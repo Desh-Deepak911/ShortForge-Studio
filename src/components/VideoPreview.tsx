@@ -108,7 +108,7 @@ export default function VideoPreview({
       <div className="flex items-center justify-center gap-2">
         {scenes.map((s, index) => (
           <button
-            key={s.id}
+            key={`${s.id}-${index}`}
             type="button"
             onClick={() => onSelectedSceneChange(index)}
             aria-label={`Scene ${index + 1}`}

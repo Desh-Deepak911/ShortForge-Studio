@@ -1,9 +1,11 @@
 "use client";
 
-import { Clock, ImagePlus, Layers, Sparkles, Trash2 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Clock, ImagePlus, Images, Layers, Sparkles, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import CopyButton from "@/components/CopyButton";
+import ImageSourceHelper from "@/components/ImageSourceHelper";
+import { getSceneImageSearchQuery } from "@/lib/imageSearch";
 import type { FootieScene, FootieScript } from "@/types/footiebitz";
 
 interface SceneEditorProps {
@@ -17,6 +19,7 @@ function isBlobUrl(url: string) {
 
 export default function SceneEditor({ script, onScriptChange }: SceneEditorProps) {
   const managedBlobUrls = useRef<Set<string>>(new Set());
+  const [autoFetchMessage, setAutoFetchMessage] = useState<string | null>(null);
 
   const totalDuration = script.scenes.reduce((sum, scene) => sum + scene.duration, 0);
   const uploadedCount = script.scenes.filter((s) => s.uploadedImage).length;
@@ -111,10 +114,31 @@ export default function SceneEditor({ script, onScriptChange }: SceneEditorProps
         </div>
       </div>
 
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() =>
+            setAutoFetchMessage(
+              "Auto image fetching will use free image APIs later. For now, use the source links or upload your own screenshots.",
+            )
+          }
+          className="inline-flex items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-2.5 text-sm font-medium text-zinc-400 transition hover:border-emerald-500/30 hover:bg-emerald-500/[0.04] hover:text-emerald-300"
+        >
+          <Images className="h-4 w-4" />
+          Auto Fetch Images
+        </button>
+
+        {autoFetchMessage && (
+          <div className="rounded-xl border border-white/10 bg-[#0a0f18]/80 px-4 py-3">
+            <p className="text-xs leading-relaxed text-zinc-500">{autoFetchMessage}</p>
+          </div>
+        )}
+      </div>
+
       <div className="space-y-5">
         {script.scenes.map((scene, index) => (
           <article
-            key={scene.id}
+            key={`${scene.id}-${index}`}
             className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f18] shadow-lg shadow-black/20"
           >
             <div className="flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-white/[0.03] to-transparent px-5 py-4">
@@ -186,12 +210,20 @@ export default function SceneEditor({ script, onScriptChange }: SceneEditorProps
               </div>
 
               <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.04] p-4">
-                <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-emerald-400/80">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  AI image prompt
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-emerald-400/80">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    AI image prompt
+                  </div>
+                  <CopyButton
+                    text={getSceneImageSearchQuery(scene)}
+                    label="Copy search"
+                  />
                 </div>
                 <p className="text-sm leading-relaxed text-zinc-400">{scene.imagePrompt}</p>
               </div>
+
+              <ImageSourceHelper scene={scene} />
 
               <div>
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">

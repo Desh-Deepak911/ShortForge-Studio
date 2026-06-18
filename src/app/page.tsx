@@ -3,6 +3,7 @@
 import {
   ChevronDown,
   Clapperboard,
+  Info,
   Loader2,
   Sparkles,
   Trophy,
@@ -11,12 +12,18 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import BreakLongVideoSection from "@/components/BreakLongVideoSection";
 import CopyButton from "@/components/CopyButton";
 import ExportPanel from "@/components/ExportPanel";
 import SceneEditor from "@/components/SceneEditor";
 import VideoPreview from "@/components/VideoPreview";
 import { formatFullScript, formatHashtags } from "@/lib/formatScript";
-import type { FootieScript, GenerateScriptResponse, Tone } from "@/types/footiebitz";
+import type {
+  FootieScript,
+  GenerateScriptResponse,
+  QualityMode,
+  Tone,
+} from "@/types/footiebitz";
 
 const TONE_OPTIONS: { value: Tone; label: string; description: string }[] = [
   { value: "dramatic", label: "Dramatic", description: "High stakes, cinematic" },
@@ -27,6 +34,12 @@ const TONE_OPTIONS: { value: Tone; label: string; description: string }[] = [
 ];
 
 const DURATION_OPTIONS = [30, 45, 60] as const;
+
+const QUALITY_OPTIONS: { value: QualityMode; label: string; description: string }[] = [
+  { value: "cheap", label: "Cheap Draft", description: "Fastest, lowest token cost" },
+  { value: "balanced", label: "Balanced", description: "Good quality and cost" },
+  { value: "best", label: "Best", description: "Highest quality scripts" },
+];
 
 const SAMPLE_TOPICS = [
   "Real Madrid comeback",
@@ -63,6 +76,7 @@ export default function Home() {
   const [topic, setTopic] = useState("");
   const [tone, setTone] = useState<Tone>("dramatic");
   const [duration, setDuration] = useState<number>(30);
+  const [qualityMode, setQualityMode] = useState<QualityMode>("cheap");
   const [script, setScript] = useState<FootieScript | null>(null);
   const [selectedSceneIndex, setSelectedSceneIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -91,7 +105,7 @@ export default function Home() {
       const response = await fetch("/api/generate-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: topic.trim(), tone, duration }),
+        body: JSON.stringify({ topic: topic.trim(), tone, duration, qualityMode }),
       });
 
       let data: GenerateScriptResponse;
@@ -254,7 +268,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                       <label htmlFor="tone" className="mb-2 block text-sm font-medium text-zinc-300">
                         Tone
@@ -298,6 +312,40 @@ export default function Home() {
                         <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                       </div>
                     </div>
+
+                    <div>
+                      <label
+                        htmlFor="qualityMode"
+                        className="mb-2 block text-sm font-medium text-zinc-300"
+                      >
+                        Script quality
+                      </label>
+                      <div className="relative">
+                        <select
+                          id="qualityMode"
+                          value={qualityMode}
+                          onChange={(e) => setQualityMode(e.target.value as QualityMode)}
+                          disabled={loading}
+                          className="w-full appearance-none rounded-xl border border-white/10 bg-[#0a0f18] px-4 py-3.5 pr-10 text-sm text-white outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/15 disabled:opacity-50"
+                        >
+                          {QUALITY_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label} — {option.description}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-600" />
+                    <p className="text-xs leading-relaxed text-zinc-500">
+                      <span className="font-medium text-zinc-400">Token usage:</span> only script
+                      generation uses OpenAI tokens. Uploading images, editing subtitles,
+                      previewing, and exporting video are handled by your browser.
+                    </p>
                   </div>
 
                   <button
@@ -325,6 +373,8 @@ export default function Home() {
                   )}
                 </form>
               </Card>
+
+              <BreakLongVideoSection />
 
               {!script && !loading && (
                 <Card>

@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Circle,
   Download,
   Film,
@@ -11,7 +12,15 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { exportFootieShort, type ExportProgress } from "@/lib/exportVideo";
+import {
+  DEFAULT_EXPORT_QUALITY,
+  EXPORT_QUALITY_PRESETS,
+  exportFootieShort,
+  getExportQualityPreset,
+  isExportQualityId,
+  type ExportProgress,
+  type ExportQualityId,
+} from "@/lib/exportVideo";
 import type { FootieScript } from "@/types/footiebitz";
 
 interface ExportPanelProps {
@@ -31,6 +40,9 @@ export default function ExportPanel({ script }: ExportPanelProps) {
   const [progress, setProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [qualityId, setQualityId] = useState<ExportQualityId>(DEFAULT_EXPORT_QUALITY);
+
+  const selectedQuality = getExportQualityPreset(qualityId);
 
   const sceneCount = script.scenes.length;
   const uploadedCount = script.scenes.filter((scene) => scene.uploadedImage).length;
@@ -75,11 +87,15 @@ export default function ExportPanel({ script }: ExportPanelProps) {
     setExportState("preparing");
 
     try {
-      await exportFootieShort(script, (update) => {
-        setExportState(update.status);
-        setProgress(update.progress);
-        setExportMessage(update.message);
-      });
+      await exportFootieShort(
+        script,
+        (update) => {
+          setExportState(update.status);
+          setProgress(update.progress);
+          setExportMessage(update.message);
+        },
+        qualityId,
+      );
     } catch (error) {
       setExportState("error");
       setErrorMessage(error instanceof Error ? error.message : "Export failed");
@@ -99,7 +115,7 @@ export default function ExportPanel({ script }: ExportPanelProps) {
             </p>
             <h2 className="mt-1 text-xl font-semibold text-white">Download your short</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Render a 1080×1920 vertical video in-browser as WebM.
+              Render a vertical 9:16 video in-browser as WebM.
             </p>
           </div>
         </div>
@@ -179,6 +195,31 @@ export default function ExportPanel({ script }: ExportPanelProps) {
       )}
 
       <div className="mt-7 rounded-xl border border-white/5 bg-[#0a0f18]/60 p-4">
+        <label htmlFor="export-quality" className="mb-2 block text-sm font-medium text-zinc-300">
+          Export quality
+        </label>
+        <div className="relative mb-4">
+          <select
+            id="export-quality"
+            value={qualityId}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (isExportQualityId(value)) {
+                setQualityId(value);
+              }
+            }}
+            disabled={isExporting}
+            className="w-full appearance-none rounded-xl border border-white/10 bg-[#06080f] px-4 py-3.5 pr-10 text-sm text-white outline-none transition focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {EXPORT_QUALITY_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.label}: {preset.width} x {preset.height}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        </div>
+
         <button
           type="button"
           onClick={handleExport}
@@ -198,7 +239,9 @@ export default function ExportPanel({ script }: ExportPanelProps) {
           )}
         </button>
         <p className="mt-3 text-center text-[11px] text-zinc-600">
-          Downloads as <span className="text-zinc-500">footiebitz-short.webm</span> · 1080×1920
+          Downloads as{" "}
+          <span className="text-zinc-500">footiebitz-{selectedQuality.id}.webm</span> ·{" "}
+          {selectedQuality.width}×{selectedQuality.height} · 9:16
         </p>
       </div>
 

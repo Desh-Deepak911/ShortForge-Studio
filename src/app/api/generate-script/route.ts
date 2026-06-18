@@ -1,10 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-import { buildFootieScriptPrompt } from "@/lib/prompts";
+import { generateFootieScript } from "@/lib/generateFootieScript";
+import { resolveQualityMode, resolveScriptModel } from "@/lib/scriptModels";
 import type {
-  FootieScene,
-  FootieScript,
   GenerateScriptRequest,
   GenerateScriptResponse,
   Tone,
@@ -13,87 +11,11 @@ import type {
 const VALID_TONES: Tone[] = ["dramatic", "funny", "tactical", "news", "emotional"];
 const DEFAULT_TONE: Tone = "dramatic";
 const DEFAULT_DURATION = 30;
-const GEMINI_MODEL = "gemini-2.0-flash";
 
 export const dynamic = "force-dynamic";
 
-type RawScene = {
-  id?: string;
-  duration?: number;
-  subtitle?: string;
-  imagePrompt?: string;
-};
-
-type RawFootieScript = {
-  title?: string;
-  hook?: string;
-  caption?: string;
-  hashtags?: unknown;
-  scenes?: RawScene[];
-};
-
 function jsonResponse(body: GenerateScriptResponse, status = 200) {
   return NextResponse.json(body, { status });
-}
-
-function extractJson(text: string): string {
-  const withoutFences = text
-    .replace(/```json\s*/gi, "")
-    .replace(/```\s*/g, "")
-    .trim();
-
-  const start = withoutFences.indexOf("{");
-  const end = withoutFences.lastIndexOf("}");
-
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error("No JSON object found in AI response");
-  }
-
-  return withoutFences.slice(start, end + 1);
-}
-
-function parseFootieScript(text: string): FootieScript {
-  let parsed: RawFootieScript;
-
-  try {
-    parsed = JSON.parse(extractJson(text)) as RawFootieScript;
-  } catch {
-    throw new Error("Failed to parse script JSON from AI response");
-  }
-
-  if (!parsed.title?.trim()) {
-    throw new Error("Script title is missing");
-  }
-
-  if (!Array.isArray(parsed.scenes) || parsed.scenes.length < 5) {
-    throw new Error("Script must contain 5 to 6 scenes");
-  }
-
-  const scenes: FootieScene[] = parsed.scenes.slice(0, 6).map((scene, index) => {
-    const subtitle = String(scene.subtitle ?? "").trim();
-    const imagePrompt = String(scene.imagePrompt ?? "").trim();
-    const duration = Math.max(3, Math.min(8, Number(scene.duration) || 5));
-
-    if (!subtitle || !imagePrompt) {
-      throw new Error(`Scene ${index + 1} is missing subtitle or imagePrompt`);
-    }
-
-    const id = String(scene.id ?? "").trim() || `scene-${index + 1}`;
-
-    return { id, duration, subtitle, imagePrompt };
-  });
-
-  const hashtags = Array.isArray(parsed.hashtags)
-    ? parsed.hashtags.map((tag) => String(tag).trim()).filter(Boolean)
-    : [];
-
-  return {
-    title: parsed.title.trim(),
-    hook: String(parsed.hook ?? "").trim(),
-    caption: String(parsed.caption ?? "").trim(),
-    hashtags,
-    scenes,
-  };
 }
 
 function resolveTone(tone: unknown): Tone {
@@ -109,6 +31,24 @@ function resolveDuration(duration: unknown): number {
     return DEFAULT_DURATION;
   }
   return Math.max(15, Math.min(60, Math.round(value)));
+}
+
+function mapOpenAIError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes("OPENAI_API_KEY")) {
+      return "Server configuration error";
+    }
+    return error.message;
+  }
+  return "Failed to generate script";
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 export async function POST(request: Request) {
@@ -128,8 +68,10 @@ export async function POST(request: Request) {
 
     const tone = resolveTone(body.tone);
     const duration = resolveDuration(body.duration);
+    const qualityMode = resolveQualityMode(body.qualityMode);
+    const model = resolveScriptModel(qualityMode);
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey || apiKey === "your_key_here") {
       return jsonResponse(
         { success: false, error: "Server configuration error" },
@@ -137,35 +79,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_MODEL,
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    });
+    const result = await generateFootieScript(topic, tone, duration, model);
 
-    const result = await model.generateContent(
-      buildFootieScriptPrompt(topic, tone, duration),
-    );
+    if (!result.success) {
+      if (result.kind === "empty") {
+        console.error("FULL OPENAI RESPONSE:", safeStringify(result.response));
+        return jsonResponse({ success: false, error: result.error }, 500);
+      }
 
-    const text = result.response.text();
-    if (!text?.trim()) {
-      return jsonResponse(
-        { success: false, error: "Empty response from AI model" },
-        502,
-      );
+      console.error("OpenAI invalid JSON:", result.rawText);
+      return jsonResponse({ success: false, error: result.error }, 500);
     }
 
-    const script = parseFootieScript(text);
-
-    return jsonResponse({ success: true, data: script });
+    return jsonResponse({ success: true, data: result.data });
   } catch (error) {
     console.error("generate-script error:", error);
-
-    const message =
-      error instanceof Error ? error.message : "Failed to generate script";
-
-    return jsonResponse({ success: false, error: message }, 500);
+    return jsonResponse({ success: false, error: mapOpenAIError(error) }, 500);
   }
 }

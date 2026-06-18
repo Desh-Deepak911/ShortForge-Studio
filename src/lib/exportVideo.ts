@@ -1,8 +1,63 @@
 import type { FootieScene, FootieScript } from "@/types/footiebitz";
 
-export const EXPORT_WIDTH = 1080;
-export const EXPORT_HEIGHT = 1920;
-export const EXPORT_FPS = 30;
+export type ExportQualityId = "720p" | "1080p" | "1440p" | "4k";
+
+export interface ExportQualityPreset {
+  id: ExportQualityId;
+  label: string;
+  width: number;
+  height: number;
+  fps: number;
+  bitrate: number;
+}
+
+export const EXPORT_QUALITY_PRESETS: ExportQualityPreset[] = [
+  {
+    id: "720p",
+    label: "720p vertical",
+    width: 720,
+    height: 1280,
+    fps: 30,
+    bitrate: 4_000_000,
+  },
+  {
+    id: "1080p",
+    label: "1080p vertical",
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    bitrate: 8_000_000,
+  },
+  {
+    id: "1440p",
+    label: "1440p vertical",
+    width: 1440,
+    height: 2560,
+    fps: 30,
+    bitrate: 12_000_000,
+  },
+  {
+    id: "4k",
+    label: "4K vertical",
+    width: 2160,
+    height: 3840,
+    fps: 30,
+    bitrate: 20_000_000,
+  },
+];
+
+export const DEFAULT_EXPORT_QUALITY: ExportQualityId = "1080p";
+
+export function getExportQualityPreset(id: ExportQualityId): ExportQualityPreset {
+  return (
+    EXPORT_QUALITY_PRESETS.find((preset) => preset.id === id) ??
+    EXPORT_QUALITY_PRESETS.find((preset) => preset.id === DEFAULT_EXPORT_QUALITY)!
+  );
+}
+
+export function isExportQualityId(value: string): value is ExportQualityId {
+  return EXPORT_QUALITY_PRESETS.some((preset) => preset.id === value);
+}
 
 export interface ExportProgress {
   status: "preparing" | "rendering" | "finalizing" | "done" | "error";
@@ -22,7 +77,9 @@ function getSupportedMimeType(): string {
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (!src.startsWith("blob:") && !src.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("Failed to load scene image"));
     img.src = src;
@@ -96,6 +153,12 @@ function drawSceneFrame(
   scene: FootieScene,
   image: HTMLImageElement | null,
 ) {
+  const scale = width / 1080;
+  const padX = 72 * scale;
+  const titleY = 180 * scale;
+  const hookY = 300 * scale;
+  const subtitleY = height - 320 * scale;
+
   if (image) {
     drawCoverImage(ctx, image, width, height);
   } else {
@@ -115,22 +178,30 @@ function drawSceneFrame(
   ctx.fillRect(0, 0, width, height);
 
   ctx.fillStyle = "#34d399";
-  ctx.font = "bold 40px Arial, Helvetica, sans-serif";
-  ctx.fillText("FOOTIEBITZ", 72, 120);
+  ctx.font = `bold ${40 * scale}px Arial, Helvetica, sans-serif`;
+  ctx.fillText("FOOTIEBITZ", padX, 120 * scale);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "600 48px Arial, Helvetica, sans-serif";
-  wrapText(ctx, script.title, 72, 180, width - 144, 58);
+  ctx.font = `600 ${48 * scale}px Arial, Helvetica, sans-serif`;
+  wrapText(ctx, script.title, padX, titleY, width - padX * 2, 58 * scale);
 
   if (script.hook) {
     ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "400 36px Arial, Helvetica, sans-serif";
-    wrapText(ctx, script.hook, 72, 300, width - 144, 46);
+    ctx.font = `400 ${36 * scale}px Arial, Helvetica, sans-serif`;
+    wrapText(ctx, script.hook, padX, hookY, width - padX * 2, 46 * scale);
   }
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 64px Arial, Helvetica, sans-serif";
-  wrapText(ctx, scene.subtitle, width / 2, height - 320, width - 120, 76, "center");
+  ctx.font = `bold ${64 * scale}px Arial, Helvetica, sans-serif`;
+  wrapText(
+    ctx,
+    scene.subtitle,
+    width / 2,
+    subtitleY,
+    width - 120 * scale,
+    76 * scale,
+    "center",
+  );
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -145,6 +216,7 @@ function downloadBlob(blob: Blob, filename: string) {
 export async function exportFootieShort(
   script: FootieScript,
   onProgress: (progress: ExportProgress) => void,
+  qualityId: ExportQualityId = DEFAULT_EXPORT_QUALITY,
 ): Promise<void> {
   if (script.scenes.length === 0) {
     throw new Error("No scenes to export");
@@ -154,11 +226,18 @@ export async function exportFootieShort(
     throw new Error("MediaRecorder is not supported in this browser");
   }
 
-  onProgress({ status: "preparing", progress: 0, message: "Preparing export..." });
+  const quality = getExportQualityPreset(qualityId);
+  const { width, height, fps, bitrate } = quality;
+
+  onProgress({
+    status: "preparing",
+    progress: 0,
+    message: `Preparing ${quality.label} export (${width}×${height} @ ${fps}fps)...`,
+  });
 
   const canvas = document.createElement("canvas");
-  canvas.width = EXPORT_WIDTH;
-  canvas.height = EXPORT_HEIGHT;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
 
   if (!ctx) {
@@ -178,8 +257,8 @@ export async function exportFootieShort(
   }
 
   const mimeType = getSupportedMimeType();
-  const stream = canvas.captureStream(EXPORT_FPS);
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  const stream = canvas.captureStream(fps);
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
   const chunks: Blob[] = [];
 
   recorder.ondataavailable = (event) => {
@@ -187,10 +266,10 @@ export async function exportFootieShort(
   };
 
   const totalFrames = script.scenes.reduce(
-    (sum, scene) => sum + Math.round(scene.duration * EXPORT_FPS),
+    (sum, scene) => sum + Math.round(scene.duration * fps),
     0,
   );
-  const frameMs = 1000 / EXPORT_FPS;
+  const frameMs = 1000 / fps;
   let renderedFrames = 0;
 
   onProgress({ status: "rendering", progress: 2, message: "Recording video..." });
@@ -199,16 +278,16 @@ export async function exportFootieShort(
   for (let sceneIndex = 0; sceneIndex < script.scenes.length; sceneIndex++) {
     const scene = script.scenes[sceneIndex];
     const image = imageCache.get(scene.id) ?? null;
-    const framesInScene = Math.round(scene.duration * EXPORT_FPS);
+    const framesInScene = Math.round(scene.duration * fps);
 
     for (let frame = 0; frame < framesInScene; frame++) {
-      drawSceneFrame(ctx, EXPORT_WIDTH, EXPORT_HEIGHT, script, scene, image);
+      drawSceneFrame(ctx, width, height, script, scene, image);
       renderedFrames++;
       const progress = Math.min(99, Math.round((renderedFrames / totalFrames) * 100));
       onProgress({
         status: "rendering",
         progress,
-        message: `Rendering scene ${sceneIndex + 1} of ${script.scenes.length}...`,
+        message: `Rendering scene ${sceneIndex + 1} of ${script.scenes.length} at ${quality.label}...`,
       });
       await sleep(frameMs);
     }
@@ -227,7 +306,12 @@ export async function exportFootieShort(
   }
 
   const blob = new Blob(chunks, { type: mimeType.split(";")[0] });
-  downloadBlob(blob, "footiebitz-short.webm");
+  const filename = `footiebitz-${quality.id}.webm`;
+  downloadBlob(blob, filename);
 
-  onProgress({ status: "done", progress: 100, message: "Downloaded footiebitz-short.webm" });
+  onProgress({
+    status: "done",
+    progress: 100,
+    message: `Downloaded ${filename} (${width}×${height})`,
+  });
 }
