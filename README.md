@@ -2,7 +2,7 @@
 
 **Turn football ideas into narrated short-form videos in minutes.**
 
-FootieBitz is a modern web application that transforms a football topic into a documentary-style narrated short. Go from a rough idea to a fully timed vertical video — with subtitles, uploaded images, and optional narration audio — entirely in the browser.
+FootieBitz is a modern web application that transforms a football topic into a documentary-style narrated short. Go from a rough idea to a fully timed vertical video — with subtitles, uploaded scene images you can reposition and zoom, and optional narration audio — entirely in the browser.
 
 ---
 
@@ -20,8 +20,20 @@ FootieBitz is a modern web application that transforms a football topic into a d
 - Edit subtitles and adjust scene durations (1–20 seconds each)
 - Add buffer scenes: **Intro**, **Context**, **Transition**, **Ending**
 - Move, duplicate, and delete scenes
-- Upload a custom image per scene
+- Upload a custom image per scene and adjust how it appears in frame
 - Total timeline duration updates live
+
+### 🖼 Image Framing
+
+For manually uploaded scene images:
+
+- **Drag** to reposition the image inside the 9:16 video frame
+- **Zoom** to focus on the detail that matters
+- **Fit** shows the full image without cropping; **Fill** covers the frame
+- **Reset** restores the default framing
+- Exported video uses the same positioning you see in preview
+
+Works on desktop and touch devices. Legacy projects with older image URLs continue to work with sensible defaults.
 
 ### 🔊 Narration
 
@@ -34,6 +46,7 @@ FootieBitz is a modern web application that transforms a football topic into a d
 - Vertical short preview (9:16) with a phone-style frame
 - Subtitle overlays per scene
 - Scene-by-scene playback with timeline progress
+- Uploaded images reflect your pan, zoom, and fit settings
 - Buffer scenes show type-labelled placeholders when no image is uploaded
 
 ### 📤 Export
@@ -42,6 +55,7 @@ FootieBitz is a modern web application that transforms a football topic into a d
 - No server upload required — everything runs in the browser
 - Quality presets: **720p**, **1080p**, **1440p**, **4K**
 - Optional narration audio track muxed into the final video
+- Scene images export with the same framing as the preview
 - Exported as a `.webm` file ready to upload anywhere
 
 ---
@@ -53,7 +67,7 @@ FootieBitz is a modern web application that transforms a football topic into a d
 | 1 | **Story Brief** | Enter a football topic and pick a target duration |
 | 2 | **Story Draft** | Review the generated title and narration |
 | 3 | **Production Timeline** | Edit scenes, adjust durations, add buffer scenes |
-| 4 | **Upload Images** | Attach images to individual scenes |
+| 4 | **Upload & Frame Images** | Attach images to scenes; drag, zoom, and choose Fit or Fill |
 | 5 | **Narration** | Generate and preview the voiceover |
 | 6 | **Preview** | Watch the full short in the browser |
 | 7 | **Export** | Render and download the final video |
@@ -192,6 +206,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | Run ESLint |
+| `npm run test:scene-image` | Verify image positioning logic |
 
 ---
 
@@ -203,7 +218,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |--------|-------------|
 | Home | Story brief input and topic selector |
 | Story Draft | Title and narration review |
-| Production Timeline | Scene editor with buffer controls |
+| Production Timeline | Scene editor with image framing and buffer controls |
 | Preview | Vertical short in a phone frame |
 | Export | Quality presets and download |
 

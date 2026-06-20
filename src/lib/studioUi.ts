@@ -86,6 +86,28 @@ export const studioLabel =
 export const studioFieldLabel =
   "mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-muted";
 
+/** Compact range slider for inspector controls (zoom, etc.). */
+export const studioRange =
+  `studio-range-input h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full bg-surface-elevated/80 accent-accent ${focusRing}`;
+
+/** Touch-friendly host wrapper for range inputs — keeps a 44px tap target on coarse pointers. */
+export const studioRangeTouchHost =
+  "flex min-h-11 w-full min-w-0 items-center sm:min-h-0";
+
+/** Image transform controls docked beneath a media preview. */
+export const studioImageControlDock =
+  "border-t border-border/15 bg-surface-elevated/20 px-2.5 py-2.5 sm:px-3 sm:py-3";
+
+/** Compact segmented control for image fit (Fit / Fill). */
+export const studioImageFitSegmentedControl =
+  "flex min-w-0 flex-1 rounded-[0.65rem] bg-surface-elevated/35 p-0.5 ring-1 ring-border/20";
+
+export const studioImageFitSegment =
+  "flex min-h-[2rem] flex-1 items-center justify-center rounded-md px-2 py-1.5 text-center text-[11px] font-medium leading-tight text-muted transition hover:text-foreground/85 sm:min-h-[1.85rem] sm:text-xs";
+
+export const studioImageFitSegmentActive =
+  "flex min-h-[2rem] flex-1 items-center justify-center rounded-md bg-surface-elevated/85 px-2 py-1.5 text-center text-[11px] font-medium leading-tight text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-border/25 sm:min-h-[1.85rem] sm:text-xs";
+
 export const studioSubtleText =
   "text-xs leading-relaxed text-muted";
 

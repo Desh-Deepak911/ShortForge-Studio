@@ -33,7 +33,9 @@ import {
   type PreviewFrame,
 } from "@/lib/previewTimeline";
 import SceneCaptionOverlay from "@/components/SceneCaptionOverlay";
+import SceneFrameImage from "@/components/SceneFrameImage";
 import { getDisplayCaption } from "@/lib/displayCaption";
+import { sceneHasImage } from "@/lib/sceneImage";
 import {
   getTransitionDurationLabel,
   getTransitionEffectLabel,
@@ -86,15 +88,12 @@ function SceneBackdrop({
   style?: CSSProperties;
 }) {
   const sceneTypeMeta = scene.sceneType ? SCENE_TYPE_META[scene.sceneType] : null;
+  const hasImage = sceneHasImage(scene);
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={style}>
-      {scene.uploadedImage ? (
-        <img
-          src={scene.uploadedImage}
-          alt={`Scene ${sceneIndex + 1}`}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+      {hasImage ? (
+        <SceneFrameImage scene={scene} alt={`Scene ${sceneIndex + 1}`} />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-surface via-background to-background px-6 text-center">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.06] ring-1 ring-white/10">

@@ -41,6 +41,7 @@ import {
   studioWarningPanel,
 } from "@/lib/studioUi";
 import { syncFootieScript } from "@/lib/voiceover";
+import { sceneHasImage } from "@/lib/sceneImage";
 import type { FootieScript } from "@/types/footiebitz";
 
 interface ExportPanelProps {
@@ -69,7 +70,7 @@ export default function ExportPanel({ script, disabled = false, compact = false 
   const selectedQuality = getExportQualityPreset(qualityId);
 
   const sceneCount = script.scenes.length;
-  const uploadedCount = script.scenes.filter((scene) => scene.uploadedImage).length;
+  const uploadedCount = script.scenes.filter((scene) => sceneHasImage(scene)).length;
   const allImagesUploaded = sceneCount > 0 && uploadedCount === sceneCount;
   const totalDuration = script.totalDuration;
   const isExporting =

@@ -173,3 +173,56 @@ html {
     opacity: 0.75;
   }
 }
+
+/* ── Studio range inputs (touch-friendly) ─────────────────────────────────── */
+.studio-range-input {
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+}
+
+.studio-range-input::-webkit-slider-runnable-track {
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: rgba(24, 27, 34, 0.85);
+}
+
+.studio-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: -0.4375rem;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.studio-range-input::-moz-range-track {
+  height: 0.375rem;
+  border: none;
+  border-radius: 9999px;
+  background: rgba(24, 27, 34, 0.85);
+}
+
+.studio-range-input::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+@media (pointer: coarse) {
+  .studio-range-input::-webkit-slider-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: -0.5625rem;
+  }
+
+  .studio-range-input::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}

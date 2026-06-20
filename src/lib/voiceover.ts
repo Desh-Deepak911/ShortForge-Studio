@@ -1,5 +1,9 @@
 import { revokeBlobUrl } from "@/lib/blobUrl";
 import { syncScenesSubtitlesNarration } from "@/lib/displayCaption";
+import {
+  updateSceneImageTransform,
+  type SceneImageTransformPatch,
+} from "@/lib/sceneImage";
 import { getStoryTotalDuration } from "@/lib/sceneTiming";
 import { recalculateSceneTimings } from "@/lib/timeline";
 import {
@@ -52,6 +56,26 @@ export function applySceneUpdate(
     {
       ...script,
       scenes: recalculateSceneTimings(updateSceneInScenes(script.scenes, sceneId, updates)),
+    },
+    script,
+  );
+}
+
+/**
+ * Patches scene image transform metadata (pan/zoom/rotation/fit).
+ * Does not change the image URL or trigger AI generation.
+ */
+export function applySceneImageTransform(
+  script: FootieScript,
+  sceneId: string,
+  transformPatch: SceneImageTransformPatch,
+): FootieScript {
+  return syncFootieScript(
+    {
+      ...script,
+      scenes: recalculateSceneTimings(
+        updateSceneImageTransform(script.scenes, sceneId, transformPatch),
+      ),
     },
     script,
   );

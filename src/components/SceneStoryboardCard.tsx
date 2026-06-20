@@ -13,9 +13,19 @@ import {
 
 import CaptionStyleControl from "@/components/CaptionStyleControl";
 import SceneCaptionOverlay from "@/components/SceneCaptionOverlay";
+import EditableSceneFrameImage from "@/components/EditableSceneFrameImage";
+import SceneImageZoomControl from "@/components/SceneImageZoomControl";
 import SubtitleEffectControl from "@/components/SubtitleEffectControl";
 import { normalizeCaptionMode } from "@/lib/captionMode";
 import { deriveSceneNarrationExcerpt, getDisplayCaption } from "@/lib/displayCaption";
+import {
+  applySceneImageFitMode,
+  getSceneImage,
+  patchSceneImageTransform,
+  resetSceneImageTransform,
+  sceneHasImage,
+  type SceneImageTransformPatch,
+} from "@/lib/sceneImage";
 import {
   studioCompactButton,
   studioDestructiveButton,
@@ -32,7 +42,7 @@ import {
   studioUploadButton,
   studioUploadZone,
 } from "@/lib/studioUi";
-import type { CaptionMode, FootieScene, SceneType } from "@/types/footiebitz";
+import type { CaptionMode, FootieScene, SceneImageFitMode, SceneType } from "@/types/footiebitz";
 
 const SCENE_TYPE_LABELS: Record<SceneType, string> = {
   intro: "Intro",
@@ -67,6 +77,8 @@ export interface SceneStoryboardCardProps {
   onMoveDown: () => void;
   onDelete: () => void;
   sceneTypeOptions: { value: SceneType; label: string }[];
+  /** Whether this scene is selected in the preview inspector. */
+  isSelected?: boolean;
   /** Full story narration — used to derive local subtitle excerpts. */
   storyNarration?: string;
   /** All scenes — used for proportional narration splitting. */
@@ -87,6 +99,7 @@ export default function SceneStoryboardCard({
   onMoveDown,
   onDelete,
   sceneTypeOptions,
+  isSelected = false,
   storyNarration = "",
   allScenes = [],
 }: SceneStoryboardCardProps) {
@@ -106,6 +119,40 @@ export default function SceneStoryboardCard({
     }
     onUpdate({ captionMode: "generated" });
   };
+
+  const commitImageTransform = (patch: SceneImageTransformPatch) => {
+    const nextImage = patchSceneImageTransform(scene, patch);
+    if (!nextImage) {
+      return;
+    }
+
+    onUpdate({ image: nextImage });
+  };
+
+  const handleImageTransformChange = (patch: SceneImageTransformPatch) => {
+    commitImageTransform(patch);
+  };
+
+  const handleImageReset = () => {
+    const current = getSceneImage(scene);
+    if (!current) {
+      return;
+    }
+
+    onUpdate({ image: resetSceneImageTransform(current) });
+  };
+
+  const handleFitModeChange = (fitMode: SceneImageFitMode) => {
+    const current = getSceneImage(scene);
+    if (!current) {
+      return;
+    }
+
+    onUpdate({ image: applySceneImageFitMode(current, fitMode) });
+  };
+
+  const sceneImage = getSceneImage(scene);
+  const showImageControls = isSelected && sceneHasImage(scene);
 
   return (
     <article className={studioStoryboardCard}>
@@ -151,31 +198,45 @@ export default function SceneStoryboardCard({
         {/* Media + on-screen caption preview */}
         <section aria-label="Scene media">
           <p className={studioFieldLabel}>Media</p>
-          <div className={`${studioStoryboardMediaFrame} relative`}>
-            {scene.uploadedImage ? (
-              <img
-                src={scene.uploadedImage}
-                alt={`${title} visual`}
-                className="aspect-[9/16] max-h-56 w-full object-cover sm:aspect-[16/10] sm:max-h-52"
+          <div className={`${studioStoryboardMediaFrame} overflow-hidden`}>
+            <div className="relative mx-auto aspect-[9/16] max-h-56 w-full max-w-[11rem] overflow-hidden sm:max-h-64 sm:max-w-[12rem]">
+              {sceneHasImage(scene) ? (
+                <EditableSceneFrameImage
+                  scene={scene}
+                  alt={`${title} visual`}
+                  isSelected={isSelected}
+                  onTransformChange={handleImageTransformChange}
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-surface via-background to-background px-4 text-center">
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-muted">
+                    {title}
+                  </p>
+                </div>
+              )}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+              <SceneCaptionOverlay
+                scene={
+                  isSubtitlesMode
+                    ? { ...scene, narration: subtitlesPreview }
+                    : scene
+                }
+                variant="card"
               />
-            ) : (
-              <div className="flex aspect-[9/16] max-h-56 w-full flex-col items-center justify-center bg-gradient-to-b from-surface via-background to-background px-4 text-center sm:aspect-[16/10] sm:max-h-52">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-muted">
-                  {title}
-                </p>
-              </div>
-            )}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-            <SceneCaptionOverlay
-              scene={
-                isSubtitlesMode
-                  ? { ...scene, narration: subtitlesPreview }
-                  : scene
-              }
-              variant="card"
-            />
+            </div>
+            {showImageControls && sceneImage ? (
+              <SceneImageZoomControl
+                variant="attached"
+                controlId={`scene-image-zoom-${scene.id}`}
+                scale={sceneImage.scale}
+                fitMode={sceneImage.fitMode}
+                onScaleChange={(scale) => handleImageTransformChange({ scale })}
+                onFitModeChange={handleFitModeChange}
+                onReset={handleImageReset}
+              />
+            ) : null}
           </div>
-          {scene.uploadedImage ? (
+          {sceneHasImage(scene) ? (
             <div className="mt-3 flex flex-wrap gap-2">
               <label className={studioUploadButton}>
                 <ImagePlus className="h-3.5 w-3.5" />

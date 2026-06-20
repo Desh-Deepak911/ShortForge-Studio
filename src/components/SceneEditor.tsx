@@ -20,6 +20,11 @@ import {
   duplicateScene,
 } from "@/lib/timeline";
 import {
+  createSceneImageFromUrl,
+  getSceneImageUrl,
+  sceneHasImage,
+} from "@/lib/sceneImage";
+import {
   ensureTimelineItems,
   getSceneFromTimeline,
   getTransitionsFromTimeline,
@@ -80,7 +85,7 @@ export default function SceneEditor({
   const timelineItems = ensureTimelineItems(scenes, script.timelineItems);
   const totalDuration = script.totalDuration;
   const transitionCount = getTransitionsFromTimeline(timelineItems).length;
-  const uploadedCount = scenes.filter((s) => s.uploadedImage).length;
+  const uploadedCount = scenes.filter((scene) => sceneHasImage(scene)).length;
   const uploadProgress = scenes.length
     ? Math.round((uploadedCount / scenes.length) * 100)
     : 0;
@@ -156,9 +161,10 @@ export default function SceneEditor({
   const deleteScene = (index: number) => {
     if (scenes.length <= 1) return;
     const removed = scenes[index];
-    const imgUrl = removed.uploadedImage;
+    const imgUrl = getSceneImageUrl(removed);
     // Only revoke the blob URL if no other scene shares it (e.g. after a duplicate).
-    const isShared = imgUrl && scenes.some((s, i) => i !== index && s.uploadedImage === imgUrl);
+    const isShared =
+      imgUrl && scenes.some((s, i) => i !== index && getSceneImageUrl(s) === imgUrl);
     if (!isShared) revokeBlobUrl(imgUrl);
     commitScenes(scenes.filter((_, i) => i !== index));
   };
@@ -188,26 +194,27 @@ export default function SceneEditor({
 
   const handleImageUpload = (id: string, file: File | null) => {
     if (!file) return;
-    const existing = scenes.find((s) => s.id === id)?.uploadedImage;
+    const existing = getSceneImageUrl(scenes.find((s) => s.id === id) ?? {});
     revokeBlobUrl(existing);
 
     try {
       const objectUrl = URL.createObjectURL(file);
       managedBlobUrls.current.add(objectUrl);
-      updateScene(id, { uploadedImage: objectUrl });
+      updateScene(id, { image: createSceneImageFromUrl(objectUrl), uploadedImage: undefined });
     } catch {
       const reader = new FileReader();
       reader.onload = () => {
-        updateScene(id, { uploadedImage: reader.result as string });
+        const url = reader.result as string;
+        updateScene(id, { image: createSceneImageFromUrl(url), uploadedImage: undefined });
       };
       reader.readAsDataURL(file);
     }
   };
 
   const removeImage = (id: string) => {
-    const existing = scenes.find((s) => s.id === id)?.uploadedImage;
+    const existing = getSceneImageUrl(scenes.find((s) => s.id === id) ?? {});
     revokeBlobUrl(existing);
-    updateScene(id, { uploadedImage: undefined });
+    updateScene(id, { image: undefined, uploadedImage: undefined });
   };
 
   useEffect(() => {
@@ -378,6 +385,7 @@ export default function SceneEditor({
                 scene={scene}
                 index={index}
                 sceneCount={scenes.length}
+                isSelected={selectedSceneIndex === index}
                 storyNarration={script.narration}
                 allScenes={scenes}
                 onUpdate={(patch) => updateScene(scene.id, patch)}

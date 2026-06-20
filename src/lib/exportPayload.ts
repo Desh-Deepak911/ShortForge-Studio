@@ -1,10 +1,10 @@
 import {
   normalizeCaptionMode,
-  normalizeSceneCaptionSettings,
   normalizeSubtitleEffect,
 } from "@/lib/captionMode";
 import { resolveTimelineItems } from "@/lib/previewTimeline";
 import { getDisplayCaption, syncScenesSubtitlesNarration } from "@/lib/displayCaption";
+import { normalizeSceneSettings } from "@/lib/sceneImage";
 import { getStoryTotalDuration } from "@/lib/sceneTiming";
 import { isSceneTimelineItem, normalizeSceneIds } from "@/lib/timelineItems";
 import type {
@@ -30,7 +30,7 @@ export interface ExportScene extends FootieScene {
 
 /** Maps an app scene to the export shape without dropping source caption fields. */
 export function mapSceneToExport(scene: FootieScene): ExportScene {
-  const normalized = normalizeSceneCaptionSettings(scene);
+  const normalized = normalizeSceneSettings(scene);
 
   return {
     ...normalized,

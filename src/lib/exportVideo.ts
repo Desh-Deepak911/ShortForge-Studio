@@ -7,6 +7,7 @@ export * from "@/lib/exportPayload";
 
 import { getSceneIndexForTime } from "@/lib/sceneTiming";
 import { getDisplayCaptionLines } from "@/lib/displayCaption";
+import { drawSceneImageInFrame, getSceneImageUrl, resolveExportSceneImage } from "@/lib/sceneImage";
 import {
   assertExportPayload,
   buildFootieExportPayload,
@@ -48,35 +49,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error("Failed to load scene image"));
     img.src = src;
   });
-}
-
-function drawCoverImage(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  width: number,
-  height: number,
-) {
-  const imgRatio = img.width / img.height;
-  const canvasRatio = width / height;
-
-  let sx: number;
-  let sy: number;
-  let sw: number;
-  let sh: number;
-
-  if (imgRatio > canvasRatio) {
-    sh = img.height;
-    sw = sh * canvasRatio;
-    sx = (img.width - sw) / 2;
-    sy = 0;
-  } else {
-    sw = img.width;
-    sh = sw / canvasRatio;
-    sx = 0;
-    sy = (img.height - sh) / 2;
-  }
-
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, width, height);
 }
 
 function wrapText(
@@ -150,7 +122,21 @@ function drawSceneFrame(
 
   // ── Background ─────────────────────────────────────────────────────────────
   if (image) {
-    drawCoverImage(ctx, image, width, height);
+    const sceneImage = resolveExportSceneImage(scene);
+
+    if (sceneImage) {
+      drawSceneImageInFrame(
+        ctx,
+        image,
+        width,
+        height,
+        sceneImage,
+        image.naturalWidth,
+        image.naturalHeight,
+      );
+    } else {
+      ctx.drawImage(image, 0, 0, width, height);
+    }
   } else {
     drawPlaceholderBackground(ctx, width, height, scene.sceneType);
   }
@@ -302,9 +288,10 @@ export async function exportSilentVideoBlob(
 
   const imageCache = new Map<string, HTMLImageElement>();
   for (const scene of scenes) {
-    if (scene.uploadedImage) {
+    const imageUrl = getSceneImageUrl(scene);
+    if (imageUrl) {
       try {
-        const img = await loadImage(scene.uploadedImage);
+        const img = await loadImage(imageUrl);
         imageCache.set(scene.id, img);
       } catch {
         // Fall back to gradient placeholder for this scene.

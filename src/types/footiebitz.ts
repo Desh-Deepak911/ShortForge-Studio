@@ -10,6 +10,22 @@ export type CaptionMode = "generated" | "subtitles";
 /** Visual treatment when displaying captions (subtitles mode or generated text). */
 export type SubtitleEffect = "fade-up" | "typewriter" | "highlight";
 
+/** How a scene image fills its frame. */
+export type SceneImageFitMode = "fill" | "fit";
+
+/** Pan/zoom transform for a manually uploaded scene image. */
+export interface SceneImage {
+  url: string;
+  scale: number;
+  x: number;
+  y: number;
+  rotation?: number;
+  fitMode?: SceneImageFitMode;
+}
+
+/** Persisted image value — legacy string URL or normalized image object. */
+export type SceneImageInput = string | SceneImage;
+
 export interface FootieScene {
   id: string;
   start: number;
@@ -17,6 +33,12 @@ export interface FootieScene {
   duration: number;
   subtitle: string;
   sceneType?: SceneType;
+  /** Scene media with optional pan/zoom transform metadata. */
+  image?: SceneImage;
+  /**
+   * @deprecated Legacy string URL — migrated to `image` on sync.
+   * Still accepted on load for backward compatibility.
+   */
   uploadedImage?: string;
   /**
    * Caption source — `generated` uses AI scene subtitles; `subtitles` derives

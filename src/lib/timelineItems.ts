@@ -1,8 +1,8 @@
 import {
   normalizeCaptionMode,
-  normalizeSceneCaptionSettings,
   normalizeSubtitleEffect,
 } from "@/lib/captionMode";
+import { normalizeSceneSettings, sceneImagesEqual } from "@/lib/sceneImage";
 import type {
   FootieScene,
   SceneTimelineItem,
@@ -71,6 +71,7 @@ export type SceneTimelineUpdates = Partial<
     | "duration"
     | "subtitle"
     | "sceneType"
+    | "image"
     | "uploadedImage"
     | "captionMode"
     | "subtitleEffect"
@@ -159,7 +160,7 @@ export function normalizeSceneIds(scenes: FootieScene[]): FootieScene[] {
 
     usedIds.add(id);
     const normalized = id === scene.id ? scene : { ...scene, id };
-    return normalizeSceneCaptionSettings(normalized);
+    return normalizeSceneSettings(normalized);
   });
 }
 
@@ -233,7 +234,7 @@ export function updateSceneInTimeline(
 
     return {
       ...item,
-      scene: normalizeSceneCaptionSettings({ ...item.scene, ...updates }),
+      scene: normalizeSceneSettings({ ...item.scene, ...updates }),
     };
   });
 }
@@ -273,7 +274,7 @@ export function updateSceneInScenes(
   updates: SceneTimelineUpdates,
 ): FootieScene[] {
   return scenes.map((scene) =>
-    normalizeSceneCaptionSettings(scene.id === sceneId ? { ...scene, ...updates } : scene),
+    normalizeSceneSettings(scene.id === sceneId ? { ...scene, ...updates } : scene),
   );
 }
 
@@ -295,7 +296,7 @@ export function scenesStructurallyEqual(a: FootieScene[], b: FootieScene[]): boo
       scene.duration === other.duration &&
       scene.subtitle === other.subtitle &&
       scene.sceneType === other.sceneType &&
-      scene.uploadedImage === other.uploadedImage &&
+      sceneImagesEqual(scene, other) &&
       scene.narration === other.narration &&
       normalizeCaptionMode(scene.captionMode) === normalizeCaptionMode(other.captionMode) &&
       normalizeSubtitleEffect(scene.subtitleEffect) ===
