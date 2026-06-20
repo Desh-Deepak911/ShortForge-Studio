@@ -25,11 +25,20 @@ import {
 } from "@/lib/exportVideo";
 import {
   studioBadge,
-  studioInput,
+  studioChecklistItem,
+  studioError,
+  studioGlass,
+  studioIconBox,
+  studioLabel,
+  studioOptionRow,
+  studioPanel,
   studioPrimaryButton,
   studioSectionDesc,
   studioSectionTitle,
+  studioSelect,
+  studioSelectChevron,
   studioStepLabel,
+  studioWarningPanel,
 } from "@/lib/studioUi";
 import { syncFootieScript } from "@/lib/voiceover";
 import type { FootieScript } from "@/types/footiebitz";
@@ -37,6 +46,7 @@ import type { FootieScript } from "@/types/footiebitz";
 interface ExportPanelProps {
   script: FootieScript;
   disabled?: boolean;
+  compact?: boolean;
 }
 
 interface ChecklistItem {
@@ -47,7 +57,7 @@ interface ChecklistItem {
 
 type ExportState = ExportProgress["status"] | "idle";
 
-export default function ExportPanel({ script, disabled = false }: ExportPanelProps) {
+export default function ExportPanel({ script, disabled = false, compact = false }: ExportPanelProps) {
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [progress, setProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
@@ -142,45 +152,47 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
   };
 
   return (
-    <div className="space-y-7">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80">
-            <Film className="h-4.5 w-4.5 text-zinc-400" strokeWidth={1.75} />
+    <div className={compact ? "space-y-5" : "space-y-7"}>
+      {!compact ? (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className={studioIconBox}>
+              <Film className="h-4.5 w-4.5 text-accent" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className={studioStepLabel}>Step 6</p>
+              <h2 className={studioSectionTitle}>Export</h2>
+              <p className={studioSectionDesc}>Render a vertical 9:16 WebM from your timeline.</p>
+            </div>
           </div>
-          <div>
-            <p className={studioStepLabel}>Step 6</p>
-            <h2 className={studioSectionTitle}>Export</h2>
-            <p className={studioSectionDesc}>Render a vertical 9:16 WebM from your timeline.</p>
-          </div>
+          <span className={`${studioBadge} self-start`}>
+            <span className="font-semibold text-foreground/90">{readyCount}/{checklist.length}</span>
+            <span className="text-muted">checks</span>
+          </span>
         </div>
-        <span className={`${studioBadge} self-start`}>
-          <span className="font-semibold text-zinc-300">{readyCount}/{checklist.length}</span>
-          <span className="text-zinc-600">checks</span>
-        </span>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted">Pre-export checklist</p>
+          <span className={`${studioBadge} shrink-0`}>
+            <span className="font-semibold text-foreground/90">{readyCount}/{checklist.length}</span>
+          </span>
+        </div>
+      )}
 
       <ul className="space-y-2">
         {checklist.map((item) => (
-          <li
-            key={item.label}
-            className={`flex items-start gap-3 rounded-xl border px-4 py-3.5 transition-colors ${
-              item.done
-                ? "border-zinc-700/80 bg-zinc-900/50"
-                : "border-zinc-800/80 bg-zinc-950/40"
-            }`}
-          >
+          <li key={item.label} className={studioChecklistItem(item.done)}>
             {item.done ? (
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
             ) : (
-              <Circle className="mt-0.5 h-5 w-5 shrink-0 text-zinc-700" />
+              <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
             )}
             <div className="min-w-0 flex-1">
-              <p className={`text-sm font-medium ${item.done ? "text-zinc-200" : "text-zinc-400"}`}>
+              <p className={`text-sm font-medium ${item.done ? "text-foreground/90" : "text-muted"}`}>
                 {item.label}
               </p>
               {item.detail && (
-                <p className="mt-0.5 truncate text-xs text-zinc-600">{item.detail}</p>
+                <p className="mt-0.5 truncate text-xs text-muted">{item.detail}</p>
               )}
             </div>
           </li>
@@ -188,7 +200,7 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
       </ul>
 
       {!allImagesUploaded && sceneCount > 0 && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3.5">
+        <div className={`${studioWarningPanel} flex items-start gap-3`}>
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
           <div>
             <p className="text-sm font-medium text-amber-100/90">Missing scene images</p>
@@ -201,11 +213,11 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
       )}
 
       {isExporting && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
+        <div className={`${studioGlass} p-5`}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
-              <span className="text-sm font-medium text-zinc-200">
+              <Loader2 className="h-4 w-4 animate-spin text-accent" />
+              <span className="text-sm font-medium text-foreground/90">
                 {exportState === "preparing" && "Preparing export..."}
                 {exportState === "rendering" && `Rendering video (${progress}%)`}
                 {exportState === "loading-voiceover" && "Loading narration"}
@@ -213,18 +225,18 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
                 {exportState === "finalizing" && "Finalizing file..."}
               </span>
             </div>
-            <span className="text-sm font-semibold text-zinc-400">{progress}%</span>
+            <span className="text-sm font-semibold text-muted">{progress}%</span>
           </div>
-          <div className="h-1 overflow-hidden rounded-full bg-zinc-800">
+          <div className="h-1 overflow-hidden rounded-full bg-surface-elevated">
             <div
-              className="h-full rounded-full bg-zinc-500 transition-all duration-300"
+              className="h-full rounded-full bg-accent/70 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
           {exportMessage && (
-            <p className="mt-3 text-xs text-zinc-600">{exportMessage}</p>
+            <p className="mt-3 text-xs text-muted">{exportMessage}</p>
           )}
-          <p className="mt-2 text-[11px] text-zinc-600">
+          <p className="mt-2 text-[11px] text-muted">
             {exportWithNarration
               ? "Rendering follows your scene timeline, then narration is merged in-browser. Keep this tab open."
               : `Rendering follows your scene timeline (~${totalDuration}s). Keep this tab open.`}
@@ -232,26 +244,22 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
         </div>
       )}
 
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-4">
+      <div className={`${studioPanel}`}>
         <label
-          className={`mb-4 flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
-            !hasNarration ? "cursor-not-allowed opacity-50" : ""
-          } ${
-            includeNarration && hasNarration
-              ? "border-violet-900/50 bg-violet-950/20"
-              : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-700"
-          } ${isBusy ? "cursor-not-allowed opacity-50" : ""}`}
+          className={`${studioOptionRow(includeNarration && hasNarration)} mb-4 ${
+            !hasNarration || isBusy ? "cursor-not-allowed opacity-50" : ""
+          }`}
         >
           <input
             type="checkbox"
             checked={includeNarration}
             onChange={(e) => setIncludeNarrationPreference(e.target.checked)}
             disabled={isBusy || !hasNarration}
-            className="mt-1 accent-violet-500"
+            className="mt-1 accent-accent"
           />
           <span>
-            <span className="block text-sm font-medium text-zinc-200">Include Narration</span>
-            <span className="mt-0.5 block text-xs text-zinc-600">
+            <span className="block text-sm font-medium text-foreground/90">Include Narration</span>
+            <span className="mt-0.5 block text-xs text-muted">
               {hasNarration
                 ? "Muxes narration into the final WebM export"
                 : "Create narration in step 4 first"}
@@ -259,7 +267,7 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
           </span>
         </label>
 
-        <label htmlFor="export-quality" className="mb-2 block text-sm font-medium text-zinc-300">
+        <label htmlFor="export-quality" className={studioLabel}>
           Export Quality
         </label>
         <div className="relative mb-4">
@@ -273,7 +281,7 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
               }
             }}
             disabled={isBusy}
-            className={`${studioInput} appearance-none pr-10`}
+            className={studioSelect}
           >
             {EXPORT_QUALITY_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -281,11 +289,11 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
+          <ChevronDown className={studioSelectChevron} />
         </div>
 
         {showAudioMergeNote && (
-          <p className="mb-4 text-xs leading-relaxed text-zinc-600">
+          <p className="mb-4 text-xs leading-relaxed text-muted">
             Narration merge can take longer for 1080p or higher exports.
           </p>
         )}
@@ -308,9 +316,9 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
             </>
           )}
         </button>
-        <p className="mt-3 text-center text-[11px] text-zinc-600">
+        <p className="mt-3 text-center text-[11px] text-muted">
           Download{" "}
-          <span className="text-zinc-500">
+          <span className="text-muted">
             {exportWithNarration
               ? "footiebitz-with-narration.webm"
               : `footiebitz-${selectedQuality.id}.webm`}
@@ -321,14 +329,14 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
       </div>
 
       {exportState === "done" && exportMessage && (
-        <div className="flex items-start gap-3 rounded-xl border border-zinc-700/80 bg-zinc-900/50 px-4 py-3.5">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-zinc-400" />
-          <p className="text-sm leading-relaxed text-zinc-300">{exportMessage}</p>
+        <div className={`${studioPanel} flex items-start gap-3`}>
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          <p className="text-sm leading-relaxed text-foreground/90">{exportMessage}</p>
         </div>
       )}
 
       {exportWarning && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3.5">
+        <div className={`${studioWarningPanel} flex items-start gap-3`}>
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
           <div>
             <p className="text-sm font-medium text-amber-100/90">Narration merge failed</p>
@@ -341,8 +349,8 @@ export default function ExportPanel({ script, disabled = false }: ExportPanelPro
       )}
 
       {errorMessage && (
-        <div className="rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-3.5">
-          <p className="text-sm leading-relaxed text-red-300">{errorMessage}</p>
+        <div className={studioError}>
+          <p className="text-sm leading-relaxed">{errorMessage}</p>
         </div>
       )}
     </div>

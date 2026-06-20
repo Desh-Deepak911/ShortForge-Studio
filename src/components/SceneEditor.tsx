@@ -1,37 +1,52 @@
 "use client";
 
 import {
-  ArrowDown,
-  ArrowUp,
+  ArrowLeftRight,
   ChevronRight,
   Clock,
-  Copy,
-  ImagePlus,
   Layers,
   PlusCircle,
   SkipBack,
   SkipForward,
-  Trash2,
-  Timer,
   Workflow,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import SceneStoryboardCard from "@/components/SceneStoryboardCard";
+import TransitionConnector from "@/components/TransitionConnector";
+
 import {
   createEmptyScene,
   duplicateScene,
-  recalculateSceneTimings,
 } from "@/lib/timeline";
 import {
+  ensureTimelineItems,
+  getSceneFromTimeline,
+  getTransitionsFromTimeline,
+  isTransitionTimelineItem,
+} from "@/lib/timelineItems";
+import {
   studioBadge,
-  studioInput,
-  studioSecondaryButton,
+  studioCompactButton,
+  studioFieldLabel,
+  studioPanel,
   studioSectionDesc,
   studioSectionTitle,
+  studioStatBar,
   studioStepLabel,
+  studioSubtleText,
 } from "@/lib/studioUi";
-import { syncFootieScript } from "@/lib/voiceover";
-import type { FootieScene, FootieScript, SceneType } from "@/types/footiebitz";
+import {
+  applySceneUpdate,
+  applyScenesUpdate,
+  applyTransitionUpdate,
+} from "@/lib/voiceover";
+import type {
+  FootieScene,
+  FootieScript,
+  SceneType,
+  TransitionEffect,
+} from "@/types/footiebitz";
 
 const SCENE_TYPE_OPTIONS: { value: SceneType; label: string }[] = [
   { value: "intro", label: "Intro" },
@@ -46,33 +61,44 @@ interface SceneEditorProps {
   onScriptChange: (script: FootieScript) => void;
   /** Index of the scene currently selected in the preview (used for Add Transition). */
   selectedSceneIndex?: number;
+  variant?: "default" | "storyboard";
 }
 
 function isBlobUrl(url: string) {
   return url.startsWith("blob:");
 }
 
-function formatTimeRange(start: number, end: number): string {
-  return `${start}s – ${end}s`;
-}
-
-export default function SceneEditor({ script, onScriptChange, selectedSceneIndex }: SceneEditorProps) {
+export default function SceneEditor({
+  script,
+  onScriptChange,
+  selectedSceneIndex,
+  variant = "default",
+}: SceneEditorProps) {
   const managedBlobUrls = useRef<Set<string>>(new Set());
 
   const scenes = script.scenes;
+  const timelineItems = ensureTimelineItems(scenes, script.timelineItems);
   const totalDuration = script.totalDuration;
+  const transitionCount = getTransitionsFromTimeline(timelineItems).length;
   const uploadedCount = scenes.filter((s) => s.uploadedImage).length;
   const uploadProgress = scenes.length
     ? Math.round((uploadedCount / scenes.length) * 100)
     : 0;
 
-  // Commit an updated scene array — recalculates timings then syncs voiceover state.
+  // Commit an updated scene array — recalculates timings then syncs timeline state.
   const commitScenes = (next: FootieScene[]) => {
-    onScriptChange(syncFootieScript({ ...script, scenes: recalculateSceneTimings(next) }));
+    onScriptChange(applyScenesUpdate(script, next));
   };
 
   const updateScene = (id: string, patch: Partial<FootieScene>) => {
-    commitScenes(scenes.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    onScriptChange(applySceneUpdate(script, id, patch));
+  };
+
+  const updateTransition = (
+    id: string,
+    patch: { effect?: TransitionEffect; durationMs?: number },
+  ) => {
+    onScriptChange(applyTransitionUpdate(script, id, patch));
   };
 
   // ── Quick buffer scene inserts ───────────────────────────────────────────────
@@ -192,22 +218,38 @@ export default function SceneEditor({ script, onScriptChange, selectedSceneIndex
     };
   }, []);
 
+  const isStoryboard = variant === "storyboard";
+
   return (
-    <div className="space-y-7">
+    <div className={isStoryboard ? "space-y-4 sm:space-y-6" : "space-y-5 sm:space-y-7"}>
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className={studioStepLabel}>Step 3</p>
-          <h2 className={studioSectionTitle}>Production Timeline</h2>
-          <p className={studioSectionDesc}>
-            Adjust timing, subtitles, and images. Add, remove, or reorder scenes freely.
-          </p>
+          <p className={studioStepLabel}>{isStoryboard ? "Timeline" : "Step 3"}</p>
+          <h2 className={studioSectionTitle}>
+            {isStoryboard ? "Scene timeline" : "Production Timeline"}
+          </h2>
+          {!isStoryboard ? (
+            <p className={studioSectionDesc}>
+              Adjust timing, subtitles, and images. Add, remove, or reorder scenes freely.
+            </p>
+          ) : (
+            <p className={studioSectionDesc}>
+              Scenes stack vertically — adjust timing, subtitles, images, and transitions.
+            </p>
+          )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span className={studioBadge}>
             <Layers className="h-3.5 w-3.5" />
             {scenes.length} {scenes.length === 1 ? "scene" : "scenes"}
           </span>
+          {transitionCount > 0 && (
+            <span className={studioBadge}>
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              {transitionCount} {transitionCount === 1 ? "transition" : "transitions"}
+            </span>
+          )}
           <span className={studioBadge}>
             <Clock className="h-3.5 w-3.5" />
             {totalDuration}s
@@ -216,41 +258,48 @@ export default function SceneEditor({ script, onScriptChange, selectedSceneIndex
       </div>
 
       {/* ── Helper note ── */}
-      <div className="space-y-1.5 rounded-xl border border-zinc-800/60 bg-zinc-950/30 px-4 py-3.5 text-xs leading-relaxed text-zinc-500">
-        <p>
-          FootieBitz creates a first draft timeline. You can add intro, context, transition, or
-          ending scenes to better match your narration.
-        </p>
-        <p className="text-zinc-600">
-          Visual scenes do not change the narration. They control when images and subtitles appear.
-        </p>
-      </div>
-
-      {/* ── Quick buffer inserts ── */}
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Workflow className="h-3.5 w-3.5 text-zinc-600" />
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-600">
-            Quick add
+      {isStoryboard ? (
+        <details className={`${studioPanel} group`}>
+          <summary className={`${studioSubtleText} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+            <span className="font-medium text-foreground/80">About the timeline</span>
+            <span className="ml-2 text-muted/80 group-open:hidden">· Show tips</span>
+          </summary>
+          <div className={`${studioSubtleText} mt-3 space-y-1.5`}>
+            <p>
+              FootieBitz creates a first draft timeline. Add intro, context, transition, or ending
+              scenes to better match your narration.
+            </p>
+            <p>
+              Visual scenes do not change the narration. Transitions between scenes are visual only.
+            </p>
+          </div>
+        </details>
+      ) : (
+        <div className={`${studioPanel} space-y-1.5 ${studioSubtleText}`}>
+          <p>
+            FootieBitz creates a first draft timeline. You can add intro, context, transition, or
+            ending scenes to better match your narration.
+          </p>
+          <p>
+            Visual scenes do not change the narration. They control when images and subtitles appear.
+            Transitions between scenes are visual only — no narration or media required.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={addIntroBuffer}
-            title="Insert a 3s intro scene at the beginning"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200"
-          >
+      )}
+
+      {/* ── Quick buffer inserts ── */}
+      <div className={studioPanel}>
+        <div className="mb-2.5 flex items-center gap-2 sm:mb-3">
+          <Workflow className="h-3.5 w-3.5 text-muted" />
+          <p className={`${studioFieldLabel} mb-0`}>Quick add</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          <button type="button" onClick={addIntroBuffer} title="Insert a 3s intro scene at the beginning" className={studioCompactButton}>
             <SkipBack className="h-3.5 w-3.5" />
             Add Intro Buffer
           </button>
 
-          <button
-            type="button"
-            onClick={addContextBuffer}
-            title="Insert a 4s context scene after the first scene"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200"
-          >
+          <button type="button" onClick={addContextBuffer} title="Insert a 4s context scene after the first scene" className={studioCompactButton}>
             <PlusCircle className="h-3.5 w-3.5" />
             Add Context Buffer
           </button>
@@ -263,18 +312,13 @@ export default function SceneEditor({ script, onScriptChange, selectedSceneIndex
                 ? `Insert a 2s transition after scene ${selectedSceneIndex + 1}`
                 : "Insert a 2s transition at the end"
             }
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200"
+            className={studioCompactButton}
           >
             <ChevronRight className="h-3.5 w-3.5" />
             Add Transition
           </button>
 
-          <button
-            type="button"
-            onClick={addEndingBuffer}
-            title="Append a 4s ending scene at the end"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200"
-          >
+          <button type="button" onClick={addEndingBuffer} title="Append a 4s ending scene at the end" className={studioCompactButton}>
             <SkipForward className="h-3.5 w-3.5" />
             Add Ending
           </button>
@@ -282,273 +326,72 @@ export default function SceneEditor({ script, onScriptChange, selectedSceneIndex
       </div>
 
       {/* ── Total timeline duration ── */}
-      <div className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-4 py-3">
-        <span className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-          <Clock className="h-4 w-4 text-zinc-500" />
+      <div className={`${studioStatBar} flex items-center justify-between`}>
+        <span className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+          <Clock className="h-4 w-4 text-muted" />
           Total timeline
         </span>
-        <span className="font-mono text-sm font-semibold text-zinc-200">
+        <span className="font-mono text-sm font-semibold text-foreground/90">
           {totalDuration}s
         </span>
       </div>
 
       {/* ── Upload progress ── */}
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-4">
+      <div className={`${studioStatBar} p-4`}>
         <div className="mb-2 flex items-center justify-between text-xs">
-          <span className="font-medium text-zinc-500">Images uploaded</span>
-          <span className="text-amber-400/90">
+          <span className="font-medium text-muted">Images uploaded</span>
+          <span className="text-accent">
             {uploadedCount}/{scenes.length}
           </span>
         </div>
-        <div className="h-1 overflow-hidden rounded-full bg-zinc-800">
+        <div className="h-1 overflow-hidden rounded-full bg-surface-elevated">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-amber-700/80 to-amber-500/70 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-accent/55 to-accent/35 transition-all duration-500"
             style={{ width: `${uploadProgress}%` }}
           />
         </div>
       </div>
 
-      {/* ── Scene list ── */}
-      <div className="relative space-y-0">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute bottom-4 left-[1.125rem] top-4 w-px bg-gradient-to-b from-zinc-700 via-zinc-800 to-transparent"
-        />
+      {/* ── Timeline list ── */}
+      <div className="flex min-w-0 flex-col gap-4 sm:gap-5 lg:gap-6">
+        {timelineItems.map((item) => {
+          if (isTransitionTimelineItem(item)) {
+            return (
+              <TransitionConnector
+                key={item.id}
+                item={item}
+                onUpdate={(patch) => updateTransition(item.id, patch)}
+              />
+            );
+          }
 
-        {scenes.map((scene, index) => (
-          <article key={scene.id} className="relative pb-7 last:pb-0">
-            <div className="flex gap-4">
-              {/* ── Step bubble ── */}
-              <div className="relative z-10 flex w-9 shrink-0 flex-col items-center pt-5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-xs font-semibold text-zinc-300 ring-4 ring-zinc-950">
-                  {index + 1}
-                </span>
-              </div>
+          const scene =
+            getSceneFromTimeline(timelineItems, item.scene.id) ??
+            scenes.find((entry) => entry.id === item.scene.id) ??
+            item.scene;
+          const index = scenes.findIndex((s) => s.id === scene.id);
+          if (index < 0) return null;
 
-              {/* ── Scene card ── */}
-              <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950/40">
-                {/* Card header */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm font-medium text-zinc-200">Scene {index + 1}</p>
-                    {scene.sceneType && (
-                      <span className="rounded-full border border-zinc-800 bg-zinc-900/60 px-2.5 py-0.5 text-[11px] font-medium capitalize text-zinc-500">
-                        {scene.sceneType}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 font-mono text-xs text-zinc-500">
-                    <Timer className="h-3.5 w-3.5 text-zinc-600" />
-                    <span>{formatTimeRange(scene.start, scene.end)}</span>
-                    <span className="rounded-full border border-zinc-800 bg-zinc-900/60 px-2 py-0.5 text-[11px]">
-                      {scene.duration}s
-                    </span>
-                  </div>
-                </div>
-
-                {/* Editable fields */}
-                <div className="space-y-5 p-5">
-                  <div className="grid gap-5 sm:grid-cols-[120px_140px_1fr]">
-                    <div>
-                      <label
-                        htmlFor={`duration-${scene.id}`}
-                        className="mb-2 block text-sm font-medium text-zinc-300"
-                      >
-                        Duration
-                      </label>
-                      <input
-                        id={`duration-${scene.id}`}
-                        type="number"
-                        min={1}
-                        max={20}
-                        value={scene.duration}
-                        onChange={(e) => {
-                          const raw = Number(e.target.value);
-                          const clamped = Math.min(20, Math.max(1, Math.round(raw)));
-                          updateScene(scene.id, {
-                            duration: Number.isFinite(raw) && raw > 0 ? clamped : scene.duration,
-                          });
-                        }}
-                        className={studioInput}
-                      />
-                      <p className="mt-1.5 text-[11px] text-zinc-600">1 – 20 seconds</p>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`scene-type-${scene.id}`}
-                        className="mb-2 block text-sm font-medium text-zinc-300"
-                      >
-                        Scene type
-                      </label>
-                      <div className="relative">
-                        <select
-                          id={`scene-type-${scene.id}`}
-                          value={scene.sceneType ?? ""}
-                          onChange={(e) =>
-                            updateScene(scene.id, {
-                              sceneType: e.target.value ? (e.target.value as SceneType) : undefined,
-                            })
-                          }
-                          className={`${studioInput} appearance-none pr-8`}
-                        >
-                          <option value="">—</option>
-                          {SCENE_TYPE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronRight className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-90 text-zinc-600" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor={`subtitle-${scene.id}`}
-                        className="mb-2 block text-sm font-medium text-zinc-300"
-                      >
-                        Subtitle
-                      </label>
-                      <textarea
-                        id={`subtitle-${scene.id}`}
-                        value={scene.subtitle}
-                        onChange={(e) => updateScene(scene.id, { subtitle: e.target.value })}
-                        rows={2}
-                        placeholder="On-screen text for this scene"
-                        className={`${studioInput} resize-none`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Image upload */}
-                  <div>
-                    <p className="mb-3 text-sm font-medium text-zinc-300">Image</p>
-
-                    {scene.uploadedImage ? (
-                      <div className="space-y-3">
-                        <div className="group relative overflow-hidden rounded-xl border border-zinc-800">
-                          <img
-                            src={scene.uploadedImage}
-                            alt={`Scene ${index + 1} preview`}
-                            className="aspect-[9/16] max-h-72 w-full object-cover transition duration-300 group-hover:scale-[1.01] sm:aspect-[16/10] sm:max-h-none"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition group-hover:opacity-100" />
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <label className={`${studioSecondaryButton} cursor-pointer`}>
-                            <ImagePlus className="h-4 w-4" />
-                            Replace Image
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                handleImageUpload(scene.id, e.target.files?.[0] ?? null);
-                                e.target.value = "";
-                              }}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => removeImage(scene.id)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-950/50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Remove Image
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-950/30 px-6 py-10 text-center transition hover:border-zinc-600 hover:bg-zinc-900/40">
-                        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 transition group-hover:border-zinc-700">
-                          <ImagePlus className="h-5 w-5 text-zinc-500" />
-                        </div>
-                        <p className="text-sm font-medium text-zinc-300">Upload image</p>
-                        <p className="mt-1 text-xs text-zinc-600">PNG, JPG, or WEBP · 9:16 recommended</p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            handleImageUpload(scene.id, e.target.files?.[0] ?? null);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  {/* ── Scene action toolbar ── */}
-                  <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800/60 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => addBefore(index)}
-                      title="Insert a new scene before this one"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200"
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" />
-                      Add Before
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => addAfter(index)}
-                      title="Insert a new scene after this one"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200"
-                    >
-                      <ChevronRight className="h-3.5 w-3.5" />
-                      Add After
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => duplicate(index)}
-                      title="Duplicate this scene"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      Duplicate
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => moveUp(index)}
-                      disabled={index === 0}
-                      title="Move scene up"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-35"
-                    >
-                      <ArrowUp className="h-3.5 w-3.5" />
-                      Move Up
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => moveDown(index)}
-                      disabled={index === scenes.length - 1}
-                      title="Move scene down"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800/70 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-35"
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                      Move Down
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteScene(index)}
-                      disabled={scenes.length <= 1}
-                      title={scenes.length <= 1 ? "Cannot delete the only scene" : "Delete scene"}
-                      className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-900/40 bg-red-950/20 px-3 py-1.5 text-xs font-medium text-red-400/90 transition hover:border-red-900/70 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-35"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
+          return (
+            <div key={item.id} className="relative">
+              <SceneStoryboardCard
+                scene={scene}
+                index={index}
+                sceneCount={scenes.length}
+                onUpdate={(patch) => updateScene(scene.id, patch)}
+                onImageUpload={(file) => handleImageUpload(scene.id, file)}
+                onRemoveImage={() => removeImage(scene.id)}
+                onAddBefore={() => addBefore(index)}
+                onAddAfter={() => addAfter(index)}
+                onDuplicate={() => duplicate(index)}
+                onMoveUp={() => moveUp(index)}
+                onMoveDown={() => moveDown(index)}
+                onDelete={() => deleteScene(index)}
+                sceneTypeOptions={SCENE_TYPE_OPTIONS}
+              />
             </div>
-          </article>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -1,28 +1,113 @@
 @import "tailwindcss";
 
+/* ── FootieBitz creative studio palette ─────────────────────────────────── */
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --surface: #18181b;
-  --surface-raised: #1c1c1f;
+  --background: #0b0c10;
+  --surface: #111318;
+  --surface-elevated: #181b22;
   --border: rgba(255, 255, 255, 0.08);
-  --muted: #71717a;
+  --foreground: #f8fafc;
+  --muted: #b4b4be;
+  --muted-foreground: #9494a3;
+  --accent: #5b8cff;
+  --accent-soft: rgba(91, 140, 255, 0.15);
+  --accent-purple: #7c6bf0;
+  --accent-purple-soft: rgba(124, 107, 240, 0.12);
+  --glass: rgba(17, 19, 24, 0.72);
+  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.28);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: rgb(255 255 255 / 0.08);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-soft: rgb(91 140 255 / 0.15);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-purple-soft: rgb(124 107 240 / 0.12);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-studio: 1rem;
+  --radius-studio-lg: 1.25rem;
+  --radius-studio-xl: 1.5rem;
 }
 
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 80% 55% at 50% -25%, rgba(91, 140, 255, 0.09), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 100% 0%, rgba(124, 107, 240, 0.07), transparent 52%),
+    radial-gradient(ellipse 40% 35% at 0% 100%, rgba(91, 140, 255, 0.04), transparent 50%);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 ::selection {
-  background: rgba(167, 139, 250, 0.25);
+  background: rgba(91, 140, 255, 0.28);
   color: #fff;
+}
+
+/* ── Studio shell utilities ───────────────────────────────────────────────── */
+.studio-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.glass-panel {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-inset), var(--shadow-soft);
+}
+
+#studio-brief,
+#studio-export,
+#studio-preview,
+#studio-timeline {
+  scroll-margin-top: 4.5rem;
+}
+
+/* ── Studio shimmer skeleton ──────────────────────────────────────────────── */
+@keyframes studio-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.studio-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.07) 45%,
+    rgba(255, 255, 255, 0.02) 90%
+  );
+  background-size: 200% 100%;
+  animation: studio-shimmer 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-shimmer {
+    animation: none;
+    background-image: none;
+    background-color: rgba(255, 255, 255, 0.04);
+  }
 }

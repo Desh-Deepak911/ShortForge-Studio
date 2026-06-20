@@ -14,11 +14,41 @@ export interface FootieScene {
   uploadedImage?: string;
 }
 
+export type TransitionEffect =
+  | "cut"
+  | "fade"
+  | "slide-left"
+  | "slide-right"
+  | "zoom-in"
+  | "blur";
+
+/** A scene entry in the production timeline. */
+export interface SceneTimelineItem {
+  id: string;
+  type: "scene";
+  scene: FootieScene;
+}
+
+/** A transition between two scenes — app-side only, no AI generation. */
+export interface TransitionTimelineItem {
+  id: string;
+  type: "transition";
+  fromSceneId: string;
+  toSceneId: string;
+  effect: TransitionEffect;
+  durationMs: number;
+  label: string;
+}
+
+export type TimelineItem = SceneTimelineItem | TransitionTimelineItem;
+
 export interface FootieScript {
   title: string;
   totalDuration: number;
   narration: string;
   scenes: FootieScene[];
+  /** Interleaved scene + transition items. Omitted in legacy stories — auto-built on sync. */
+  timelineItems?: TimelineItem[];
   voiceoverUrl?: string;
 }
 

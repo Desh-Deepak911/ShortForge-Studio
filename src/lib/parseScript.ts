@@ -1,4 +1,5 @@
 import { getStoryTotalDuration, normalizeSceneTiming } from "@/lib/sceneTiming";
+import { ensureTimelineItems, normalizeSceneIds } from "@/lib/timelineItems";
 import type { FootieScene, FootieScript } from "@/types/footiebitz";
 
 type RawScene = {
@@ -138,10 +139,8 @@ function resolveTotalDuration(scenes: FootieScene[]): number {
 }
 
 export function normalizeFootieStory(story: FootieScript): FootieScript {
-  // Spread the full scene so fields like sceneType / uploadedImage are preserved.
-  // start/end are placeholders — normalizeSceneTiming recomputes them.
   const scenes = normalizeSceneTiming(
-    story.scenes.map((scene) => ({ ...scene, start: 0, end: 0 })),
+    normalizeSceneIds(story.scenes ?? []).map((scene) => ({ ...scene, start: 0, end: 0 })),
   );
 
   return {
@@ -149,6 +148,7 @@ export function normalizeFootieStory(story: FootieScript): FootieScript {
     narration: story.narration.trim(),
     totalDuration: getStoryTotalDuration(scenes),
     scenes,
+    timelineItems: ensureTimelineItems(scenes, story.timelineItems),
     ...(story.voiceoverUrl ? { voiceoverUrl: story.voiceoverUrl } : {}),
   };
 }
@@ -182,5 +182,6 @@ export function parseFootieScript(text: string): FootieScript {
     narration: parsed.narration.trim(),
     totalDuration,
     scenes,
+    timelineItems: ensureTimelineItems(scenes),
   };
 }

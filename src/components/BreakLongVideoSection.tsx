@@ -11,7 +11,18 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { studioCard, studioSecondaryButton, studioStepLabel } from "@/lib/studioUi";
+import {
+  studioBadge,
+  studioCard,
+  studioFieldLabel,
+  studioIconBox,
+  studioPanel,
+  studioSecondaryButton,
+  studioSectionTitle,
+  studioStepLabel,
+  studioSubtleText,
+  studioUploadZone,
+} from "@/lib/studioUi";
 
 const COMING_SOON_MESSAGE =
   "Coming soon: FootieBitz will extract audio, detect key moments, and create multiple shorts from one upload.";
@@ -62,21 +73,21 @@ export default function BreakLongVideoSection() {
     <section className={studioCard}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80">
-            <Scissors className="h-4.5 w-4.5 text-zinc-500" strokeWidth={1.75} />
+          <div className={studioIconBox}>
+            <Scissors className="h-4.5 w-4.5 text-muted" strokeWidth={1.75} />
           </div>
           <div>
             <p className={studioStepLabel}>Coming soon</p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-50">
+            <h2 className={studioSectionTitle}>
               Break Long Video into Shorts
             </h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">
+            <p className="mt-1.5 text-sm leading-relaxed text-muted">
               Upload a full match or podcast clip and turn highlights into multiple vertical
               shorts.
             </p>
           </div>
         </div>
-        <span className="self-start rounded-full border border-zinc-800 bg-zinc-900/50 px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+        <span className={`${studioBadge} self-start uppercase tracking-wide`}>
           Preview
         </span>
       </div>
@@ -84,13 +95,11 @@ export default function BreakLongVideoSection() {
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div>
-            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-600">
-              Source video
-            </p>
+            <p className={`${studioFieldLabel} mb-3`}>Source video</p>
 
             {videoUrl ? (
               <div className="space-y-3">
-                <div className="overflow-hidden rounded-xl border border-zinc-800 bg-black">
+                <div className="overflow-hidden rounded-2xl bg-black ring-1 ring-border/30">
                   <video
                     src={videoUrl}
                     controls
@@ -100,7 +109,7 @@ export default function BreakLongVideoSection() {
                   </video>
                 </div>
                 {videoName && (
-                  <p className="truncate text-xs text-zinc-600">{videoName}</p>
+                  <p className="truncate text-xs text-muted">{videoName}</p>
                 )}
                 <label className={`${studioSecondaryButton} cursor-pointer`}>
                   <Upload className="h-4 w-4" />
@@ -117,12 +126,12 @@ export default function BreakLongVideoSection() {
                 </label>
               </div>
             ) : (
-              <label className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-950/30 px-6 py-12 text-center transition hover:border-zinc-600 hover:bg-zinc-900/40">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 transition group-hover:border-zinc-700">
-                  <Upload className="h-5 w-5 text-zinc-500" />
+              <label className={studioUploadZone}>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-elevated ring-1 ring-border/25">
+                  <Upload className="h-5 w-5 text-muted" />
                 </div>
-                <p className="text-sm font-medium text-zinc-300">Upload a video file</p>
-                <p className="mt-1.5 text-xs text-zinc-600">MP4, MOV, or WEBM · processed in your browser</p>
+                <p className="text-sm font-medium text-foreground/90">Upload a video file</p>
+                <p className="mt-1.5 text-xs text-muted">MP4, MOV, or WEBM · processed in your browser</p>
                 <input
                   type="file"
                   accept="video/*"
@@ -140,41 +149,39 @@ export default function BreakLongVideoSection() {
             type="button"
             onClick={() => setAnalyzeMessage(COMING_SOON_MESSAGE)}
             disabled={!videoUrl}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/50 px-6 py-3 text-sm font-semibold text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800/60 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className={`${studioSecondaryButton} w-full sm:w-auto`}
           >
             <Wand2 className="h-4 w-4" strokeWidth={1.75} />
             Analyze Video
           </button>
 
           {analyzeMessage && (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3.5">
-              <p className="text-sm leading-relaxed text-zinc-400">{analyzeMessage}</p>
+            <div className={`${studioPanel} text-sm leading-relaxed text-muted`}>
+              <p>{analyzeMessage}</p>
             </div>
           )}
         </div>
 
         <div>
-          <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-600">
-            Future pipeline
-          </p>
+          <p className={`${studioFieldLabel} mb-4`}>Future pipeline</p>
           <ol className="space-y-2">
             {PIPELINE_STEPS.map((item) => {
               const Icon = item.icon;
               return (
                 <li
                   key={item.step}
-                  className="flex items-center gap-3 rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-4 py-3"
+                  className={`${studioPanel} flex items-center gap-3`}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/60 text-xs font-medium text-zinc-500">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surface-elevated/60 text-xs font-medium text-muted ring-1 ring-border/25">
                     {item.step}
                   </span>
-                  <Icon className="h-4 w-4 shrink-0 text-zinc-700" />
-                  <span className="text-sm font-medium text-zinc-400">{item.title}</span>
+                  <Icon className="h-4 w-4 shrink-0 text-muted" />
+                  <span className="text-sm font-medium text-muted">{item.title}</span>
                 </li>
               );
             })}
           </ol>
-          <p className="mt-4 text-[11px] leading-relaxed text-zinc-600">
+          <p className={`${studioSubtleText} mt-4`}>
             Video analysis will run client-side or via dedicated APIs in a future release.
           </p>
         </div>

@@ -3,13 +3,20 @@
 import type { FootieScene, FootieScript, SceneType } from "@/types/footiebitz";
 
 export * from "@/lib/exportVideo.shared";
+export * from "@/lib/exportPayload";
 
 import { getSceneIndexForTime } from "@/lib/sceneTiming";
+import {
+  assertExportPayload,
+  buildFootieExportPayload,
+  countExportTransitions,
+  getRenderableScenesFromPayload,
+  type FootieExportPayload,
+} from "@/lib/exportPayload";
 
 import {
   DEFAULT_EXPORT_QUALITY,
   getExportQualityPreset,
-  getScriptVideoDuration,
   type ExportProgress,
   type ExportQualityPreset,
   type FootieExportOptions,
@@ -247,10 +254,19 @@ export async function exportSilentVideoBlob(
   script: FootieScript,
   qualityPreset: ExportQualityPreset,
   onProgress?: (progress: ExportProgress) => void,
+  payloadOverride?: FootieExportPayload,
 ): Promise<Blob> {
   assertBrowserExportEnvironment();
 
-  if (script.scenes.length === 0) {
+  const payload = payloadOverride ?? buildFootieExportPayload(script);
+  assertExportPayload(payload);
+
+  // Transitions are included in the payload for future renderers.
+  // Scene-only export ignores them until renderTransitions is enabled.
+  const scenes = getRenderableScenesFromPayload(payload);
+  const transitionCount = countExportTransitions(payload);
+
+  if (scenes.length === 0) {
     throw new Error("No scenes to export");
   }
 
@@ -263,7 +279,10 @@ export async function exportSilentVideoBlob(
   onProgress?.({
     status: "preparing",
     progress: 0,
-    message: `Preparing ${label} export (${width}×${height} @ ${fps}fps)...`,
+    message:
+      transitionCount > 0
+        ? `Preparing ${label} export (${width}×${height} @ ${fps}fps) · ${transitionCount} transitions queued`
+        : `Preparing ${label} export (${width}×${height} @ ${fps}fps)...`,
   });
 
   const canvas = document.createElement("canvas");
@@ -276,7 +295,7 @@ export async function exportSilentVideoBlob(
   }
 
   const imageCache = new Map<string, HTMLImageElement>();
-  for (const scene of script.scenes) {
+  for (const scene of scenes) {
     if (scene.uploadedImage) {
       try {
         const img = await loadImage(scene.uploadedImage);
@@ -296,7 +315,7 @@ export async function exportSilentVideoBlob(
     if (event.data.size > 0) chunks.push(event.data);
   };
 
-  const totalDurationSec = getScriptVideoDuration(script);
+  const totalDurationSec = payload.totalDuration;
   const totalFrames = Math.max(1, Math.round(totalDurationSec * fps));
   const frameMs = 1000 / fps;
   let renderedFrames = 0;
@@ -306,8 +325,8 @@ export async function exportSilentVideoBlob(
 
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
     const timeSec = frameIndex / fps;
-    const sceneIndex = getSceneIndexForTime(timeSec, script.scenes);
-    const scene = script.scenes[sceneIndex];
+    const sceneIndex = getSceneIndexForTime(timeSec, scenes);
+    const scene = scenes[sceneIndex];
     const image = imageCache.get(scene.id) ?? null;
 
     drawSceneFrame(ctx, width, height, script, scene, image);
@@ -345,25 +364,26 @@ export async function exportFootieShort(
 ): Promise<void> {
   assertBrowserExportEnvironment();
 
+  const payload = buildFootieExportPayload(script);
   const quality = getExportQualityPreset(options.qualityId ?? DEFAULT_EXPORT_QUALITY);
   const includeNarration =
-    options.audioMode === "with-voice" && Boolean(script.voiceoverUrl);
+    options.audioMode === "with-voice" && Boolean(payload.voiceoverUrl);
 
   const silentBlob = await exportSilentVideoBlob(script, quality, (update) => {
     onProgress(mapRenderingProgress(update, includeNarration));
-  });
+  }, payload);
 
   let finalBlob = silentBlob;
   let filename = `footiebitz-${quality.id}.webm`;
 
-  if (includeNarration && script.voiceoverUrl) {
+  if (includeNarration && payload.voiceoverUrl) {
     onProgress({
       status: "loading-voiceover",
       progress: 72,
       message: "Loading narration",
     });
 
-    const audioBlob = await fetchNarrationBlob(script.voiceoverUrl);
+    const audioBlob = await fetchNarrationBlob(payload.voiceoverUrl);
 
     onProgress({
       status: "combining",
@@ -374,7 +394,7 @@ export async function exportFootieShort(
     try {
       const { muxVideoWithAudio } = await import("@/lib/ffmpegClient");
       finalBlob = await muxVideoWithAudio(silentBlob, audioBlob, {
-        videoDurationSec: getScriptVideoDuration(script),
+        videoDurationSec: payload.totalDuration,
         onProgress: (muxPercent) => {
           onProgress({
             status: "combining",

@@ -1,14 +1,21 @@
 "use client";
 
-import { ChevronDown, Loader2, Mic } from "lucide-react";
+import { ChevronDown, Mic } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { revokeBlobUrl } from "@/lib/blobUrl";
 import {
-  studioInput,
+  studioActionButton,
+  studioError,
+  studioGlass,
+  studioLabel,
   studioSectionDesc,
   studioSectionTitle,
+  studioSelect,
+  studioSelectChevron,
   studioStepLabel,
+  studioSubtleText,
+  studioSuccessPanel,
 } from "@/lib/studioUi";
 import { syncFootieScript } from "@/lib/voiceover";
 import {
@@ -21,12 +28,14 @@ interface NarrationPanelProps {
   script: FootieScript;
   onScriptChange: (script: FootieScript) => void;
   disabled?: boolean;
+  compact?: boolean;
 }
 
 export default function NarrationPanel({
   script,
   onScriptChange,
   disabled = false,
+  compact = false,
 }: NarrationPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -123,32 +132,36 @@ export default function NarrationPanel({
   const isBusy = loading || disabled;
 
   return (
-    <div className="space-y-7">
-      <div>
-        <p className={studioStepLabel}>Step 4</p>
-        <h2 className={studioSectionTitle}>Narration</h2>
-        <p className={studioSectionDesc}>
-          Turn your story narration into spoken audio for preview and export.
-        </p>
-      </div>
+    <div className={compact ? "space-y-4 sm:space-y-5" : "space-y-6 sm:space-y-7"}>
+      {!compact ? (
+        <div>
+          <p className={studioStepLabel}>Step 4</p>
+          <h2 className={studioSectionTitle}>Narration</h2>
+          <p className={studioSectionDesc}>
+            Turn your story narration into spoken audio for preview and export.
+          </p>
+        </div>
+      ) : null}
 
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-4 py-3.5">
-        <p className="text-xs leading-relaxed text-zinc-500">
-          FootieBitz will read the full narration while scenes change in sequence.
-        </p>
-      </div>
+      {!compact ? (
+        <div className={studioGlass}>
+          <p className={studioSubtleText}>
+            FootieBitz will read the full narration while scenes change in sequence.
+          </p>
+        </div>
+      ) : null}
 
       <div>
-        <label htmlFor="narration-voice" className="mb-2 block text-sm font-medium text-zinc-300">
+        <label htmlFor="narration-voice" className={studioLabel}>
           Narrator voice
         </label>
-        <div className="relative max-w-xs">
+        <div className="relative w-full">
           <select
             id="narration-voice"
             value={voice}
             onChange={(e) => setVoice(e.target.value as VoiceoverVoiceOption)}
             disabled={isBusy}
-            className={`${studioInput} appearance-none pr-10 capitalize`}
+            className={`${studioSelect} capitalize`}
           >
             {VOICEOVER_VOICE_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -156,7 +169,7 @@ export default function NarrationPanel({
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
+          <ChevronDown className={studioSelectChevron} />
         </div>
       </div>
 
@@ -164,24 +177,19 @@ export default function NarrationPanel({
         type="button"
         onClick={handleCreateNarration}
         disabled={isBusy || !narrationText}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-900/60 bg-violet-950/40 px-4 py-3 text-sm font-semibold text-violet-200 transition hover:border-violet-800 hover:bg-violet-950/60 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        className={`${studioActionButton} w-full`}
       >
-        {loading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Creating narration...
-          </>
-        ) : (
-          <>
-            <Mic className="h-4 w-4" strokeWidth={1.75} />
-            {script.voiceoverUrl ? "Recreate Narration" : "Create Narration"}
-          </>
-        )}
+        <Mic className="h-4 w-4" strokeWidth={1.75} />
+        {loading
+          ? "Creating narration..."
+          : script.voiceoverUrl
+            ? "Recreate Narration"
+            : "Create Narration"}
       </button>
 
       {script.voiceoverUrl && (
-        <div className="rounded-xl border border-violet-900/40 bg-violet-950/20 p-4">
-          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-violet-400/80">
+        <div className={studioSuccessPanel}>
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
             Audio preview
           </p>
           <audio controls src={script.voiceoverUrl} className="w-full" preload="metadata">
@@ -191,8 +199,8 @@ export default function NarrationPanel({
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-3">
-          <p className="text-xs leading-relaxed text-red-300">{error}</p>
+        <div className={studioError}>
+          <p className="text-xs leading-relaxed">{error}</p>
         </div>
       )}
     </div>
