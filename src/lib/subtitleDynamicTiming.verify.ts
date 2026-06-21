@@ -11,7 +11,7 @@ import {
 } from "@/features/export/services";
 import { resolveExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
 import { getPreviewSceneTiming } from "@/features/preview/utils/previewSceneTiming";
-import type { FootieScene, FootieScript } from "@/features/story/types";
+import type { FootieScene } from "@/features/story/types";
 import {
   getSceneTimingAtGlobalTime,
   getSubtitleChunkDurationMs,

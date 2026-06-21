@@ -453,8 +453,12 @@ export function usePreviewPlayback({
     };
   }, [script?.voiceoverUrl, stopVoice, syncSceneToAudioTime]);
 
+  const backgroundMusic = script?.backgroundMusic;
+
   useEffect(() => {
-    const musicUrl = resolvePreviewBackgroundMusicUrl(script);
+    const musicUrl = resolvePreviewBackgroundMusicUrl(
+      backgroundMusic ? ({ backgroundMusic } as FootieScript) : null,
+    );
     if (!musicUrl) {
       backgroundMusicAudioRef.current = null;
       return;
@@ -472,12 +476,7 @@ export function usePreviewPlayback({
         backgroundMusicAudioRef.current = null;
       }
     };
-  }, [
-    script?.backgroundMusic?.enabled,
-    script?.backgroundMusic?.source,
-    script?.backgroundMusic?.fileUrl,
-    script?.backgroundMusic?.trackId,
-  ]);
+  }, [backgroundMusic]);
 
   useEffect(() => {
     return () => {

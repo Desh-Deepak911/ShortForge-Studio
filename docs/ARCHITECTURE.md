@@ -1,8 +1,37 @@
 # Architecture
 
-FootieBitz is a single-page Next.js studio for creating vertical football documentary shorts. The application is organized into three major layers — **Generation**, **Editing**, and **Rendering** — that operate on a shared in-memory story model (`FootieScript`).
+FootieBitz is a multi-route Next.js application for creating vertical football documentary shorts. The product shell exposes four main pages — landing, create, editor, and drafts — while the technical core remains three layers: **Generation**, **Editing**, and **Rendering**, all operating on a shared story model (`FootieScript`).
 
-AI work runs on server API routes. All editing, preview, and export run in the browser. There is no database; story state lives in React until the page is refreshed.
+AI work runs on server API routes. Editing, preview, export, and **draft persistence (MVP)** run in the browser. There is no database and no authentication today. Draft JSON is stored in **localStorage** under a single app key; opening `/editor/[draftId]` hydrates React state from that store without calling generation again.
+
+**Planned (not shipped):** cloud-backed drafts and user accounts — see [ROADMAP.md](../ROADMAP.md) Phase 5.
+
+---
+
+## Product routes
+
+| Route | Page | Purpose |
+|-------|------|---------|
+| `/` | `src/app/page.tsx` + `LandingPage` | Marketing — product overview, links to `/create` and `/drafts` |
+| `/create` | `src/app/create/page.tsx` + `CreateStoryFlow` | Story brief → `POST /api/generate-script` → `createDraft()` → redirect `/editor/[draftId]` |
+| `/editor/[draftId]` | `src/app/editor/[draftId]/page.tsx` + `DraftEditorFlow` | Load draft via `getDraft(draftId)`; timeline, preview, export; **Save Draft** |
+| `/drafts` | `src/app/drafts/page.tsx` + `DraftsDashboard` | List drafts (`listDrafts()`), open or delete |
+
+```mermaid
+flowchart LR
+  L["/ Landing"]
+  C["/create"]
+  E["/editor/draftId"]
+  D["/drafts"]
+  LS[(localStorage)]
+  L --> C
+  L --> D
+  C -->|generate + createDraft| E
+  D -->|open| E
+  E -->|Save Draft| LS
+  D -->|list / delete| LS
+  E -->|load| LS
+```
 
 ---
 
@@ -19,79 +48,109 @@ flowchart TB
   end
 
   subgraph Client["Browser (React)"]
-    Brief["StoryComposer"]
-    Editor["TimelineEditor + SceneCard"]
+    Create["CreateStoryFlow"]
+    Editor["DraftEditorFlow / StoryWorkspace"]
     Preview["VideoPreview"]
     Export["exportFootieShort"]
+    Drafts["draft-storage.service"]
     State["FootieScript state"]
-    Brief --> State
+    Create --> State
     State --> Editor
     State --> Preview
     State --> Export
+    Editor -->|Save Draft| Drafts
+    Drafts -->|getDraft| Editor
   end
 
-  Brief -->|POST| API
+  Create -->|POST| API
   Editor -->|POST| VO
-  API -->|FootieScript + MP3| State
-  VO -->|MP3 blob| State
+  API -->|FootieScript + MP3| Create
+  VO -->|MP3 blob| Editor
 ```
 
 ---
 
 ## Current data flow
 
-The end-to-end path from user input to downloaded video:
+The end-to-end path from landing to saved draft to export:
 
 ```
-Prompt
+Landing (/)
   ↓
-Story
+Create (/create) → Generate → createDraft → Editor (/editor/[draftId])
+  ↓                                              ↓
+Save Draft → localStorage                    Preview → Export
   ↓
-Voiceover
-  ↓
-Editor
-  ↓
-Preview
-  ↓
-Export
+Drafts (/drafts) → reopen editor
 ```
 
 ### Step-by-step
 
 | Stage | What happens | Key code |
 |-------|--------------|----------|
-| **Prompt** | User enters topic, tone, duration, scene count, quality mode in `StoryComposer` | `src/components/StoryComposer.tsx`, `src/app/page.tsx` |
+| **Landing** | Marketing page; links to create or drafts | `src/app/page.tsx`, `src/components/LandingPage.tsx` |
+| **Create prompt** | User enters topic, tone, duration, scene count, quality on `/create` | `CreateStoryFlow`, `StoryComposer` |
 | **Story** | Server generates title + continuous narration via OpenAI | `script-generation.service.ts`, `lib/ai/prompts.ts` |
 | **Voiceover** | Server synthesizes MP3 from narration; duration measured from audio | `voiceover.service.ts` |
 | **Story (scenes)** | Server plans timed scenes fitted to voiceover length | `scene-planning.service.ts`, `audio-first-generation.service.ts` |
-| **Editor** | Client receives `FootieScript`; user edits scenes, images, captions, transitions | `StoryWorkspace`, `TimelineEditor`, `lib/voiceover.ts` |
-| **Preview** | React playback with narration-synced clock | `VideoPreview`, `PreviewFrame`, `usePreviewPlayback` |
-| **Export** | Canvas frame loop + optional FFmpeg.wasm audio mux | `video-render.service.ts`, `ffmpeg.utils.ts` |
+| **Draft created** | Client calls `createDraft(script)` → redirect `/editor/[draftId]` | `draft-storage.service.ts`, `CreateStoryFlow` |
+| **Editor load** | `getDraft(draftId)` hydrates React state; **no AI on open** | `DraftEditorFlow`, `StoryWorkspace` |
+| **Editor edits** | User edits scenes, images, captions, transitions | `TimelineEditor`, `lib/voiceover.ts` |
+| **Save Draft** | `serializeEditorStateForDraft()` → `updateDraft()` → localStorage | `draft-serialization.utils.ts`, `AppShell` |
+| **Preview** | React playback with narration-synced clock | `VideoPreview`, `usePreviewPlayback` |
+| **Export** | Canvas frame loop + optional FFmpeg mux | `video-render.service.ts`, `ffmpeg.utils.ts` |
+| **Drafts** | `listDrafts()` dashboard; open or delete | `DraftsDashboard`, `/drafts` |
 
 ```mermaid
 sequenceDiagram
   participant User
-  participant Page as page.tsx
+  participant Create as /create
   participant API as /api/generate-script
-  participant Pipeline as audio-first-generation
-  participant Editor as StoryWorkspace
+  participant Store as localStorage
+  participant Editor as /editor/draftId
   participant Preview as VideoPreview
   participant Export as exportFootieShort
 
-  User->>Page: Submit prompt (topic, tone, duration)
-  Page->>API: POST generate-script
-  API->>Pipeline: generateAudioFirstStory()
-  Pipeline-->>API: FootieScript + voiceover MP3
-  API-->>Page: JSON response (+ base64 audio)
-  Page->>Page: createVoiceoverBlobUrl(), syncFootieScript()
-  Page->>Editor: FootieScript state
-  Editor->>Preview: Same FootieScript (read)
-  User->>Preview: Play with narration
-  User->>Export: Render WebM
-  Export->>Export: buildFootieExportPayload() → canvas frames
+  User->>Create: Submit prompt
+  Create->>API: POST generate-script
+  API-->>Create: FootieScript + voiceover MP3
+  Create->>Store: createDraft()
+  Create->>Editor: redirect
+  Editor->>Store: getDraft(draftId)
+  Store-->>Editor: Draft.script
+  User->>Editor: Edit timeline
+  User->>Editor: Save Draft
+  Editor->>Store: updateDraft()
+  Editor->>Preview: Same FootieScript
+  User->>Export: Render MP4
 ```
 
-After generation, every consumer reads the same `FootieScript` object held in `page.tsx` React state. Updates flow through `applyStoryUpdate()` → `syncFootieScript()` before reaching preview and export.
+After generation, the editor holds `FootieScript` in React state. **Save Draft** persists to localStorage; reload or reopen from `/drafts` rehydrates from storage. Updates flow through `applyStoryUpdate()` → `syncFootieScript()` before reaching preview and export.
+
+---
+
+## Draft persistence (MVP)
+
+Drafts are the product's project model. Each draft wraps a canonical `FootieScript` plus metadata (id, title, prompt preview, timestamps, status).
+
+| Concern | Implementation |
+|---------|----------------|
+| Storage | Browser **localStorage**, key `footiebitz:drafts:v1` |
+| Create | After successful generation on `/create` |
+| Save | Manual **Save Draft** button in `AppShell` (no autosave yet) |
+| Load | `getDraft(draftId)` when `/editor/[draftId]` mounts |
+| List / delete | `/drafts` via `listDrafts()`, `deleteDraft()` |
+
+**Module:** `src/features/drafts/` — types, `draft-storage.service.ts`, `draft-serialization.utils.ts`, `DraftEditorFlow`, `DraftsDashboard`.
+
+**Limitations (today):**
+
+- Drafts are **local to this browser** — no sync across devices or browsers
+- Clearing site data removes all drafts
+- **Blob URLs** (voiceover MP3, uploaded images, background music) are not durably stored; they may break after a full page reload until IndexedDB or cloud media ships
+- **No authentication** — anyone with access to the browser profile can read drafts
+
+**Planned:** Cloud drafts tied to user accounts (Phase 5). Not implemented.
 
 ---
 
@@ -424,21 +483,35 @@ Overlay window: final N ms of outgoing scene (`clampOverlayTransitionDurationMs(
 ```
 footiebitz/src/
 ├── app/
-│   ├── page.tsx                      # Studio root — FootieScript state
+│   ├── page.tsx                      # Landing (/)
+│   ├── create/page.tsx               # Story generation (/create)
+│   ├── editor/[draftId]/page.tsx     # Editor (/editor/[draftId])
+│   ├── drafts/page.tsx               # Draft dashboard (/drafts)
 │   ├── layout.tsx
 │   └── api/
 │       ├── generate-script/route.ts  # Audio-first generation
 │       └── generate-voiceover/route.ts
 │
-├── components/                       # Studio shell (not feature-specific)
-│   ├── StoryComposer.tsx             # Prompt UI
+├── components/                       # Shell, landing, composer, workspace
+│   ├── LandingPage.tsx
+│   ├── StoryComposer.tsx             # Prompt UI (used on /create)
 │   ├── StoryWorkspace.tsx            # Post-generation layout
+│   ├── layout/AppShell.tsx           # Header incl. Save Draft
 │   ├── StoryReview.tsx
 │   ├── NarrationPanel.tsx
 │   ├── ExportPanel.tsx
 │   └── VoiceSettingsCard.tsx
 │
 ├── features/
+│   ├── drafts/                       # Draft model + localStorage
+│   │   ├── types/
+│   │   ├── services/draft-storage.service.ts
+│   │   ├── utils/draft-serialization.utils.ts
+│   │   └── components/               # DraftEditorFlow, DraftsDashboard
+│   │
+│   ├── create/                       # /create orchestration
+│   │   └── components/CreateStoryFlow.tsx
+│   │
 │   ├── story/                        # Domain model + generation + shared utils
 │   │   ├── types/                    # FootieScript, FootieScene, TimelineItem
 │   │   ├── services/                 # AI pipelines (server-only)
@@ -448,30 +521,17 @@ footiebitz/src/
 │   │   └── components/
 │   │       ├── TimelineEditor.tsx
 │   │       ├── SceneCard.tsx
-│   │       ├── SceneFrameImage.tsx
-│   │       ├── TransitionCard.tsx
-│   │       └── …controls
+│   │       └── …
 │   │
 │   ├── preview/                      # Layer 3 — preview renderer
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   └── utils/
-│   │
 │   └── export/                       # Layer 3 — export renderer
-│       ├── services/
-│       │   ├── video-render.service.ts
-│       │   └── export-payload.service.ts
-│       └── utils/
-│           ├── export-caption-canvas.utils.ts
-│           ├── export-transition-canvas.utils.ts
-│           └── ffmpeg.utils.ts
 │
 ├── lib/
 │   ├── ai/                           # Prompts, schema, OpenAI client
 │   ├── voiceover.ts                  # syncFootieScript, applyStoryUpdate
-│   └── generateScriptStream.ts       # NDJSON streaming client
+│   └── *.verify.ts                   # Regression tests
 │
-├── hooks/                            # useFrameSize, useDragScrollLock, …
+├── hooks/
 └── types/
     └── footiebitz.ts                 # API request/response types
 ```
@@ -484,11 +544,13 @@ footiebitz/src/
 |---------|----------|
 | OpenAI API calls | Server (`features/story/services/`, marked `server-only`) |
 | `OPENAI_API_KEY` | Server environment only |
-| `FootieScript` state | Client React state (`page.tsx`) |
-| Image blob URLs | Client (file upload) |
+| `FootieScript` state | Client React state (editor routes) |
+| Draft JSON persistence | Client **localStorage** (`draft-storage.service.ts`) |
+| Image / audio blob URLs | Client (file upload, voiceover response) |
 | Preview rendering | Client React |
 | Export rendering | Client Canvas + MediaRecorder |
 | FFmpeg.wasm | Client (dynamic import) |
+| User accounts / cloud drafts | **Not implemented** (planned Phase 5) |
 
 ---
 

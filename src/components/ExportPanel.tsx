@@ -9,7 +9,7 @@ import {
   Film,
   Loader2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   buildExportDownloadFileName,
@@ -52,6 +52,8 @@ interface ExportPanelProps {
   script: FootieScript;
   disabled?: boolean;
   compact?: boolean;
+  /** Called when export settings change so drafts can persist them on save. */
+  onExportSettingsChange?: (settings: ExportSettings) => void;
 }
 
 interface ChecklistItem {
@@ -66,6 +68,7 @@ export default function ExportPanel({
   script,
   disabled = false,
   compact = false,
+  onExportSettingsChange,
 }: ExportPanelProps) {
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [progress, setProgress] = useState(0);
@@ -73,21 +76,38 @@ export default function ExportPanel({
   const [exportWarning, setExportWarning] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [includeNarrationPreference, setIncludeNarrationPreference] = useState(true);
-  const [exportSettings, setExportSettings] = useState<ExportSettings>(() =>
-    resolveExportSettings(script),
+  const baseExportSettings = useMemo((): ExportSettings => {
+    const next = resolveExportSettings(script);
+    return !isWebmExportAvailable() && next.format === "webm"
+      ? { ...next, format: "mp4" as const }
+      : next;
+  }, [script]);
+
+  const scriptSettingsKey = useMemo(
+    () => `${script.title}|${JSON.stringify(script.exportSettings ?? null)}`,
+    [script.title, script.exportSettings],
   );
 
-  useEffect(() => {
-    const next = resolveExportSettings(script);
-    setExportSettings(
-      !isWebmExportAvailable() && next.format === "webm"
-        ? { ...next, format: "mp4" }
-        : next,
-    );
-  }, [script.title, script.exportSettings]);
+  const [userExportSettings, setUserExportSettings] = useState<{
+    key: string;
+    settings: ExportSettings;
+  } | null>(null);
+
+  const exportSettings = useMemo(() => {
+    if (userExportSettings?.key === scriptSettingsKey) {
+      return userExportSettings.settings;
+    }
+    return baseExportSettings;
+  }, [baseExportSettings, userExportSettings, scriptSettingsKey]);
 
   const updateExportSettings = (patch: Partial<ExportSettings>) => {
-    setExportSettings((current) => ({ ...current, ...patch }));
+    setUserExportSettings((current) => {
+      const base =
+        current?.key === scriptSettingsKey ? current.settings : baseExportSettings;
+      const next = { ...base, ...patch };
+      onExportSettingsChange?.(next);
+      return { key: scriptSettingsKey, settings: next };
+    });
   };
 
   const effectiveExportSettings = useMemo(

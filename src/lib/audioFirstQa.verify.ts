@@ -16,7 +16,6 @@ import {
   attachSceneNarrationFromScript,
   getStoryTotalDuration,
   resolveVoiceoverDurationMs,
-  splitNarrationEvenlyBySceneCount,
 } from "@/features/story/utils";
 import { syncFootieScript } from "@/lib/voiceover";
 import { GENERATION_LOADING_STEPS, resolveSceneCount } from "@/types/footiebitz";

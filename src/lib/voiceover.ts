@@ -32,7 +32,6 @@ import {
 import { getStoryTotalDuration } from "@/features/story/utils";
 import type { FootieScene, FootieScript, SceneImage, StoryVoiceSettings } from "@/features/story/types";
 import {
-  DEFAULT_VOICEOVER_VOICE,
   resolveVoiceoverSpeed,
   resolveVoiceoverVoice,
 } from "@/lib/voiceoverOptions";

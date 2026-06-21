@@ -24,7 +24,7 @@ import {
   studioWorkspacePanel,
   studioWorkspaceSection,
 } from "@/lib/studioUi";
-import type { FootieScript } from "@/features/story/types";
+import type { ExportSettings, FootieScript } from "@/features/story/types";
 
 interface StoryWorkspaceProps {
   script: FootieScript;
@@ -32,6 +32,7 @@ interface StoryWorkspaceProps {
   selectedSceneIndex: number;
   onSelectedSceneChange: (index: number) => void;
   onScrollToExport: () => void;
+  onExportSettingsChange?: (settings: ExportSettings) => void;
 }
 
 function WorkspacePanel({
@@ -67,6 +68,7 @@ export default function StoryWorkspace({
   selectedSceneIndex,
   onSelectedSceneChange,
   onScrollToExport,
+  onExportSettingsChange,
 }: StoryWorkspaceProps) {
   const scrollToPreview = () => {
     document.getElementById("studio-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -141,7 +143,11 @@ export default function StoryWorkspace({
             </WorkspacePanel>
 
             <WorkspacePanel id="studio-export" step="Export" title="Export video">
-              <ExportPanel script={script} compact />
+              <ExportPanel
+                script={script}
+                compact
+                onExportSettingsChange={onExportSettingsChange}
+              />
             </WorkspacePanel>
           </aside>
         </div>

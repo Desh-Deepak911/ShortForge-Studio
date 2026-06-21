@@ -31,23 +31,42 @@ The core studio is live. Creators can go from a football topic to a finished ver
 - ✔ Preview — interactive 9:16 playback with narration sync
 - ✔ Export — downloadable vertical video at 720p–4K with optional narration
 
+### Product shell and drafts (local)
+
+- ✔ Landing page (`/`) — marketing entry with links to create or open drafts
+- ✔ Create flow (`/create`) — story brief and generation; redirects to editor on success
+- ✔ Editor route (`/editor/[draftId]`) — loads a saved draft; no AI call on open
+- ✔ Draft dashboard (`/drafts`) — list, open, and delete saved stories
+- ✔ **Save Draft** — manual persistence of full `FootieScript` to **localStorage** (this browser only)
+
+**Current limitation:** Drafts do not sync across devices or browsers. Blob URLs (voiceover, uploads, background music) may not survive a full page reload until durable media storage ships.
+
 ---
 
 ## Next
 
----
+**Phase 1 (remaining):** autosave, durable blob media across reload, and cross-session reliability — still **local-browser** until Phase 5.
 
-## Phase 1 — Projects and entry points
+---
+## Phase 1 — Projects and entry points (partial)
 
 **Goal:** Creators can leave and return without losing work. FootieBitz feels like a product with a front door, not a single session.
 
-- **Draft system** — every story saved as a named, retrievable project
-- **Landing page** — clear value proposition and entry for new creators
-- **`/editor/:draftId`** — deep-linkable editor for a specific project
-- **`/create` page** — focused flow for starting a new short from a brief
-- **Autosave** — continuous save so refresh, crash, or tab close never loses progress
+**Shipped (local-browser MVP):**
 
-**Outcome:** Creators build a library of works-in-progress and return to them across sessions and devices.
+- ✔ Landing page (`/`)
+- ✔ `/create` — focused flow for starting a new short from a brief
+- ✔ `/editor/[draftId]` — deep-linkable editor for a specific project
+- ✔ `/drafts` — dashboard of saved stories
+- ✔ Draft system — localStorage-backed projects with manual **Save Draft**
+
+**Still planned in Phase 1:**
+
+- **Autosave** — continuous save so refresh, crash, or tab close never loses progress
+- **Durable media** — voiceover and uploads that survive full page reload (IndexedDB or similar)
+- **Cross-session reliability** — stronger recovery when localStorage or blob state is incomplete
+
+**Outcome (today):** Creators build a library of works-in-progress and return to them **in the same browser**. Cross-device access requires Phase 5 (cloud + auth).
 
 ---
 
@@ -106,18 +125,21 @@ The core studio is live. Creators can go from a football topic to a finished ver
 
 ---
 
-## Phase 5 — Accounts, cloud, and publishing
+## Phase 5 — Accounts, cloud, and publishing *(not implemented)*
 
-**Goal:** FootieBitz becomes a daily production home — projects persist, teams collaborate, posts go live.
+**Goal:** FootieBitz becomes a daily production home — projects persist beyond one browser, teams collaborate, posts go live.
 
-### Authentication
+> **Status:** Authentication and cloud-backed drafts are **planned only**. Today's drafts live in localStorage with no sign-in.
+
+### Authentication *(planned)*
 
 - Individual accounts with projects synced across devices
 - Team and organisation accounts with roles and permissions
 - Secure sign-in suitable for clubs and media outlets
 
-### Cloud storage
+### Cloud storage *(planned)*
 
+- **Cloud drafts** — story JSON and metadata stored server-side, tied to an account
 - Durable media library — images and voiceover survive beyond a single browser session
 - Central asset folders reusable across projects
 - Reliable delivery for preview and export at any project size
@@ -137,12 +159,12 @@ The core studio is live. Creators can go from a football topic to a finished ver
 
 | Phase | Theme | Creator promise |
 |-------|--------|-----------------|
-| **Completed** | Core studio | Topic → narrated vertical short in one session |
-| **Phase 1** | Projects | Come back tomorrow; your work is still here |
+| **Completed** | Core studio + local drafts | Topic → narrated short; save and reopen in this browser |
+| **Phase 1 (remaining)** | Local persistence polish | Autosave and media that survives reload |
 | **Phase 2** | Generation | Smarter first drafts; refine without restarting |
 | **Phase 3** | Editing | Pro timeline control; story-first trust preserved |
 | **Phase 4** | Rendering | Preview it, ship it — same result, any platform |
-| **Phase 5** | Platform | Account, library, team, publish |
+| **Phase 5** | Platform *(planned)* | Sign-in, cloud drafts, team, publish |
 
 ---
 

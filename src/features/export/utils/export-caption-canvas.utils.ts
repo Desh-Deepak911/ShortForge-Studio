@@ -347,14 +347,8 @@ function drawActiveChunkLines(
 }
 
 /** Draws bottom-centered export subtitles for the single active chunk. */
-export function drawExportSubtitlesCaption({
-  ctx,
-  width,
-  height,
-  subtitleY,
-  scale,
-  display,
-}: DrawExportSubtitlesCaptionOptions): void {
+export function drawExportSubtitlesCaption(options: DrawExportSubtitlesCaptionOptions): void {
+  const { ctx, width, subtitleY, scale, display } = options;
   prepareExportSubtitleLayer(ctx);
 
   if (!display.activeChunk.trim()) {

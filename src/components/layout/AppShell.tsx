@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, PenLine, Plus } from "lucide-react";
+import { Download, PenLine, Plus, Save } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
@@ -24,6 +25,12 @@ interface AppShellProps {
   onExport: () => void;
   createDisabled?: boolean;
   exportDisabled?: boolean;
+  /** When true, show a Drafts link in the header. */
+  showDraftsNav?: boolean;
+  /** Manual draft save — shown in editor header when provided. */
+  onSaveDraft?: () => void;
+  saveDraftDisabled?: boolean;
+  saveDraftConfirmation?: string | null;
 }
 
 export default function AppShell({
@@ -36,13 +43,17 @@ export default function AppShell({
   onExport,
   createDisabled = false,
   exportDisabled = false,
+  showDraftsNav = true,
+  onSaveDraft,
+  saveDraftDisabled = false,
+  saveDraftConfirmation,
 }: AppShellProps) {
   return (
     <div className="relative z-10 flex min-h-screen min-w-0 flex-col overflow-x-hidden">
       <header className={studioHeader}>
         <div className={`${hasProject ? studioShellContainerWide : studioShellContainer} flex h-11 min-w-0 items-center gap-2 sm:h-[3.25rem] sm:gap-4`}>
           {/* Brand */}
-          <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
             <div
               className={`${studioIconBox} h-8 w-8 shrink-0 sm:h-9 sm:w-9 shadow-[0_0_20px_rgba(91,140,255,0.1)]`}
             >
@@ -54,7 +65,7 @@ export default function AppShell({
               </p>
               <p className="hidden text-[11px] text-muted sm:block">Short-form studio</p>
             </div>
-          </div>
+          </Link>
 
           {/* Project context — desktop / tablet */}
           {hasProject && projectTitle ? (
@@ -90,8 +101,35 @@ export default function AppShell({
 
           {/* Actions */}
           <div className="flex shrink-0 items-center gap-2">
+            {showDraftsNav ? (
+              <Link href="/drafts" className={`${studioNavExportButton} hidden sm:inline-flex`}>
+                Drafts
+              </Link>
+            ) : null}
             {hasProject ? (
               <>
+                {onSaveDraft ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onSaveDraft}
+                      disabled={saveDraftDisabled || loading}
+                      className={`${studioNavExportButton} hidden sm:inline-flex`}
+                    >
+                      <Save className="h-3.5 w-3.5" strokeWidth={1.75} />
+                      Save Draft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onSaveDraft}
+                      disabled={saveDraftDisabled || loading}
+                      aria-label="Save draft"
+                      className={`${studioNavExportButton} sm:hidden`}
+                    >
+                      <Save className="h-4 w-4" strokeWidth={1.75} />
+                    </button>
+                  </>
+                ) : null}
                 <button
                   type="button"
                   onClick={onExport}
@@ -135,6 +173,17 @@ export default function AppShell({
             )}
           </div>
         </div>
+        {saveDraftConfirmation ? (
+          <div
+            className={`${hasProject ? studioShellContainerWide : studioShellContainer} border-t border-border/15 py-2`}
+            role="status"
+            aria-live="polite"
+          >
+            <p className="text-center text-xs font-medium text-accent sm:text-left">
+              {saveDraftConfirmation}
+            </p>
+          </div>
+        ) : null}
       </header>
 
       <main
@@ -146,7 +195,7 @@ export default function AppShell({
       <footer className={studioFooter}>
         <div className={`${hasProject ? studioShellContainerWide : studioShellContainer} flex flex-col items-center justify-between gap-2 sm:flex-row`}>
           <p className="text-xs font-medium text-muted">FootieBitz</p>
-          <p className="text-[11px] text-muted">Football shorts · 9:16 · WebM</p>
+          <p className="text-[11px] text-muted">Football shorts · 9:16 · MP4</p>
         </div>
       </footer>
     </div>

@@ -33,7 +33,9 @@
     "test:export-settings": "tsx src/lib/exportSettings.verify.ts",
     "test:background-music": "tsx src/lib/backgroundMusic.verify.ts",
     "test:preview-background-music": "tsx src/lib/previewBackgroundMusic.verify.ts",
-    "test:export-background-music": "tsx src/lib/exportBackgroundMusic.verify.ts"
+    "test:export-background-music": "tsx src/lib/exportBackgroundMusic.verify.ts",
+    "test:drafts": "tsx src/lib/drafts.verify.ts",
+    "test:draft-reload-qa": "tsx src/lib/draftReloadQa.verify.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
