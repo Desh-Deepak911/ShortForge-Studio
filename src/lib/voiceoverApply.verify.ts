@@ -16,12 +16,13 @@ function test(name: string, fn: () => void) {
 
 console.log("voiceover apply");
 
-test("Apply Changes hook uses applyVoiceoverChanges", () => {
+test("Apply Changes hook uses applyVoiceoverRegeneration", () => {
   const hook = readFileSync(join(process.cwd(), "src/hooks/useStoryVoiceoverApply.ts"), "utf8");
-  assert.match(hook, /applyVoiceoverToStory/);
+  assert.match(hook, /applyVoiceoverRegeneration/);
   assert.match(hook, /narration: narrationText/);
   assert.match(hook, /restoreVoiceoverBaseline/);
-  assert.doesNotMatch(hook, /applyVoiceoverRegeneration/);
+  assert.match(hook, /getCanonicalVoiceover/);
+  assert.match(hook, /handleVoiceoverReplacement/);
 });
 
 test("Apply Changes UI shows loading and error states", () => {

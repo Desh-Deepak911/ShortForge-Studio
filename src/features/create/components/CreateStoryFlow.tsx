@@ -10,6 +10,7 @@ import StoryComposer from "@/components/StoryComposer";
 import StudioEmptyState from "@/components/StudioEmptyState";
 import StudioLoadingState from "@/components/StudioLoadingState";
 import { createDraft } from "@/features/drafts";
+import { getAudioEngine } from "@/features/audio";
 import { consumeGenerateScriptStream } from "@/lib/generateScriptStream";
 import { SAMPLE_TOPICS, WORKFLOW_STEPS } from "@/lib/studioConstants";
 import {
@@ -17,7 +18,7 @@ import {
   studioSectionTitle,
   studioStepLabel,
 } from "@/lib/studioUi";
-import { attachVoiceoverToScript, createVoiceoverBlobUrl, syncFootieScript } from "@/lib/voiceover";
+import { attachVoiceoverToScript, syncFootieScript } from "@/lib/voiceover";
 import type {
   GenerateScriptResponse,
   GenerationLoadingStep,
@@ -100,7 +101,7 @@ export default function CreateStoryFlow() {
 
       if (voiceoverBase64) {
         nextScript = attachVoiceoverToScript(nextScript, {
-          voiceoverUrl: createVoiceoverBlobUrl(voiceoverBase64),
+          voiceoverUrl: getAudioEngine().materializeVoiceoverBase64(voiceoverBase64),
           voiceoverDurationMs,
           voiceSettings: data.audioFirst?.voiceover?.metadata
             ? {

@@ -1,5 +1,7 @@
 export * from "./download.utils";
+export * from "./export-audio-input.utils";
 export * from "./export-background-music.utils";
+export * from "./export-path.utils";
 export * from "./export-settings.utils";
 export * from "./export-quality.utils";
 export * from "./export-subtitle.utils";

@@ -8,7 +8,6 @@ import {
   resolveExportBackgroundMusicBedVolume,
   resolveExportBackgroundMusicMixSettings,
 } from "@/features/export/utils/export-background-music.utils";
-import { PREVIEW_MUSIC_DUCKING_MULTIPLIER } from "@/features/preview/utils";
 import type { FootieScript } from "@/features/story/types";
 
 function test(name: string, fn: () => void) {
@@ -44,12 +43,9 @@ const scriptWithMusic: FootieScript = {
 
 console.log("exportBackgroundMusic");
 
-test("resolveExportBackgroundMusicBedVolume ducks under narration when enabled", () => {
+test("resolveExportBackgroundMusicBedVolume uses track volume without ducking", () => {
   const music = scriptWithMusic.backgroundMusic!;
-  assert.equal(
-    resolveExportBackgroundMusicBedVolume(music, true),
-    0.2 * PREVIEW_MUSIC_DUCKING_MULTIPLIER,
-  );
+  assert.equal(resolveExportBackgroundMusicBedVolume(music, true), 0.2);
   assert.equal(resolveExportBackgroundMusicBedVolume(music, false), 0.2);
 });
 
@@ -60,14 +56,17 @@ test("resolveExportBackgroundMusicMixSettings includes fade windows", () => {
   assert.equal(settings?.fadeOutSec, 2);
 });
 
-test("buildExportBackgroundMusicFilterChain applies volume and fades", () => {
+test("buildExportBackgroundMusicFilterChain applies volume without fades", () => {
   const settings = resolveExportBackgroundMusicMixSettings(scriptWithMusic, true)!;
   const chain = buildExportBackgroundMusicFilterChain(2, 12, settings, "music");
 
   assert.match(chain, /\[2:a\]/);
-  assert.match(chain, /volume=0\.0700/);
-  assert.match(chain, /afade=t=in:st=0:d=2/);
-  assert.match(chain, /afade=t=out:st=10\.000:d=2/);
+  assert.match(chain, /aresample=48000/);
+  assert.match(chain, /aformat=sample_fmts=fltp:channel_layouts=stereo/);
+  assert.match(chain, /atrim=0:12\.000/);
+  assert.match(chain, /apad=whole_dur=12\.000/);
+  assert.match(chain, /volume=0\.2000/);
+  assert.doesNotMatch(chain, /afade=/);
   assert.match(chain, /\[music\]$/);
 });
 

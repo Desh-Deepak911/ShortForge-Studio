@@ -1,3 +1,5 @@
+import { getAudioEngine } from "@/features/audio";
+
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -9,37 +11,9 @@ export function downloadBlob(blob: Blob, filename: string) {
 }
 
 export async function fetchNarrationBlob(voiceoverUrl: string): Promise<Blob> {
-  const response = await fetch(voiceoverUrl);
-  if (!response.ok) {
-    throw new Error("Failed to load narration audio");
-  }
-
-  const blob = await response.blob();
-  if (blob.size === 0) {
-    throw new Error("Narration audio is empty");
-  }
-
-  if (blob.type.includes("audio")) {
-    return blob;
-  }
-
-  return new Blob([await blob.arrayBuffer()], { type: "audio/mpeg" });
+  return getAudioEngine().fetchVoiceoverBlobByUrl(voiceoverUrl);
 }
 
 export async function fetchBackgroundMusicBlob(musicUrl: string): Promise<Blob> {
-  const response = await fetch(musicUrl);
-  if (!response.ok) {
-    throw new Error("Failed to load background music");
-  }
-
-  const blob = await response.blob();
-  if (blob.size === 0) {
-    throw new Error("Background music file is empty");
-  }
-
-  if (blob.type.includes("audio") || blob.type.includes("video/webm")) {
-    return blob;
-  }
-
-  return new Blob([await blob.arrayBuffer()], { type: "audio/mpeg" });
+  return getAudioEngine().fetchBackgroundMusicBlobByUrl(musicUrl);
 }

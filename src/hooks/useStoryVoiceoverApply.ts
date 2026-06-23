@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { getAudioEngine, getCanonicalVoiceover } from "@/features/audio";
 import { getStoryVoiceSettings } from "@/features/story/utils";
 import type { FootieScript } from "@/features/story/types";
-import { revokeBlobUrl } from "@/lib/blobUrl";
 import {
-  applyVoiceoverChanges as applyVoiceoverToStory,
+  applyVoiceoverRegeneration,
   resolveVoiceoverDurationFromBlob,
 } from "@/lib/voiceover";
 import { DEFAULT_VOICEOVER_VOICE } from "@/lib/voiceoverOptions";
@@ -19,9 +19,7 @@ function restoreVoiceoverBaseline(
     ...current,
     voiceoverUrl: baseline.voiceoverUrl,
     voiceoverDurationMs: baseline.voiceoverDurationMs,
-    totalDuration: baseline.totalDuration,
-    scenes: baseline.scenes,
-    timelineItems: baseline.timelineItems,
+    voiceSettings: baseline.voiceSettings,
   };
 }
 
@@ -31,7 +29,7 @@ export function useStoryVoiceoverApply(
 ) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const managedVoiceoverUrl = useRef<string | null>(null);
+  const audioEngine = useMemo(() => getAudioEngine(), []);
   const scriptRef = useRef(script);
 
   useEffect(() => {
@@ -39,19 +37,16 @@ export function useStoryVoiceoverApply(
   }, [script]);
 
   useEffect(() => {
-    const managedUrl = managedVoiceoverUrl.current;
     return () => {
-      revokeBlobUrl(managedUrl);
-      managedVoiceoverUrl.current = null;
+      audioEngine.releaseManagedVoiceoverUrls();
     };
-  }, []);
+  }, [audioEngine]);
 
   useEffect(() => {
-    if (!script.voiceoverUrl) {
-      revokeBlobUrl(managedVoiceoverUrl.current);
-      managedVoiceoverUrl.current = null;
+    if (!audioEngine.hasVoiceover(script)) {
+      audioEngine.releaseManagedVoiceoverUrls();
     }
-  }, [script.voiceoverUrl]);
+  }, [audioEngine, script]);
 
   const applyVoiceoverChanges = async () => {
     setError(null);
@@ -109,7 +104,7 @@ export function useStoryVoiceoverApply(
         ? blob
         : new Blob([await blob.arrayBuffer()], { type: "audio/mpeg" });
 
-      pendingVoiceoverUrl = URL.createObjectURL(audioBlob);
+      pendingVoiceoverUrl = audioEngine.materializeVoiceoverBlob(audioBlob);
 
       const headerDurationMs = Number(response.headers.get("X-Voiceover-Duration-Ms"));
       const voiceoverDurationMs =
@@ -117,32 +112,24 @@ export function useStoryVoiceoverApply(
           ? Math.round(headerDurationMs)
           : await resolveVoiceoverDurationFromBlob(audioBlob, narrationText);
 
-      const previousManagedUrl = managedVoiceoverUrl.current;
-      const previousVoiceoverUrl = baseline.voiceoverUrl;
+      const previousVoiceoverUrl = getCanonicalVoiceover(baseline)?.url;
 
       onScriptChange(
-        applyVoiceoverToStory(baseline, {
+        applyVoiceoverRegeneration(baseline, {
           voiceoverUrl: pendingVoiceoverUrl,
           voiceoverDurationMs,
           voiceSettings: { voice, speed },
         }),
       );
 
-      managedVoiceoverUrl.current = pendingVoiceoverUrl;
-      pendingVoiceoverUrl = null;
+      audioEngine.handleVoiceoverReplacement({
+        previousUrl: previousVoiceoverUrl,
+        nextUrl: pendingVoiceoverUrl,
+      });
 
-      if (previousManagedUrl && previousManagedUrl !== managedVoiceoverUrl.current) {
-        revokeBlobUrl(previousManagedUrl);
-      }
-      if (
-        previousVoiceoverUrl &&
-        previousVoiceoverUrl !== managedVoiceoverUrl.current &&
-        previousVoiceoverUrl !== previousManagedUrl
-      ) {
-        revokeBlobUrl(previousVoiceoverUrl);
-      }
+      pendingVoiceoverUrl = null;
     } catch (err) {
-      revokeBlobUrl(pendingVoiceoverUrl);
+      audioEngine.revokeVoiceoverUrl(pendingVoiceoverUrl);
 
       onScriptChange(restoreVoiceoverBaseline(scriptRef.current, baseline));
 

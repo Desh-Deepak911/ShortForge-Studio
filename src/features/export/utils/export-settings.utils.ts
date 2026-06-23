@@ -14,13 +14,13 @@ export interface ExportSettings {
   resolution: ExportResolution;
 }
 
-export const DEFAULT_EXPORT_FORMAT: ExportFormat = "mp4";
+export const DEFAULT_EXPORT_FORMAT: ExportFormat = "webm";
 export const DEFAULT_EXPORT_QUALITY_TIER: ExportQualityTier = "high";
 export const DEFAULT_EXPORT_RESOLUTION: ExportResolution = "1080x1920";
 export const DEFAULT_EXPORT_FILE_NAME = "story-short";
 
-/** WebM direct download is not offered yet — canvas still captures WebM internally for MP4 transcode. */
-export const WEBM_EXPORT_AVAILABLE = false;
+/** Fast browser-native path — canvas captures WebM; MP4 requires a separate transcode pass. */
+export const WEBM_EXPORT_AVAILABLE = true;
 
 const EXPORT_FORMATS: ExportFormat[] = ["mp4", "webm"];
 const EXPORT_QUALITY_TIERS: ExportQualityTier[] = ["standard", "high"];
@@ -82,20 +82,27 @@ export function isWebmExportAvailable(): boolean {
 }
 
 /**
- * Applies supported export format rules. WebM requests fall back to MP4 when unavailable.
+ * Validates export format availability. Settings are never rewritten to another format.
+ * Use {@link resolveExportPath} for pipeline selection.
  */
 export function resolveEffectiveExportSettings(settings: ExportSettings): {
   settings: ExportSettings;
+  /** @deprecated No silent format fallback — use `blocked` instead. */
   formatFallback: boolean;
+  blocked: boolean;
+  blockReason?: string;
 } {
   if (settings.format === "webm" && !WEBM_EXPORT_AVAILABLE) {
     return {
-      settings: { ...settings, format: "mp4" },
-      formatFallback: true,
+      settings,
+      formatFallback: false,
+      blocked: true,
+      blockReason:
+        "WebM export is unavailable. Choose MP4 or try another browser.",
     };
   }
 
-  return { settings, formatFallback: false };
+  return { settings, formatFallback: false, blocked: false };
 }
 
 /** Applies defaults and sanitizes partial export settings. */
@@ -107,9 +114,14 @@ export function normalizeExportSettings(
     partial?.fileName?.trim() || slugifyStoryTitle(title ?? ""),
   );
 
+  const format =
+    partial?.format === "mp4" || partial?.format === "webm"
+      ? partial.format
+      : DEFAULT_EXPORT_FORMAT;
+
   return {
     fileName,
-    format: partial?.format === "webm" ? "webm" : DEFAULT_EXPORT_FORMAT,
+    format,
     quality:
       partial?.quality === "standard" ? "standard" : DEFAULT_EXPORT_QUALITY_TIER,
     resolution:

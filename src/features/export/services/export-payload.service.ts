@@ -1,3 +1,4 @@
+import { getCanonicalVoiceover } from "@/features/audio";
 import {
   getDisplayCaption,
   getSceneDurationMs,
@@ -270,18 +271,19 @@ export function buildFootieExportPayload(script: FootieScript): FootieExportPayl
   const sourceScenes = script.scenes ?? [];
   const scenes = mapScenesToExport(sourceScenes, script.narration ?? "");
   const timelineItems = resolveTimelineItems(script.timelineItems, sourceScenes);
+  const canonicalVoiceover = getCanonicalVoiceover(script);
   const audioFirst = isAudioFirstStory({
     ...script,
     scenes,
-    voiceoverUrl: script.voiceoverUrl,
-    voiceoverDurationMs: script.voiceoverDurationMs,
+    voiceoverUrl: canonicalVoiceover?.url,
+    voiceoverDurationMs: canonicalVoiceover?.durationMs,
   });
 
   const totalDuration =
     scenes.length > 0 && scenesHaveMsTiming(scenes)
       ? getStoryTotalDuration(scenes)
-      : script.voiceoverDurationMs != null && script.voiceoverDurationMs > 0
-        ? script.voiceoverDurationMs / 1000
+      : canonicalVoiceover?.durationMs != null && canonicalVoiceover.durationMs > 0
+        ? canonicalVoiceover.durationMs / 1000
         : resolveStoryDurationSec({ ...script, scenes });
 
   return {
@@ -291,9 +293,9 @@ export function buildFootieExportPayload(script: FootieScript): FootieExportPayl
     totalDuration,
     timelineItems: mapTimelineItemsToExport(timelineItems, scenes),
     scenes,
-    ...(script.voiceoverUrl ? { voiceoverUrl: script.voiceoverUrl } : {}),
-    ...(script.voiceoverDurationMs != null && script.voiceoverDurationMs > 0
-      ? { voiceoverDurationMs: script.voiceoverDurationMs }
+    ...(canonicalVoiceover?.url ? { voiceoverUrl: canonicalVoiceover.url } : {}),
+    ...(canonicalVoiceover?.durationMs != null && canonicalVoiceover.durationMs > 0
+      ? { voiceoverDurationMs: canonicalVoiceover.durationMs }
       : {}),
     ...(audioFirst ? { audioFirst: true } : {}),
     renderTransitions: false,

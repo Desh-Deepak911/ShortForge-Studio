@@ -11,9 +11,11 @@ import {
   isJsonSerializable,
   listDrafts,
   normalizeDraft,
+  resolveDraftScriptForEditor,
   serializeEditorStateForDraft,
   updateDraft,
 } from "@/features/drafts";
+import { buildAudioMixFromStory } from "@/features/audio";
 import type { FootieScript } from "@/features/story/types";
 import type { ExportSettings, StoryBackgroundMusic, StoryVoiceSettings } from "@/features/story/types";
 
@@ -255,6 +257,74 @@ test("serializeEditorStateForDraft preserves full editor state for reload", () =
   assert.equal(reloaded?.script.scenes[0]?.image?.scale, 1.2);
   assert.equal(reloaded?.script.timelineItems?.[1]?.type, "transition");
   assert.equal(reloaded?.exportSettings?.fileName, "custom-export");
+});
+
+test("saved drafts preserve voiceover, voice speed, and background music metadata", () => {
+  const persistedBase64 = Buffer.from("draft-voiceover-bytes").toString("base64");
+  const musicBase64 = Buffer.from("draft-music-bytes").toString("base64");
+  const scriptWithAudio: FootieScript = {
+    ...baseScript,
+    voiceoverUrl: undefined,
+    voiceoverDurationMs: 12_000,
+    voiceoverAudioBase64: persistedBase64,
+    voiceSettings: { voice: "fable", speed: 1.25 },
+    backgroundMusic: {
+      enabled: true,
+      source: "upload",
+      fileName: "ambient.mp3",
+      volume: 0.18,
+      duckingEnabled: true,
+      fadeIn: true,
+      fadeOut: true,
+      fileDataBase64: musicBase64,
+    },
+  } as FootieScript;
+
+  const serialized = serializeEditorStateForDraft(scriptWithAudio);
+  assert.equal(isJsonSerializable(serialized), true);
+  assert.equal(serialized.voiceoverDurationMs, 12_000);
+  assert.equal(serialized.voiceSettings?.speed, 1.25);
+  assert.equal((serialized as FootieScript & { voiceoverAudioBase64?: string }).voiceoverAudioBase64, persistedBase64);
+  assert.equal(
+    (serialized.backgroundMusic as { fileDataBase64?: string })?.fileDataBase64,
+    musicBase64,
+  );
+
+  const options = { adapter: adapter() };
+  const draft = createDraft({ script: serialized }, options);
+  const reloaded = getDraft(draft.id, options);
+
+  assert.ok(reloaded);
+  assert.equal(reloaded?.voiceover?.audioBase64, persistedBase64);
+  assert.equal(reloaded?.voiceover?.durationMs, 12_000);
+  assert.equal(reloaded?.voiceSettings?.speed, 1.25);
+  assert.equal(reloaded?.backgroundMusic?.fileName, "ambient.mp3");
+  assert.equal(
+    (reloaded?.backgroundMusic as { fileDataBase64?: string })?.fileDataBase64,
+    musicBase64,
+  );
+});
+
+test("resolveDraftScriptForEditor hydrates playable voiceover for preview and export", () => {
+  const persistedBase64 = Buffer.from("hydrate-voiceover").toString("base64");
+  const draft = normalizeDraft({
+    id: "draft-audio",
+    script: {
+      ...baseScript,
+      voiceoverUrl: "blob:stale",
+      voiceoverDurationMs: 12_000,
+      voiceoverAudioBase64: persistedBase64,
+      voiceSettings: { voice: "alloy", speed: 1.4 },
+    } as FootieScript,
+  });
+
+  const resolved = resolveDraftScriptForEditor(draft);
+  const mix = buildAudioMixFromStory(resolved);
+
+  assert.ok(mix.voiceover?.src);
+  assert.match(mix.voiceover!.src, /^blob:/);
+  assert.equal(mix.voiceover?.durationMs, 12_000);
+  assert.equal(resolved.voiceSettings?.speed, 1.4);
 });
 
 console.log("All draft checks passed.");

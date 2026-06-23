@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { buildAudioMixFromStory } from "@/features/audio";
 import {
   buildExportDownloadFileName,
   exportFootieShort,
@@ -21,11 +22,17 @@ import {
   isHighQualityExportSettings,
   isWebmExportAvailable,
   normalizeExportSettings,
-  resolveEffectiveExportSettings,
+  resolveExportPath,
+  resolveExportPathFormatNotice,
   resolveExportSettings,
+  resolveWebmBackgroundMusicExportNotice,
   type ExportAudioMode,
   type ExportProgress,
 } from "@/features/export/services";
+import {
+  EXPORT_AUDIO_VOICE_ONLY_FALLBACK_WARNING,
+  isExportBackgroundMusicActiveFromMix,
+} from "@/features/export/utils/export-background-music.utils";
 import {
   studioBadge,
   studioChecklistItem,
@@ -74,14 +81,13 @@ export default function ExportPanel({
   const [progress, setProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [exportWarning, setExportWarning] = useState<string | null>(null);
+  const [exportResultKind, setExportResultKind] = useState<ExportProgress["resultKind"]>("default");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [includeNarrationPreference, setIncludeNarrationPreference] = useState(true);
-  const baseExportSettings = useMemo((): ExportSettings => {
-    const next = resolveExportSettings(script);
-    return !isWebmExportAvailable() && next.format === "webm"
-      ? { ...next, format: "mp4" as const }
-      : next;
-  }, [script]);
+  const baseExportSettings = useMemo(
+    (): ExportSettings => resolveExportSettings(script),
+    [script],
+  );
 
   const scriptSettingsKey = useMemo(
     () => `${script.title}|${JSON.stringify(script.exportSettings ?? null)}`,
@@ -110,8 +116,8 @@ export default function ExportPanel({
     });
   };
 
-  const effectiveExportSettings = useMemo(
-    () => resolveEffectiveExportSettings(exportSettings).settings,
+  const resolvedExportPath = useMemo(
+    () => resolveExportPath(exportSettings),
     [exportSettings],
   );
 
@@ -125,6 +131,16 @@ export default function ExportPanel({
     exportState === "loading-voiceover" ||
     exportState === "combining" ||
     exportState === "finalizing";
+  const audioMix = useMemo(() => buildAudioMixFromStory(script), [script]);
+  const voiceoverSrc = audioMix.voiceover?.src;
+  const webmBackgroundMusicNotice = useMemo(
+    () =>
+      resolveWebmBackgroundMusicExportNotice({
+        exportPath: resolvedExportPath.path,
+        backgroundMusicActive: isExportBackgroundMusicActiveFromMix(audioMix),
+      }),
+    [audioMix, resolvedExportPath.path],
+  );
   const checklist = useMemo<ChecklistItem[]>(
     () => [
       {
@@ -143,9 +159,9 @@ export default function ExportPanel({
         detail: `${uploadedCount} of ${sceneCount} scenes`,
       },
       {
-        label: script.voiceoverUrl ? "Narration ready" : "Narration not created yet",
-        done: Boolean(script.voiceoverUrl),
-        detail: script.voiceoverUrl
+        label: voiceoverSrc ? "Narration ready" : "Narration not created yet",
+        done: Boolean(voiceoverSrc),
+        detail: voiceoverSrc
           ? "Ready for Play Preview and export"
           : "Complete step 4 to add narration",
       },
@@ -155,11 +171,11 @@ export default function ExportPanel({
         detail: allImagesUploaded ? "All scenes have images" : "Placeholders used for missing images",
       },
     ],
-    [script.title, script.narration, script.voiceoverUrl, sceneCount, totalDuration, uploadedCount, allImagesUploaded],
+    [script.title, script.narration, voiceoverSrc, sceneCount, totalDuration, uploadedCount, allImagesUploaded],
   );
 
   const readyCount = checklist.filter((item) => item.done).length;
-  const hasNarration = Boolean(script.voiceoverUrl);
+  const hasNarration = Boolean(voiceoverSrc);
   const includeNarration = hasNarration && includeNarrationPreference;
   const exportAudioMode = useMemo((): ExportAudioMode => {
     if (!includeNarration) return "silent";
@@ -167,9 +183,9 @@ export default function ExportPanel({
   }, [includeNarration]);
   const exportWithNarration = exportAudioMode === "with-voice" && hasNarration;
   const showAudioMergeNote =
-    exportWithNarration && isHighQualityExportSettings(effectiveExportSettings);
-  const downloadFileName = buildExportDownloadFileName(effectiveExportSettings);
-  const [exportWidth, exportHeight] = effectiveExportSettings.resolution
+    exportWithNarration && isHighQualityExportSettings(exportSettings);
+  const downloadFileName = buildExportDownloadFileName(exportSettings);
+  const [exportWidth, exportHeight] = exportSettings.resolution
     .split("x")
     .map(Number);
   const isBusy = isExporting || disabled;
@@ -178,11 +194,19 @@ export default function ExportPanel({
     setErrorMessage(null);
     setExportWarning(null);
     setExportMessage(null);
+    setExportResultKind("default");
     setProgress(0);
     setExportState("preparing");
 
     try {
       const normalizedExportSettings = normalizeExportSettings(exportSettings, script.title);
+      const exportPath = resolveExportPath(normalizedExportSettings);
+
+      if (exportPath.blocked) {
+        setExportState("error");
+        setErrorMessage(exportPath.blockReason ?? "Selected export format is unavailable.");
+        return;
+      }
 
       await exportFootieShort(
         syncFootieScript(script),
@@ -191,6 +215,7 @@ export default function ExportPanel({
           setProgress(update.progress);
           setExportMessage(update.message);
           setExportWarning(update.warning ?? null);
+          setExportResultKind(update.resultKind ?? "default");
         },
         {
           audioMode: exportAudioMode,
@@ -315,7 +340,7 @@ export default function ExportPanel({
             <span className="block text-sm font-medium text-foreground/90">Include Narration</span>
             <span className="mt-0.5 block text-xs text-muted">
               {hasNarration
-                ? `Muxes narration into the final ${effectiveExportSettings.format.toUpperCase()} export`
+                ? `Muxes narration into the final ${exportSettings.format.toUpperCase()} export`
                 : "Create narration in step 4 first"}
             </span>
           </span>
@@ -343,7 +368,7 @@ export default function ExportPanel({
           <div className="relative mb-1">
             <select
               id="export-format"
-              value={effectiveExportSettings.format}
+              value={exportSettings.format}
               onChange={(e) => {
                 const value = e.target.value;
                 if (isExportFormat(value)) {
@@ -353,19 +378,30 @@ export default function ExportPanel({
               disabled={isBusy}
               className={studioSelect}
             >
-              <option value="mp4">MP4</option>
               {isWebmExportAvailable() ? (
-                <option value="webm">WebM</option>
+                <option value="webm">WebM — Fast</option>
               ) : (
                 <option value="webm" disabled>
-                  WebM (Coming soon)
+                  WebM — Fast (unavailable)
                 </option>
               )}
+              <option value="mp4">MP4 — YouTube compatible, slower</option>
             </select>
             <ChevronDown className={studioSelectChevron} />
           </div>
-          {!isWebmExportAvailable() && (
-            <p className="mb-4 text-xs text-muted">WebM export is coming soon. MP4 is fully supported.</p>
+          <p className="mb-1 text-xs text-muted">
+            {resolveExportPathFormatNotice(resolvedExportPath.path)}
+          </p>
+          {resolvedExportPath.blocked ? (
+            <p className="mb-4 text-xs text-amber-600 dark:text-amber-400">
+              {resolvedExportPath.blockReason}
+            </p>
+          ) : webmBackgroundMusicNotice ? (
+            <p className="mb-4 text-xs text-amber-600 dark:text-amber-400">
+              {webmBackgroundMusicNotice}
+            </p>
+          ) : (
+            <div className="mb-4" />
           )}
 
           <label htmlFor="export-resolution" className={studioLabel}>
@@ -422,7 +458,7 @@ export default function ExportPanel({
         <button
           type="button"
           onClick={handleExport}
-          disabled={isBusy || sceneCount < 1}
+          disabled={isBusy || sceneCount < 1 || resolvedExportPath.blocked}
           className={`${studioPrimaryButton} w-full`}
         >
           {isExporting ? (
@@ -444,23 +480,46 @@ export default function ExportPanel({
         </p>
       </div>
 
-      {exportState === "done" && exportMessage && (
-        <div className={`${studioPanel} flex items-start gap-3`}>
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
-          <p className="text-sm leading-relaxed text-foreground/90">{exportMessage}</p>
-        </div>
-      )}
-
-      {exportWarning && (
+      {exportState === "done" && exportMessage && exportResultKind === "audio-voice-only" && (
         <div className={`${studioWarningPanel} flex items-start gap-3`}>
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
           <div>
-            <p className="text-sm font-medium text-amber-100/90">Narration merge failed</p>
-            <p className="mt-1 text-sm leading-relaxed text-amber-200/70">{exportWarning}</p>
-            <p className="mt-2 text-xs leading-relaxed text-amber-200/50">
-              Your silent video was downloaded instead.
+            <p className="text-sm font-medium leading-relaxed text-amber-100/90">
+              {exportWarning ?? EXPORT_AUDIO_VOICE_ONLY_FALLBACK_WARNING}
             </p>
+            <p className="mt-2 text-xs leading-relaxed text-amber-200/60">{exportMessage}</p>
           </div>
+        </div>
+      )}
+
+      {exportState === "done" && exportMessage && exportResultKind !== "audio-silent" && exportResultKind !== "audio-voice-only" && (
+        <div className={`${studioPanel} flex items-start gap-3`}>
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          <div>
+            <p className="text-sm leading-relaxed text-foreground/90">{exportMessage}</p>
+            {exportWarning && (
+              <p className="mt-2 text-xs leading-relaxed text-muted">{exportWarning}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {exportState === "done" && exportMessage && exportResultKind === "audio-silent" && (
+        <div className={`${studioWarningPanel} flex items-start gap-3`}>
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
+          <div>
+            <p className="text-sm leading-relaxed text-amber-100/90">{exportMessage}</p>
+            {exportWarning && (
+              <p className="mt-2 text-xs leading-relaxed text-amber-200/50">{exportWarning}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {exportState === "done" && exportWarning && exportResultKind !== "audio-silent" && exportResultKind !== "audio-voice-only" && !exportMessage && (
+        <div className={`${studioWarningPanel} flex items-start gap-3`}>
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
+          <p className="text-sm leading-relaxed text-amber-200/70">{exportWarning}</p>
         </div>
       )}
 

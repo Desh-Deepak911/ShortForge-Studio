@@ -30,6 +30,7 @@ import {
 import {
   applyStoryVoiceSettings,
   applyVoiceoverChanges,
+  applyVoiceoverRegeneration,
   syncFootieScript,
 } from "@/lib/voiceover";
 import { resolveVoiceoverSpeed } from "@/lib/voiceoverOptions";
@@ -104,7 +105,7 @@ test("only voiceover regenerates — story fields and scenes preserved on apply"
   const transition = timelineItems.find((item) => item.type === "transition");
   assert.ok(transition && transition.type === "transition");
 
-  const next = applyVoiceoverChanges(script, {
+  const next = applyVoiceoverRegeneration(script, {
     voiceoverUrl: "blob:faster",
     voiceoverDurationMs: 16_000,
     voiceSettings: { voice: "fable", speed: 1.25 },
@@ -118,6 +119,13 @@ test("only voiceover regenerates — story fields and scenes preserved on apply"
   assert.equal(next.scenes[0]?.captionMode, "subtitles");
   assert.equal(next.scenes[0]?.subtitleEffect, "fade-up");
   assert.equal(next.scenes[0]?.subtitle, "Generated caption");
+  assert.equal(next.voiceoverUrl, "blob:faster");
+  assert.equal(next.voiceoverDurationMs, 16_000);
+  assert.equal(getStoryVoiceSettings(next).speed, 1.25);
+  assert.equal(next.scenes[0]?.durationMs, script.scenes[0]?.durationMs);
+  assert.equal(next.scenes[1]?.durationMs, script.scenes[1]?.durationMs);
+  assert.equal(next.scenes[2]?.durationMs, script.scenes[2]?.durationMs);
+  assert.equal(resolveStoryDurationSec(next), 20);
 
   const nextTransition = next.timelineItems?.find((item) => item.type === "transition");
   assert.ok(nextTransition && nextTransition.type === "transition");
@@ -127,7 +135,7 @@ test("only voiceover regenerates — story fields and scenes preserved on apply"
 
 test("images remain after voice speed apply", () => {
   const script = buildSpeedChangeStory();
-  const next = applyVoiceoverChanges(script, {
+  const next = applyVoiceoverRegeneration(script, {
     voiceoverUrl: "blob:faster",
     voiceoverDurationMs: 16_000,
     voiceSettings: { speed: 1.25 },
@@ -141,7 +149,7 @@ test("images remain after voice speed apply", () => {
   }
 });
 
-test("scene durations update proportionally after faster voiceover", () => {
+test("applyVoiceoverChanges still refits scenes when used directly", () => {
   const script = buildSpeedChangeStory();
   const next = applyVoiceoverChanges(script, {
     voiceoverUrl: "blob:faster",
@@ -157,53 +165,55 @@ test("scene durations update proportionally after faster voiceover", () => {
   assert.equal(resolveStoryDurationSec(next), 16);
 });
 
-test("preview scene switching updates after speed refit", () => {
+test("preview scene switching follows existing scene timings after speed apply", () => {
   const script = buildSpeedChangeStory();
-  const refitted = applyVoiceoverChanges(script, {
+  const updated = applyVoiceoverRegeneration(script, {
     voiceoverUrl: "blob:faster",
     voiceoverDurationMs: 16_000,
     voiceSettings: { speed: 1.25 },
   });
-  const timelineItems = ensureTimelineItems(refitted.scenes, refitted.timelineItems);
+  const timelineItems = ensureTimelineItems(updated.scenes, updated.timelineItems);
 
-  assert.equal(getActiveSceneAtTime(refitted.scenes, 6399)?.index, 0);
-  assert.equal(getActiveSceneAtTime(refitted.scenes, 6400)?.index, 1);
+  assert.equal(getActiveSceneAtTime(updated.scenes, 7999)?.index, 0);
+  assert.equal(getActiveSceneAtTime(updated.scenes, 8000)?.index, 1);
 
-  const frameBefore = getPreviewFrameAtTime(timelineItems, refitted.scenes, 6.0);
-  const frameAfter = getPreviewFrameAtTime(timelineItems, refitted.scenes, 7.0);
+  const frameBefore = getPreviewFrameAtTime(timelineItems, updated.scenes, 7.0);
+  const frameAfter = getPreviewFrameAtTime(timelineItems, updated.scenes, 8.5);
 
   assert.equal(frameBefore.kind === "scene" ? frameBefore.sceneIndex : -1, 0);
   assert.equal(frameAfter.kind === "scene" ? frameAfter.sceneIndex : -1, 1);
 });
 
-test("export scene switching updates after speed refit", () => {
+test("export keeps existing scene timings after speed apply", () => {
   const script = buildSpeedChangeStory();
-  const refitted = applyVoiceoverChanges(script, {
+  const updated = applyVoiceoverRegeneration(script, {
     voiceoverUrl: "blob:faster",
     voiceoverDurationMs: 16_000,
     voiceSettings: { speed: 1.25 },
   });
-  const payload = buildFootieExportPayload(refitted);
+  const payload = buildFootieExportPayload(updated);
   const exportScenes = getRenderableScenesFromPayload(payload);
 
-  assert.equal(getSceneTimingAtGlobalTime(exportScenes, 6399)?.slot.index, 0);
-  assert.equal(getSceneTimingAtGlobalTime(exportScenes, 6400)?.slot.index, 1);
-  assert.equal(getExportTotalDurationSec(payload), 16);
+  assert.equal(getSceneTimingAtGlobalTime(exportScenes, 7999)?.slot.index, 0);
+  assert.equal(getSceneTimingAtGlobalTime(exportScenes, 8000)?.slot.index, 1);
+  assert.equal(getExportTotalDurationSec(payload), 20);
+  assert.equal(payload.voiceoverUrl, "blob:faster");
+  assert.equal(payload.voiceoverDurationMs, 16_000);
 });
 
-test("subtitle timing updates automatically from refitted scene.durationMs", () => {
+test("subtitle timing still derives from unchanged scene.durationMs", () => {
   const script = buildSpeedChangeStory();
-  const refitted = applyVoiceoverChanges(script, {
+  const updated = applyVoiceoverRegeneration(script, {
     voiceoverUrl: "blob:faster",
     voiceoverDurationMs: 16_000,
     voiceSettings: { speed: 1.25 },
   });
   const chunks = splitSubtitleChunks(subtitleText);
-  const sceneDurationMs = refitted.scenes[0]!.durationMs!;
+  const sceneDurationMs = updated.scenes[0]!.durationMs!;
   const chunkDurationMs = sceneDurationMs / chunks.length;
 
   const previewTiming = getPreviewSceneTiming({
-    scenes: refitted.scenes,
+    scenes: updated.scenes,
     sceneIndex: 99,
     elapsedSec: chunkDurationMs / 1000,
     playbackMode: "narration",
@@ -212,11 +222,11 @@ test("subtitle timing updates automatically from refitted scene.durationMs", () 
     previewClockMs: 0,
   });
 
-  assert.equal(previewTiming.sceneDurationMs, 6400);
+  assert.equal(previewTiming.sceneDurationMs, 8000);
   assert.equal(previewTiming.activeSceneIndex, 0);
 
-  const previewSubtitle = resolveActiveSubtitleForScene(refitted.scenes[0]!, previewTiming);
-  const exportSubtitle = resolveExportSubtitleDisplay(refitted.scenes[0]!, previewTiming);
+  const previewSubtitle = resolveActiveSubtitleForScene(updated.scenes[0]!, previewTiming);
+  const exportSubtitle = resolveExportSubtitleDisplay(updated.scenes[0]!, previewTiming);
 
   assert.equal(previewSubtitle.chunkDurationMs, chunkDurationMs);
   assert.ok(exportSubtitle);
@@ -226,13 +236,13 @@ test("subtitle timing updates automatically from refitted scene.durationMs", () 
 
 test("subtitle animations remain synchronized between preview and export", () => {
   const script = buildSpeedChangeStory();
-  const refitted = applyVoiceoverChanges(script, {
+  const updated = applyVoiceoverRegeneration(script, {
     voiceoverUrl: "blob:faster",
     voiceoverDurationMs: 16_000,
     voiceSettings: { speed: 1.25 },
   });
   const elapsedMs = 2100;
-  const timingAt = getSceneTimingAtGlobalTime(refitted.scenes, elapsedMs);
+  const timingAt = getSceneTimingAtGlobalTime(updated.scenes, elapsedMs);
   assert.ok(timingAt);
 
   const timing = {
@@ -240,8 +250,8 @@ test("subtitle animations remain synchronized between preview and export", () =>
     sceneDurationMs: timingAt.sceneDurationMs,
   };
 
-  const preview = resolveActiveSubtitleForScene(refitted.scenes[0]!, timing);
-  const exportState = getExportSubtitleChunkState(refitted.scenes[0]!, timing);
+  const preview = resolveActiveSubtitleForScene(updated.scenes[0]!, timing);
+  const exportState = getExportSubtitleChunkState(updated.scenes[0]!, timing);
 
   assert.equal(preview.activeChunk, exportState.chunk);
   assert.equal(preview.chunkIndex, Math.floor(timing.sceneElapsedMs / preview.chunkDurationMs));

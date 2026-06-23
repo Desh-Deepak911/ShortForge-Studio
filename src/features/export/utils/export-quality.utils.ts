@@ -91,6 +91,8 @@ export interface ExportProgress {
   progress: number;
   message: string;
   warning?: string;
+  /** Drives post-export UI tone when audio mux fallbacks are used. */
+  resultKind?: "audio-full" | "audio-voice-only" | "audio-silent" | "default";
 }
 
 export function getScriptVideoDuration(script: FootieScript): number {

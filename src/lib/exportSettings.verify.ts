@@ -13,9 +13,9 @@ import {
   resolveExportSettings,
   sanitizeExportFileName,
   slugifyStoryTitle,
-} from "@/features/export/services";
-import { getExportQualityPreset } from "@/features/export/utils/export-quality.utils";
-import type { FootieScript } from "@/features/story/types";
+} from "../features/export/utils/export-settings.utils";
+import { getExportQualityPreset } from "../features/export/utils/export-quality.utils";
+import type { FootieScript } from "../features/story/types";
 
 function test(name: string, fn: () => void) {
   fn();
@@ -81,16 +81,23 @@ test("buildExportDownloadFileName uses sanitized base name and selected format",
 test("normalizeExportSettings applies product defaults", () => {
   assert.deepEqual(normalizeExportSettings(undefined, "My Story"), {
     fileName: "my-story",
-    format: "mp4",
+    format: "webm",
     quality: "high",
     resolution: "1080x1920",
   });
 });
 
+test("normalizeExportSettings preserves explicit MP4 selection", () => {
+  assert.equal(
+    normalizeExportSettings({ format: "mp4" }, "My Story").format,
+    "mp4",
+  );
+});
+
 test("resolveExportSettings is backward compatible without stored settings", () => {
   assert.deepEqual(resolveExportSettings(baseScript), {
     fileName: "haaland-derby-winner",
-    format: "mp4",
+    format: "webm",
     quality: "high",
     resolution: "1080x1920",
   });
@@ -135,7 +142,7 @@ test("exportSettingsToQualityPreset maps resolution and quality to render preset
   assert.equal(standard720.bitrate, 4_000_000);
 });
 
-test("resolveEffectiveExportSettings falls back to MP4 when WebM is unavailable", () => {
+test("resolveEffectiveExportSettings blocks unavailable WebM without forcing MP4", () => {
   const result = resolveEffectiveExportSettings({
     fileName: "story",
     format: "webm",
@@ -143,8 +150,21 @@ test("resolveEffectiveExportSettings falls back to MP4 when WebM is unavailable"
     resolution: "1080x1920",
   });
 
+  assert.equal(result.settings.format, "webm");
+  assert.equal(result.formatFallback, false);
+  assert.equal(result.blocked, false);
+});
+
+test("resolveEffectiveExportSettings preserves explicit MP4 selection", () => {
+  const result = resolveEffectiveExportSettings({
+    fileName: "story",
+    format: "mp4",
+    quality: "high",
+    resolution: "1080x1920",
+  });
+
   assert.equal(result.settings.format, "mp4");
-  assert.equal(result.formatFallback, true);
+  assert.equal(result.formatFallback, false);
 });
 
 test("resolveExportRenderPreset maps export settings to canvas dimensions and bitrate", () => {

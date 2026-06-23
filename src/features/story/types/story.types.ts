@@ -119,6 +119,8 @@ export interface StoryBackgroundMusic {
   source: BackgroundMusicSource;
   fileUrl?: string;
   fileName?: string;
+  /** Persisted MIME for draft-reloaded uploads; used by export normalization. */
+  fileMimeType?: string;
   trackId?: string;
   trackName?: string;
   artist?: string;

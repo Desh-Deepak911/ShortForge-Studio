@@ -122,7 +122,7 @@ export default function VoiceSettingsCard({
         </p>
       ) : (
         <p className={studioSubtleText}>
-          Regenerates the voiceover and redistributes scene timings proportionally.
+          Regenerates the voiceover audio at the selected speed. Scene timings and subtitles stay as they are.
         </p>
       )}
 

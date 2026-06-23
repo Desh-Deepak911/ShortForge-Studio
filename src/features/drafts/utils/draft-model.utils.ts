@@ -1,3 +1,4 @@
+import { getCanonicalVoiceover } from "@/features/audio";
 import type { FootieScript } from "@/features/story/types";
 
 import type {
@@ -8,16 +9,21 @@ import type {
   StoryDraftSummary,
 } from "../types";
 
+import type { DraftPersistedScript } from "./draft-audio-persistence.utils";
 import { createDraftId } from "./draft-id.utils";
 
 export function voiceoverFromScript(script: FootieScript): DraftVoiceover | undefined {
-  if (!script.voiceoverUrl && script.voiceoverDurationMs == null) {
+  const canonical = getCanonicalVoiceover(script);
+  const audioBase64 = (script as DraftPersistedScript).voiceoverAudioBase64;
+
+  if (!canonical?.url && script.voiceoverDurationMs == null && !audioBase64) {
     return undefined;
   }
 
   return {
-    url: script.voiceoverUrl,
-    durationMs: script.voiceoverDurationMs,
+    url: canonical?.url,
+    durationMs: canonical?.durationMs ?? script.voiceoverDurationMs,
+    ...(audioBase64 ? { audioBase64 } : {}),
   };
 }
 
@@ -29,11 +35,19 @@ export function applyVoiceoverToScript(
     return script;
   }
 
-  return {
+  const next: DraftPersistedScript = {
     ...script,
     voiceoverUrl: voiceover.url,
     voiceoverDurationMs: voiceover.durationMs,
   };
+
+  if (voiceover.audioBase64) {
+    next.voiceoverAudioBase64 = voiceover.audioBase64;
+  } else {
+    delete next.voiceoverAudioBase64;
+  }
+
+  return next;
 }
 
 /** Extracts denormalized editor slices from the canonical script. */
@@ -66,10 +80,15 @@ export function applyEditorSlicesToScript(
 }
 
 export function buildDraftSummaryFields(script: FootieScript) {
+  const canonical = getCanonicalVoiceover(script);
+  const hasPersistedVoiceover = Boolean(
+    (script as DraftPersistedScript).voiceoverAudioBase64,
+  );
+
   return {
     sceneCount: script.scenes.length,
     totalDuration: script.totalDuration,
-    hasVoiceover: Boolean(script.voiceoverUrl),
+    hasVoiceover: Boolean(canonical?.url || hasPersistedVoiceover),
   };
 }
 

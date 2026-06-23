@@ -12,9 +12,11 @@ import {
   deleteDraft,
   getDraft,
   listDrafts,
+  resolveDraftScriptForEditor,
   serializeEditorStateForDraft,
   updateDraft,
 } from "@/features/drafts";
+import { buildAudioMixFromStory } from "@/features/audio";
 import type { FootieScript } from "@/features/story/types";
 
 function test(name: string, fn: () => void) {
@@ -73,6 +75,7 @@ test("generation success creates draft and redirects to editor", () => {
 test("editor loads draft from storage without AI calls", () => {
   const editorFlow = readSrc("src/features/drafts/components/DraftEditorFlow.tsx");
   assert.match(editorFlow, /getDraft\(draftId\)/);
+  assert.match(editorFlow, /resolveDraftScriptForEditor/);
   assert.match(editorFlow, /StoryWorkspace/);
   assert.doesNotMatch(editorFlow, /generate-script/);
   assert.doesNotMatch(editorFlow, /fetch\(/);
@@ -142,6 +145,38 @@ test("save draft persists edited editor state and survives reload", () => {
   assert.equal(reloaded?.script.exportSettings?.resolution, "720x1280");
   assert.equal(reloaded?.script.backgroundMusic?.fileName, "bed.mp3");
   assert.ok(reloaded!.updatedAt >= draft.updatedAt);
+});
+
+test("reload restores saved voiceover audio for preview and export mix", () => {
+  const adapter = createMemoryDraftStorageAdapter();
+  const options = { adapter };
+  const voiceoverBase64 = Buffer.from("reload-voiceover-audio").toString("base64");
+
+  const draft = createDraft({ script: generatedScript }, options);
+  const saved = updateDraft(
+    draft.id,
+    {
+      script: {
+        ...generatedScript,
+        voiceoverUrl: undefined,
+        voiceoverDurationMs: 8000,
+        voiceoverAudioBase64: voiceoverBase64,
+        voiceSettings: { voice: "alloy", speed: 1.25 },
+      } as FootieScript,
+    },
+    options,
+  );
+
+  assert.ok(saved);
+  const reloaded = getDraft(draft.id, options);
+  assert.ok(reloaded);
+
+  const editorScript = resolveDraftScriptForEditor(reloaded!);
+  const mix = buildAudioMixFromStory(editorScript);
+
+  assert.ok(mix.voiceover?.src);
+  assert.equal(mix.voiceover?.durationMs, 8000);
+  assert.equal(editorScript.voiceSettings?.speed, 1.25);
 });
 
 test("/drafts lists saved drafts with open and delete actions", () => {

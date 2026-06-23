@@ -43,11 +43,19 @@ export interface VoiceoverAttachment {
   voiceSettings?: Partial<StoryVoiceSettings>;
 }
 
-/** Creates an object URL from a base64-encoded MP3 payload. */
-export function createVoiceoverBlobUrl(audioBase64: string): string {
+/** Creates an object URL from a base64-encoded audio payload. */
+export function createAudioBlobUrl(
+  audioBase64: string,
+  mimeType = "audio/mpeg",
+): string {
   const binary = atob(audioBase64);
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
+  return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+}
+
+/** Creates an object URL from a base64-encoded MP3 payload. */
+export function createVoiceoverBlobUrl(audioBase64: string): string {
+  return createAudioBlobUrl(audioBase64, "audio/mpeg");
 }
 
 /** Resolves narration duration from an audio blob, with word-count fallback. */
@@ -110,6 +118,29 @@ export function attachVoiceoverToScript(
         ? { voiceoverDurationMs: Math.round(attachment.voiceoverDurationMs) }
         : {}),
       voiceSettings: mergeVoiceSettings(script, attachment.voiceSettings),
+    },
+    script,
+  );
+}
+
+/**
+ * Regenerates voiceover audio and metadata without refitting scenes, transitions,
+ * captions, or images. Preview and export read the updated canonical voiceover URL.
+ */
+export function applyVoiceoverRegeneration(
+  script: FootieScript,
+  attachment: VoiceoverAttachment,
+): FootieScript {
+  const voiceSettings = mergeVoiceSettings(script, attachment.voiceSettings);
+
+  return syncFootieScript(
+    {
+      ...script,
+      voiceoverUrl: attachment.voiceoverUrl,
+      ...(attachment.voiceoverDurationMs != null && attachment.voiceoverDurationMs > 0
+        ? { voiceoverDurationMs: Math.round(attachment.voiceoverDurationMs) }
+        : {}),
+      voiceSettings,
     },
     script,
   );

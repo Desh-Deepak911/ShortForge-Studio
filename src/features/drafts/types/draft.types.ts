@@ -24,6 +24,8 @@ export interface StoryCreationBrief {
 export interface DraftVoiceover {
   url?: string;
   durationMs?: number;
+  /** Persisted MP3 payload — restored to a blob URL on editor load. */
+  audioBase64?: string;
 }
 
 /**

@@ -9,11 +9,11 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { buildAudioMixFromStory, getAudioEngine, logAudioEngineState } from "@/features/audio";
 import { getDisplayCaption, getSceneTimingMap, getSceneVoiceoverExcerpt } from "@/features/story/utils";
 import {
   getPreviewFrameAtTime,
   resolvePreviewBackgroundMusicPlaybackVolume,
-  resolvePreviewBackgroundMusicUrl,
   resolveTimelineItems,
   type PreviewSceneFrame,
 } from "@/features/preview/utils";
@@ -46,10 +46,21 @@ export function usePreviewPlayback({
     () => resolveTimelineItems(script?.timelineItems, scenes),
     [script?.timelineItems, scenes],
   );
+  const audioEngine = useMemo(() => getAudioEngine(), []);
+  const audioMix = useMemo(() => buildAudioMixFromStory(script), [script]);
+  const voiceoverTrack = audioMix.voiceover;
+  const backgroundTrack = audioMix.background;
   const sceneCount = scenes.length;
   const totalDuration = getStoryVoiceoverDurationSec(script);
   const safeIndex = sceneCount > 0 ? Math.min(selectedSceneIndex, sceneCount - 1) : 0;
-  const hasNarration = Boolean(script?.voiceoverUrl);
+  const hasNarration = Boolean(voiceoverTrack?.src);
+  const voiceoverUrl = voiceoverTrack?.src;
+  const backgroundMusicUrl =
+    backgroundTrack?.enabled ? backgroundTrack.src : undefined;
+
+  useEffect(() => {
+    logAudioEngineState(script, "preview");
+  }, [script, audioMix.masterDurationMs, voiceoverUrl, backgroundMusicUrl]);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -384,14 +395,12 @@ export function usePreviewPlayback({
   }, [onSelectedSceneChange, sceneCount, speakSceneAt, startBackgroundMusic, stopNarrationAudio]);
 
   const playPreview = async () => {
-    const voiceoverUrl = script?.voiceoverUrl;
-    if (sceneCount === 0 || !voiceoverUrl) return;
+    if (sceneCount === 0 || !voiceoverUrl || !script) return;
 
-    if (!narrationAudioRef.current) {
-      narrationAudioRef.current = new Audio(voiceoverUrl);
-    }
+    const playbackAudio = audioEngine.getNarrationAudioElementBySrc(voiceoverUrl);
+    if (!playbackAudio) return;
 
-    const playbackAudio = narrationAudioRef.current;
+    narrationAudioRef.current = playbackAudio;
 
     clearAdvanceTimeout();
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
@@ -419,12 +428,17 @@ export function usePreviewPlayback({
   };
 
   useEffect(() => {
-    if (!script?.voiceoverUrl) {
+    if (!script || !voiceoverUrl) {
       narrationAudioRef.current = null;
       return;
     }
 
-    const audio = new Audio(script.voiceoverUrl);
+    const audio = audioEngine.getNarrationAudioElementBySrc(voiceoverUrl);
+    if (!audio) {
+      narrationAudioRef.current = null;
+      return;
+    }
+
     narrationAudioRef.current = audio;
 
     const handleTimeUpdate = () => {
@@ -443,40 +457,36 @@ export function usePreviewPlayback({
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("ended", handleEnded);
-      audio.pause();
-      audio.src = "";
+      audioEngine.detachNarrationPreviewElement(voiceoverUrl, audio);
       if (narrationAudioRef.current === audio) narrationAudioRef.current = null;
       if (playbackModeRef.current === "narration") {
         isPlayingRef.current = false;
         playbackModeRef.current = null;
       }
     };
-  }, [script?.voiceoverUrl, stopVoice, syncSceneToAudioTime]);
-
-  const backgroundMusic = script?.backgroundMusic;
+  }, [audioEngine, script, stopVoice, syncSceneToAudioTime, voiceoverUrl]);
 
   useEffect(() => {
-    const musicUrl = resolvePreviewBackgroundMusicUrl(
-      backgroundMusic ? ({ backgroundMusic } as FootieScript) : null,
-    );
-    if (!musicUrl) {
+    if (!backgroundMusicUrl) {
       backgroundMusicAudioRef.current = null;
       return;
     }
 
-    const audio = new Audio(musicUrl);
-    audio.loop = true;
-    audio.preload = "auto";
+    const audio = audioEngine.getBackgroundMusicAudioElementBySrc(backgroundMusicUrl);
+    if (!audio) {
+      backgroundMusicAudioRef.current = null;
+      return;
+    }
+
     backgroundMusicAudioRef.current = audio;
 
     return () => {
-      audio.pause();
-      audio.src = "";
+      audioEngine.detachBackgroundMusicPreviewElement(backgroundMusicUrl, audio);
       if (backgroundMusicAudioRef.current === audio) {
         backgroundMusicAudioRef.current = null;
       }
     };
-  }, [backgroundMusic]);
+  }, [audioEngine, backgroundMusicUrl]);
 
   useEffect(() => {
     return () => {

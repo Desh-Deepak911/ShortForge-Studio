@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/layout";
 import StoryWorkspace from "@/components/StoryWorkspace";
-import { getDraft, serializeEditorStateForDraft, updateDraft } from "@/features/drafts";
+import { getDraft, resolveDraftScriptForEditor, serializeEditorStateForDraftAsync, updateDraft } from "@/features/drafts";
 import type { ExportSettings, FootieScript } from "@/features/story/types";
 import {
   studioPanel,
@@ -39,7 +39,7 @@ function loadDraftFromStorage(draftId: string): {
     return { notFound: true, script: null };
   }
 
-  return { notFound: false, script: syncFootieScript(loaded.script) };
+  return { notFound: false, script: resolveDraftScriptForEditor(loaded) };
 }
 
 /**
@@ -107,7 +107,7 @@ export default function DraftEditorFlow({ draftId }: DraftEditorFlowProps) {
     setSaveConfirmation(null);
   }, []);
 
-  const handleSaveDraft = useCallback(() => {
+  const handleSaveDraft = useCallback(async () => {
     if (!studioScript || isSaving) {
       return;
     }
@@ -115,7 +115,7 @@ export default function DraftEditorFlow({ draftId }: DraftEditorFlowProps) {
     setIsSaving(true);
 
     try {
-      const serializedScript = serializeEditorStateForDraft(studioScript, {
+      const serializedScript = await serializeEditorStateForDraftAsync(studioScript, {
         exportSettings: exportSettingsRef.current ?? studioScript.exportSettings,
       });
 
@@ -128,7 +128,7 @@ export default function DraftEditorFlow({ draftId }: DraftEditorFlowProps) {
 
       setDraftEdits({
         draftId,
-        script: serializedScript,
+        script: resolveDraftScriptForEditor(updated),
         selectedSceneIndex: isCurrentDraftEdits ? draftEdits.selectedSceneIndex : 0,
       });
       exportSettingsRef.current = serializedScript.exportSettings ?? exportSettingsRef.current;
