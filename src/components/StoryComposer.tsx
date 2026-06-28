@@ -22,6 +22,8 @@ import {
   studioSubtleText,
 } from "@/lib/studioUi";
 import ResearchPreviewPanel from "@/features/create/components/ResearchPreviewPanel";
+import ContentTypeSuggestion from "@/features/create/components/ContentTypeSuggestion";
+import type { EntityPreviewDisplay } from "@/features/create/types/entity-preview.types";
 import type { ResearchPreviewState } from "@/features/create/types/research-preview.types";
 import type { QualityMode, ScriptMode, Tone } from "@/types/footiebitz";
 import { MAX_SCENE_COUNT, MIN_SCENE_COUNT, SCRIPT_MODE_OPTIONS } from "@/types/footiebitz";
@@ -66,7 +68,10 @@ interface StoryComposerProps {
   onClearError: () => void;
   onSubmit: () => void;
   researchPreview: ResearchPreviewState;
+  entityPreview?: EntityPreviewDisplay;
   onPreviewResearch: () => void;
+  /** Re-runs research preview via `executeIntelligenceQuery` (no client-side orchestration). */
+  onRefreshResearchPreview?: () => void;
 }
 
 function ComposerStep({
@@ -117,7 +122,9 @@ export default function StoryComposer({
   onClearError,
   onSubmit,
   researchPreview,
+  entityPreview,
   onPreviewResearch,
+  onRefreshResearchPreview,
 }: StoryComposerProps) {
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(() => context.trim().length > 0);
 
@@ -209,6 +216,13 @@ export default function StoryComposer({
               ))}
             </div>
           </div>
+
+          <ContentTypeSuggestion
+            topic={topic}
+            context={context}
+            scriptMode={scriptMode}
+            loading={loading}
+          />
         </ComposerStep>
 
         {/* 3. Optional details */}
@@ -382,10 +396,13 @@ export default function StoryComposer({
             embedded
             enableResearch={enableResearch}
             topic={topic}
+            manualContext={context}
             scriptMode={scriptMode}
             preview={researchPreview}
+            entityPreview={entityPreview}
             disabled={loading}
             onPreviewResearch={onPreviewResearch}
+            onRefreshResearchPreview={onRefreshResearchPreview}
           />
         </ComposerStep>
 

@@ -5,10 +5,10 @@ import type {
 import type { FootballResearchMode } from "@/features/research/types/football-research.types";
 
 import {
-  detectCompetitionFromTopic,
-  detectRankingSeasonFromTopic,
-  detectRankingTimeScope,
-} from "./competition-resolver.utils";
+  mapCompetitionScopeToRanking,
+  resolveCompetitionFromTopic as resolveCanonicalCompetition,
+} from "@/features/intelligence/competitions";
+import { attachRankingSeasonStatus } from "./season-resolution.utils";
 import { normalizeTop5ScorersIntent } from "./top-scorers-research.utils";
 
 const TOP_SCORERS_PATTERNS: RegExp[] = [
@@ -27,7 +27,9 @@ function normalizeTopic(topic: string): string {
   return topic.trim().replace(/\s+/g, " ");
 }
 
-function detectRankingType(normalizedTopic: string): RankingType {
+/** Legacy topic parser — ranking metric detection only. */
+export function detectRankingType(topic: string): RankingType {
+  const normalizedTopic = normalizeTopic(topic);
   if (TOP_SCORERS_PATTERNS.some((pattern) => pattern.test(normalizedTopic))) {
     return "top_scorers";
   }
@@ -39,7 +41,8 @@ function detectRankingType(normalizedTopic: string): RankingType {
   return "unknown";
 }
 
-function detectLimit(topic: string, defaultLimit = DEFAULT_RANKING_LIMIT): number {
+/** Legacy topic parser — list size detection only. */
+export function detectRankingLimit(topic: string, defaultLimit = DEFAULT_RANKING_LIMIT): number {
   const topNumberMatch = topic.match(/\btop\s+(\d{1,2})\b/i);
   if (topNumberMatch) {
     const parsed = Number(topNumberMatch[1]);
@@ -57,6 +60,7 @@ function detectLimit(topic: string, defaultLimit = DEFAULT_RANKING_LIMIT): numbe
 
 /**
  * Parses a top_5 brief into structured ranking intent (competition, metric, time scope).
+ * @deprecated Fallback only — prefer `buildRankingIntentFromAnalysis` when `IntelligenceAnalysis` is available.
  */
 export function parseRankingIntent(
   topic: string,
@@ -64,20 +68,25 @@ export function parseRankingIntent(
   mode?: FootballResearchMode,
 ): RankingIntent {
   const normalizedTopic = normalizeTopic(topic);
-  const season = detectRankingSeasonFromTopic(normalizedTopic);
-  const competition = detectCompetitionFromTopic(normalizedTopic);
+  const competitionResolution = resolveCanonicalCompetition(normalizedTopic);
+  const competition = mapCompetitionScopeToRanking(competitionResolution.scope);
+  const season = competitionResolution.season;
+  const timeScope = competitionResolution.timeScope;
 
   const intent: RankingIntent = {
     kind: "ranking",
     rankingType: detectRankingType(normalizedTopic),
     competition,
-    timeScope: detectRankingTimeScope(normalizedTopic, competition, season),
+    timeScope,
     ...(season != null ? { season } : {}),
-    limit: detectLimit(normalizedTopic, defaultLimit),
+    limit: detectRankingLimit(normalizedTopic, defaultLimit),
   };
 
-  return normalizeTop5ScorersIntent(intent, mode);
+  return attachRankingSeasonStatus(normalizeTop5ScorersIntent(intent, mode));
 }
+
+/** @deprecated Prefer `buildRankingIntentFromAnalysis` when `IntelligenceAnalysis` is available. */
+export const buildRankingIntentFromTopic = parseRankingIntent;
 
 export function isTopScorersWorldCupIntent(intent: RankingIntent): boolean {
   return intent.rankingType === "top_scorers" && intent.competition === "fifa_world_cup";

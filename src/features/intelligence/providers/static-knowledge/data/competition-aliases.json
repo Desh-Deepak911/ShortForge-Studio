@@ -1,0 +1,18 @@
+{
+  "id": "competition-aliases",
+  "kind": "reference",
+  "title": "Competition aliases",
+  "sourceNote": "Canonical competition names for brief normalization.",
+  "aliases": [
+    { "alias": "ucl", "canonical": "UEFA Champions League", "scope": "champions_league" },
+    { "alias": "champions league", "canonical": "UEFA Champions League", "scope": "champions_league" },
+    { "alias": "prem", "canonical": "Premier League", "scope": "premier_league" },
+    { "alias": "epl", "canonical": "Premier League", "scope": "premier_league" },
+    { "alias": "premier league", "canonical": "Premier League", "scope": "premier_league" },
+    { "alias": "la liga", "canonical": "La Liga", "scope": "la_liga" },
+    { "alias": "serie a", "canonical": "Serie A", "scope": "serie_a" },
+    { "alias": "bundesliga", "canonical": "Bundesliga", "scope": "bundesliga" },
+    { "alias": "world cup", "canonical": "FIFA World Cup", "scope": "fifa_world_cup" },
+    { "alias": "fifa world cup", "canonical": "FIFA World Cup", "scope": "fifa_world_cup" }
+  ]
+}

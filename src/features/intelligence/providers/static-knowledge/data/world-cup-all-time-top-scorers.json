@@ -1,0 +1,15 @@
+{
+  "id": "world-cup-all-time-top-scorers",
+  "kind": "ranked_list",
+  "title": "All-time FIFA World Cup top scorers",
+  "competition": "fifa_world_cup",
+  "metric": "goals",
+  "sourceNote": "Curated all-time record — expand via JSON as tournaments complete.",
+  "entries": [
+    { "rank": 1, "name": "Miroslav Klose", "value": 16, "nationality": "Germany" },
+    { "rank": 2, "name": "Ronaldo Nazário", "value": 15, "nationality": "Brazil" },
+    { "rank": 3, "name": "Gerd Müller", "value": 14, "nationality": "Germany" },
+    { "rank": 4, "name": "Just Fontaine", "value": 13, "nationality": "France" },
+    { "rank": 5, "name": "Lionel Messi", "value": 13, "nationality": "Argentina" }
+  ]
+}

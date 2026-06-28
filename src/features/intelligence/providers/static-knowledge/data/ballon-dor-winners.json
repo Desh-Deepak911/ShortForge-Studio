@@ -1,0 +1,14 @@
+{
+  "id": "ballon-dor-winners",
+  "kind": "historic_winners",
+  "title": "Ballon d'Or winners",
+  "category": "individual_award",
+  "sourceNote": "Sample historic winners — extend JSON for full archive.",
+  "entries": [
+    { "year": 2023, "winner": "Lionel Messi", "country": "Argentina", "club": "Inter Miami" },
+    { "year": 2022, "winner": "Karim Benzema", "country": "France", "club": "Real Madrid" },
+    { "year": 2021, "winner": "Lionel Messi", "country": "Argentina", "club": "Paris Saint-Germain" },
+    { "year": 2019, "winner": "Lionel Messi", "country": "Argentina", "club": "Barcelona" },
+    { "year": 2018, "winner": "Luka Modrić", "country": "Croatia", "club": "Real Madrid" }
+  ]
+}

@@ -71,6 +71,6 @@ export function buildTopScorersUnavailableWarning(
 }
 
 export function buildTopScorersSeasonUnavailableWarning(intent: RankingIntent): string {
-  const label = getCompetitionLabel(intent.competition);
-  return `No season available for ${label} topscorers.`;
+  void intent;
+  return "Choose a season to fetch ranking data.";
 }

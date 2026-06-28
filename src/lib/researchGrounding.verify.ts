@@ -3,11 +3,13 @@
  */
 import assert from "node:assert/strict";
 
-import { buildFootballResearchContextText } from "@/features/research/utils/football-context-builder";
+import { buildFootballResearchContextText } from "@/features/research/legacy";
 import {
   applyFifaWorldCup2026Grounding,
-  buildResearchUnavailablePromptRules,
   hasNoUsefulResearchForGrounding,
+} from "@/features/research/legacy/research-grounding.legacy.utils";
+import {
+  buildResearchUnavailablePromptRules,
   mentionsFifaWorldCup2026,
   NO_RELIABLE_FOOTBALL_DATA_WARNING,
 } from "@/features/research/utils/research-grounding.utils";

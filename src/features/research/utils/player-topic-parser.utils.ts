@@ -1,3 +1,4 @@
+/** @deprecated Use `COMPETITION_CATALOG` from `@/features/intelligence/competitions`. */
 import { RANKING_COMPETITIONS } from "@/features/research/utils/competition-resolver.utils";
 import type {
   ParsedPlayerAnalysisTopic,
@@ -90,6 +91,10 @@ function stripYears(value: string): string {
 
 /**
  * Extracts player name, competition, and year from a player-analysis topic string.
+ */
+/**
+ * Legacy player-analysis topic parser (name, competition, season from raw text).
+ * @deprecated Fallback only — prefer `resolvePlayerAnalysisTopic` when `IntelligenceAnalysis` is available.
  */
 export function parsePlayerAnalysisTopic(topic: string): ParsedPlayerAnalysisTopic {
   const normalizedTopic = normalizeWhitespace(topic);

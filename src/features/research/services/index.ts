@@ -1,2 +1,7 @@
-export { researchFootballContext } from "./football-research.service";
-export type { ResearchFootballContextInput } from "./football-research.service";
+export {
+  executeIntelligenceQuery,
+  buildIntelligenceExecutionValidationFailure,
+  type ExecuteIntelligenceQueryInput,
+  type ExecuteIntelligenceQueryResult,
+  type IntelligenceExecutionStatus,
+} from "@/features/intelligence/planner/execute-intelligence-query";

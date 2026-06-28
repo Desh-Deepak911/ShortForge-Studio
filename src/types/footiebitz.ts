@@ -1,5 +1,4 @@
 import type { AudioFirstGenerationResult, FootieScript } from "@/features/story/types";
-import type { FootballResearchContext } from "@/features/research/types/football-research.types";
 
 export type Tone = "dramatic" | "funny" | "tactical" | "news" | "emotional";
 
@@ -72,10 +71,10 @@ export function resolveSceneCount(value: unknown): number {
 }
 
 export interface GenerateScriptResearchPreview {
+  /** Intelligence query id from Research Preview — server resolves full pipeline from store. */
+  queryId: string;
   topic: string;
   mode: ScriptMode;
-  researchContext: FootballResearchContext;
-  contextText: string;
 }
 
 export interface GenerateScriptRequest {

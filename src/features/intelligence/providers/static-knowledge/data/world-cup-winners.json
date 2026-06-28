@@ -1,0 +1,14 @@
+{
+  "id": "world-cup-winners",
+  "kind": "historic_winners",
+  "title": "FIFA World Cup winners",
+  "category": "tournament",
+  "sourceNote": "Sample World Cup champions — extend JSON for full history.",
+  "entries": [
+    { "year": 2022, "winner": "Argentina", "host": "Qatar", "runnerUp": "France" },
+    { "year": 2018, "winner": "France", "host": "Russia", "runnerUp": "Croatia" },
+    { "year": 2014, "winner": "Germany", "host": "Brazil", "runnerUp": "Argentina" },
+    { "year": 2010, "winner": "Spain", "host": "South Africa", "runnerUp": "Netherlands" },
+    { "year": 2006, "winner": "Italy", "host": "Germany", "runnerUp": "France" }
+  ]
+}

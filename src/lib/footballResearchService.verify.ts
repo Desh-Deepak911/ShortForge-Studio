@@ -32,15 +32,32 @@ test("topic inference uses mode for player and top list", () => {
   assert.equal(inferFootballTopicKind("Best strikers", "top_5"), "top_list");
 });
 
-test("research service routes top_5 world cup scorers through ranking intent", () => {
-  const service = readSrc("src/features/research/services/football-research.service.ts");
-  assert.match(service, /parseRankingIntent/);
-  assert.match(service, /resolveCompetitionFromTopic/);
-  assert.match(service, /resolveRankingSeason/);
-  assert.match(service, /researchTopScorersRanking/);
-  assert.match(service, /buildAllTimeWorldCupTopScorersContext/);
-  assert.match(service, /static-fallback/);
-  assert.match(service, /Using curated all-time World Cup record fallback\./);
+test("executor routes top_5 world cup scorers through ranking intent enrichment", () => {
+  const researchIndex = readSrc("src/features/research/index.ts");
+  const enrichment = readSrc("src/features/intelligence/planner/execution-enrichment.server.ts");
+  const engine = readSrc("src/features/intelligence/providers/static-knowledge/static-knowledge-research.engine.ts");
+  const legacyRegistry = readSrc(
+    "src/features/intelligence/providers/legacy/provider-research.legacy.server.ts",
+  );
+  assert.match(researchIndex, /executeIntelligenceQuery/);
+  assert.match(enrichment, /resolveResearchRankingIntent/);
+  assert.doesNotMatch(researchIndex, /researchFootballContextDetailed/);
+  assert.doesNotMatch(researchIndex, /runRegistryResearch/);
+  assert.match(legacyRegistry, /runRegistryResearchDetailed/);
+  assert.match(engine, /source: "static-fallback"/);
+  assert.match(engine, /getWorldCupAllTimeTopScorersPlayers/);
+});
+
+test("executor routes player_analysis through provider engine", () => {
+  const executor = readSrc("src/features/intelligence/planner/execute-intelligence-query.ts");
+  const engine = readSrc("src/features/intelligence/providers/api-football-research.engine.ts");
+  assert.match(engine, /resolvePlayerAnalysisTopic/);
+  assert.match(engine, /playerAnalysisIntent/);
+  assert.match(engine, /buildVerifiedPlayerFactStrings/);
+  assert.match(executor, /executeIntelligenceQuery/);
+  assert.match(executor, /buildExecutionEnrichmentFromQuery/);
+  assert.doesNotMatch(executor, /await executeRegistryFallbackResearch/);
+  assert.doesNotMatch(executor, /apiFootballProvider/);
 });
 
 test("ranking intent parses world cup top scorers brief", () => {
@@ -52,32 +69,51 @@ test("ranking intent parses world cup top scorers brief", () => {
   assert.equal(intent.limit, 5);
 });
 
-test("research service resolves all-time world cup scorers before API check", () => {
-  const service = readSrc("src/features/research/services/football-research.service.ts");
-  assert.match(service, /isTopScorersWorldCupIntent\(rankingIntent\) && rankingIntent\.timeScope === "all_time"/);
-  assert.match(service, /return buildAllTimeWorldCupTopScorersContext\(rankingIntent, topic, input\.mode, manualContext\)/);
+test("executor resolves all-time world cup scorers via executeResearchPlan", () => {
+  const executor = readSrc("src/features/intelligence/planner/execute-intelligence-query.ts");
+  const enrichment = readSrc("src/features/intelligence/planner/execution-enrichment.server.ts");
+  assert.match(executor, /executeIntelligenceQuery/);
+  assert.match(enrichment, /rankingIntent/);
+  assert.match(executor, /providerRegistry\.executeResearchPlan/);
+  assert.doesNotMatch(executor, /runRegistryResearch/);
+  assert.doesNotMatch(executor, /staticKnowledgeProvider/);
+  assert.doesNotMatch(executor, /isApiFootballConfigured/);
 });
 
-test("research service is server-only and never throws to callers", () => {
-  const service = readSrc("src/features/research/services/football-research.service.ts");
-  assert.match(service, /import "server-only"/);
-  assert.match(service, /export async function researchFootballContext/);
-  assert.match(service, /isApiFootballConfigured/);
-  assert.match(service, /Never throws/);
-  assert.doesNotMatch(service, /throw new Error/);
+test("production research barrel exports executor only", () => {
+  const researchIndex = readSrc("src/features/research/index.ts");
+  const servicesIndex = readSrc("src/features/research/services/index.ts");
+  assert.match(researchIndex, /executeIntelligenceQuery/);
+  assert.match(servicesIndex, /executeIntelligenceQuery/);
+  assert.doesNotMatch(researchIndex, /researchFootballContextDetailed/);
+  assert.doesNotMatch(servicesIndex, /researchFootballContextDetailed/);
 });
 
-test("legacy football adapter delegates to research feature", () => {
-  const adapter = readSrc("src/features/football/services/football-research.service.ts");
-  assert.match(adapter, /@\/features\/research/);
-  assert.match(adapter, /buildFootballResearchContextText/);
+test("research-football API accepts forwarded intelligence query via executor", () => {
+  const route = readSrc("src/app/api/research-football/route.ts");
+  const executor = readSrc("src/features/intelligence/planner/execute-intelligence-query.ts");
+  assert.match(route, /executeIntelligenceQuery/);
+  assert.match(route, /assembledContext/);
+  assert.match(executor, /intelligenceQuery\?: IntelligenceQuery/);
+  assert.doesNotMatch(route, /contextText/);
+  assert.doesNotMatch(route, /researchContext/);
+  assert.doesNotMatch(route, /researchFootballContextDetailed/);
 });
 
-test("research service routes player_analysis through topic parser", () => {
-  const service = readSrc("src/features/research/services/football-research.service.ts");
-  assert.match(service, /parsePlayerAnalysisTopic/);
-  assert.match(service, /playerAnalysisIntent/);
-  assert.match(service, /buildVerifiedPlayerFactStrings/);
+test("football research legacy adapter routes through executor + assembledContextToPrompt", () => {
+  const adapter = readSrc("src/features/football/legacy/football-research.service.legacy.ts");
+  const footballIndex = readSrc("src/features/football/index.ts");
+  const scriptResolver = readSrc("src/features/research/utils/script-research-context.utils.ts");
+  const legacyDetailed = readSrc(
+    "src/features/research/legacy/football-research-detailed.legacy.server.ts",
+  );
+  assert.match(adapter, /executeIntelligenceQuery/);
+  assert.match(adapter, /applyAssembledResearchContext/);
+  assert.doesNotMatch(adapter, /buildFootballResearchContextText/);
+  assert.doesNotMatch(footballIndex, /researchFootballContext/);
+  assert.match(scriptResolver, /assembledContextToPrompt/);
+  assert.match(legacyDetailed, /executeIntelligenceQuery/);
+  assert.match(legacyDetailed, /researchFootballContextDetailed/);
 });
 
 console.log("\nAll football research service checks passed.");

@@ -110,13 +110,14 @@ test("player analysis context text uses structured sections", () => {
   assert.match(text, /if selected/);
 });
 
-test("research service parses player topic before API search", () => {
-  const service = readSrc("src/features/research/services/football-research.service.ts");
-  assert.match(service, /parsePlayerAnalysisTopic/);
-  assert.match(service, /buildPlayerSearchQueries/);
-  assert.match(service, /pickBestPlayerSearchMatch/);
-  assert.match(service, /appendFifaWorldCup2026TournamentFacts/);
-  assert.match(service, /buildVerifiedPlayerFactStrings/);
+test("player research engine parses player topic before API search", () => {
+  const analysisUtils = readSrc("src/features/research/utils/intelligence-analysis-research.utils.ts");
+  const engine = readSrc("src/features/intelligence/providers/api-football-research.engine.ts");
+  assert.match(analysisUtils, /parsePlayerAnalysisTopic/);
+  assert.match(engine, /buildPlayerSearchQueries/);
+  assert.match(engine, /pickBestPlayerSearchMatch/);
+  assert.match(engine, /appendFifaWorldCup2026TournamentFacts/);
+  assert.match(engine, /buildVerifiedPlayerFactStrings/);
 });
 
 console.log("\nAll player topic parser checks passed.");

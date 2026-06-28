@@ -1,0 +1,44 @@
+{
+  "id": "football-nicknames",
+  "kind": "reference",
+  "title": "Known football nicknames",
+  "sourceNote": "Fixture, club, and competition nicknames for entity hints.",
+  "nicknames": [
+    {
+      "nickname": "el clasico",
+      "type": "fixture",
+      "label": "El Clasico",
+      "entities": ["Barcelona", "Real Madrid"]
+    },
+    {
+      "nickname": "the derby",
+      "type": "fixture",
+      "label": "Manchester Derby",
+      "entities": ["Manchester City", "Manchester United"]
+    },
+    {
+      "nickname": "north london derby",
+      "type": "fixture",
+      "label": "North London Derby",
+      "entities": ["Arsenal", "Tottenham Hotspur"]
+    },
+    {
+      "nickname": "barca",
+      "type": "club",
+      "label": "Barcelona",
+      "entities": ["Barcelona"]
+    },
+    {
+      "nickname": "man city",
+      "type": "club",
+      "label": "Manchester City",
+      "entities": ["Manchester City"]
+    },
+    {
+      "nickname": "red devils",
+      "type": "club",
+      "label": "Manchester United",
+      "entities": ["Manchester United"]
+    }
+  ]
+}

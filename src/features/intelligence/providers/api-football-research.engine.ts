@@ -1,13 +1,15 @@
 import "server-only";
 
+import type { IntelligenceAnalysis } from "@/features/intelligence/shared/intelligence-analysis.types";
+import type { EntityResearchHints } from "@/features/intelligence/entities/entity-research-hints.types";
 import {
   getFixtureEvents,
   getFixtureLineups,
   getFixtureStatistics,
   getPlayerSearch,
+  getPlayerStatistics,
   getStandings,
   getTopScorers,
-  isApiFootballConfigured,
   searchFixturesByTeam,
   searchTeams,
   type ApiFootballFixtureItem,
@@ -15,14 +17,21 @@ import {
   type ApiFootballTopScorerRanking,
 } from "@/lib/football";
 
+import type { ApiFootballResearchState } from "./api-football-research-state.types";
+import {
+  buildApiFootballResearchResult,
+  type ApiFootballResearchResultQuery,
+} from "./build-api-football-research-result.utils";
+import type { ApiFootballResearchInput } from "./api-football-research.types";
+import type { IntelligenceResearchResult } from "./provider-result.types";
+import type { RankingIntent } from "@/features/research/types/ranking-intent.types";
 import type {
-  FootballResearchContext,
   FootballResearchMode,
   FootballResearchPlayer,
   FootballResearchSource,
 } from "@/features/research/types/football-research.types";
-import type { RankingIntent } from "@/features/research/types/ranking-intent.types";
-
+import type { PlayerAnalysisIntent } from "@/features/research/types/player-analysis.types";
+import { FIFA_WORLD_CUP_2026_NOT_QATAR_FACT } from "@/features/research/utils/research-grounding.utils";
 import {
   buildFixtureFact,
   buildPlayerFact,
@@ -34,43 +43,61 @@ import {
   mapApiStandings,
   mapApiStatistics,
   mapApiTeam,
-} from "../utils/api-football-mappers.utils";
+} from "@/features/research/utils/api-football-mappers.utils";
+import { parseManualFacts } from "@/features/research/utils/topic-inference.utils";
+import { getCompetitionLabel } from "@/features/research/utils/competition-resolver.utils";
+import { isTopScorersRankingIntent } from "@/features/research/utils/ranking-intent.utils";
 import {
-  inferFootballTopicKind,
-  parseManualFacts,
-  splitMatchTopic,
-} from "../utils/topic-inference.utils";
+  resolveMatchTeamQueries,
+  resolvePlayerAnalysisTopic,
+  resolvePlayerStatsSeason,
+  resolveResearchRankingIntent,
+  resolveResearchTopicKind,
+} from "@/features/research/utils/intelligence-analysis-research.utils";
+import { buildTopScorersUnavailableWarning } from "@/features/research/utils/top-scorers-research.utils";
+import { attachRankingSeasonStatus, RANKING_SEASON_REQUIRED_WARNING } from "@/features/research/utils/season-resolution.utils";
 import {
-  getCompetitionLabel,
-  resolveRankingSeason,
-} from "../utils/competition-resolver.utils";
-import {
-  isTopScorersRankingIntent,
-  parseRankingIntent,
-} from "../utils/ranking-intent.utils";
-import {
-  buildTopScorersSeasonUnavailableWarning,
-  buildTopScorersUnavailableWarning,
-  isAllTimeWorldCupTopScorersIntent,
-  resolveTopScorersLeagueId,
-} from "../utils/top-scorers-research.utils";
-import {
-  appendFifaWorldCup2026TournamentFacts,
   buildPlayerAnalysisIntent,
   buildVerifiedPlayerFactStrings,
   pickBestPlayerSearchMatch,
-} from "../utils/player-analysis.utils";
+} from "@/features/research/utils/player-analysis.utils";
+import { buildPlayerSearchQueries } from "@/features/research/utils/player-topic-parser.utils";
 import {
-  buildPlayerSearchQueries,
-  parsePlayerAnalysisTopic,
-} from "../utils/player-topic-parser.utils";
-import { getAllTimeWorldCupTopScorers } from "../utils/world-cup-all-time-scorers.utils";
-import { applyFifaWorldCup2026Grounding } from "../utils/research-grounding.utils";
+  applyEntityHintsToRankingIntent,
+  resolveLeagueIdFromHintsOrIntent,
+  resolveRankingSeasonFromHintsOrIntent,
+} from "@/features/research/utils/entity-research-hints.utils";
+import { resolveEntityHintsForResearch } from "@/features/research/utils/resolved-entities-research.utils";
 
-export interface ResearchFootballContextInput {
-  topic: string;
-  mode: FootballResearchMode;
-  manualContext?: string;
+function appendFifaWorldCup2026TournamentFacts(
+  state: ApiFootballResearchState,
+  intent: PlayerAnalysisIntent,
+): void {
+  intent.competitionKey = "fifa_world_cup_2026";
+  intent.competitionLabel = "FIFA World Cup 2026";
+  intent.year = 2026;
+  intent.squadStatus = "unknown";
+
+  const tournamentFacts = [
+    "Competition: FIFA World Cup 2026",
+    "Tournament year: 2026",
+    "Host nations: USA, Canada, Mexico",
+    FIFA_WORLD_CUP_2026_NOT_QATAR_FACT,
+  ];
+
+  const seen = new Set(state.facts);
+  for (const fact of tournamentFacts) {
+    if (!seen.has(fact)) {
+      seen.add(fact);
+      state.facts.push(fact);
+    }
+  }
+
+  if (!state.warnings.some((warning) => /2026 World Cup squad/i.test(warning))) {
+    state.warnings.push(
+      "2026 World Cup squad selection/participation: unknown — not confirmed by API.",
+    );
+  }
 }
 
 function createEmptyContext(input: {
@@ -80,7 +107,7 @@ function createEmptyContext(input: {
   source: FootballResearchSource;
   warnings?: string[];
   summary?: string;
-}): FootballResearchContext {
+}): ApiFootballResearchState {
   const facts = parseManualFacts(input.manualContext);
 
   return {
@@ -93,29 +120,29 @@ function createEmptyContext(input: {
   };
 }
 
-function buildSummary(context: FootballResearchContext): string {
-  if (context.rankingIntent?.rankingType === "top_scorers" && context.players?.length) {
-    const competitionLabel = getCompetitionLabel(context.rankingIntent.competition);
+function buildSummary(state: ApiFootballResearchState): string {
+  if (state.rankingIntent?.rankingType === "top_scorers" && state.players?.length) {
+    const competitionLabel = getCompetitionLabel(state.rankingIntent.competition);
     const timeLabel =
-      context.rankingIntent.timeScope === "season" && context.rankingIntent.season
-        ? `${context.rankingIntent.season}`
+      state.rankingIntent.timeScope === "season" && state.rankingIntent.season
+        ? `${state.rankingIntent.season}`
         : "all-time";
-    return `Top ${context.players.length} goal scorers — ${competitionLabel} (${timeLabel})`;
+    return `Top ${state.players.length} goal scorers — ${competitionLabel} (${timeLabel})`;
   }
 
-  if (context.fixture) {
-    return `${context.fixture.homeTeam} vs ${context.fixture.awayTeam} — ${context.fixture.league}`;
+  if (state.fixture) {
+    return `${state.fixture.homeTeam} vs ${state.fixture.awayTeam} — ${state.fixture.league}`;
   }
 
-  if (context.players?.length) {
-    return `Player focus: ${context.players[0]!.name}`;
+  if (state.players?.length) {
+    return `Player focus: ${state.players[0]!.name}`;
   }
 
-  if (context.teams?.length) {
-    return `Team focus: ${context.teams.map((team) => team.name).join(" vs ")}`;
+  if (state.teams?.length) {
+    return `Team focus: ${state.teams.map((team) => team.name).join(" vs ")}`;
   }
 
-  return `Research brief: ${context.topic}`;
+  return `Research brief: ${state.topic}`;
 }
 
 function appendUniqueFacts(facts: string[], nextFacts: string[]): string[] {
@@ -175,9 +202,9 @@ async function fetchFixtureBundle(
   fixtureId: number,
   mode: FootballResearchMode,
 ): Promise<{
-  statistics?: FootballResearchContext["statistics"];
-  events?: FootballResearchContext["events"];
-  lineups?: FootballResearchContext["lineups"];
+  statistics?: ApiFootballResearchState["statistics"];
+  events?: ApiFootballResearchState["events"];
+  lineups?: ApiFootballResearchState["lineups"];
 }> {
   const needsStatistics =
     mode === "tactical_review" || mode === "match_recap" || mode === "match_preview";
@@ -201,9 +228,34 @@ async function researchMatchTopic(
   topic: string,
   mode: FootballResearchMode,
   manualContext?: string,
-): Promise<FootballResearchContext> {
-  const queries = splitMatchTopic(topic);
-  const teams = await resolveTeamsFromQueries(queries);
+  entityHints?: EntityResearchHints,
+  intelligenceAnalysis?: IntelligenceAnalysis,
+): Promise<ApiFootballResearchState> {
+  let teams: Array<{ id: number; name: string; country?: string }> = [];
+
+  if (entityHints?.teams?.length) {
+    teams = entityHints.teams.map((team) => ({
+      id: team.id,
+      name: team.name,
+    }));
+  } else if (
+    entityHints?.fixture?.homeTeamId != null &&
+    entityHints.fixture.awayTeamId != null
+  ) {
+    teams = [
+      {
+        id: entityHints.fixture.homeTeamId,
+        name: entityHints.fixture.homeTeam,
+      },
+      {
+        id: entityHints.fixture.awayTeamId,
+        name: entityHints.fixture.awayTeam,
+      },
+    ];
+  } else {
+    const queries = resolveMatchTeamQueries({ topic, intelligenceAnalysis });
+    teams = await resolveTeamsFromQueries(queries);
+  }
   const warnings: string[] = [];
 
   if (teams.length === 0) {
@@ -281,12 +333,40 @@ async function researchMatchTopic(
   return context;
 }
 
+function resolveExplicitPlayerStatsSeason(
+  topic: string,
+  entityHints?: EntityResearchHints,
+  intelligenceAnalysis?: IntelligenceAnalysis,
+): number | undefined {
+  if (entityHints?.season != null) {
+    return entityHints.season;
+  }
+
+  return resolvePlayerStatsSeason({ topic, intelligenceAnalysis });
+}
+
+async function fetchPlayerStatisticsWhenSeasonExplicit(
+  playerId: number,
+  topic: string,
+  entityHints?: EntityResearchHints,
+  intelligenceAnalysis?: IntelligenceAnalysis,
+): Promise<ApiFootballPlayerSearchItem[] | null> {
+  const season = resolveExplicitPlayerStatsSeason(topic, entityHints, intelligenceAnalysis);
+  if (season == null) {
+    return null;
+  }
+
+  return getPlayerStatistics(playerId, season);
+}
+
 async function researchPlayerTopic(
   topic: string,
   mode: FootballResearchMode,
   manualContext?: string,
-): Promise<FootballResearchContext> {
-  const parsed = parsePlayerAnalysisTopic(topic);
+  entityHints?: EntityResearchHints,
+  intelligenceAnalysis?: IntelligenceAnalysis,
+): Promise<ApiFootballResearchState> {
+  const parsed = resolvePlayerAnalysisTopic({ topic, intelligenceAnalysis });
   const playerAnalysisIntent = buildPlayerAnalysisIntent(parsed);
 
   const context = createEmptyContext({
@@ -304,15 +384,27 @@ async function researchPlayerTopic(
   const searchQueries = buildPlayerSearchQueries(parsed.playerName);
   let matchedItem: ApiFootballPlayerSearchItem | null = null;
 
-  for (const query of searchQueries) {
-    const playersResult = await getPlayerSearch(query);
-    if (!playersResult?.length) {
-      continue;
-    }
+  if (entityHints?.player?.id) {
+    const statsResult = await fetchPlayerStatisticsWhenSeasonExplicit(
+      entityHints.player.id,
+      topic,
+      entityHints,
+      intelligenceAnalysis,
+    );
+    matchedItem = statsResult?.[0] ?? null;
+  }
 
-    matchedItem = pickBestPlayerSearchMatch(parsed.playerName, playersResult);
-    if (matchedItem) {
-      break;
+  if (!matchedItem) {
+    for (const query of searchQueries) {
+      const playersResult = await getPlayerSearch(query);
+      if (!playersResult?.length) {
+        continue;
+      }
+
+      matchedItem = pickBestPlayerSearchMatch(parsed.playerName, playersResult);
+      if (matchedItem) {
+        break;
+      }
     }
   }
 
@@ -364,70 +456,47 @@ function mapTopScorerRankingsToPlayers(
   }));
 }
 
-function buildAllTimeWorldCupTopScorersContext(
-  intent: RankingIntent,
-  topic: string,
-  mode: FootballResearchMode,
-  manualContext?: string,
-): FootballResearchContext {
-  const context = createEmptyContext({
-    topic,
-    mode,
-    manualContext,
-    source: "static-fallback",
-  });
-  context.rankingIntent = intent;
-
-  const rankedPlayers = getAllTimeWorldCupTopScorers(intent.limit);
-  context.players = rankedPlayers;
-  appendUniqueFacts(
-    context.facts,
-    rankedPlayers.map((player, index) => `#${index + 1} ${buildPlayerFact(player)}`),
-  );
-  context.warnings.push("Using curated all-time World Cup record fallback.");
-  context.summary = buildSummary(context);
-  return context;
-}
-
 async function researchTopScorersRanking(
   intent: RankingIntent,
   topic: string,
   mode: FootballResearchMode,
   manualContext?: string,
-): Promise<FootballResearchContext | null> {
-  if (intent.competition === "unknown") {
+  entityHints?: EntityResearchHints,
+): Promise<ApiFootballResearchState | null> {
+  const effectiveIntent = applyEntityHintsToRankingIntent(intent, entityHints);
+
+  if (effectiveIntent.competition === "unknown") {
     return null;
   }
 
-  if (isAllTimeWorldCupTopScorersIntent(intent)) {
-    return buildAllTimeWorldCupTopScorersContext(intent, topic, mode, manualContext);
-  }
-
-  const leagueId = resolveTopScorersLeagueId(intent);
+  const leagueId = resolveLeagueIdFromHintsOrIntent(effectiveIntent, entityHints);
   if (leagueId == null) {
     return null;
   }
 
-  const season = resolveRankingSeason(intent);
+  const season = resolveRankingSeasonFromHintsOrIntent(effectiveIntent, entityHints);
   if (season == null) {
     const context = createEmptyContext({
       topic,
       mode,
       manualContext,
       source: "fallback",
-      warnings: [buildTopScorersSeasonUnavailableWarning(intent)],
+      warnings: [RANKING_SEASON_REQUIRED_WARNING],
     });
-    context.rankingIntent = intent;
+    context.rankingIntent = attachRankingSeasonStatus({
+      ...effectiveIntent,
+      seasonStatus: "missing_required",
+    });
     context.summary = buildSummary(context);
     return context;
   }
 
-  const competitionLabel = getCompetitionLabel(intent.competition);
-  const resolvedIntent: RankingIntent = {
-    ...intent,
+  const competitionLabel = getCompetitionLabel(effectiveIntent.competition);
+  const resolvedIntent: RankingIntent = attachRankingSeasonStatus({
+    ...effectiveIntent,
     timeScope: "season",
     season,
-  };
+  });
 
   const topscorersResult = await getTopScorers({ leagueId, season });
   const context = createEmptyContext({
@@ -441,7 +510,7 @@ async function researchTopScorersRanking(
   if (topscorersResult?.length) {
     const rankedPlayers = mapTopScorerRankingsToPlayers(
       topscorersResult,
-      intent.limit,
+      effectiveIntent.limit,
       competitionLabel,
       season,
     );
@@ -465,12 +534,9 @@ async function researchLegacyTopListTopic(
   mode: FootballResearchMode,
   manualContext?: string,
   rankingIntent?: RankingIntent,
-): Promise<FootballResearchContext> {
-  const [teamsResult, playersResult] = await Promise.all([
-    searchTeams(topic),
-    getPlayerSearch(topic),
-  ]);
-
+  entityHints?: EntityResearchHints,
+  intelligenceAnalysis?: IntelligenceAnalysis,
+): Promise<ApiFootballResearchState> {
   const context = createEmptyContext({
     topic,
     mode,
@@ -481,10 +547,24 @@ async function researchLegacyTopListTopic(
     context.rankingIntent = rankingIntent;
   }
 
-  if (teamsResult?.[0]) {
-    context.teams = [mapApiTeam(teamsResult[0])];
+  const primaryTeamId = entityHints?.teams?.[0]?.id;
+
+  if (entityHints?.teams?.length) {
+    context.teams = entityHints.teams.map((team) => ({
+      id: team.id,
+      name: team.name,
+    }));
+  } else {
+    const teamsResult = await searchTeams(topic);
+    if (teamsResult?.[0]) {
+      context.teams = [mapApiTeam(teamsResult[0])];
+    }
+  }
+
+  const resolvedPrimaryTeamId = primaryTeamId ?? context.teams?.[0]?.id;
+  if (resolvedPrimaryTeamId) {
     const fixtures =
-      (await searchFixturesByTeam(context.teams[0]!.id, { last: 1 })) ?? [];
+      (await searchFixturesByTeam(resolvedPrimaryTeamId, { last: 1 })) ?? [];
     const latestFixture = fixtures[0];
 
     if (latestFixture) {
@@ -502,7 +582,16 @@ async function researchLegacyTopListTopic(
     }
   }
 
-  if (playersResult?.length) {
+  const playersResult = entityHints?.player?.id
+    ? ((await fetchPlayerStatisticsWhenSeasonExplicit(
+        entityHints.player.id,
+        topic,
+        entityHints,
+        intelligenceAnalysis,
+      )) ?? [])
+    : ((await getPlayerSearch(topic)) ?? []);
+
+  if (playersResult.length) {
     const rankedPlayers = mapApiPlayers(playersResult)
       .sort((left, right) => (right.goals ?? 0) - (left.goals ?? 0))
       .slice(0, 5);
@@ -526,29 +615,45 @@ async function researchTopListTopic(
   topic: string,
   mode: FootballResearchMode,
   manualContext?: string,
-): Promise<FootballResearchContext> {
-  const rankingIntent = mode === "top_5" ? parseRankingIntent(topic, 5, mode) : undefined;
+  entityHints?: EntityResearchHints,
+  intelligenceAnalysis?: IntelligenceAnalysis,
+): Promise<ApiFootballResearchState> {
+  const rankingIntent = resolveResearchRankingIntent({
+    topic,
+    mode,
+    intelligenceAnalysis,
+  });
 
   if (rankingIntent && isTopScorersRankingIntent(rankingIntent, mode)) {
-    const rankedContext = await researchTopScorersRanking(rankingIntent, topic, mode, manualContext);
+    const rankedContext = await researchTopScorersRanking(
+      rankingIntent,
+      topic,
+      mode,
+      manualContext,
+      entityHints,
+    );
     if (rankedContext) {
       return rankedContext;
     }
   }
 
-  return researchLegacyTopListTopic(topic, mode, manualContext, rankingIntent);
+  return researchLegacyTopListTopic(
+    topic,
+    mode,
+    manualContext,
+    rankingIntent,
+    entityHints,
+    intelligenceAnalysis,
+  );
 }
 
 async function researchGeneralTopic(
   topic: string,
   mode: FootballResearchMode,
   manualContext?: string,
-): Promise<FootballResearchContext> {
-  const [teamsResult, playersResult] = await Promise.all([
-    searchTeams(topic),
-    getPlayerSearch(topic),
-  ]);
-
+  entityHints?: EntityResearchHints,
+  intelligenceAnalysis?: IntelligenceAnalysis,
+): Promise<ApiFootballResearchState> {
   const context = createEmptyContext({
     topic,
     mode,
@@ -556,11 +661,14 @@ async function researchGeneralTopic(
     source: "api-football",
   });
 
-  if (teamsResult?.length) {
-    context.teams = teamsResult.slice(0, 2).map(mapApiTeam);
+  if (entityHints?.teams?.length) {
+    context.teams = entityHints.teams.map((team) => ({
+      id: team.id,
+      name: team.name,
+    }));
     appendUniqueFacts(
       context.facts,
-      context.teams.map((team) => `${team.name}${team.country ? ` (${team.country})` : ""}`),
+      context.teams.map((team) => team.name),
     );
 
     const fixtures =
@@ -569,9 +677,34 @@ async function researchGeneralTopic(
       context.fixture = mapApiFixture(fixtures[0]);
       appendUniqueFacts(context.facts, [buildFixtureFact(context.fixture)]);
     }
+  } else {
+    const teamsResult = await searchTeams(topic);
+    if (teamsResult?.length) {
+      context.teams = teamsResult.slice(0, 2).map(mapApiTeam);
+      appendUniqueFacts(
+        context.facts,
+        context.teams.map((team) => `${team.name}${team.country ? ` (${team.country})` : ""}`),
+      );
+
+      const fixtures =
+        (await searchFixturesByTeam(context.teams[0]!.id, { last: 1 })) ?? [];
+      if (fixtures[0]) {
+        context.fixture = mapApiFixture(fixtures[0]);
+        appendUniqueFacts(context.facts, [buildFixtureFact(context.fixture)]);
+      }
+    }
   }
 
-  if (playersResult?.length) {
+  const playersResult = entityHints?.player?.id
+    ? ((await fetchPlayerStatisticsWhenSeasonExplicit(
+        entityHints.player.id,
+        topic,
+        entityHints,
+        intelligenceAnalysis,
+      )) ?? [])
+    : ((await getPlayerSearch(topic)) ?? []);
+
+  if (playersResult.length) {
     context.players = mapApiPlayers(playersResult.slice(0, 2));
     appendUniqueFacts(
       context.facts,
@@ -594,79 +727,68 @@ async function researchGeneralTopic(
 }
 
 /**
- * Researches football context for script enrichment.
- * Never throws — always returns a FootballResearchContext suitable for fallback generation.
+ * Fallback-only legacy API-Football research engine (monolithic topic routing).
+ *
+ * Hot paths use `providerRegistry.executeResearchPlan()` → `mergeProviderResults()`.
+ * TODO(phase-5): remove after all provider plans emit normalized operations.
  */
-export async function researchFootballContext(
-  input: ResearchFootballContextInput,
-): Promise<FootballResearchContext> {
+export async function executeApiFootballResearch(
+  input: ApiFootballResearchInput,
+  query: ApiFootballResearchResultQuery,
+): Promise<IntelligenceResearchResult> {
   const topic = input.topic.trim();
   const manualContext = input.manualContext?.trim() || undefined;
+  const entityHints = resolveEntityHintsForResearch({
+    resolvedEntities: input.resolvedEntities,
+    entityHints: input.entityHints,
+  });
 
-  if (!topic) {
-    return createEmptyContext({
-      topic: "",
-      mode: input.mode,
-      manualContext,
-      source: "fallback",
-      warnings: ["Topic is required for football research."],
-    });
-  }
+  const topicKind = resolveResearchTopicKind({
+    topic,
+    mode: input.mode,
+    intelligenceAnalysis: input.intelligenceAnalysis,
+  });
 
-  if (input.mode === "top_5") {
-    const rankingIntent = parseRankingIntent(topic, 5, input.mode);
-    if (isAllTimeWorldCupTopScorersIntent(rankingIntent)) {
-      return buildAllTimeWorldCupTopScorersContext(rankingIntent, topic, input.mode, manualContext);
-    }
-  }
+  let state: ApiFootballResearchState;
 
-  if (!isApiFootballConfigured()) {
-    return applyFifaWorldCup2026Grounding(
-      createEmptyContext({
+  switch (topicKind) {
+    case "match":
+      state = await researchMatchTopic(
         topic,
-        mode: input.mode,
+        input.mode,
         manualContext,
-        source: manualContext ? "manual" : "fallback",
-        warnings: manualContext
-          ? ["API_FOOTBALL_KEY is not configured — using manual context only."]
-          : ["API_FOOTBALL_KEY is not configured."],
-      }),
-    );
-  }
-
-  try {
-    const topicKind = inferFootballTopicKind(topic, input.mode);
-
-    switch (topicKind) {
-      case "match":
-        return applyFifaWorldCup2026Grounding(
-          await researchMatchTopic(topic, input.mode, manualContext),
-        );
-      case "player":
-        return applyFifaWorldCup2026Grounding(
-          await researchPlayerTopic(topic, input.mode, manualContext),
-        );
-      case "top_list":
-        return applyFifaWorldCup2026Grounding(
-          await researchTopListTopic(topic, input.mode, manualContext),
-        );
-      case "team":
-      default:
-        return applyFifaWorldCup2026Grounding(
-          await researchGeneralTopic(topic, input.mode, manualContext),
-        );
-    }
-  } catch (error) {
-    return applyFifaWorldCup2026Grounding(
-      createEmptyContext({
+        entityHints,
+        input.intelligenceAnalysis,
+      );
+      break;
+    case "player":
+      state = await researchPlayerTopic(
         topic,
-        mode: input.mode,
+        input.mode,
         manualContext,
-        source: manualContext ? "manual" : "fallback",
-        warnings: [
-          error instanceof Error ? error.message : "Football research failed.",
-        ],
-      }),
-    );
+        entityHints,
+        input.intelligenceAnalysis,
+      );
+      break;
+    case "top_list":
+      state = await researchTopListTopic(
+        topic,
+        input.mode,
+        manualContext,
+        entityHints,
+        input.intelligenceAnalysis,
+      );
+      break;
+    case "team":
+    default:
+      state = await researchGeneralTopic(
+        topic,
+        input.mode,
+        manualContext,
+        entityHints,
+        input.intelligenceAnalysis,
+      );
   }
+
+  return buildApiFootballResearchResult(state, query);
 }

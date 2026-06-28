@@ -459,6 +459,9 @@ function appendGeneralModes(lines: string[], researchContext: FootballResearchCo
 /**
  * Converts structured football research into a prompt-ready text block.
  * Does not generate narration — only formats verified research for script generation.
+ *
+ * @deprecated Prefer `assembledContextToPrompt` — tests and legacy adapters only.
+ * @deprecated test/legacy only — do not use in production path.
  */
 export function buildFootballResearchContextText(
   researchContext: FootballResearchContext,

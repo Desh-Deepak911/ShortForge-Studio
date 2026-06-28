@@ -7,6 +7,7 @@ import type {
   ApiFootballFixtureLineup,
   ApiFootballFixturePlayersResponse,
   ApiFootballFixtureStatistics,
+  ApiFootballLeagueItem,
   ApiFootballPlayerSearchItem,
   ApiFootballStandingsResponse,
   ApiFootballTeam,
@@ -127,6 +128,15 @@ export async function searchTeams(query: string): Promise<ApiFootballTeam[] | nu
   }
 
   return apiFootballRequest<ApiFootballTeam>("/teams", { search: trimmed });
+}
+
+export async function searchLeagues(query: string): Promise<ApiFootballLeagueItem[] | null> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return apiFootballRequest<ApiFootballLeagueItem>("/leagues", { search: trimmed });
 }
 
 export async function searchFixturesByTeam(

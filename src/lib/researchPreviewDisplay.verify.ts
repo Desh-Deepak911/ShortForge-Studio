@@ -5,11 +5,13 @@ import assert from "node:assert/strict";
 
 import {
   dedupeFriendlyWarnings,
-  resolveResearchPreviewConfidence,
   resolveResearchPreviewDisplayStatus,
+} from "@/features/create/utils/research-preview-display.utils";
+import {
+  resolveResearchPreviewConfidence,
   resolveResearchPreviewSourceLabel,
   selectResearchPreviewFacts,
-} from "@/features/create/utils/research-preview-display.utils";
+} from "@/features/create/utils/research-preview-display.legacy.utils";
 import type { FootballResearchContext } from "@/features/research/types/football-research.types";
 import { NO_RELIABLE_FOOTBALL_DATA_WARNING } from "@/features/research/utils/research-grounding.utils";
 

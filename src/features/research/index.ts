@@ -1,8 +1,15 @@
-export { researchFootballContext } from "./services";
-export type { ResearchFootballContextInput } from "./services";
+export {
+  executeIntelligenceQuery,
+  buildIntelligenceExecutionValidationFailure,
+  type ExecuteIntelligenceQueryInput,
+  type ExecuteIntelligenceQueryResult,
+  type IntelligenceExecutionStatus,
+} from "@/features/intelligence/planner/execute-intelligence-query";
+
+export { resolveFootballResearchMode } from "./types/football-research.types";
+export type { FootballResearchMode, FootballResearchSource } from "./types/football-research.types";
+
 export type {
-  FootballResearchContext,
-  FootballResearchMode,
-  FootballResearchSource,
-} from "./types/football-research.types";
-export { buildFootballResearchContextText } from "./utils/football-context-builder";
+  ResolveScriptResearchContextInput,
+  ResolvedScriptResearchContext,
+} from "./utils/script-research-context.utils";

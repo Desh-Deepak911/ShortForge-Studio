@@ -116,7 +116,7 @@ test("generate-script route supports staged modes", () => {
   assert.match(route, /resolveScriptResearchContext/);
   assert.match(route, /enableResearch/);
   assert.match(route, /researchPreview/);
-  assert.match(resolver, /shouldPassResearchContextToScript/);
+  assert.match(resolver, /applyAssembledResearchContext/);
   assert.match(resolver, /isResearchContextTextUseful/);
   assert.match(prompts, /RESEARCHED FOOTBALL CONTEXT/);
   assert.match(prompts, /Mode voice/);

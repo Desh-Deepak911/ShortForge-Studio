@@ -1,0 +1,14 @@
+{
+  "id": "champions-league-winners",
+  "kind": "historic_winners",
+  "title": "UEFA Champions League winners",
+  "category": "tournament",
+  "sourceNote": "Sample European champions — extend JSON for full history.",
+  "entries": [
+    { "year": 2024, "winner": "Real Madrid", "country": "Spain", "runnerUp": "Borussia Dortmund" },
+    { "year": 2023, "winner": "Manchester City", "country": "England", "runnerUp": "Inter Milan" },
+    { "year": 2022, "winner": "Real Madrid", "country": "Spain", "runnerUp": "Liverpool" },
+    { "year": 2021, "winner": "Chelsea", "country": "England", "runnerUp": "Manchester City" },
+    { "year": 2020, "winner": "Bayern Munich", "country": "Germany", "runnerUp": "Paris Saint-Germain" }
+  ]
+}

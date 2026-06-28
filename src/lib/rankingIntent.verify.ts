@@ -25,6 +25,7 @@ test("parses top 5 highest goal scorers fifa world cup as all-time ranking", () 
     rankingType: "top_scorers",
     competition: "fifa_world_cup",
     timeScope: "all_time",
+    seasonStatus: "not_applicable",
     limit: 5,
   });
   assert.equal(isTopScorersWorldCupIntent(intent), true);
@@ -62,6 +63,7 @@ test("detects season year and all-time markers", () => {
     competition: "fifa_world_cup",
     timeScope: "season",
     season: 2022,
+    seasonStatus: "explicit",
     limit: 10,
   });
 

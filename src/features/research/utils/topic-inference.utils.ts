@@ -4,6 +4,10 @@ const MATCH_TOPIC_PATTERN = /\s+vs\.?\s+|\s+v\.?\s+/i;
 
 export type FootballTopicKind = "match" | "team" | "player" | "top_list";
 
+/**
+ * Legacy topic/mode heuristic for research routing.
+ * @deprecated Fallback only — prefer `resolveTopicKindFromAnalysis` when `IntelligenceAnalysis` is available.
+ */
 export function inferFootballTopicKind(
   topic: string,
   mode: FootballResearchMode,
@@ -23,6 +27,10 @@ export function inferFootballTopicKind(
   return "team";
 }
 
+/**
+ * Legacy match topic splitter ("Team A vs Team B").
+ * @deprecated Fallback only — prefer `resolveMatchTeamQueries` when `IntelligenceAnalysis` is available.
+ */
 export function splitMatchTopic(topic: string): string[] {
   return topic
     .split(/\s+vs\.?\s+|\s+v\.?\s+/i)

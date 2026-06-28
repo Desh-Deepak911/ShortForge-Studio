@@ -3,12 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 
-import type { FootballResearchContext } from "@/features/research/types/football-research.types";
+import type {
+  ResearchPreviewDevCall,
+} from "@/features/create/types/research-preview-dev.types";
 import {
   IDLE_RESEARCH_PREVIEW,
   type ResearchPreviewState,
 } from "@/features/create/types/research-preview.types";
-import { resolveResearchPreviewStatus, buildGenerateScriptResearchPreview } from "@/features/create/utils/research-preview.utils";
+import { buildEntityPreviewFromExecution } from "@/features/create/utils/entity-preview-from-execution.utils";
+import { resolveResearchPreviewStatusFromPreview } from "@/features/create/utils/research-preview-assembled.utils";
+import { buildGenerateScriptResearchPreview } from "@/features/create/utils/research-preview.utils";
+import { fetchIntelligenceResearch } from "@/features/create/utils/research-preview-intelligence.client.utils";
+import { intelligenceQueryToAnalysis } from "@/features/intelligence/shared/intelligence-analysis.utils";
 
 import BreakLongVideoSection from "@/components/BreakLongVideoSection";
 import { AppShell } from "@/components/layout";
@@ -70,74 +76,117 @@ export default function CreateStoryFlow() {
     resetResearchPreview();
   }, [resetResearchPreview]);
 
-  const previewResearch = useCallback(async () => {
-    if (!enableResearch) {
+  const runIntelligenceResearch = useCallback(async () => {
+      if (!enableResearch) {
+        setResearchPreview({
+          status: "error",
+          errorMessage: "Enable Smart Research to gather supporting information.",
+        });
+        return;
+      }
+
+      const trimmedTopic = topic.trim();
+      if (!trimmedTopic) {
+        setResearchPreview({
+          status: "error",
+          errorMessage: "Enter a topic before running Research Preview.",
+        });
+        return;
+      }
+
       setResearchPreview({
-        status: "error",
-        errorMessage: "Enable Smart Research to gather supporting information.",
+        status: "loading",
       });
-      return;
-    }
 
-    const trimmedTopic = topic.trim();
-    if (!trimmedTopic) {
-      setResearchPreview({
-        status: "error",
-        errorMessage: "Enter a topic before running Research Preview.",
-      });
-      return;
-    }
+      try {
+        const isDev = process.env.NODE_ENV === "development";
+        const researchStartedAt = performance.now();
 
-    setResearchPreview({ status: "loading" });
-
-    try {
-      const response = await fetch("/api/research-football", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        const { ok, status, payload } = await fetchIntelligenceResearch({
           topic: trimmedTopic,
           mode: scriptMode,
           manualContext: context.trim() || undefined,
-        }),
-      });
+        });
 
-      let payload: { researchContext?: FootballResearchContext; contextText?: string };
-      try {
-        payload = (await response.json()) as typeof payload;
-      } catch {
-        throw new Error("Invalid response from research service.");
+        const researchFinishedAt = performance.now();
+        const assembledContext = payload.assembledContext;
+
+        if (!assembledContext || !payload.intelligenceQuery) {
+          throw new Error("Research returned no supporting information.");
+        }
+
+        const intelligenceQuery = payload.intelligenceQuery;
+        const intelligenceAnalysis = intelligenceQueryToAnalysis(intelligenceQuery);
+
+        const devCalls: ResearchPreviewDevCall[] | undefined = isDev
+          ? [
+              {
+                endpoint: "/api/research-football",
+                status,
+                ok,
+                durationMs: Math.round(researchFinishedAt - researchStartedAt),
+              },
+            ]
+          : undefined;
+
+        setResearchPreview({
+          status: resolveResearchPreviewStatusFromPreview({
+            assembledContext,
+            executionStatus: payload.executionStatus,
+            httpOk: ok,
+          }),
+          topic: trimmedTopic,
+          mode: scriptMode,
+          intelligenceAnalysis,
+          intelligenceQuery,
+          assembledContext,
+          executionStatus: payload.executionStatus,
+          entityPreview: buildEntityPreviewFromExecution({
+            intelligenceQuery,
+            assembledContext,
+          }),
+          ...(isDev && payload.providerResults ? { providerResults: payload.providerResults } : {}),
+          ...(isDev && payload.providerDiagnostics
+            ? { providerDiagnostics: payload.providerDiagnostics }
+            : {}),
+          ...(isDev && payload.providerExecutionSummary
+            ? { providerExecutionSummary: payload.providerExecutionSummary }
+            : {}),
+          ...(isDev && payload.canonicalResearchBundle
+            ? { canonicalResearchBundle: payload.canonicalResearchBundle }
+            : {}),
+          ...(isDev && payload.knowledgeGraph ? { knowledgeGraph: payload.knowledgeGraph } : {}),
+          ...(isDev && payload.graphContext ? { graphContext: payload.graphContext } : {}),
+          ...(devCalls ? { devCalls } : {}),
+          ...(ok
+            ? {}
+            : {
+                errorMessage:
+                  assembledContext.warnings[0] ??
+                  "Research couldn't be completed for this topic.",
+              }),
+        });
+      } catch (err) {
+        setResearchPreview({
+          status: "error",
+          errorMessage:
+            err instanceof TypeError
+              ? "Check your connection and try again."
+              : err instanceof Error
+                ? err.message
+                : "Research isn't available right now. You can still write your story.",
+        });
       }
-
-      const researchContext = payload.researchContext;
-      if (!researchContext) {
-        throw new Error("Research returned no supporting information.");
-      }
-
-      setResearchPreview({
-        status: resolveResearchPreviewStatus(researchContext, response.ok),
-        topic: trimmedTopic,
-        mode: scriptMode,
-        researchContext,
-        contextText: payload.contextText,
-        ...(response.ok
-          ? {}
-          : {
-              errorMessage:
-                researchContext.warnings[0] ?? "Research couldn't be completed for this topic.",
-            }),
-      });
-    } catch (err) {
-      setResearchPreview({
-        status: "error",
-        errorMessage:
-          err instanceof TypeError
-            ? "Check your connection and try again."
-            : err instanceof Error
-              ? err.message
-              : "Research isn't available right now. You can still write your story.",
-      });
-    }
   }, [context, enableResearch, scriptMode, topic]);
+
+  const previewResearch = useCallback(async () => {
+    await runIntelligenceResearch();
+  }, [runIntelligenceResearch]);
+
+  /** Re-runs preview via the same executor path — no cached query reuse on the client. */
+  const refreshResearchPreview = useCallback(async () => {
+    await runIntelligenceResearch();
+  }, [runIntelligenceResearch]);
 
   const generateScript = async () => {
     if (!topic.trim()) {
@@ -280,8 +329,12 @@ export default function CreateStoryFlow() {
             onClearError={() => setError(null)}
             onSubmit={generateScript}
             researchPreview={researchPreview}
+            entityPreview={researchPreview.entityPreview}
             onPreviewResearch={() => {
               void previewResearch();
+            }}
+            onRefreshResearchPreview={() => {
+              void refreshResearchPreview();
             }}
           />
 

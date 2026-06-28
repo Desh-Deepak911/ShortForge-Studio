@@ -1,5 +1,3 @@
-import type { FootballResearchContext } from "@/features/research/types/football-research.types";
-import { hasRankedPlayerResearch } from "@/features/research/utils/research-context-pass.utils";
 import type { ScriptMode } from "@/types/footiebitz";
 
 export const TOP_5_RANKED_DATA_RULES = `Top 5 ranked data rules (mandatory — verified rankings present):
@@ -19,34 +17,18 @@ export const TOP_5_MISSING_RANKINGS_RULES = `Top 5 mode without ranked data (man
 - If you reference a countdown at all, explicitly state that verified ranking data was not found — never fill the list from memory.`;
 
 export function hasRankedPlayerDataInContextText(context?: string): boolean {
-  return Boolean(context?.includes("RANKED PLAYER DATA:"));
-}
-
-/** Whether structured research includes ranked scorers (players with goal totals). */
-export function hasTop5RankingEntries(context: FootballResearchContext | undefined): boolean {
-  if (!context) {
-    return false;
-  }
-
-  return hasRankedPlayerResearch(context);
+  return Boolean(
+    context?.includes("RANKED PLAYER DATA:") || context?.includes("RANKINGS:"),
+  );
 }
 
 export function resolveTop5RankedDataAvailable(input: {
   scriptMode: ScriptMode;
-  researchContext?: FootballResearchContext;
   contextText?: string;
   researchApplied?: boolean;
 }): boolean {
-  if (input.scriptMode !== "top_5") {
+  if (input.scriptMode !== "top_5" || !input.researchApplied) {
     return false;
-  }
-
-  if (!hasTop5RankingEntries(input.researchContext)) {
-    return false;
-  }
-
-  if (input.researchApplied) {
-    return true;
   }
 
   return hasRankedPlayerDataInContextText(input.contextText);

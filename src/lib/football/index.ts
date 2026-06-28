@@ -10,6 +10,7 @@ export {
   getTopScorers,
   isApiFootballConfigured,
   searchFixturesByTeam,
+  searchLeagues,
   searchTeams,
 } from "./api-football.client";
 export { resolveConfiguredSeason, resolveDefaultSeason } from "./season.utils";
@@ -20,6 +21,7 @@ export type {
   ApiFootballFixtureLineup,
   ApiFootballFixturePlayersResponse,
   ApiFootballFixtureStatistics,
+  ApiFootballLeagueItem,
   ApiFootballPlayerSearchItem,
   ApiFootballStandingsResponse,
   ApiFootballTeam,

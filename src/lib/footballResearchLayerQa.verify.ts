@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { buildFootballResearchContextText } from "@/features/research/utils/football-context-builder";
+import { buildFootballResearchContextText } from "@/features/research/legacy";
 import type { FootballResearchContext } from "@/features/research/types/football-research.types";
 import { mergeFootballContext } from "@/features/football/utils/football-research.utils";
 import { getNarrationWordBudget } from "@/features/story/utils/narration-duration-budget.utils";
@@ -54,12 +54,15 @@ async function runQa() {
 
   await test("QA-1 without API_FOOTBALL_KEY script generation path still supports manual context", () => {
     const route = readSrc("src/app/api/generate-script/route.ts");
-    const service = readSrc("src/features/research/services/football-research.service.ts");
+    const apiProvider = readSrc("src/features/intelligence/providers/api-football.provider.ts");
+    const fallback = readSrc("src/features/intelligence/planner/intelligence-execution-fallback.server.ts");
+    const scriptResolver = readSrc("src/features/research/utils/script-research-context.server.utils.ts");
 
     assert.match(route, /resolveScriptOnlyGenerationContext/);
     assert.match(route, /context: manualContext/);
-    assert.match(service, /API_FOOTBALL_KEY is not configured/);
-    assert.match(service, /source: manualContext \? "manual" : "fallback"/);
+    assert.match(apiProvider, /API_FOOTBALL_KEY is not configured/);
+    assert.match(fallback, /source: manualFacts\.length > 0 \? "manual" : "fallback"/);
+    assert.match(scriptResolver, /applyAssembledResearchContext/);
 
     const manual = "Manual: high press in the first half.";
     const prompt = buildStoryScriptPrompt(

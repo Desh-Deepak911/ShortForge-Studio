@@ -15,6 +15,18 @@ export interface ApiFootballTeam {
   };
 }
 
+export interface ApiFootballLeagueItem {
+  league: {
+    id: number;
+    name: string;
+    type?: string;
+  };
+  country?: {
+    name?: string;
+    code?: string | null;
+  };
+}
+
 export interface ApiFootballFixtureGoals {
   home: number | null;
   away: number | null;

@@ -95,9 +95,10 @@ test("create flow exposes Football Research Mode", () => {
 test("research-football route is wired", () => {
   const route = readSrc("src/app/api/research-football/route.ts");
   assert.match(route, /import "server-only"/);
-  assert.match(route, /researchFootballContext/);
-  assert.match(route, /contextText/);
-  assert.match(route, /buildFootballResearchContextText/);
+  assert.match(route, /executeIntelligenceQuery/);
+  assert.match(route, /assembledContext/);
+  assert.doesNotMatch(route, /contextText/);
+  assert.doesNotMatch(route, /buildFootballResearchContextText/);
   assert.match(route, /mode\?:/);
   assert.doesNotMatch(route, /openai/i);
   assert.doesNotMatch(route, /API_FOOTBALL_KEY/);

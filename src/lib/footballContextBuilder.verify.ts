@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 
-import { buildFootballResearchContextText } from "@/features/research/utils/football-context-builder";
+import { buildFootballResearchContextText } from "@/features/research/legacy";
 import type { FootballResearchContext } from "@/features/research/types/football-research.types";
 
 function test(name: string, fn: () => void) {

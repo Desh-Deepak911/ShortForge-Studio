@@ -6,7 +6,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildGenerateScriptResearchPreview } from "@/features/create/utils/research-preview.utils";
-import type { FootballResearchContext } from "@/features/research/types/football-research.types";
+import { assembledContextToPrompt } from "@/features/intelligence/context/assembled-context-to-prompt";
+import type { AssembledContext } from "@/features/intelligence/context/assembled-context.types";
 
 const QA_BASE_URL = process.env.QA_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -41,8 +42,8 @@ async function postResearchFootball(body: Record<string, unknown>) {
   return {
     status: response.status,
     json: (await response.json()) as {
-      researchContext?: FootballResearchContext;
-      contextText?: string;
+      intelligenceQuery?: import("@/features/intelligence/planner/query-orchestrator.types").IntelligenceQuery;
+      assembledContext?: AssembledContext;
     },
   };
 }
@@ -141,6 +142,7 @@ async function runQa() {
     const flow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
     assert.match(flow, /previewResearch/);
     assert.match(flow, /buildGenerateScriptResearchPreview\(researchPreview\)/);
+    assert.match(flow, /queryId/);
     assert.match(flow, /\/api\/research-football/);
     assert.match(flow, /researchPreviewPayload \? \{ researchPreview/);
   });
@@ -158,9 +160,9 @@ async function runQa() {
     });
 
     assert.equal(status, 200);
-    const ctx = json.researchContext;
-    const text = json.contextText ?? "";
-    assert.ok(ctx, "expected researchContext");
+    const assembled = json.assembledContext;
+    const text = assembled ? assembledContextToPrompt(assembled) : "";
+    assert.ok(assembled, "expected assembledContext");
 
     assertResearchContextNoQatar(text, "research context");
     assertHostsMentioned(text, "research context");
@@ -198,12 +200,12 @@ async function runQa() {
     });
 
     assert.equal(status, 200);
-    const ctx = json.researchContext!;
-    assert.equal(ctx.source, "static-fallback");
-    assert.equal(ctx.players?.length, 5);
+    const assembled = json.assembledContext!;
+    assert.equal(assembled.provenance.source, "static-fallback");
+    assert.equal(assembled.rankings[0]?.entries.length, 5);
 
-    const previewText = json.contextText ?? "";
-    assert.match(previewText, /RANKED PLAYER DATA:/);
+    const previewText = assembledContextToPrompt(assembled);
+    assert.match(previewText, /RANKINGS:|RANKED PLAYER DATA:/);
     for (const name of ALL_TIME_SCORERS) {
       assert.match(previewText, new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
     }
@@ -212,10 +214,10 @@ async function runQa() {
       status: "success",
       topic,
       mode: "top_5",
-      researchContext: ctx,
-      contextText: previewText,
+      assembledContext: assembled,
+      intelligenceQuery: json.intelligenceQuery!,
     });
-    assert.ok(previewPayload, "preview payload reusable for generate");
+    assert.ok(previewPayload?.queryId, "preview payload passes queryId for generate");
 
     const script = await postGenerateScript({
       topic,
@@ -254,23 +256,23 @@ async function runQa() {
     });
 
     assert.equal(status, 200);
-    const ctx = json.researchContext!;
-    assert.equal(ctx.rankingIntent?.season, 2026);
+    const assembled = json.assembledContext!;
+    assert.equal(assembled.season, 2026);
 
-    if (ctx.source === "api-football" && ctx.players?.length) {
-      assert.ok(ctx.players.every((player) => player.goals != null));
-      assert.match(json.contextText ?? "", /RANKED PLAYER DATA:/);
-      console.log(`    (API-Football returned ${ctx.players.length} scorers)`);
+    if (assembled.provenance.source === "api-football" && assembled.rankings.some((ranking) => ranking.entries.length > 0)) {
+      assert.ok(assembled.rankings.every((ranking) => ranking.entries.every((entry) => entry.value != null)));
+      assert.match(assembledContextToPrompt(assembled), /RANKINGS:|RANKED PLAYER DATA:/);
+      console.log(`    (API-Football returned ${assembled.rankings[0]?.entries.length ?? 0} scorers)`);
       return;
     }
 
     assert.ok(
-      ctx.warnings.some((warning) =>
+      assembled.warnings.some((warning) =>
         /unavailable|topscorers|provider|2026|no ranked|not found|configured/i.test(warning),
       ),
-      `expected data-unavailable warning, got: ${ctx.warnings.join("; ")}`,
+      `expected data-unavailable warning, got: ${assembled.warnings.join("; ")}`,
     );
-    console.log(`    (fallback with warning: ${ctx.warnings[0] ?? "none"})`);
+    console.log(`    (fallback with warning: ${assembled.warnings[0] ?? "none"})`);
   });
 
   await test("7 review → voiceover → scenes → editor pipeline wiring intact", () => {

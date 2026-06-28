@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 
-import { buildFootballResearchContextText } from "@/features/research/utils/football-context-builder";
+import { buildFootballResearchContextText } from "@/features/research/legacy";
 import {
   isResearchContextTextUseful,
   shouldPassResearchContextToScript,

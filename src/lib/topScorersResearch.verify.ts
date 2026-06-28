@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { buildFootballResearchContextText } from "@/features/research/utils/football-context-builder";
+import { buildFootballResearchContextText } from "@/features/research/legacy";
 import {
   isTopScorersRankingIntent,
   parseRankingIntent,
@@ -125,11 +125,13 @@ test("script prompt mandates ranked player names when RANKED PLAYER DATA present
 });
 
 test("research service routes topscorers API with league and season", () => {
-  const service = readSrc("src/features/research/services/football-research.service.ts");
-  assert.match(service, /getTopScorers\(\{ leagueId, season \}\)/);
-  assert.match(service, /resolveTopScorersLeagueId/);
-  assert.match(service, /FIFA_WORLD_CUP_2026_NO_SCORERS_WARNING|buildTopScorersUnavailableWarning/);
-  assert.match(service, /isAllTimeWorldCupTopScorersIntent/);
+  const executor = readSrc("src/features/intelligence/planner/execute-intelligence-query.ts");
+  const engine = readSrc("src/features/intelligence/providers/api-football-research.engine.ts");
+  assert.match(engine, /getTopScorers\(\{ leagueId, season \}\)/);
+  assert.match(executor, /executeIntelligenceQuery/);
+  assert.match(executor, /buildExecutionEnrichmentFromQuery/);
+  assert.doesNotMatch(executor, /apiFootballProvider/);
+  assert.doesNotMatch(executor, /staticKnowledgeProvider/);
 });
 
 test("normalizeTop5ScorersIntent leaves non-top_5 modes unchanged", () => {

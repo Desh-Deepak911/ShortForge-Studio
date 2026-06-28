@@ -1,12 +1,4 @@
-export {
-  mergeFootballContext,
-  researchFootballContext,
-  resolveScriptGenerationContext,
-} from "./services";
-export type {
-  FootballResearchResult,
-  ResolveScriptGenerationContextResult,
-} from "./services";
+export { mergeFootballContext } from "./utils/football-research.utils";
 
 export {
   extractFootballSearchQueries,

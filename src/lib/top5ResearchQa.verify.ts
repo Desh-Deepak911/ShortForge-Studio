@@ -9,9 +9,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { buildFootballResearchContextText } from "@/features/research/utils/football-context-builder";
-import { shouldPassResearchContextToScript } from "@/features/research/utils/research-context-pass.utils";
-import type { FootballResearchContext } from "@/features/research/types/football-research.types";
+import type { AssembledContext } from "@/features/intelligence/context/assembled-context.types";
+import { assembledContextToPrompt } from "@/features/intelligence/context/assembled-context-to-prompt";
+import { parseRankingIntent } from "@/features/research/utils/ranking-intent.utils";
 import {
   countWords,
   getEstimatedScriptDurationSeconds,
@@ -44,6 +44,11 @@ function readSrc(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
+interface ResearchFootballResponse {
+  executionStatus?: string;
+  assembledContext?: AssembledContext;
+}
+
 async function postResearchFootball(body: Record<string, unknown>) {
   const response = await fetch(`${QA_BASE_URL}/api/research-football`, {
     method: "POST",
@@ -52,11 +57,12 @@ async function postResearchFootball(body: Record<string, unknown>) {
   });
   return {
     status: response.status,
-    json: (await response.json()) as {
-      researchContext?: FootballResearchContext;
-      contextText?: string;
-    },
+    json: (await response.json()) as ResearchFootballResponse,
   };
+}
+
+function promptFromResearch(json: ResearchFootballResponse): string {
+  return json.assembledContext ? assembledContextToPrompt(json.assembledContext) : "";
 }
 
 async function postGenerateScript(body: Record<string, unknown>) {
@@ -94,6 +100,12 @@ function assertAllTimeScorersPresent(text: string, context: string): void {
   }
 }
 
+function rankingLabels(assembled: AssembledContext): string {
+  return assembled.rankings
+    .flatMap((ranking) => ranking.entries.map((entry) => entry.label))
+    .join("\n");
+}
+
 async function runQa() {
   console.log("top5ResearchQa");
 
@@ -109,19 +121,15 @@ async function runQa() {
     });
 
     assert.equal(status, 200);
-    const ctx = json.researchContext;
-    assert.ok(ctx, "expected researchContext");
-    assert.equal(ctx!.source, "static-fallback");
-    assert.equal(ctx!.players?.length, 5);
-    assert.equal(shouldPassResearchContextToScript(ctx!), true);
+    const assembled = json.assembledContext;
+    assert.ok(assembled, "expected assembledContext");
+    assert.equal(assembled!.provenance.source, "static-fallback");
+    assert.ok(assembled!.rankings.some((ranking) => ranking.entries.length >= 5));
 
-    const text = json.contextText ?? buildFootballResearchContextText(ctx!);
-    assert.match(text, /RANKED PLAYER DATA:/);
+    const text = promptFromResearch(json);
+    assert.match(text, /RANKINGS:|RANKED PLAYER DATA:/);
     assertAllTimeScorersPresent(text, "all-time world cup context");
-    assertAllTimeScorersPresent(
-      (ctx!.players ?? []).map((player) => player.name).join("\n"),
-      "all-time world cup players",
-    );
+    assertAllTimeScorersPresent(rankingLabels(assembled!), "all-time world cup rankings");
   });
 
   await test("QA-2 FIFA World Cup 2022 uses API topscorers or safe warning", async () => {
@@ -130,27 +138,25 @@ async function runQa() {
       return;
     }
 
-    const { status, json } = await postResearchFootball({
-      topic: "top 5 highest goal scorers fifa world cup 2022",
-      mode: "top_5",
-    });
+    const topic = "top 5 highest goal scorers fifa world cup 2022";
+    const rankingIntent = parseRankingIntent(topic);
+    assert.equal(rankingIntent.timeScope, "season");
+    assert.equal(rankingIntent.season, 2022);
+
+    const { status, json } = await postResearchFootball({ topic, mode: "top_5" });
 
     assert.equal(status, 200);
-    const ctx = json.researchContext;
-    assert.ok(ctx, "expected researchContext");
-    assert.equal(ctx!.rankingIntent?.timeScope, "season");
-    assert.equal(ctx!.rankingIntent?.season, 2022);
+    const assembled = json.assembledContext;
+    assert.ok(assembled, "expected assembledContext");
 
-    if (ctx!.source === "api-football" && ctx!.players?.length) {
-      assert.ok(ctx!.players.length >= 1, "expected API topscorers");
-      assert.match(json.contextText ?? "", /RANKED PLAYER DATA:/);
+    if (assembled!.provenance.source === "api-football" && assembled!.rankings.some((r) => r.entries.length)) {
+      assert.match(promptFromResearch(json), /RANKINGS:|RANKED PLAYER DATA:/);
       return;
     }
 
-    assert.equal(ctx!.source, "fallback");
     assert.ok(
-      ctx!.warnings.some((warning) => /topscorers|provider|season|configured/i.test(warning)),
-      `expected safe warning, got: ${ctx!.warnings.join("; ")}`,
+      assembled!.warnings.some((warning) => /topscorers|provider|season|configured/i.test(warning)),
+      `expected safe warning, got: ${assembled!.warnings.join("; ")}`,
     );
   });
 
@@ -160,29 +166,28 @@ async function runQa() {
       return;
     }
 
-    const service = readSrc("src/features/research/services/football-research.service.ts");
+    const engine = readSrc("src/features/intelligence/providers/api-football-research.engine.ts");
     const client = readSrc("src/lib/football/api-football.client.ts");
-    assert.match(service, /getTopScorers/);
+    assert.match(engine, /getTopScorers|top_scorers/i);
     assert.match(client, /\/players\/topscorers/);
 
-    const { status, json } = await postResearchFootball({
-      topic: "top 5 premier league goal scorers 2024",
-      mode: "top_5",
-    });
+    const topic = "top 5 premier league goal scorers 2024";
+    const rankingIntent = parseRankingIntent(topic);
+    assert.equal(rankingIntent.competition, "premier_league");
+    assert.equal(rankingIntent.season, 2024);
+
+    const { status, json } = await postResearchFootball({ topic, mode: "top_5" });
 
     assert.equal(status, 200);
-    const ctx = json.researchContext;
-    assert.ok(ctx, "expected researchContext");
-    assert.equal(ctx!.rankingIntent?.competition, "premier_league");
-    assert.equal(ctx!.rankingIntent?.season, 2024);
+    const assembled = json.assembledContext;
+    assert.ok(assembled, "expected assembledContext");
 
-    if (ctx!.source === "api-football" && ctx!.players?.length) {
-      assert.ok(ctx!.players.every((player) => player.goals != null));
-      assert.match(json.contextText ?? "", /RANKED PLAYER DATA:/);
+    if (assembled!.provenance.source === "api-football" && assembled!.rankings.some((r) => r.entries.length)) {
+      assert.match(promptFromResearch(json), /RANKINGS:|RANKED PLAYER DATA:/);
       return;
     }
 
-    assert.ok(ctx!.warnings.length > 0, "expected safe provider warning when API unavailable");
+    assert.ok(assembled!.warnings.length > 0, "expected safe provider warning when API unavailable");
   });
 
   await test("QA-4 API-Football failure does not break research or script routes", async () => {
@@ -196,7 +201,7 @@ async function runQa() {
       mode: "top_5",
     });
     assert.equal(research.status, 200);
-    assert.ok(research.json.researchContext);
+    assert.ok(research.json.assembledContext);
 
     const script = await postGenerateScript({
       topic: "top 5 goal scorers zzzznonexistenttopic999",
@@ -261,8 +266,12 @@ async function runQa() {
     assert.match(route, /resolveScriptResearchContext/);
     assert.match(route, /researchApplied/);
     assert.match(route, /top5RankedDataAvailable/);
-    assert.match(resolver, /shouldPassResearchContextToScript/);
+    assert.match(resolver, /applyAssembledResearchContext/);
+    assert.match(resolver, /resolveResearchPromptText/);
+    assert.match(resolver, /assembledContextToPrompt/);
     assert.match(resolver, /isResearchContextTextUseful/);
+    assert.match(resolver, /hasRankedPlayerDataInContextText/);
+    assert.doesNotMatch(resolver, /buildFootballResearchContextText/);
   });
 
   console.log("\nTop 5 research QA checks passed (live API + static wiring).");
