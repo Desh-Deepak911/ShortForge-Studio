@@ -13,6 +13,7 @@ export type {
   SceneImageInput,
   SceneImageMotion,
   SceneImageMotionIntensity,
+  SceneImageMotionPreset,
   SceneImageMotionType,
   SceneTimelineItem,
   SceneType,

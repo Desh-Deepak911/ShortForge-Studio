@@ -1,5 +1,6 @@
 "use client";
 
+import type { CaptionAnimationState } from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
 import { resolveActiveSubtitleForScene } from "@/features/story/utils";
 import { type DisplayCaptionScene } from "@/features/story/utils";
 
@@ -9,6 +10,10 @@ interface SubtitleOverlayProps {
   scene: DisplayCaptionScene & { id?: string };
   sceneElapsedMs: number;
   sceneDurationMs: number;
+  activeSubtitleChunk?: string;
+  chunkProgress?: number;
+  captionAnimationState?: CaptionAnimationState | null;
+  subtitleAvailableDurationMs?: number;
   className?: string;
 }
 
@@ -17,12 +22,22 @@ export default function SubtitleOverlay({
   scene,
   sceneElapsedMs,
   sceneDurationMs,
+  activeSubtitleChunk,
+  chunkProgress,
+  captionAnimationState,
+  subtitleAvailableDurationMs,
   className = "",
 }: SubtitleOverlayProps) {
-  const previewChunkState = resolveActiveSubtitleForScene(scene, {
-    sceneElapsedMs,
-    sceneDurationMs,
-  });
+  const previewChunkState =
+    activeSubtitleChunk != null
+      ? {
+          activeChunk: activeSubtitleChunk,
+          chunkProgress: chunkProgress ?? 0,
+        }
+      : resolveActiveSubtitleForScene(scene, {
+          sceneElapsedMs,
+          sceneDurationMs,
+        });
   const visibleCaption = previewChunkState.activeChunk;
 
   const caption = renderSceneCaptionContent(
@@ -32,7 +47,8 @@ export default function SubtitleOverlay({
     {
       maxLines: 3,
       activeSubtitleChunk: previewChunkState.activeChunk,
-      chunkProgress: previewChunkState.chunkProgress,
+      captionAnimationState: captionAnimationState ?? undefined,
+      subtitleAvailableDurationMs,
     },
   );
 

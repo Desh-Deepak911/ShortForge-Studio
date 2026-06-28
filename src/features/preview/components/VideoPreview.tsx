@@ -15,8 +15,8 @@ import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
 import PreviewFrame, { DynamicIsland, PreviewDeviceFrame } from "@/features/preview/components/PreviewFrame";
 import SubtitleOverlay from "@/features/preview/components/SubtitleOverlay";
 import { usePreviewPlayback } from "@/features/preview/hooks/usePreviewPlayback";
-import { getPreviewSceneTiming, resolvePreviewTransitionOverlay } from "@/features/preview/utils";
-import { normalizeCaptionMode, resolveSceneImageMotionProgress } from "@/features/story/utils";
+import { getPreviewSceneTiming, resolvePreviewTimelineImageMotion, resolvePreviewTransitionOverlay } from "@/features/preview/utils";
+import { normalizeCaptionMode } from "@/features/story/utils";
 import {
   studioPreviewControls,
   studioPreviewPill,
@@ -69,7 +69,8 @@ export default function VideoPreview({
     setSpeechVolume,
     previewClockMs,
     browserSceneStartedAtMs,
-    timelineItems,
+    masterTimeline,
+    currentTimeMs,
     scene,
     playPreview,
     playWithBrowserVoice,
@@ -110,20 +111,29 @@ export default function VideoPreview({
     isPlaying,
     browserSceneStartedAtMs,
     previewClockMs,
+    masterTimeline,
+    currentTimeMs,
   });
-  const { sceneElapsedMs, sceneDurationMs } = previewSceneTiming;
-  const sceneMotionProgress = resolveSceneImageMotionProgress(
-    sceneElapsedMs,
-    sceneDurationMs,
-  );
+  const { sceneElapsedMs, sceneDurationMs, sceneTimelineImageMotion, timelineTimeMs } =
+    previewSceneTiming;
   const transitionOverlay =
-    isPlaying && previewSceneTiming.activeSceneIndex != null
-      ? resolvePreviewTransitionOverlay(
-          scenes,
-          timelineItems,
-          previewSceneTiming.activeSceneIndex,
-          sceneElapsedMs,
-          sceneDurationMs,
+    masterTimeline && timelineTimeMs != null
+      ? resolvePreviewTransitionOverlay(masterTimeline, scenes, timelineTimeMs)
+      : null;
+  const transitionFromTimelineImageMotion =
+    transitionOverlay && masterTimeline && timelineTimeMs != null
+      ? resolvePreviewTimelineImageMotion(
+          masterTimeline,
+          transitionOverlay.fromScene,
+          timelineTimeMs,
+        )
+      : null;
+  const transitionToTimelineImageMotion =
+    transitionOverlay && masterTimeline && timelineTimeMs != null
+      ? resolvePreviewTimelineImageMotion(
+          masterTimeline,
+          transitionOverlay.toScene,
+          timelineTimeMs,
         )
       : null;
   const hideCaptionsDuringTransition = transitionOverlay != null;
@@ -140,15 +150,19 @@ export default function VideoPreview({
         title={script.title}
         previewFrame={previewFrame}
         transitionOverlay={transitionOverlay}
-        sceneMotionProgress={sceneMotionProgress}
-        transitionFromMotionProgress={sceneMotionProgress}
-        transitionToMotionProgress={0}
+        sceneTimelineImageMotion={sceneTimelineImageMotion}
+        transitionFromTimelineImageMotion={transitionFromTimelineImageMotion}
+        transitionToTimelineImageMotion={transitionToTimelineImageMotion}
         overlay={
           showSubtitles ? (
             <SubtitleOverlay
               scene={subtitleScene}
               sceneElapsedMs={sceneElapsedMs}
               sceneDurationMs={sceneDurationMs}
+              activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
+              chunkProgress={previewSceneTiming.chunkProgress}
+              captionAnimationState={previewSceneTiming.captionAnimationState}
+              subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
             />
           ) : null
         }

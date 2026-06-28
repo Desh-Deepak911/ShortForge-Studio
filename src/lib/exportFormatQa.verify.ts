@@ -59,7 +59,7 @@ test("1. default export format is WebM", () => {
 });
 
 test("2. WebM voiceover path uses stream-copy mux profile (fast path)", () => {
-  assert.match(ffmpegSource, /codecArgs: \["-c:v", "copy", "-c:a", "libopus"\]/);
+  assert.match(ffmpegSource, /codecArgs: \["-c:v", "copy", "-c:a", "libopus", "-b:a", "96k"\]/);
   assert.match(ffmpegSource, /outputFormat = options\.outputFormat \?\? "webm"/);
   assert.match(videoRenderSource, /resolveMuxOutputFormat\(exportPath\.path\)/);
   assert.match(videoRenderSource, /return exportPath === "mp4" \? "mp4" : "webm"/);

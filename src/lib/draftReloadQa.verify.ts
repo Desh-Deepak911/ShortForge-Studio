@@ -193,7 +193,8 @@ test("/drafts lists saved drafts with open and delete actions", () => {
   assert.match(dashboard, /listDrafts\(/);
   assert.match(dashboard, /\/editor\/\$\{draft\.id\}/);
   assert.match(dashboard, /deleteDraft\(/);
-  assert.match(dashboard, /Your projects will appear here once you start creating\./);
+  assert.match(dashboard, /No stories yet/);
+  assert.match(dashboard, /Stories you create save here on this device/);
 
   const adapter = createMemoryDraftStorageAdapter();
   const options = { adapter };

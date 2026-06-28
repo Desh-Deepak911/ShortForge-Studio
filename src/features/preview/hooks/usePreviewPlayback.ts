@@ -12,11 +12,14 @@ import {
 import { buildAudioMixFromStory, getAudioEngine, logAudioEngineState } from "@/features/audio";
 import { getDisplayCaption, getSceneTimingMap, getSceneVoiceoverExcerpt } from "@/features/story/utils";
 import {
-  getPreviewFrameAtTime,
+  buildPreviewMasterTimeline,
+  resolvePreviewDurationSec,
+  resolvePreviewPlaybackState,
   resolvePreviewBackgroundMusicPlaybackVolume,
   resolveTimelineItems,
   type PreviewSceneFrame,
 } from "@/features/preview/utils";
+import { logPreviewMasterTimelineDiagnostics } from "@/features/timeline-intelligence/preview-timeline-diagnostics.dev.utils";
 import type { FootieScript } from "@/features/story/types";
 import { getStoryVoiceoverDurationSec } from "@/lib/voiceover";
 
@@ -50,8 +53,11 @@ export function usePreviewPlayback({
   const audioMix = useMemo(() => buildAudioMixFromStory(script), [script]);
   const voiceoverTrack = audioMix.voiceover;
   const backgroundTrack = audioMix.background;
+  const masterTimeline = useMemo(() => buildPreviewMasterTimeline(script), [script]);
   const sceneCount = scenes.length;
-  const totalDuration = getStoryVoiceoverDurationSec(script);
+  const totalDuration = masterTimeline
+    ? resolvePreviewDurationSec(masterTimeline)
+    : getStoryVoiceoverDurationSec(script);
   const safeIndex = sceneCount > 0 ? Math.min(selectedSceneIndex, sceneCount - 1) : 0;
   const hasNarration = Boolean(voiceoverTrack?.src);
   const voiceoverUrl = voiceoverTrack?.src;
@@ -74,6 +80,8 @@ export function usePreviewPlayback({
   const [speechPitch, setSpeechPitch] = useState(1);
   const [speechVolume, setSpeechVolume] = useState(1);
   const [previewClockMs, setPreviewClockMs] = useState(0);
+  const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  const [narrationEnded, setNarrationEnded] = useState(false);
 
   const isPlayingRef = useRef(false);
   const playbackModeRef = useRef<PlaybackMode | null>(null);
@@ -84,6 +92,10 @@ export function usePreviewPlayback({
   const backgroundMusicAudioRef = useRef<HTMLAudioElement | null>(null);
   const playbackStartedAtMsRef = useRef<number | null>(null);
   const isSpeakingRef = useRef(false);
+  const narrationEndedRef = useRef(false);
+  const timelineClockMsRef = useRef(0);
+  const lastTailTickWallMsRef = useRef<number | null>(null);
+  const tailHoldLoggedRef = useRef(false);
   const [browserSceneStartedAtMs, setBrowserSceneStartedAtMs] = useState<number | null>(null);
   const voiceInitializedRef = useRef(false);
   const voiceSettingsRef = useRef({ rate: 1, pitch: 1, volume: 1, voiceURI: "" });
@@ -93,11 +105,18 @@ export function usePreviewPlayback({
 
   const previewFrame = useMemo((): PreviewSceneFrame | null => {
     if (!scene) return null;
-    if (isPlaying && playbackMode === "narration") {
-      return getPreviewFrameAtTime(timelineItems, scenes, elapsedSec);
+    if (isPlaying && playbackMode === "narration" && masterTimeline) {
+      const state = resolvePreviewPlaybackState(
+        masterTimeline,
+        scenes,
+        Math.floor(elapsedSec * 1000),
+      );
+      if (state) {
+        return { kind: "scene", scene: state.scene, sceneIndex: state.sceneIndex };
+      }
     }
     return { kind: "scene", scene, sceneIndex: displayIndex };
-  }, [displayIndex, elapsedSec, isPlaying, playbackMode, scene, scenes, timelineItems]);
+  }, [displayIndex, elapsedSec, isPlaying, masterTimeline, playbackMode, scene, scenes]);
 
   const activeSceneIndex = previewFrame?.sceneIndex ?? displayIndex;
 
@@ -177,6 +196,12 @@ export function usePreviewPlayback({
   const resetTimeline = useCallback(() => {
     setCurrentSceneIndex(0);
     setElapsedSec(0);
+    setCurrentTimeMs(0);
+    timelineClockMsRef.current = 0;
+    narrationEndedRef.current = false;
+    lastTailTickWallMsRef.current = null;
+    tailHoldLoggedRef.current = false;
+    setNarrationEnded(false);
     onSelectedSceneChange(0);
   }, [onSelectedSceneChange]);
 
@@ -209,14 +234,21 @@ export function usePreviewPlayback({
     setIsSpeaking(false);
   }, [clearAdvanceTimeout, pauseBackgroundMusic]);
 
-  const syncSceneToAudioTime = useCallback(
-    (currentTimeSec: number) => {
-      const frame = getPreviewFrameAtTime(timelineItems, scenes, currentTimeSec);
-      setCurrentSceneIndex(frame.sceneIndex);
-      setElapsedSec(currentTimeSec);
-      onSelectedSceneChange(frame.sceneIndex);
+  const syncSceneToTimelineTime = useCallback(
+    (timeMs: number) => {
+      if (!masterTimeline) return;
+
+      const clampedMs = Math.min(Math.max(0, timeMs), masterTimeline.renderDurationMs);
+      timelineClockMsRef.current = clampedMs;
+      const state = resolvePreviewPlaybackState(masterTimeline, scenes, clampedMs);
+      if (!state) return;
+
+      setCurrentSceneIndex(state.sceneIndex);
+      setElapsedSec(clampedMs / 1000);
+      setCurrentTimeMs(clampedMs);
+      onSelectedSceneChange(state.sceneIndex);
     },
-    [onSelectedSceneChange, scenes, timelineItems],
+    [masterTimeline, onSelectedSceneChange, scenes],
   );
 
   const scheduleAdvanceAfterScene = useCallback(
@@ -319,12 +351,54 @@ export function usePreviewPlayback({
 
     let frameId = 0;
     const tick = () => {
-      setPreviewClockMs(Date.now());
+      const now = Date.now();
+      setPreviewClockMs(now);
 
-      if (playbackModeRef.current === "narration") {
+      if (playbackModeRef.current === "narration" && masterTimeline) {
         const audio = narrationAudioRef.current;
         if (audio && isPlayingRef.current) {
-          syncSceneToAudioTime(audio.currentTime);
+          if (!audio.ended && !audio.paused) {
+            narrationEndedRef.current = false;
+            lastTailTickWallMsRef.current = null;
+            tailHoldLoggedRef.current = false;
+            setNarrationEnded(false);
+            syncSceneToTimelineTime(Math.floor(audio.currentTime * 1000));
+          } else if (audio.ended || narrationEndedRef.current) {
+            if (!narrationEndedRef.current) {
+              narrationEndedRef.current = true;
+              setNarrationEnded(true);
+              const audioEndMs =
+                Math.floor(audio.duration * 1000) || masterTimeline.narrationDurationMs;
+              syncSceneToTimelineTime(Math.max(timelineClockMsRef.current, audioEndMs));
+              lastTailTickWallMsRef.current = now;
+
+              if (
+                process.env.NODE_ENV === "development" &&
+                script &&
+                !tailHoldLoggedRef.current &&
+                masterTimeline.renderDurationMs > audioEndMs
+              ) {
+                tailHoldLoggedRef.current = true;
+                logPreviewMasterTimelineDiagnostics(masterTimeline, {
+                  script,
+                  currentTimeMs: timelineClockMsRef.current,
+                  narrationEnded: true,
+                });
+              }
+            } else if (!audio.paused || audio.ended) {
+              const lastTick = lastTailTickWallMsRef.current ?? now;
+              lastTailTickWallMsRef.current = now;
+              const deltaMs = now - lastTick;
+              const nextMs = Math.min(
+                masterTimeline.renderDurationMs,
+                timelineClockMsRef.current + deltaMs,
+              );
+              syncSceneToTimelineTime(nextMs);
+              if (nextMs >= masterTimeline.renderDurationMs) {
+                stopVoice();
+              }
+            }
+          }
         }
       }
 
@@ -335,7 +409,7 @@ export function usePreviewPlayback({
 
     frameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frameId);
-  }, [isPlaying, syncBackgroundMusicVolume, syncSceneToAudioTime]);
+  }, [isPlaying, masterTimeline, script, stopVoice, syncBackgroundMusicVolume, syncSceneToTimelineTime]);
 
   useEffect(() => {
     isSpeakingRef.current = isSpeaking;
@@ -413,8 +487,14 @@ export function usePreviewPlayback({
 
     playbackAudio.pause();
     playbackAudio.currentTime = 0;
+    narrationEndedRef.current = false;
+    lastTailTickWallMsRef.current = null;
+    tailHoldLoggedRef.current = false;
+    setNarrationEnded(false);
     setCurrentSceneIndex(0);
     setElapsedSec(0);
+    setCurrentTimeMs(0);
+    timelineClockMsRef.current = 0;
     onSelectedSceneChange(0);
 
     try {
@@ -443,12 +523,14 @@ export function usePreviewPlayback({
 
     const handleTimeUpdate = () => {
       if (!isPlayingRef.current || playbackModeRef.current !== "narration") return;
-      syncSceneToAudioTime(audio.currentTime);
+      if (narrationEndedRef.current) return;
+      syncSceneToTimelineTime(Math.floor(audio.currentTime * 1000));
     };
 
     const handleEnded = () => {
       if (playbackModeRef.current !== "narration") return;
-      stopVoice();
+      narrationEndedRef.current = true;
+      setNarrationEnded(true);
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
@@ -464,7 +546,15 @@ export function usePreviewPlayback({
         playbackModeRef.current = null;
       }
     };
-  }, [audioEngine, script, stopVoice, syncSceneToAudioTime, voiceoverUrl]);
+  }, [audioEngine, script, syncSceneToTimelineTime, voiceoverUrl]);
+
+  useEffect(() => {
+    if (!masterTimeline || !script) {
+      return;
+    }
+
+    logPreviewMasterTimelineDiagnostics(masterTimeline, { script });
+  }, [masterTimeline, script]);
 
   useEffect(() => {
     if (!backgroundMusicUrl) {
@@ -537,6 +627,9 @@ export function usePreviewPlayback({
     previewClockMs,
     browserSceneStartedAtMs: activeBrowserSceneStartedAtMs,
     timelineItems,
+    masterTimeline,
+    currentTimeMs,
+    narrationEnded,
     scene,
     playPreview,
     playWithBrowserVoice,

@@ -1,14 +1,8 @@
 "use client";
 
-import { Film } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
-
 import SceneFrameImage from "@/features/editor/components/SceneFrameImage";
-import {
-  getSceneImage,
-  resolveSceneImageMotionScale,
-  sceneHasImage,
-} from "@/features/story/utils";
+import type { TimelineImageMotionInput } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
+import { sceneHasImage } from "@/features/story/utils";
 import {
   studioPreviewDevice,
   studioPreviewScreen,
@@ -17,7 +11,9 @@ import type { FootieScene, SceneType } from "@/features/story/types";
 
 import type { PreviewSceneFrame } from "@/features/preview/utils";
 import type { PreviewTransitionOverlay } from "@/features/preview/utils/previewTransitionOverlay";
-import { getTransitionLayerStyles } from "@/features/preview/utils/previewTimeline";
+import { transitionStateToPreviewLayerStyles } from "@/features/timeline-intelligence/resolve-transition-state.utils";
+import { Film } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 
 const SCENE_TYPE_META: Record<SceneType, { label: string; color: string }> = {
   intro: { label: "Intro", color: "text-white/70" },
@@ -31,19 +27,15 @@ export function SceneBackdrop({
   scene,
   sceneIndex,
   style,
-  motionProgress = 0,
+  timelineImageMotion = null,
 }: {
   scene: FootieScene;
   sceneIndex: number;
   style?: CSSProperties;
-  motionProgress?: number;
+  timelineImageMotion?: TimelineImageMotionInput | null;
 }) {
   const sceneTypeMeta = scene.sceneType ? SCENE_TYPE_META[scene.sceneType] : null;
   const hasImage = sceneHasImage(scene);
-  const motionScale = resolveSceneImageMotionScale(
-    getSceneImage(scene)?.imageMotion,
-    motionProgress,
-  );
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={style}>
@@ -51,7 +43,7 @@ export function SceneBackdrop({
         <SceneFrameImage
           scene={scene}
           alt={`Scene ${sceneIndex + 1}`}
-          motionScale={motionScale}
+          timelineImageMotion={timelineImageMotion}
         />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-surface via-background to-background px-6 text-center">
@@ -93,9 +85,9 @@ interface PreviewFrameProps {
   title: string;
   previewFrame: PreviewSceneFrame;
   transitionOverlay?: PreviewTransitionOverlay | null;
-  sceneMotionProgress?: number;
-  transitionFromMotionProgress?: number;
-  transitionToMotionProgress?: number;
+  sceneTimelineImageMotion?: TimelineImageMotionInput | null;
+  transitionFromTimelineImageMotion?: TimelineImageMotionInput | null;
+  transitionToTimelineImageMotion?: TimelineImageMotionInput | null;
   overlay?: ReactNode;
   footer?: ReactNode;
 }
@@ -104,14 +96,17 @@ export default function PreviewFrame({
   title,
   previewFrame,
   transitionOverlay = null,
-  sceneMotionProgress = 0,
-  transitionFromMotionProgress = 0,
-  transitionToMotionProgress = 0,
+  sceneTimelineImageMotion = null,
+  transitionFromTimelineImageMotion = null,
+  transitionToTimelineImageMotion = null,
   overlay,
   footer,
 }: PreviewFrameProps) {
   const transitionStyles = transitionOverlay
-    ? getTransitionLayerStyles(transitionOverlay.effect, transitionOverlay.progress)
+    ? transitionStateToPreviewLayerStyles(
+        transitionOverlay.effect,
+        transitionOverlay.transitionState,
+      )
     : null;
 
   return (
@@ -124,20 +119,20 @@ export default function PreviewFrame({
             scene={transitionOverlay.fromScene}
             sceneIndex={transitionOverlay.fromSceneIndex}
             style={transitionStyles.from}
-            motionProgress={transitionFromMotionProgress}
+            timelineImageMotion={transitionFromTimelineImageMotion}
           />
           <SceneBackdrop
             scene={transitionOverlay.toScene}
             sceneIndex={transitionOverlay.toSceneIndex}
             style={transitionStyles.to}
-            motionProgress={transitionToMotionProgress}
+            timelineImageMotion={transitionToTimelineImageMotion}
           />
         </>
       ) : (
         <SceneBackdrop
           scene={previewFrame.scene}
           sceneIndex={previewFrame.sceneIndex}
-          motionProgress={sceneMotionProgress}
+          timelineImageMotion={sceneTimelineImageMotion}
         />
       )}
 

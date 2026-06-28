@@ -1,4 +1,8 @@
-import { getTransitionLayerStyles } from "@/features/preview/utils/previewTimeline";
+import {
+  resolveTransitionEffectLayers,
+  resolveTransitionPreviewFilters,
+  type TransitionState,
+} from "@/features/timeline-intelligence/resolve-transition-state.utils";
 import type { TransitionEffect } from "@/features/story/types";
 
 export interface ExportTransitionLayerDrawState {
@@ -12,48 +16,85 @@ export interface DrawExportSceneBackgroundFn {
   (ctx: CanvasRenderingContext2D, width: number, height: number): void;
 }
 
-function parseExportTransitionLayerStyle(style: {
-  opacity?: number;
-  transform?: string;
-  filter?: string;
-}): ExportTransitionLayerDrawState {
-  const opacity = style.opacity ?? 1;
+function parseTransformStyle(
+  opacity: number,
+  transform?: string,
+  blurPx = 0,
+): ExportTransitionLayerDrawState {
   let translateXRatio = 0;
   let scale = 1;
-  let blurPx = 0;
 
-  if (style.transform) {
-    const translateMatch = style.transform.match(/translateX\(([-\d.]+)%\)/);
+  if (transform) {
+    const translateMatch = transform.match(/translateX\(([-\d.]+)%\)/);
     if (translateMatch) {
       translateXRatio = parseFloat(translateMatch[1]) / 100;
     }
 
-    const scaleMatch = style.transform.match(/scale\(([\d.]+)\)/);
+    const scaleMatch = transform.match(/scale\(([\d.]+)\)/);
     if (scaleMatch) {
       scale = parseFloat(scaleMatch[1]);
-    }
-  }
-
-  if (style.filter) {
-    const blurMatch = style.filter.match(/blur\(([\d.]+)px\)/);
-    if (blurMatch) {
-      blurPx = parseFloat(blurMatch[1]);
     }
   }
 
   return { opacity, translateXRatio, scale, blurPx };
 }
 
+function parseBlurPx(filter?: string): number {
+  if (!filter) {
+    return 0;
+  }
+
+  const blurMatch = filter.match(/blur\(([\d.]+)px\)/);
+  return blurMatch ? parseFloat(blurMatch[1]) : 0;
+}
+
+/** Maps shared transition state to export canvas draw parameters. */
+export function getExportTransitionLayerDrawStatesFromTransitionState(
+  effect: TransitionEffect,
+  state: Pick<
+    TransitionState,
+    "opacityFrom" | "opacityTo" | "transformFrom" | "transformTo" | "progress"
+  >,
+): { from: ExportTransitionLayerDrawState; to: ExportTransitionLayerDrawState } {
+  const previewStyles = {
+    from: {
+      opacity: state.opacityFrom,
+      transform: state.transformFrom !== "none" ? state.transformFrom : undefined,
+    },
+    to: {
+      opacity: state.opacityTo,
+      transform: state.transformTo !== "none" ? state.transformTo : undefined,
+    },
+  };
+  const filters = resolveTransitionPreviewFilters(effect, state.progress);
+
+  return {
+    from: parseTransformStyle(
+      previewStyles.from.opacity,
+      previewStyles.from.transform,
+      parseBlurPx(filters.filterFrom),
+    ),
+    to: parseTransformStyle(
+      previewStyles.to.opacity,
+      previewStyles.to.transform,
+      parseBlurPx(filters.filterTo),
+    ),
+  };
+}
+
 export function getExportTransitionLayerDrawStates(
   effect: TransitionEffect,
   progress: number,
 ): { from: ExportTransitionLayerDrawState; to: ExportTransitionLayerDrawState } {
-  const styles = getTransitionLayerStyles(effect, progress);
+  const layers = resolveTransitionEffectLayers(effect, progress);
 
-  return {
-    from: parseExportTransitionLayerStyle(styles.from),
-    to: parseExportTransitionLayerStyle(styles.to),
-  };
+  return getExportTransitionLayerDrawStatesFromTransitionState(effect, {
+    opacityFrom: layers.opacityFrom,
+    opacityTo: layers.opacityTo,
+    transformFrom: layers.transformFrom,
+    transformTo: layers.transformTo,
+    progress,
+  });
 }
 
 function drawExportTransitionLayer(
@@ -87,11 +128,17 @@ function drawExportTransitionLayers(
   width: number,
   height: number,
   effect: TransitionEffect,
-  progress: number,
+  transitionState: Pick<
+    TransitionState,
+    "opacityFrom" | "opacityTo" | "transformFrom" | "transformTo" | "progress"
+  >,
   drawFromBackground: DrawExportSceneBackgroundFn,
   drawToBackground: DrawExportSceneBackgroundFn,
 ): void {
-  const { from, to } = getExportTransitionLayerDrawStates(effect, progress);
+  const { from, to } = getExportTransitionLayerDrawStatesFromTransitionState(
+    effect,
+    transitionState,
+  );
 
   drawExportTransitionLayer(ctx, width, height, drawFromBackground, from);
   drawExportTransitionLayer(ctx, width, height, drawToBackground, to);
@@ -99,19 +146,22 @@ function drawExportTransitionLayers(
 
 export interface DrawExportTransitionBackgroundsOptions {
   effect: TransitionEffect;
-  progress: number;
+  transitionState: Pick<
+    TransitionState,
+    "opacityFrom" | "opacityTo" | "transformFrom" | "transformTo" | "progress"
+  >;
   drawFromBackground: DrawExportSceneBackgroundFn;
   drawToBackground: DrawExportSceneBackgroundFn;
 }
 
-/** Composites outgoing and incoming scene backgrounds using the preview transition map. */
+/** Composites outgoing and incoming scene backgrounds using shared transition state. */
 export function drawExportTransitionBackgrounds(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   options: DrawExportTransitionBackgroundsOptions,
 ): void {
-  const { effect, progress, drawFromBackground, drawToBackground } = options;
+  const { effect, transitionState, drawFromBackground, drawToBackground } = options;
 
   try {
     drawExportTransitionLayers(
@@ -119,17 +169,24 @@ export function drawExportTransitionBackgrounds(
       width,
       height,
       effect,
-      progress,
+      transitionState,
       drawFromBackground,
       drawToBackground,
     );
   } catch {
+    const fadeLayers = resolveTransitionEffectLayers("fade", transitionState.progress);
     drawExportTransitionLayers(
       ctx,
       width,
       height,
       "fade",
-      progress,
+      {
+        opacityFrom: fadeLayers.opacityFrom,
+        opacityTo: fadeLayers.opacityTo,
+        transformFrom: fadeLayers.transformFrom,
+        transformTo: fadeLayers.transformTo,
+        progress: transitionState.progress,
+      },
       drawFromBackground,
       drawToBackground,
     );

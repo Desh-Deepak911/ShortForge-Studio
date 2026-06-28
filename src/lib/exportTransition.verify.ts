@@ -48,7 +48,7 @@ test("video render uses overlay map and hides captions during transition", () =>
     "utf8",
   );
 
-  assert.match(source, /resolveSceneTransitionOverlay/);
+  assert.match(source, /resolveTimelineTransitionOverlay/);
   assert.match(source, /drawExportTransitionBackgrounds/);
   assert.match(source, /if \(transitionOverlay\)/);
   assert.doesNotMatch(source, /TRANSITION_CARD_TITLE/);

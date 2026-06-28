@@ -13,6 +13,7 @@ import {
 } from "@/features/export/services";
 import { getPreviewFrameAtTime } from "@/features/preview/utils/previewTimeline";
 import { getPreviewSceneTiming } from "@/features/preview/utils/previewSceneTiming";
+import { buildMasterTimeline } from "@/features/timeline-intelligence/build-master-timeline";
 import type { FootieScene, FootieScript } from "@/features/story/types";
 import {
   ensureTimelineItems,
@@ -143,6 +144,11 @@ test("subtitle and scene authority stays on scene timing map during transition w
   assert.equal(timingAtBoundary?.slot.index, 1);
   assert.equal(timingDuringTransition?.slot.index, 1);
 
+  const masterTimeline = buildMasterTimeline(script, {
+    mode: "preview",
+    useVoiceoverRefit: true,
+  });
+
   const previewTiming = getPreviewSceneTiming({
     scenes,
     sceneIndex: 0,
@@ -151,6 +157,8 @@ test("subtitle and scene authority stays on scene timing map during transition w
     isPlaying: true,
     browserSceneStartedAtMs: null,
     previewClockMs: 0,
+    masterTimeline,
+    currentTimeMs: duringTransitionMs,
   });
 
   assert.equal(previewTiming.activeSceneIndex, 1);
@@ -170,7 +178,7 @@ test("preview resolves scene frames only — no transition playback segments", (
 
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
   assert.match(videoRender, /getRenderableScenesFromPayload/);
-  assert.match(videoRender, /resolveSceneTransitionOverlay/);
+  assert.match(videoRender, /resolveTimelineTransitionOverlay/);
   assert.match(videoRender, /drawExportTransitionBackgrounds/);
   assert.match(videoRender, /resolveExportFrameTiming/);
   assert.doesNotMatch(videoRender, /TRANSITION_CARD_TITLE/);
@@ -197,7 +205,8 @@ test("voiceover and subtitle modules are outside transition render scope", () =>
 
   assert.doesNotMatch(hook, /transition/i);
   assert.match(subtitleTiming, /getSceneTimingAtGlobalTime/);
-  assert.match(previewTiming, /getSceneTimingAtGlobalTime/);
+  assert.match(previewTiming, /resolveTimelineSceneFrame|resolvePreviewPlaybackState/);
+  assert.doesNotMatch(previewTiming, /getSceneTimingAtGlobalTime/);
   assert.doesNotMatch(subtitleTiming, /transition/i);
 });
 

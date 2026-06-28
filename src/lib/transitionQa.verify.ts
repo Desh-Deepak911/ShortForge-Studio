@@ -11,6 +11,8 @@ import {
   getRenderableScenesFromPayload,
   isTransitionVideoContent,
 } from "@/features/export/services";
+import { buildMasterTimeline } from "@/features/timeline-intelligence/build-master-timeline";
+import { resolveTimelineTransitionOverlay } from "@/features/timeline-intelligence/resolve-timeline-transition-overlay.utils";
 import { getExportTransitionLayerDrawStates } from "@/features/export/utils/export-transition-canvas.utils";
 import { getPreviewFrameAtTime, getTransitionLayerStyles } from "@/features/preview/utils/previewTimeline";
 import { resolvePreviewTransitionOverlay } from "@/features/preview/utils/previewTransitionOverlay";
@@ -19,7 +21,6 @@ import {
   ensureTimelineItems,
   getSceneTimingAtGlobalTime,
   getStoryTotalDuration,
-  resolveSceneTransitionOverlay,
   TRANSITION_CARD_TITLE,
   TRANSITION_EFFECT_OPTIONS,
 } from "@/features/story/utils";
@@ -173,13 +174,8 @@ const VISUAL_EFFECTS: TransitionEffect[] = [
 for (const effect of VISUAL_EFFECTS) {
   test(`preview overlay resolves for ${effect} during tail window`, () => {
     const script = buildStoryWithEffect(effect);
-    const overlay = resolvePreviewTransitionOverlay(
-      script.scenes,
-      script.timelineItems ?? [],
-      0,
-      3750,
-      4000,
-    );
+    const timeline = buildMasterTimeline(script, { mode: "preview" });
+    const overlay = resolvePreviewTransitionOverlay(timeline, script.scenes, 3750);
 
     assert.ok(overlay, `${effect} overlay should be active at 3750ms`);
     assert.equal(overlay.effect, effect);
@@ -270,20 +266,9 @@ test("scene timing authority during transition window stays on scene map", () =>
 
 test("shared overlay resolver is active in preview and export", () => {
   const script = buildStoryWithEffect("slide-left");
-  const previewOverlay = resolvePreviewTransitionOverlay(
-    script.scenes,
-    script.timelineItems ?? [],
-    0,
-    3600,
-    4000,
-  );
-  const exportOverlay = resolveSceneTransitionOverlay(
-    script.scenes,
-    script.timelineItems ?? [],
-    0,
-    3600,
-    4000,
-  );
+  const timeline = buildMasterTimeline(script, { mode: "preview" });
+  const previewOverlay = resolvePreviewTransitionOverlay(timeline, script.scenes, 3600);
+  const exportOverlay = resolveTimelineTransitionOverlay(timeline, script.scenes, 3600);
 
   assert.deepEqual(previewOverlay, exportOverlay);
 });

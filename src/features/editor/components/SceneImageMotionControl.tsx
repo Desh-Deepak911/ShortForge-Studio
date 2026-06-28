@@ -1,6 +1,12 @@
 "use client";
 
 import {
+  IMAGE_MOTION_PRESETS,
+  IMAGE_MOTION_PRESET_LABELS,
+  isZoomImageMotionPreset,
+  type ImageMotionPreset,
+} from "@/features/timeline-intelligence/image-motion-presets.utils";
+import {
   normalizeSceneImageMotion,
   normalizeSceneImageMotionIntensity,
   normalizeSceneImageMotionType,
@@ -20,11 +26,31 @@ import type {
   SceneImageMotionType,
 } from "@/features/story/types";
 
-const INSPECTOR_MOTION_TYPE_LABELS: Record<SceneImageMotionType, string> = {
-  none: "None",
-  "zoom-in": "Slow zoom in",
-  "zoom-out": "Slow zoom out",
-};
+function motionTypeToInspectorPreset(type: SceneImageMotionType): ImageMotionPreset {
+  switch (type) {
+    case "none":
+      return "static";
+    case "zoom-in":
+      return "slow-zoom-in";
+    case "zoom-out":
+      return "slow-zoom-out";
+    default:
+      return type;
+  }
+}
+
+function inspectorPresetToMotionType(preset: ImageMotionPreset): SceneImageMotionType {
+  switch (preset) {
+    case "static":
+      return "none";
+    case "slow-zoom-in":
+      return "zoom-in";
+    case "slow-zoom-out":
+      return "zoom-out";
+    default:
+      return preset;
+  }
+}
 
 interface SceneImageMotionControlProps {
   imageMotion?: SceneImageMotion;
@@ -42,11 +68,18 @@ export default function SceneImageMotionControl({
   const motion = normalizeSceneImageMotion(imageMotion);
   const activeType = normalizeSceneImageMotionType(motion.type);
   const activeIntensity = normalizeSceneImageMotionIntensity(motion.intensity);
-  const showKenBurnsIntensity = activeType !== "none";
   const isInspector = variant === "inspector";
+  const activePreset = motionTypeToInspectorPreset(activeType);
+  const showKenBurnsIntensity = isInspector
+    ? activePreset !== "static" && isZoomImageMotionPreset(activePreset)
+    : activeType !== "none";
 
   const handleTypeChange = (type: SceneImageMotionType) => {
     onMotionChange({ type });
+  };
+
+  const handlePresetChange = (preset: ImageMotionPreset) => {
+    onMotionChange({ type: inspectorPresetToMotionType(preset) });
   };
 
   const handleIntensityChange = (intensity: SceneImageMotionIntensity) => {
@@ -55,7 +88,7 @@ export default function SceneImageMotionControl({
 
   const motionSectionLabel = isInspector ? "Motion" : "Image Motion";
   const motionSectionDesc = isInspector
-    ? "Add slow movement during playback. None keeps the frame static."
+    ? "Add slow movement during playback. Static keeps the frame fixed."
     : undefined;
 
   return (
@@ -76,38 +109,66 @@ export default function SceneImageMotionControl({
         role="radiogroup"
         aria-labelledby={`${controlId}-motion-label`}
       >
-        {SCENE_IMAGE_MOTION_TYPE_OPTIONS.map((option) => {
-          const isActive = activeType === option.value;
-          const label = isInspector
-            ? INSPECTOR_MOTION_TYPE_LABELS[option.value]
-            : option.label;
-          const title =
-            option.value === "none"
-              ? "No motion during playback"
-              : option.value === "zoom-in"
-                ? "Gradually zoom in during the scene"
-                : "Start zoomed and pull back during the scene";
+        {isInspector
+          ? IMAGE_MOTION_PRESETS.map((preset) => {
+              const isActive = activePreset === preset;
+              const label = IMAGE_MOTION_PRESET_LABELS[preset];
+              const title =
+                preset === "static"
+                  ? "No motion during playback"
+                  : preset.includes("pan-") && preset.includes("-zoom-in")
+                    ? "Pan and zoom during the scene"
+                    : preset.includes("pan-")
+                      ? "Pan across the scene during playback"
+                      : preset === "slow-zoom-in"
+                        ? "Gradually zoom in during the scene"
+                        : preset === "slow-zoom-out"
+                          ? "Start zoomed and pull back during the scene"
+                          : "Motion during playback";
 
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={isActive}
-              title={title}
-              onClick={() => handleTypeChange(option.value)}
-              className={isActive ? studioImageFitSegmentActive : studioImageFitSegment}
-            >
-              {label}
-            </button>
-          );
-        })}
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  role="radio"
+                  aria-checked={isActive}
+                  title={title}
+                  onClick={() => handlePresetChange(preset)}
+                  className={isActive ? studioImageFitSegmentActive : studioImageFitSegment}
+                >
+                  {label}
+                </button>
+              );
+            })
+          : SCENE_IMAGE_MOTION_TYPE_OPTIONS.map((option) => {
+              const isActive = activeType === option.value;
+              const title =
+                option.value === "none"
+                  ? "No motion during playback"
+                  : option.value === "zoom-in"
+                    ? "Gradually zoom in during the scene"
+                    : "Start zoomed and pull back during the scene";
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={isActive}
+                  title={title}
+                  onClick={() => handleTypeChange(option.value)}
+                  className={isActive ? studioImageFitSegmentActive : studioImageFitSegment}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
       </div>
 
       {showKenBurnsIntensity ? (
         <div className="space-y-1.5">
           <div>
-            <p className={`${studioFieldLabel} mb-0`}>Ken Burns</p>
+            <p className={`${studioFieldLabel} mb-0`}>Intensity</p>
             <p className={`${studioSubtleText} mt-1`}>
               Controls how much the image moves during playback.
             </p>
@@ -115,7 +176,7 @@ export default function SceneImageMotionControl({
           <div
             className={studioImageFitSegmentedControlStacked}
             role="radiogroup"
-            aria-label="Ken Burns intensity"
+            aria-label="Motion intensity"
           >
             {SCENE_IMAGE_MOTION_INTENSITY_OPTIONS.map((option) => {
               const isActive = activeIntensity === option.value;

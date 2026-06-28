@@ -9,6 +9,7 @@ import NarrationPanel from "@/components/NarrationPanel";
 import StoryReview from "@/components/StoryReview";
 import VoiceSettingsCard from "@/components/VoiceSettingsCard";
 import { TimelineEditor } from "@/features/editor/components";
+import TimelineDeveloperView from "@/features/timeline-intelligence/TimelineDeveloperView";
 import { VideoPreview } from "@/features/preview/components";
 import {
   studioMobileActionBar,
@@ -136,6 +137,7 @@ export default function StoryWorkspace({
                 selectedSceneIndex={selectedSceneIndex}
                 onSelectedSceneChange={onSelectedSceneChange}
               />
+              <TimelineDeveloperView script={script} />
             </WorkspacePanel>
 
             <WorkspacePanel step="Narration" title="Spoken audio">

@@ -1,8 +1,15 @@
 import type { ExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
+import {
+  resolveCaptionAnimationTranslateYPx,
+} from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
+import {
+  resolveSubtitleDisplayLayout,
+  SUBTITLE_MIN_FONT_SCALE,
+  wrapSubtitleTextToLines,
+} from "@/features/story/utils/subtitle-layout.utils";
 import { SUBTITLE_MAX_VISIBLE_LINES, SUBTITLE_MAX_WIDTH_RATIO } from "@/features/story/utils";
 import {
   getExportHighlightSubtitleFrame,
-  getFadeUpSubtitleFrame,
   getTypewriterRevealedText,
 } from "@/features/story/utils/subtitle-effect.utils";
 
@@ -42,47 +49,6 @@ export function getExportSubtitleLayoutMetrics(scale: number): ExportSubtitleLay
     padX: SUBTITLE_BOX_PAD_X * scale,
     padY: SUBTITLE_BOX_PAD_Y * scale,
   };
-}
-
-/**
- * Word-wraps text into at most `maxLines` rows using canvas measurement.
- * Overflow beyond maxLines is omitted — chunking should split copy earlier.
- */
-export function wrapTextToLines(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-  maxLines: number = SUBTITLE_MAX_VISIBLE_LINES,
-): string[] {
-  const normalized = text.trim().replace(/\s+/g, " ");
-  if (!normalized) {
-    return [];
-  }
-
-  const words = normalized.split(" ");
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-
-    if (current && ctx.measureText(candidate).width > maxWidth) {
-      lines.push(current);
-      current = word;
-      if (lines.length >= maxLines) {
-        return lines;
-      }
-      continue;
-    }
-
-    current = candidate;
-  }
-
-  if (current && lines.length < maxLines) {
-    lines.push(current);
-  }
-
-  return lines;
 }
 
 /** Resets canvas draw state so subtitle frames never inherit prior alpha/composite settings. */
@@ -200,29 +166,54 @@ function resolveLayoutMetrics(
   ctx: CanvasRenderingContext2D,
   width: number,
   scale: number,
+  fontScale = 1,
 ): ExportSubtitleLayoutMetrics {
   const base = getExportSubtitleLayoutMetrics(scale);
+  const fontSize = base.fontSize * fontScale;
   const maxBoxWidth = width * SUBTITLE_MAX_WIDTH_RATIO;
   const maxTextWidth = Math.max(1, maxBoxWidth - base.padX * 2);
-  ctx.font = `bold ${base.fontSize}px Arial, Helvetica, sans-serif`;
-  return { ...base, maxBoxWidth, maxTextWidth };
+  ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+  return {
+    ...base,
+    fontSize,
+    lineHeight: fontSize * SUBTITLE_LINE_HEIGHT_RATIO,
+    maxBoxWidth,
+    maxTextWidth,
+  };
 }
 
 function resolveDisplayLines(
   ctx: CanvasRenderingContext2D,
   display: ExportSubtitleDisplay,
   maxTextWidth: number,
+  fontScale: number,
 ): string[] {
   const sourceText =
-    display.effect === "typewriter"
-      ? getTypewriterRevealedText(display.activeChunk, display.effectProgress).trim()
-      : display.activeChunk.trim();
+    display.animationState && display.effect === "typewriter"
+      ? display.animationState.visibleText.trim()
+      : display.effect === "typewriter"
+        ? getTypewriterRevealedText(display.activeChunk, display.effectProgress).trim()
+        : display.activeChunk.trim();
 
   if (!sourceText) {
     return [];
   }
 
-  return wrapTextToLines(ctx, sourceText, maxTextWidth, SUBTITLE_MAX_VISIBLE_LINES);
+  if (display.lines.length > 0) {
+    return display.lines;
+  }
+
+  const layout = resolveSubtitleDisplayLayout(sourceText, {
+    maxLines: SUBTITLE_MAX_VISIBLE_LINES,
+  });
+  const effectiveScale = Math.min(fontScale, layout.fontScale);
+
+  return wrapSubtitleTextToLines(
+    sourceText,
+    maxTextWidth / Math.max(SUBTITLE_MIN_FONT_SCALE, effectiveScale),
+    (line) => ctx.measureText(line).width,
+    Number.POSITIVE_INFINITY,
+  );
 }
 
 function drawHighlightLine(
@@ -278,12 +269,13 @@ function drawWrappedSubtitleBlock(
   opacity: number,
   yOffset: number,
   display?: ExportSubtitleDisplay,
+  fontScale = 1,
 ): void {
   if (lines.length === 0) {
     return;
   }
 
-  const metrics = resolveLayoutMetrics(ctx, width, scale);
+  const metrics = resolveLayoutMetrics(ctx, width, scale, fontScale);
   const { boxWidth, boxHeight } = resolveExportSubtitleTextBlockSize(ctx, lines, metrics);
   const boxTop = subtitleY - boxHeight + yOffset;
   const centerX = width / 2;
@@ -305,6 +297,11 @@ function drawWrappedSubtitleBlock(
     const lineY = textTopY + (index + 1) * metrics.lineHeight;
 
     if (display?.effect === "highlight") {
+      const highlightDurationMs = Math.max(
+        1,
+        display.subtitleAvailableDurationMs ?? display.activeChunkDurationMs,
+      );
+      const highlightElapsedMs = display.animationState?.localElapsedMs ?? display.chunkElapsedMs;
       drawHighlightLine(
         ctx,
         line,
@@ -312,8 +309,8 @@ function drawWrappedSubtitleBlock(
         lineY,
         scale,
         metrics.fontSize,
-        display.chunkElapsedMs,
-        display.activeChunkDurationMs,
+        highlightElapsedMs,
+        highlightDurationMs,
       );
     } else {
       ctx.fillText(line, centerX, lineY);
@@ -332,8 +329,9 @@ function drawActiveChunkLines(
   captionOpacity: number,
   captionYOffset: number,
 ): void {
-  const metrics = resolveLayoutMetrics(ctx, width, scale);
-  const lines = resolveDisplayLines(ctx, display, metrics.maxTextWidth);
+  const fontScale = display.fontScale ?? 1;
+  const metrics = resolveLayoutMetrics(ctx, width, scale, fontScale);
+  const lines = resolveDisplayLines(ctx, display, metrics.maxTextWidth, fontScale);
   drawWrappedSubtitleBlock(
     ctx,
     lines,
@@ -343,6 +341,7 @@ function drawActiveChunkLines(
     captionOpacity,
     captionYOffset,
     display,
+    fontScale,
   );
 }
 
@@ -358,14 +357,29 @@ export function drawExportSubtitlesCaption(options: DrawExportSubtitlesCaptionOp
   let captionOpacity = 1;
   let captionYOffset = 0;
 
-  if (display.effect === "fade-up") {
-    const fadeUp = getFadeUpSubtitleFrame(display.chunkElapsedMs);
-    captionOpacity = fadeUp.opacity;
-    captionYOffset = fadeUp.yOffsetPx * scale;
+  if (display.animationState) {
+    captionOpacity = display.animationState.opacity;
+    captionYOffset = resolveCaptionAnimationTranslateYPx(display.animationState.transform) * scale;
   }
 
   drawActiveChunkLines(ctx, display, width, subtitleY, scale, captionOpacity, captionYOffset);
   resetExportCanvasDrawState(ctx);
+}
+
+/** Word-wraps text into rows using canvas measurement — never drops trailing words. */
+export function wrapTextToLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number = SUBTITLE_MAX_VISIBLE_LINES,
+): string[] {
+  const layout = resolveSubtitleDisplayLayout(text, { maxLines });
+  return wrapSubtitleTextToLines(
+    text,
+    maxWidth,
+    (line) => ctx.measureText(line).width,
+    Number.POSITIVE_INFINITY,
+  ).slice(0, layout.lines.length > maxLines ? layout.lines.length : undefined);
 }
 
 /** Draws bottom-centered generated captions without subtitle effects. */
@@ -389,13 +403,26 @@ export function drawExportGeneratedCaption(
     return;
   }
 
-  const wrappedLines = wrapTextToLines(
-    ctx,
+  const layout = resolveSubtitleDisplayLayout(sourceText, {
+    maxLines: SUBTITLE_MAX_VISIBLE_LINES,
+  });
+  const wrappedLines = wrapSubtitleTextToLines(
     sourceText,
     metrics.maxTextWidth,
-    SUBTITLE_MAX_VISIBLE_LINES,
+    (line) => ctx.measureText(line).width,
+    Number.POSITIVE_INFINITY,
   );
 
-  drawWrappedSubtitleBlock(ctx, wrappedLines, width, subtitleY, scale, 1, 0);
+  drawWrappedSubtitleBlock(
+    ctx,
+    wrappedLines,
+    width,
+    subtitleY,
+    scale,
+    1,
+    0,
+    undefined,
+    layout.fontScale,
+  );
   resetExportCanvasDrawState(ctx);
 }

@@ -1,4 +1,9 @@
 import {
+  resolveTransitionEffectLayers,
+  transitionStateToPreviewLayerStyles,
+  type TransitionPreviewLayerStyles,
+} from "@/features/timeline-intelligence/resolve-transition-state.utils";
+import {
   ensureTimelineItems,
   getActiveSceneAtTime,
   getTransitionsFromTimeline,
@@ -28,10 +33,7 @@ export type PreviewTransitionFrame = {
 
 export type PreviewFrame = PreviewSceneFrame | PreviewTransitionFrame;
 
-export type TransitionLayerStyles = {
-  from: { opacity?: number; transform?: string; filter?: string; zIndex?: number };
-  to: { opacity?: number; transform?: string; filter?: string; zIndex?: number };
-};
+export type TransitionLayerStyles = TransitionPreviewLayerStyles;
 
 /** Finds the transition item between two adjacent scenes, if present. */
 export function getTransitionBetweenScenes(
@@ -75,58 +77,14 @@ export function getTransitionLayerStyles(
   effect: TransitionEffect,
   progress: number,
 ): TransitionLayerStyles {
-  const p = Math.min(1, Math.max(0, progress));
-
-  switch (effect) {
-    case "cut":
-      return {
-        from: { opacity: 0, zIndex: 1 },
-        to: { opacity: 1, zIndex: 2 },
-      };
-    case "fade":
-      return {
-        from: { opacity: 1 - p, zIndex: 1 },
-        to: { opacity: p, zIndex: 2 },
-      };
-    case "slide-left":
-      return {
-        from: { transform: `translateX(${-p * 100}%)`, opacity: 1, zIndex: 1 },
-        to: { transform: `translateX(${(1 - p) * 100}%)`, opacity: 1, zIndex: 2 },
-      };
-    case "slide-right":
-      return {
-        from: { transform: `translateX(${p * 100}%)`, opacity: 1, zIndex: 1 },
-        to: { transform: `translateX(${-(1 - p) * 100}%)`, opacity: 1, zIndex: 2 },
-      };
-    case "zoom-in":
-      return {
-        from: { opacity: 1 - p, zIndex: 1 },
-        to: {
-          transform: `scale(${1.08 - p * 0.08})`,
-          opacity: p,
-          zIndex: 2,
-        },
-      };
-    case "zoom-out":
-      return {
-        from: {
-          transform: `scale(${1 - p * 0.08})`,
-          opacity: 1 - p,
-          zIndex: 1,
-        },
-        to: { opacity: p, zIndex: 2 },
-      };
-    case "blur":
-      return {
-        from: { filter: `blur(${p * 8}px)`, opacity: 1 - p * 0.25, zIndex: 1 },
-        to: { filter: `blur(${(1 - p) * 8}px)`, opacity: p, zIndex: 2 },
-      };
-    default:
-      return {
-        from: { opacity: 1 - p, zIndex: 1 },
-        to: { opacity: p, zIndex: 2 },
-      };
-  }
+  const layers = resolveTransitionEffectLayers(effect, progress);
+  return transitionStateToPreviewLayerStyles(effect, {
+    opacityFrom: layers.opacityFrom,
+    opacityTo: layers.opacityTo,
+    transformFrom: layers.transformFrom,
+    transformTo: layers.transformTo,
+    progress,
+  });
 }
 
 /** Runs a transition animation; returns a cancel function. */

@@ -74,6 +74,20 @@ export function getFadeUpSubtitleFrame(chunkElapsedMs: number): FadeUpSubtitleFr
   };
 }
 
+/** Matches preview `TypewriterIntervalReveal` pacing for timeline duration estimates. */
+export const TYPEWRITER_TARGET_DURATION_MS = 2000;
+export const TYPEWRITER_MIN_STEP_MS = 28;
+export const TYPEWRITER_MAX_STEP_MS = 48;
+
+export function estimateTypewriterRevealDurationMs(text: string): number {
+  const length = Math.max(text.trim().length, 1);
+  const stepMs = Math.max(
+    TYPEWRITER_MIN_STEP_MS,
+    Math.min(TYPEWRITER_MAX_STEP_MS, Math.floor(TYPEWRITER_TARGET_DURATION_MS / length)),
+  );
+  return stepMs * length;
+}
+
 /** Typewriter reveal for export — matches preview `TypewriterProgressReveal`. */
 export function getTypewriterRevealedText(text: string, chunkProgress: number): string {
   const normalized = text.trim();
@@ -86,7 +100,11 @@ export function getTypewriterRevealedText(text: string, chunkProgress: number): 
     return normalized;
   }
 
-  const visibleLength = Math.floor(normalized.length * clampedProgress);
+  // First frame of a chunk must show at least one character (never blank at chunk start).
+  const visibleLength = Math.max(
+    1,
+    Math.floor(normalized.length * clampedProgress),
+  );
   return normalized.slice(0, visibleLength);
 }
 

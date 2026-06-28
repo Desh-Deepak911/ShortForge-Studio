@@ -1,11 +1,10 @@
 "use client";
 
-import type { FootieScript, SceneType, TimelineItem } from "@/features/story/types";
+import type { FootieScript, SceneType } from "@/features/story/types";
 
 import {
   assertExportPayload,
   buildFootieExportPayload,
-  getExportTotalDurationSec,
   getRenderableScenesFromPayload,
   isTransitionVideoContent,
   type ExportScene,
@@ -42,6 +41,7 @@ import {
   type ExportPath,
 } from "@/features/export/utils/export-path.utils";
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
+import { logExportMasterTimelineDiagnostics } from "@/features/timeline-intelligence/export-timeline-diagnostics.dev.utils";
 import type { ExportAudioMuxOutputFormat } from "@/features/export/utils/ffmpeg.utils";
 import {
   drawExportGeneratedCaption,
@@ -49,20 +49,27 @@ import {
   resetExportCanvasDrawState,
 } from "@/features/export/utils/export-caption-canvas.utils";
 import { drawExportTransitionBackgrounds } from "@/features/export/utils/export-transition-canvas.utils";
-import { resolveExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
-import { resolveSceneTransitionOverlay } from "@/features/story/utils/transition-overlay.utils";
-import type { SceneTransitionOverlay } from "@/features/story/utils/transition-overlay.utils";
+import {
+  resolveExportSubtitleDisplayFromTimeline,
+  type ExportSubtitleDisplay,
+} from "@/features/export/utils/export-subtitle.utils";
+import { resolveTimelineTransitionOverlay } from "@/features/timeline-intelligence/resolve-timeline-transition-overlay.utils";
+import type { TimelineTransitionOverlay } from "@/features/timeline-intelligence/resolve-timeline-transition-overlay.utils";
+import { resolveSceneImageMotionTransformState } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
+import {
+  getImageMotionEventForScene,
+  resolveTimelineFrameCount,
+  resolveTimelineFrameTimeMs,
+  resolveTimelineSceneFrame,
+} from "@/features/timeline-intelligence/timeline-playback.utils";
+import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 import {
   getExportSceneCaptionLines,
-  getSceneDurationMs,
-  getSceneTimingAtGlobalTime,
   normalizeCaptionMode,
-  resolveStoryDurationSec,
   drawSceneImageInFrame,
   getSceneImageUrl,
   resolveExportSceneImage,
-  resolveSceneImageMotionProgress,
-  resolveSceneImageMotionScale,
+  resolveSceneImageTransformForFrame,
 } from "@/features/story/utils";
 
 function assertBrowserExportEnvironment(): void {
@@ -158,22 +165,67 @@ export interface ExportFrameTiming {
   sceneDurationMs: number;
 }
 
-function resolveExportFrameTiming(
+export interface ExportFrameFromTimeline {
+  scene: ExportScene;
+  sceneIndex: number;
+  timing: ExportFrameTiming;
+  subtitleDisplay: ExportSubtitleDisplay | null;
+}
+
+/** Resolves export frame state from shared MasterTimeline playback helpers. */
+export function resolveExportFrameFromMasterTimeline(
+  masterTimeline: MasterTimeline,
   scenes: ExportScene[],
-  timeSec: number,
-): { scene: ExportScene; sceneIndex: number; timing: ExportFrameTiming } {
-  const timingAt = getSceneTimingAtGlobalTime(scenes, timeSec * 1000);
-  const sceneIndex = timingAt?.slot.index ?? 0;
-  const scene = scenes[sceneIndex] ?? scenes[0]!;
+  sceneById: Map<string, ExportScene>,
+  currentTimeMs: number,
+): ExportFrameFromTimeline {
+  const frame = resolveTimelineSceneFrame(masterTimeline, scenes, currentTimeMs);
+  const fallbackScene = scenes[0]!;
+
+  if (!frame) {
+    return {
+      scene: fallbackScene,
+      sceneIndex: 0,
+      timing: {
+        sceneElapsedMs: 0,
+        sceneDurationMs: fallbackScene.durationMs ?? 1000,
+      },
+      subtitleDisplay: null,
+    };
+  }
+
+  const scene = sceneById.get(frame.scene.id) ?? frame.scene;
+  const timing: ExportFrameTiming = {
+    sceneElapsedMs: frame.sceneElapsedMs,
+    sceneDurationMs: frame.sceneDurationMs,
+  };
+  const subtitleDisplay = resolveExportSubtitleDisplayFromTimeline(
+    scene,
+    frame.subtitle,
+    frame.captionAnimation,
+    currentTimeMs,
+  );
 
   return {
     scene,
-    sceneIndex,
-    timing: {
-      sceneElapsedMs: timingAt?.sceneElapsedMs ?? 0,
-      sceneDurationMs: timingAt?.sceneDurationMs ?? getSceneDurationMs(scene),
-    },
+    sceneIndex: frame.sceneIndex,
+    timing,
+    subtitleDisplay,
   };
+}
+
+function resolveExportFrameTiming(
+  masterTimeline: MasterTimeline,
+  scenes: ExportScene[],
+  sceneById: Map<string, ExportScene>,
+  currentTimeMs: number,
+): ExportFrameFromTimeline {
+  return resolveExportFrameFromMasterTimeline(
+    masterTimeline,
+    scenes,
+    sceneById,
+    currentTimeMs,
+  );
 }
 
 function drawSceneBackground(
@@ -182,13 +234,24 @@ function drawSceneBackground(
   height: number,
   scene: ExportScene,
   image: HTMLImageElement | null,
-  motionProgress = 0,
+  masterTimeline: MasterTimeline,
+  currentTimeMs: number,
 ) {
   if (image) {
     const sceneImage = resolveExportSceneImage(scene);
-    const motionScale = resolveSceneImageMotionScale(sceneImage?.imageMotion, motionProgress);
+    const imageMotionEvent = getImageMotionEventForScene(masterTimeline, scene.id);
+    const motionState =
+      sceneImage && imageMotionEvent
+        ? resolveSceneImageMotionTransformState(
+            sceneImage,
+            { event: imageMotionEvent, timeMs: currentTimeMs },
+            width,
+            height,
+          )
+        : null;
 
     if (sceneImage) {
+      const resolvedTransform = resolveSceneImageTransformForFrame(sceneImage, width, height);
       drawSceneImageInFrame(
         ctx,
         image,
@@ -197,7 +260,15 @@ function drawSceneBackground(
         sceneImage,
         image.naturalWidth,
         image.naturalHeight,
-        motionScale,
+        1,
+        motionState
+          ? {
+              scale: motionState.scale,
+              translateX: motionState.translateX,
+              translateY: motionState.translateY,
+              rotation: resolvedTransform.rotation ?? 0,
+            }
+          : undefined,
       );
     } else {
       ctx.drawImage(image, 0, 0, width, height);
@@ -215,8 +286,11 @@ function drawSceneFrame(
   scene: ExportScene,
   image: HTMLImageElement | null,
   timing: ExportFrameTiming,
-  transitionOverlay: SceneTransitionOverlay | null,
+  subtitleDisplay: ExportSubtitleDisplay | null,
+  transitionOverlay: TimelineTransitionOverlay | null,
   transitionImages: { from: HTMLImageElement | null; to: HTMLImageElement | null } | null,
+  masterTimeline: MasterTimeline,
+  currentTimeMs: number,
 ) {
   const scale = width / 1080;
   const padX = 72 * scale;
@@ -226,16 +300,11 @@ function drawSceneFrame(
   resetExportCanvasDrawState(ctx);
   ctx.clearRect(0, 0, width, height);
 
-  const sceneMotionProgress = resolveSceneImageMotionProgress(
-    timing.sceneElapsedMs,
-    timing.sceneDurationMs,
-  );
-
   // ── Background ─────────────────────────────────────────────────────────────
   if (transitionOverlay && transitionImages) {
     drawExportTransitionBackgrounds(ctx, width, height, {
       effect: transitionOverlay.effect,
-      progress: transitionOverlay.progress,
+      transitionState: transitionOverlay.transitionState,
       drawFromBackground: (layerCtx, layerWidth, layerHeight) => {
         drawSceneBackground(
           layerCtx,
@@ -243,7 +312,8 @@ function drawSceneFrame(
           layerHeight,
           transitionOverlay.fromScene as ExportScene,
           transitionImages.from,
-          sceneMotionProgress,
+          masterTimeline,
+          currentTimeMs,
         );
       },
       drawToBackground: (layerCtx, layerWidth, layerHeight) => {
@@ -253,12 +323,13 @@ function drawSceneFrame(
           layerHeight,
           transitionOverlay.toScene as ExportScene,
           transitionImages.to,
-          0,
+          masterTimeline,
+          currentTimeMs,
         );
       },
     });
   } else {
-    drawSceneBackground(ctx, width, height, scene, image, sceneMotionProgress);
+    drawSceneBackground(ctx, width, height, scene, image, masterTimeline, currentTimeMs);
   }
 
   // Gradient overlay for text legibility.
@@ -297,7 +368,6 @@ function drawSceneFrame(
   const captionTiming = timing;
 
   if (normalizeCaptionMode(scene.captionMode) === "subtitles") {
-    const subtitleDisplay = resolveExportSubtitleDisplay(scene, captionTiming);
     if (subtitleDisplay) {
       drawExportSubtitlesCaption({
         ctx,
@@ -351,9 +421,10 @@ function mapRenderingProgress(
 export async function exportSilentVideoBlob(
   script: FootieScript,
   qualityPreset: ExportQualityPreset,
+  masterTimeline: MasterTimeline,
   onProgress?: (progress: ExportProgress) => void,
   payloadOverride?: FootieExportPayload,
-  exportDurationSec?: number,
+  exportDurationMs?: number,
 ): Promise<Blob> {
   assertBrowserExportEnvironment();
 
@@ -363,6 +434,7 @@ export async function exportSilentVideoBlob(
   // Tail-of-scene transition overlays use timeline metadata; transition items are
   // never rendered as standalone video segments.
   const scenes = getRenderableScenesFromPayload(payload);
+  const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
 
   if (scenes.length === 0) {
     throw new Error("Add scenes to your storyboard before exporting.");
@@ -411,12 +483,11 @@ export async function exportSilentVideoBlob(
     if (event.data.size > 0) chunks.push(event.data);
   };
 
-  const totalDurationSec = Math.max(
-    exportDurationSec ??
-      Math.max(getExportTotalDurationSec(payload), resolveStoryDurationSec(script)),
-    0.001,
+  const renderDurationMs = Math.max(
+    exportDurationMs ?? masterTimeline.renderDurationMs,
+    1,
   );
-  const totalFrames = Math.max(1, Math.round(totalDurationSec * fps));
+  const totalFrames = resolveTimelineFrameCount(renderDurationMs, fps);
   const frameMs = 1000 / fps;
   let renderedFrames = 0;
 
@@ -424,16 +495,19 @@ export async function exportSilentVideoBlob(
   recorder.start(250);
 
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-    const timeSec = frameIndex / fps;
-    const { scene, sceneIndex, timing } = resolveExportFrameTiming(scenes, timeSec);
+    const currentTimeMs = resolveTimelineFrameTimeMs(frameIndex, fps);
+    const { scene, sceneIndex, timing, subtitleDisplay } = resolveExportFrameTiming(
+      masterTimeline,
+      scenes,
+      sceneById,
+      currentTimeMs,
+    );
 
     const image = imageCache.get(scene.id) ?? null;
-    const transitionOverlay = resolveSceneTransitionOverlay(
+    const transitionOverlay = resolveTimelineTransitionOverlay(
+      masterTimeline,
       scenes,
-      payload.timelineItems as TimelineItem[],
-      sceneIndex,
-      timing.sceneElapsedMs,
-      timing.sceneDurationMs,
+      currentTimeMs,
     );
     const transitionImages = transitionOverlay
       ? {
@@ -450,8 +524,11 @@ export async function exportSilentVideoBlob(
       scene,
       image,
       timing,
+      subtitleDisplay,
       transitionOverlay,
       transitionImages,
+      masterTimeline,
+      currentTimeMs,
     );
     requestCanvasCaptureFrame(stream);
     renderedFrames++;
@@ -684,6 +761,7 @@ export async function exportFootieShort(
   const exportScript = preflight.story;
   const exportDurationMs = preflight.exportDurationMs;
   const exportDurationSec = exportDurationMs / 1000;
+  logExportMasterTimelineDiagnostics(preflight.masterTimeline);
   const preflightWarning =
     preflight.warnings.length > 0 ? preflight.warnings.join(" ") : undefined;
 
@@ -710,11 +788,12 @@ export async function exportFootieShort(
   const silentBlob = await exportSilentVideoBlob(
     exportScript,
     quality,
+    preflight.masterTimeline,
     (update) => {
       onProgress(mapRenderingProgress(update, includeNarration));
     },
     payload,
-    exportDurationSec,
+    exportDurationMs,
   );
 
   let finalBlob = silentBlob;

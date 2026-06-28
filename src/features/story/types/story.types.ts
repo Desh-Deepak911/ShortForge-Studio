@@ -9,8 +9,26 @@ export type SubtitleEffect = "fade-up" | "typewriter" | "highlight";
 /** How a scene image fills its frame. */
 export type SceneImageFitMode = "fill" | "fit";
 
+/** Timeline image motion presets (Phase 3B). Legacy `none` / `zoom-in` / `zoom-out` remain valid. */
+export type SceneImageMotionPreset =
+  | "static"
+  | "slow-zoom-in"
+  | "slow-zoom-out"
+  | "pan-left"
+  | "pan-right"
+  | "pan-up"
+  | "pan-down"
+  | "pan-left-zoom-in"
+  | "pan-right-zoom-in"
+  | "pan-up-zoom-in"
+  | "pan-down-zoom-in";
+
 /** Ken Burns-style motion applied during scene playback. */
-export type SceneImageMotionType = "none" | "zoom-in" | "zoom-out";
+export type SceneImageMotionType =
+  | "none"
+  | "zoom-in"
+  | "zoom-out"
+  | SceneImageMotionPreset;
 
 export type SceneImageMotionIntensity = "subtle" | "medium" | "strong";
 

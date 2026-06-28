@@ -72,7 +72,14 @@
     "test:prompt-intelligence-qa": "tsx src/lib/promptIntelligenceQa.verify.ts",
     "test:prompt-intelligence-production-qa": "tsx src/lib/promptIntelligenceProductionQa.verify.ts",
     "test:audio-engine": "tsx src/lib/audioEngine.verify.ts",
-    "test:audio-engine-qa": "tsx src/lib/audioEngineQa.verify.ts"
+    "test:audio-engine-qa": "tsx src/lib/audioEngineQa.verify.ts",
+    "test:timeline-foundation-qa": "tsx src/lib/timelineFoundationQa.verify.ts",
+    "test:timeline-playback": "tsx src/lib/timelinePlayback.verify.ts",
+    "test:timeline-authority-qa": "tsx src/lib/timelineAuthorityQa.verify.ts",
+    "test:timeline-caption-animation-qa": "tsx src/lib/timelineCaptionAnimationQa.verify.ts",
+    "test:timeline-image-motion-qa": "tsx src/lib/timelineImageMotionQa.verify.ts",
+    "test:timeline-transition-qa": "tsx src/lib/timelineTransitionQa.verify.ts",
+    "test:timeline-optimizer-qa": "tsx src/lib/timelineOptimizerQa.verify.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

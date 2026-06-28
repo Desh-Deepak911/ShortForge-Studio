@@ -21,6 +21,7 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 - [Features](#features)
 - [Story Creation Pipeline](#story-creation-pipeline)
 - [Intelligence Runtime](#intelligence-runtime)
+- [Timeline Intelligence Runtime](#timeline-intelligence-runtime)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 - [Current Capabilities](#current-capabilities)
@@ -49,8 +50,9 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 - **Image positioning** — Pan, zoom, and Ken Burns motion per scene
 - **Background music** — Optional bed with volume control in preview and export
 - **Voiceover controls** — Regenerate narration and adjust playback speed
-- **Subtitle synchronization** — Captions aligned to narration timing
-- **Live preview** — Interactive device-frame playback synced to audio
+- **Subtitle synchronization** — Captions aligned to narration timing with completion guard for final lines
+- **Caption effects** — Fade-up, typewriter, and highlight animations scheduled on the master clock
+- **Live preview** — Interactive device-frame playback synced to audio via shared timeline authority
 
 ### Export
 
@@ -58,6 +60,7 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 - **WebM export** — In-browser capture via MediaRecorder
 - **MP4 export** — High-quality muxing via FFmpeg.wasm
 - **Audio synchronization** — Voiceover and background music mixed in the final file
+- **Preview/export parity** — WebM and MP4 exports use the same Master Timeline as live preview
 - **Draft persistence** — Save and reload work across sessions (browser localStorage)
 
 ---
@@ -150,6 +153,46 @@ Deep dive: [ARCHITECTURE.md — Intelligence Runtime](./ARCHITECTURE.md#intellig
 
 ---
 
+## Timeline Intelligence Runtime
+
+Preview and export share one **Master Timeline** — an absolute-timestamp model that keeps scene, subtitle, caption animation, image motion, transition, and audio clocks aligned from editor through download.
+
+```
+FootieScript
+  ↓
+buildMasterTimeline()
+  ↓
+optimizeMasterTimeline()
+  ↓
+  ├── Scene track
+  ├── Subtitle track
+  ├── Caption-animation track
+  ├── Image-motion track
+  ├── Transition track
+  └── Audio track
+  ↓
+Preview playback · Export frame loop · FFmpeg mux
+```
+
+| Capability | Purpose |
+|------------|---------|
+| **Master Timeline** | Single canonical clock for every timed event in preview and export. |
+| **Absolute timestamp model** | All events use `startMs` / `endMs` on one master clock — no per-pipeline drift. |
+| **Shared preview/export timing** | Preview and export resolve the same scene, subtitle, and animation at the same `timeMs`. |
+| **Render duration authority** | `renderDurationMs` spans audio, narration, scenes, subtitles, animations, and transitions. |
+| **Subtitle completion guard** | Final subtitle lines hold through render end so narration does not cut off early. |
+| **Caption animation scheduler** | Fade-up, highlight, and typewriter effects paced inside subtitle windows. |
+| **Typewriter timing** | Character reveal respects available duration; short windows accelerate safely. |
+| **Image motion scheduler** | Pan, zoom, and Ken Burns presets driven by timeline events, not ad hoc per frame. |
+| **Transition scheduler** | Scene-tail overlays (fade, slide, zoom, blur) clamped to safe outgoing duration. |
+| **Timeline optimizer** | Pre-render pass clamps animation/transition tails and flags dense or short scenes. |
+| **Drift correction** | Export preflight refits scenes to voiceover; optimizer preserves audio alignment. |
+| **WebM/MP4 export sync** | Mux duration follows Master Timeline render span; voiceover remains primary authority. |
+
+Shipped in **v2.6.0 — Timeline Intelligence Runtime**. Deep dive: [ARCHITECTURE.md — Timeline Intelligence Runtime](./ARCHITECTURE.md#timeline-intelligence-runtime)
+
+---
+
 ## Technology Stack
 
 | Category | Technologies |
@@ -176,6 +219,7 @@ footiebitz/
 │   │   ├── story/              # Script types, generation, timing
 │   │   ├── editor/             # Timeline, scenes, captions, transitions
 │   │   ├── preview/            # Device-frame playback
+│   │   ├── timeline-intelligence/  # Master Timeline, schedulers, optimizer
 │   │   ├── export/             # Canvas render, FFmpeg mux, audio mix
 │   │   └── drafts/             # Draft model and localStorage persistence
 │   ├── lib/                    # Shared utilities and verify scripts
@@ -194,12 +238,13 @@ ShortForge Studio ships a production-ready creator workflow for football short-f
 
 - **Multi-stage story creation** — Create → Review → Voiceover → Scene Generation → Editor → Preview → Export
 - **Research-backed scripts** — Intelligence Runtime feeds Prompt Intelligence before LLM generation
+- **Timeline Intelligence Runtime** — Master Timeline with shared preview/export timing, schedulers, and optimizer (v2.6.0)
 - **Timeline editing** — Scenes, images, captions, transitions, and Ken Burns motion
 - **Voiceover and background music** — TTS with regeneration; optional music bed in preview and export
 - **Draft persistence** — Save, list, open, and delete drafts in the browser
-- **Browser rendering** — MP4 (FFmpeg.wasm) and WebM (MediaRecorder); no server video encoding
+- **Browser rendering** — MP4 (FFmpeg.wasm) and WebM (MediaRecorder); aligned to Master Timeline render duration
 
-Release history: [CHANGELOG.md](./CHANGELOG.md) · Planned work: [ROADMAP.md](./ROADMAP.md)
+Latest release: **v2.6.0 — Timeline Intelligence Runtime** · [CHANGELOG.md](./CHANGELOG.md) · Planned work: [ROADMAP.md](./ROADMAP.md)
 
 ---
 

@@ -18,7 +18,7 @@ import {
 import {
   resolveExportBackgroundMusicMixSettingsFromMix,
 } from "@/features/export/utils/export-background-music.utils";
-import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
+import { prepareStoryForExport, type PrepareStoryForExportResult } from "@/features/export/utils/export-preflight.utils";
 import {
   getExportSubtitleChunkState,
   resolveExportSubtitleDisplay,
@@ -44,6 +44,21 @@ function test(name: string, fn: () => void) {
 
 function readSrc(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
+}
+
+function assertMasterTimelineExportDuration(
+  preflight: PrepareStoryForExportResult,
+  voiceoverDurationMs: number,
+): void {
+  assert.equal(preflight.exportDurationMs, preflight.masterTimeline.renderDurationMs);
+  assert.ok(
+    preflight.exportDurationMs >= voiceoverDurationMs,
+    `export duration should cover voiceover (${voiceoverDurationMs}ms)`,
+  );
+  assert.equal(
+    Math.round(getStoryTotalDuration(preflight.story.scenes) * 1000),
+    voiceoverDurationMs,
+  );
 }
 
 function makeScene(
@@ -144,11 +159,11 @@ test("1. initial generated story exports with voiceover + music", () => {
     preflight.exportDurationMs,
   );
 
-  assert.equal(preflight.exportDurationMs, 24_000);
+  assertMasterTimelineExportDuration(preflight, 24_000);
   assert.equal(resolveExportAudioSource(mix), "voiceover+background");
   assert.ok(mix.voiceover?.src);
   assert.ok(mix.background?.src);
-  assert.equal(musicSettings?.exportDurationMs, 24_000);
+  assert.equal(musicSettings?.exportDurationMs, preflight.exportDurationMs);
 
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
   assert.match(videoRender, /prepareStoryForExport\(script\)/);
@@ -170,10 +185,12 @@ test("2. edit scene duration, then export refits to voiceover authority", () => 
   const beforeEndMs = edited.scenes[1]?.endMs;
   const preflight = prepareStoryForExport(edited);
 
-  assert.equal(preflight.exportDurationMs, 24_000);
-  assert.equal(Math.round(getStoryTotalDuration(preflight.story.scenes) * 1000), 24_000);
+  assertMasterTimelineExportDuration(preflight, 24_000);
   assert.equal(edited.scenes[1]?.endMs, beforeEndMs);
-  assert.match(preflight.warnings.join(" "), /refitted scenes to voiceover duration/i);
+  assert.match(
+    preflight.warnings.join(" "),
+    /Voiceover refit applied|refitted scenes to voiceover duration/i,
+  );
 });
 
 test("3. edit multiple scene durations, then export preserves proportional intent", () => {
@@ -190,7 +207,7 @@ test("3. edit multiple scene durations, then export preserves proportional inten
 
   const preflight = prepareStoryForExport(edited);
 
-  assert.equal(preflight.exportDurationMs, 30_000);
+  assertMasterTimelineExportDuration(preflight, 30_000);
   assert.equal(preflight.story.scenes[0]?.duration, 6);
   assert.equal(preflight.story.scenes[1]?.duration, 14);
   assert.equal(preflight.story.scenes[2]?.duration, 10);
@@ -210,8 +227,7 @@ test("4. change voice speed, then export uses updated voiceover duration", () =>
 
   const preflight = prepareStoryForExport(faster);
 
-  assert.equal(preflight.exportDurationMs, 18_000);
-  assert.equal(Math.round(getStoryTotalDuration(preflight.story.scenes) * 1000), 18_000);
+  assertMasterTimelineExportDuration(preflight, 18_000);
   assert.equal(preflight.story.voiceSettings?.speed, 1.25);
 });
 
@@ -253,11 +269,11 @@ test("6. background music uses final normalized export duration", () => {
     preflight.exportDurationMs,
   );
 
-  assert.equal(preflight.exportDurationMs, 24_000);
-  assert.equal(musicSettings?.exportDurationMs, 24_000);
+  assertMasterTimelineExportDuration(preflight, 24_000);
+  assert.equal(musicSettings?.exportDurationMs, preflight.exportDurationMs);
 
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
-  assert.match(videoRender, /exportSilentVideoBlob\([\s\S]*exportDurationSec/);
+  assert.match(videoRender, /exportSilentVideoBlob\([\s\S]*masterTimeline/);
   assert.match(videoRender, /resolveExportBackgroundMusicMixSettingsFromMix\([\s\S]*exportDurationMs/);
 
   const browserMix = readSrc("src/features/export/utils/export-browser-audio-mix.utils.ts");
@@ -281,9 +297,13 @@ test("7. voiceover remains primary export duration authority", () => {
   const preflight = prepareStoryForExport(editorScript);
   const payload = buildFootieExportPayload(preflight.story);
 
-  assert.equal(preflight.exportDurationMs, 22_000);
+  assertMasterTimelineExportDuration(preflight, 22_000);
   assert.notEqual(Math.round(getStoryTotalDuration(editorScript.scenes) * 1000), 22_000);
   assert.equal(getExportTotalDurationSec(payload), 22);
+  assert.ok(
+    preflight.exportDurationMs >= 22_000,
+    "optimized render span covers voiceover authority",
+  );
 });
 
 test("8. subtitles still derive from refitted scene duration", () => {
@@ -326,8 +346,8 @@ test("9. transitions and Ken Burns still work on export path", () => {
   assert.ok(transitionDrawStates.to);
 
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
-  assert.match(videoRender, /resolveSceneTransitionOverlay/);
-  assert.match(videoRender, /resolveSceneImageMotionScale/);
+  assert.match(videoRender, /resolveTimelineTransitionOverlay/);
+  assert.match(videoRender, /resolveSceneImageMotionTransformState/);
   assert.match(videoRender, /drawExportTransitionBackgrounds/);
 });
 

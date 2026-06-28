@@ -207,7 +207,7 @@ html {
 }
 
 .subtitle-effect-fade-up {
-  animation: subtitle-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
 }
 
 .subtitle-effect-highlight {
@@ -257,7 +257,6 @@ html {
     rgba(234, 179, 8, 0.75) 100%
   );
   box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
-  animation: subtitle-highlight-bar 2.4s ease-in-out infinite;
   transform-origin: center;
 }
 
@@ -271,7 +270,6 @@ html {
   border-radius: 0.35rem;
   background-color: rgba(255, 255, 255, 0.08);
   color: inherit;
-  animation: subtitle-highlight-sheen 2.4s ease-in-out infinite;
 }
 
 .subtitle-effect-typewriter {

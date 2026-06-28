@@ -323,7 +323,7 @@ test("fade-up export uses chunk-local elapsed time for animation", () => {
 
 test("typewriter export reveals substring based on chunk progress", () => {
   const chunk = "First phrase starts the scene.";
-  assert.equal(getTypewriterRevealedText(chunk, 0), "");
+  assert.equal(getTypewriterRevealedText(chunk, 0), chunk.slice(0, 1));
   assert.ok(getTypewriterRevealedText(chunk, 0.5).length < chunk.length);
   assert.equal(getTypewriterRevealedText(chunk, 1), chunk);
 

@@ -94,8 +94,8 @@ test("export renderer applies motion to background image only", () => {
     "utf8",
   );
 
-  assert.match(videoRender, /resolveSceneImageMotionProgress\(\s*timing\.sceneElapsedMs,\s*timing\.sceneDurationMs/);
-  assert.match(videoRender, /const motionScale = resolveSceneImageMotionScale/);
+  assert.match(videoRender, /resolveSceneImageMotionTransformState/);
+  assert.match(videoRender, /getImageMotionEventForScene/);
   assert.match(videoRender, /function drawSceneBackground/);
   assert.doesNotMatch(videoRender, /drawExportSubtitlesCaption[\s\S]{0,120}resolveSceneImageMotionScale/);
   assert.doesNotMatch(videoRender, /drawExportGeneratedCaption[\s\S]{0,120}resolveSceneImageMotionScale/);
@@ -110,12 +110,14 @@ test("preview applies motion to backdrop image only", () => {
     join(root, "src/features/preview/components/VideoPreview.tsx"),
     "utf8",
   );
+  const sceneFrameImage = readFileSync(
+    join(root, "src/features/editor/components/SceneFrameImage.tsx"),
+    "utf8",
+  );
 
-  assert.match(previewFrame, /motionProgress/);
-  assert.match(previewFrame, /resolveSceneImageMotionScale/);
-  assert.match(previewFrame, /motionScale=\{motionScale\}/);
-  assert.match(videoPreview, /resolveSceneImageMotionProgress/);
-  assert.match(videoPreview, /sceneMotionProgress/);
+  assert.match(previewFrame, /timelineImageMotion/);
+  assert.match(sceneFrameImage, /resolveSceneImageMotionTransformState/);
+  assert.match(videoPreview, /sceneTimelineImageMotion/);
   assert.doesNotMatch(previewFrame, /CaptionOverlay/);
 });
 

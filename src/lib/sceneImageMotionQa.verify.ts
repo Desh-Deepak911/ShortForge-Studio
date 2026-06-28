@@ -88,10 +88,11 @@ test("image motion controls appear for every scene with image (not selection-gat
 
 test("zoom-in works in preview — scale increases over scene progress", () => {
   const previewFrame = readSrc("src/features/preview/components/PreviewFrame.tsx");
+  const sceneFrameImage = readSrc("src/features/editor/components/SceneFrameImage.tsx");
   const motion = { type: "zoom-in" as const, intensity: "medium" as const };
 
-  assert.match(previewFrame, /resolveSceneImageMotionScale/);
-  assert.match(previewFrame, /motionScale=\{motionScale\}/);
+  assert.match(previewFrame, /timelineImageMotion/);
+  assert.match(sceneFrameImage, /resolveSceneImageMotionTransformState/);
 
   const start = resolveSceneImageMotionScale(motion, 0);
   const mid = resolveSceneImageMotionScale(motion, 0.5);
@@ -126,9 +127,9 @@ test("zoom-in works in export — motion scale applied in background draw path",
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
   const sceneUtils = readSrc("src/features/story/utils/scene.utils.ts");
 
-  assert.match(videoRender, /resolveSceneImageMotionProgress/);
-  assert.match(videoRender, /drawSceneImageInFrame\([\s\S]*motionScale/);
-  assert.match(sceneUtils, /combinedScale = resolved\.scale \* motionScale/);
+  assert.match(videoRender, /resolveSceneImageMotionTransformState/);
+  assert.match(videoRender, /drawSceneImageInFrame\([\s\S]*motionState/);
+  assert.match(sceneUtils, /drawTransformOverride\?\.scale \?\? resolved\.scale \* motionScale/);
 
   const motion = { type: "zoom-in" as const, intensity: "subtle" as const };
   assert.equal(resolveSceneImageMotionScale(motion, 0), 1);
@@ -148,8 +149,8 @@ test("text and subtitles stay stable — motion only on background image layer",
   const sceneFrameImage = readSrc("src/features/editor/components/SceneFrameImage.tsx");
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
 
-  assert.match(sceneFrameImage, /motionScale/);
-  assert.match(previewFrame, /SceneFrameImage[\s\S]*motionScale=\{motionScale\}/);
+  assert.match(sceneFrameImage, /timelineImageMotion/);
+  assert.match(previewFrame, /SceneFrameImage[\s\S]*timelineImageMotion/);
   assert.doesNotMatch(previewFrame, /CaptionOverlay/);
   assert.doesNotMatch(previewFrame, /SubtitleOverlay/);
   assert.match(videoPreview, /hideCaptionsDuringTransition/);

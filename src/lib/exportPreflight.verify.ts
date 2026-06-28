@@ -12,6 +12,7 @@ import {
   EXPORT_NARRATION_VOICEOVER_MISMATCH_WARNING,
   hasNarrationVoiceoverMismatch,
 } from "@/features/export/utils/export-narration-voiceover.utils";
+import { TIMELINE_END_BUFFER_MS } from "@/features/timeline-intelligence/build-master-timeline";
 import { getStoryTotalDuration } from "@/features/story/utils/scene.utils";
 import type { FootieScript } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/voiceover";
@@ -58,13 +59,13 @@ console.log("exportPreflight");
 test("prepareStoryForExport refits scenes to voiceoverDurationMs", () => {
   const result = prepareStoryForExport(syncFootieScript(baseScript));
 
-  assert.equal(result.exportDurationMs, 10_000);
+  assert.equal(result.exportDurationMs, 10_000 + TIMELINE_END_BUFFER_MS);
+  assert.ok(result.masterTimeline);
   assert.equal(Math.round(getStoryTotalDuration(result.story.scenes) * 1000), 10_000);
   assert.equal(result.story.scenes[0]?.durationMs, 5000);
   assert.equal(result.story.scenes[1]?.durationMs, 5000);
   assert.equal(result.story.scenes[1]?.endMs, 10_000);
-  assert.equal(result.warnings.length, 1);
-  assert.match(result.warnings[0]!, /refitted scenes to voiceover duration/i);
+  assert.ok(result.warnings.some((warning) => /refit applied/i.test(warning)));
 });
 
 test("prepareStoryForExport preserves proportional manual scene durations", () => {
@@ -113,7 +114,7 @@ test("prepareStoryForExport preserves proportional manual scene durations", () =
 
   const result = prepareStoryForExport(proportionalScript);
 
-  assert.equal(result.exportDurationMs, 30_000);
+  assert.equal(result.exportDurationMs, 30_000 + TIMELINE_END_BUFFER_MS);
   assert.equal(result.story.scenes[0]?.duration, 6);
   assert.equal(result.story.scenes[1]?.duration, 14);
   assert.equal(result.story.scenes[2]?.duration, 10);
@@ -164,7 +165,7 @@ test("prepareStoryForExport uses even scene durations when any timing is invalid
 
   const result = prepareStoryForExport(unevenScript);
 
-  assert.equal(result.exportDurationMs, 30_000);
+  assert.equal(result.exportDurationMs, 30_000 + TIMELINE_END_BUFFER_MS);
   assert.equal(result.story.scenes[0]?.duration, 10);
   assert.equal(result.story.scenes[1]?.duration, 10);
   assert.equal(result.story.scenes[2]?.duration, 10);
@@ -179,7 +180,7 @@ test("prepareStoryForExport uses scene timeline when voiceover is absent", () =>
 
   const result = prepareStoryForExport(withoutVoice);
 
-  assert.equal(result.exportDurationMs, 12_000);
+  assert.equal(result.exportDurationMs, 12_000 + TIMELINE_END_BUFFER_MS);
   assert.equal(Math.round(getStoryTotalDuration(result.story.scenes) * 1000), 12_000);
   assert.equal(result.warnings.length, 0);
 });
@@ -256,8 +257,8 @@ test("background music mix settings use preflight exportDurationMs", () => {
   const mix = buildAudioMixFromStory(preflight.story);
   const settings = resolveExportBackgroundMusicMixSettingsFromMix(mix, true, preflight.exportDurationMs);
 
-  assert.equal(preflight.exportDurationMs, 30_000);
-  assert.equal(settings?.exportDurationMs, 30_000);
+  assert.equal(preflight.exportDurationMs, 30_000 + TIMELINE_END_BUFFER_MS);
+  assert.equal(settings?.exportDurationMs, 30_000 + TIMELINE_END_BUFFER_MS);
 });
 
 console.log("All export preflight checks passed.");

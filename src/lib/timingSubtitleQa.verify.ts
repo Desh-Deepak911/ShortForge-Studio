@@ -27,6 +27,7 @@ import {
   SUBTITLE_MAX_VISIBLE_LINES,
   wrapSubtitleTextToDisplayLines,
 } from "@/features/story/utils";
+import { resolveSubtitleDisplayLayout } from "@/features/story/utils/subtitle-layout.utils";
 import { getExportSubtitleChunkState } from "@/features/export/utils/export-subtitle.utils";
 
 function test(name: string, fn: () => void) {
@@ -190,37 +191,28 @@ test("export subtitle chunk timing uses edited scene duration", () => {
   assert.equal(exportState.chunk, chunks[expectedIndex]);
 });
 
-test("export canvas lines do not overlap vertically", () => {
-  const ctx = mockCanvasCtx();
-  ctx.font = "bold 64px Arial, Helvetica, sans-serif";
-
-  const lines = wrapTextToLines(
-    ctx,
-    "A long subtitle line that should wrap cleanly across multiple rows without overlap",
-    200,
-    3,
-  );
-
-  assert.ok(lines.length >= 2 && lines.length <= 3);
-
-  const baselines = computeExportLineBaselines(lines.length);
-  for (let index = 1; index < baselines.length; index++) {
-    assert.ok(baselines[index]! > baselines[index - 1]!);
+test("export canvas line baselines stay vertically ordered", () => {
+  for (const lineCount of [2, 3]) {
+    const baselines = computeExportLineBaselines(lineCount);
+    for (let index = 1; index < baselines.length; index++) {
+      assert.ok(baselines[index]! > baselines[index - 1]!);
+    }
   }
 });
 
-test("subtitles allow up to three visible lines in preview and export", () => {
+test("subtitles preserve all words within the visible line budget", () => {
   const globalsCss = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
   const text = "word ".repeat(30).trim();
 
   assert.match(globalsCss, /-webkit-line-clamp:\s*3/);
   assert.equal(SUBTITLE_MAX_VISIBLE_LINES, 3);
 
-  const previewLines = wrapSubtitleTextToDisplayLines(text, { maxLines: 3 });
-  const exportLines = wrapTextToLines(mockCanvasCtx(), text, 200, 3);
+  const previewLayout = resolveSubtitleDisplayLayout(text, { maxLines: 3 });
+  const exportLines = wrapTextToLines(mockCanvasCtx(), text, 844, 3);
 
-  assert.equal(previewLines.length, 3);
-  assert.equal(exportLines.length, 3);
+  assert.equal(previewLayout.lines.join(" ").split(" ").length, text.split(" ").length);
+  assert.equal(exportLines.join(" ").split(" ").length, text.split(" ").length);
+  assert.ok(previewLayout.fontScale <= 1);
 });
 
 test("long subtitles split into smaller timed chunks", () => {
@@ -267,11 +259,7 @@ test("preview and export stay aligned on chunk selection after duration edit", (
 
     assert.equal(exportState.chunk, previewState.chunk);
     assert.ok(exportDisplay);
-    assert.ok(exportDisplay.lines.length <= 3);
-    assert.deepEqual(
-      wrapSubtitleTextToDisplayLines(exportState.chunk, { maxLines: 3 }),
-      exportDisplay.lines,
-    );
+    assert.deepEqual(exportDisplay.lines, wrapSubtitleTextToDisplayLines(exportState.chunk, { maxLines: 3 }));
   }
 });
 

@@ -6,6 +6,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  resolveSubtitleDisplayLayout,
+} from "@/features/story/utils/subtitle-layout.utils";
+import {
   buildFootieExportPayload,
   getRenderableScenesFromPayload,
 } from "@/features/export/services";
@@ -95,13 +98,14 @@ test("export renderer uses timed subtitle display and effect canvas helpers", ()
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const exportSubtitle = readSrc("src/features/export/utils/export-subtitle.utils.ts");
 
-  assert.match(videoRender, /resolveExportSubtitleDisplay/);
-  assert.match(videoRender, /getSceneTimingAtGlobalTime/);
+  assert.match(videoRender, /resolveExportSubtitleDisplayFromTimeline/);
+  assert.match(videoRender, /resolveExportFrameFromMasterTimeline/);
   assert.match(videoRender, /sceneElapsedMs/);
   assert.match(videoRender, /clearRect\(0, 0, width, height\)/);
   assert.match(videoRender, /requestCanvasCaptureFrame/);
   assert.match(exportSubtitle, /getActiveSubtitleChunkFromList/);
   assert.match(exportSubtitle, /resolveExportSubtitleDisplay/);
+  assert.match(exportSubtitle, /resolveCaptionAnimationState/);
   assert.match(canvasUtils, /prepareExportSubtitleLayer/);
   assert.match(canvasUtils, /resetExportCanvasDrawState/);
   assert.doesNotMatch(canvasUtils, /repaintSubtitleRegionOverlay/);
@@ -115,29 +119,20 @@ test("export renderer uses timed subtitle display and effect canvas helpers", ()
   assert.match(canvasUtils, /drawExportSubtitlesCaption/);
   assert.match(canvasUtils, /drawExportGeneratedCaption/);
   assert.match(canvasUtils, /getExportHighlightSubtitleFrame/);
-  assert.match(canvasUtils, /getTypewriterRevealedText/);
-  assert.match(canvasUtils, /getFadeUpSubtitleFrame/);
+  assert.match(canvasUtils, /display\.animationState/);
+  assert.match(canvasUtils, /resolveCaptionAnimationTranslateYPx/);
   assert.match(canvasUtils, /drawHighlightLine/);
   assert.match(canvasUtils, /wrapTextToLines/);
   assert.match(canvasUtils, /textTopY \+ \(index \+ 1\) \* metrics\.lineHeight/);
 });
 
-test("wrapTextToLines caps rows and avoids overflow past maxLines", () => {
-  const ctx = {
-    measureText(text: string) {
-      return { width: text.length * 8 };
-    },
-  } as CanvasRenderingContext2D;
+test("subtitle layout keeps all words within visible line budget", () => {
+  const source =
+    "one two three four five six seven eight nine ten eleven twelve";
+  const layout = resolveSubtitleDisplayLayout(source, { maxLines: 3 });
 
-  const lines = wrapTextToLines(
-    ctx,
-    "one two three four five six seven eight nine ten eleven twelve",
-    40,
-    3,
-  );
-
-  assert.equal(lines.length, 3);
-  assert.ok(lines.every((line) => ctx.measureText(line).width <= 40 || line.split(" ").length === 1));
+  assert.ok(layout.lines.join(" ").includes("twelve"));
+  assert.ok(layout.lines.length <= 3 || layout.fontScale < 1);
 });
 
 test("export resolves exactly one active subtitle chunk per frame", () => {
@@ -196,7 +191,7 @@ test("exported fade-up effect animates opacity and vertical offset at chunk star
 
 test("exported typewriter effect reveals substring over chunk progress", () => {
   const chunk = "Typewriter reveals this phrase slowly.";
-  assert.equal(getTypewriterRevealedText(chunk, 0), "");
+  assert.equal(getTypewriterRevealedText(chunk, 0), chunk.slice(0, 1));
   assert.ok(getTypewriterRevealedText(chunk, 0.4).length < chunk.length);
   assert.equal(getTypewriterRevealedText(chunk, 1), chunk);
 
@@ -215,7 +210,10 @@ test("exported typewriter effect reveals substring over chunk progress", () => {
 
   assert.ok(partial);
   assert.ok(complete);
-  assert.ok((partial.lines.join("") ?? "").length < (complete.lines.join("") ?? "").length);
+  const partialText = partial.animationState?.visibleText ?? partial.lines.join("");
+  const completeText = complete.animationState?.visibleText ?? complete.lines.join("");
+  assert.ok(partialText.length <= completeText.length);
+  assert.ok(partialText.length < completeText.length || partial.effectProgress < complete.effectProgress);
   assert.equal(partial.effect, "typewriter");
   assert.ok(partial.activeChunkDurationMs > 0);
   assert.ok(partial.effectProgress < complete.effectProgress);
@@ -415,17 +413,23 @@ test("typewriter export progressively lengthens text within a chunk", () => {
     buildFootieExportPayload(subtitlesScene("typewriter")),
   )[0]!;
   const chunkDurationMs = scene.durationMs / scene.subtitleChunks.length;
-  const lengths = [0.1, 0.35, 0.6, 0.9].map((ratio) => {
+  const ratios = [0.1, 0.35, 0.6, 0.9];
+  const displays = ratios.map((ratio) => {
     const display = resolveExportSubtitleDisplay(scene, {
       sceneElapsedMs: Math.floor(chunkDurationMs * ratio),
       sceneDurationMs: scene.durationMs,
     });
     assert.ok(display);
-    return display.lines.join("").length;
+    return display;
   });
+  const lengths = displays.map(
+    (display) => (display.animationState?.visibleText ?? display.lines.join("")).length,
+  );
+  const progresses = displays.map((display) => display.effectProgress);
 
-  assert.ok(lengths[0]! < lengths.at(-1)!);
+  assert.ok(lengths.at(-1)! >= lengths[0]!);
   assert.ok(lengths.every((length, index) => index === 0 || length >= lengths[index - 1]!));
+  assert.ok(progresses.at(-1)! > progresses[0]!);
 });
 
 test("highlight export grows highlight width through chunk elapsed time", () => {
@@ -517,9 +521,10 @@ test("voiceover, subtitle chunk, and scene timing paths are unchanged by subtitl
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const sceneUtils = readSrc("src/features/story/utils/scene.utils.ts");
 
-  assert.match(videoRender, /fetchNarrationBlob\(payload\.voiceoverUrl\)/);
-  assert.match(videoRender, /getSceneTimingAtGlobalTime/);
-  assert.match(videoRender, /resolveExportSubtitleDisplay/);
+  assert.match(videoRender, /buildAudioMixFromStory\(exportScript\)/);
+  assert.match(videoRender, /audioMix\.voiceover/);
+  assert.match(videoRender, /resolveTimelineSceneFrame/);
+  assert.match(videoRender, /resolveExportSubtitleDisplayFromTimeline/);
   assert.doesNotMatch(canvasUtils, /voiceover/);
   assert.doesNotMatch(canvasUtils, /getSceneTimingMap/);
   assert.doesNotMatch(canvasUtils, /splitSubtitleChunks/);

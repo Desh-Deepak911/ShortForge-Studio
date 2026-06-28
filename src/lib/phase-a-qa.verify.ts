@@ -100,7 +100,7 @@ test("narration subtitles do not cover the screen", () => {
 test("subtitle preview uses timed chunk selection when playing", () => {
   assert.match(videoPreview, /sceneElapsedMs/);
   assert.match(videoPreview, /sceneDurationMs/);
-  assert.match(subtitleOverlay, /chunkProgress/);
+  assert.match(subtitleOverlay, /captionAnimationState/);
   assert.match(subtitleOverlay, /resolveActiveSubtitleForScene/);
   assert.match(subtitleOverlay, /sceneElapsedMs/);
   assert.match(subtitleOverlay, /sceneDurationMs/);
@@ -132,10 +132,9 @@ test("fade-up, typewriter, and highlight effect hooks exist", () => {
   assert.match(subtitleEffectPreview, /case "fade-up"/);
   assert.match(subtitleEffectPreview, /case "typewriter"/);
   assert.match(subtitleEffectPreview, /case "highlight"/);
-  assert.match(subtitleEffectPreview, /subtitle-effect-fade-up/);
-  assert.match(subtitleEffectPreview, /chunkKey/);
-  assert.match(subtitleEffectPreview, /chunkProgress/);
-  assert.match(subtitleEffectPreview, /TypewriterProgressReveal/);
+  assert.match(subtitleEffectPreview, /TimelineFadeUpSubtitleCaption/);
+  assert.match(subtitleEffectPreview, /captionAnimationState/);
+  assert.match(subtitleEffectPreview, /TimelineTypewriterSubtitleCaption/);
   assert.match(globalsCss, /translateY\(8px\)/);
   assert.match(subtitleEffectPreview, /subtitle-effect-highlight-bar/);
   assert.match(globalsCss, /@keyframes subtitle-fade-up/);
@@ -322,13 +321,10 @@ test("subtitle chunk advances during preview playback timing", () => {
 });
 
 test("subtitle effects target the active chunk with restart keys", () => {
-  assert.match(subtitleEffectPreview, /chunkKey/);
-  assert.match(subtitleEffectPreview, /key=\{chunkKey\}/);
-  assert.match(subtitleEffectPreview, /subtitle-effect-fade-up/);
-  assert.match(subtitleEffectPreview, /TypewriterProgressReveal/);
+  assert.match(subtitleEffectPreview, /TimelineFadeUpSubtitleCaption/);
+  assert.match(subtitleEffectPreview, /TimelineTypewriterSubtitleCaption/);
   assert.match(subtitleEffectPreview, /subtitle-effect-highlight/);
   assert.match(globalsCss, /@keyframes subtitle-fade-up/);
-  assert.match(globalsCss, /@keyframes subtitle-highlight-sheen/);
 });
 
 test("no UI redesign or playback architecture drift", () => {

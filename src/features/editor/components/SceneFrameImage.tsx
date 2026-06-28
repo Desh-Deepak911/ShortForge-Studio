@@ -6,6 +6,8 @@ import {
   getSceneImageTransformStyle,
   withScreenDragOffset,
 } from "@/features/story/utils";
+import { resolveSceneImageMotionTransformState } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
+import type { TimelineImageMotionInput } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
 import { useFrameSize } from "@/hooks/useFrameSize";
 import type { FootieScene } from "@/features/story/types";
 
@@ -16,8 +18,8 @@ interface SceneFrameImageProps {
   imageClassName?: string;
   /** Live drag offset in screen pixels (preview only). */
   transformOffset?: { x: number; y: number };
-  /** Additional Ken Burns scale applied on top of manual zoom (preview playback). */
-  motionScale?: number;
+  /** Timeline-driven image motion (preview/export parity). */
+  timelineImageMotion?: TimelineImageMotionInput | null;
   /** Keeps transforms on the compositor while panning. */
   isDragging?: boolean;
 }
@@ -32,7 +34,7 @@ export default function SceneFrameImage({
   className = "absolute inset-0 overflow-hidden",
   imageClassName = "",
   transformOffset,
-  motionScale = 1,
+  timelineImageMotion = null,
   isDragging = false,
 }: SceneFrameImageProps) {
   const { ref: containerRef, width: frameWidth, height: frameHeight } =
@@ -49,12 +51,27 @@ export default function SceneFrameImage({
 
   const objectFit = getSceneImageObjectFit(image);
   const hasFrameSize = frameWidth > 0 && frameHeight > 0;
-  const transformStyle = {
-    ...(hasFrameSize
-      ? getSceneImageTransformStyle(image, frameWidth, frameHeight, motionScale)
-      : { transform: "none" as const, transformOrigin: "center center" as const }),
-    ...(isDragging ? { willChange: "transform" } : {}),
-  };
+  const motionTransformState =
+    timelineImageMotion && hasFrameSize
+      ? resolveSceneImageMotionTransformState(
+          image,
+          timelineImageMotion,
+          frameWidth,
+          frameHeight,
+        )
+      : null;
+  const transformStyle = motionTransformState
+    ? {
+        transform: motionTransformState.transform,
+        transformOrigin: "center center" as const,
+        ...(isDragging ? { willChange: "transform" } : {}),
+      }
+    : {
+        ...(hasFrameSize
+          ? getSceneImageTransformStyle(image, frameWidth, frameHeight)
+          : { transform: "none" as const, transformOrigin: "center center" as const }),
+        ...(isDragging ? { willChange: "transform" } : {}),
+      };
 
   return (
     <div ref={containerRef} className={className}>

@@ -5,6 +5,7 @@ import type {
   SceneImageFitMode,
   SceneImageMotion,
   SceneImageMotionIntensity,
+  SceneImageMotionPreset,
   SceneImageMotionType,
 } from "@/features/story/types";
 
@@ -33,6 +34,22 @@ export const SCENE_IMAGE_MOTION_INTENSITY_OPTIONS: {
   { value: "strong", label: "Strong" },
 ];
 
+const SCENE_IMAGE_MOTION_PRESET_TYPES: readonly SceneImageMotionPreset[] = [
+  "static",
+  "slow-zoom-in",
+  "slow-zoom-out",
+  "pan-left",
+  "pan-right",
+  "pan-up",
+  "pan-down",
+  "pan-left-zoom-in",
+  "pan-right-zoom-in",
+  "pan-up-zoom-in",
+  "pan-down-zoom-in",
+];
+
+const SCENE_IMAGE_MOTION_PRESET_TYPE_SET = new Set<string>(SCENE_IMAGE_MOTION_PRESET_TYPES);
+
 /** Canonical 9:16 frame used to store pan offsets independent of preview/export size. */
 export const SCENE_IMAGE_REFERENCE_WIDTH = 1080;
 export const SCENE_IMAGE_REFERENCE_HEIGHT = 1920;
@@ -54,6 +71,10 @@ export function getDefaultImageMotion(): SceneImageMotion {
 export function normalizeSceneImageMotionType(value: unknown): SceneImageMotionType {
   if (value === "zoom-in" || value === "zoom-out" || value === "none") {
     return value;
+  }
+
+  if (typeof value === "string" && SCENE_IMAGE_MOTION_PRESET_TYPE_SET.has(value)) {
+    return value as SceneImageMotionPreset;
   }
 
   return DEFAULT_IMAGE_MOTION_TYPE;
@@ -554,6 +575,14 @@ export function getSceneImageDrawDimensions(
   return getSceneImageCoverDimensions(imageWidth, imageHeight, frameWidth, frameHeight);
 }
 
+/** Draw transform override for timeline-driven image motion. */
+export interface SceneImageDrawTransform {
+  scale: number;
+  translateX: number;
+  translateY: number;
+  rotation?: number;
+}
+
 /** Draws a scene image inside a clipped frame using normalized transform metadata. */
 export function drawSceneImageInFrame(
   ctx: CanvasRenderingContext2D,
@@ -564,6 +593,7 @@ export function drawSceneImageInFrame(
   sourceWidth: number,
   sourceHeight: number,
   motionScale = 1,
+  drawTransformOverride?: SceneImageDrawTransform,
 ): void {
   const resolved = resolveSceneImageTransformForFrame(image, frameWidth, frameHeight);
   const { drawWidth, drawHeight } = getSceneImageDrawDimensions(
@@ -573,15 +603,18 @@ export function drawSceneImageInFrame(
     frameWidth,
     frameHeight,
   );
-  const combinedScale = resolved.scale * motionScale;
+  const combinedScale = drawTransformOverride?.scale ?? resolved.scale * motionScale;
+  const translateX = drawTransformOverride?.translateX ?? resolved.x;
+  const translateY = drawTransformOverride?.translateY ?? resolved.y;
+  const rotation = drawTransformOverride?.rotation ?? resolved.rotation ?? 0;
 
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, frameWidth, frameHeight);
   ctx.clip();
 
-  ctx.translate(frameWidth / 2 + resolved.x, frameHeight / 2 + resolved.y);
-  ctx.rotate(((resolved.rotation ?? 0) * Math.PI) / 180);
+  ctx.translate(frameWidth / 2 + translateX, frameHeight / 2 + translateY);
+  ctx.rotate((rotation * Math.PI) / 180);
   ctx.scale(combinedScale, combinedScale);
 
   ctx.drawImage(bitmap, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);

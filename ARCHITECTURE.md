@@ -17,6 +17,7 @@ This document describes system design for engineers and technical reviewers. It 
 - [High Level Flow](#high-level-flow)
 - [Intelligence Runtime](#intelligence-runtime)
 - [Story Creation Pipeline](#story-creation-pipeline)
+- [Timeline Intelligence Runtime](#timeline-intelligence-runtime)
 - [Rendering Pipeline](#rendering-pipeline)
 - [Core Design Principles](#core-design-principles)
 - [Future Evolution](#future-evolution)
@@ -57,7 +58,8 @@ Export
 | **Voiceover** | TTS audio; measured duration is the timing authority for all downstream visuals. |
 | **Scene Generation** | Scenes, captions, and transitions planned against the voiceover (audio-first). |
 | **Timeline Editor** | Creators refine scenes, images, motion, music, and subtitles on a 9:16 canvas. |
-| **Renderer** | Browser-side canvas compositing produces frame-accurate video synced to audio. |
+| **Timeline Intelligence** | Master Timeline built from draft state; absolute timestamps unify preview and export clocks. |
+| **Renderer** | Browser-side canvas compositing produces frame-accurate video synced to Master Timeline. |
 | **Export** | FFmpeg.wasm and MediaRecorder mux narration, background music, and video into WebM or MP4. |
 
 **Audio-first production:** narration exists and is measured before scene generation, so visual timing follows speech.
@@ -155,14 +157,68 @@ Incomplete drafts open on **Review**; editor-ready drafts open on **Editor**. Dr
 
 ---
 
-## Rendering Pipeline
+## Timeline Intelligence Runtime
 
-All video output is produced client-side.
+Preview and export no longer maintain separate timing logic. A **Master Timeline** is built from the draft, optimized for safe render spans, and consumed by both playback and export frame loops.
 
 ```
-Timeline
+FootieScript
   ↓
-Canvas
+buildMasterTimeline()
+  ↓
+optimizeMasterTimeline()
+  ↓
+MasterTimeline (absolute timestamps)
+  ↓
+  ├── Scene track
+  ├── Subtitle track
+  ├── Caption-animation track
+  ├── Image-motion track
+  ├── Transition track
+  └── Audio track
+  ↓
+Preview clock · Export frame loop · FFmpeg mux duration
+```
+
+| Component | Purpose |
+|-----------|---------|
+| **Master Timeline** | Single canonical clock; every timed event uses `startMs` / `endMs` on one axis. |
+| **Absolute timestamp model** | Scene, subtitle, animation, motion, transition, and audio events share one master clock. |
+| **Shared preview/export timing** | `resolveTimelineSceneFrame` and related helpers return identical state at the same `timeMs`. |
+| **Render duration authority** | `renderDurationMs` is the export and mux span — max of content lanes plus end buffer. |
+| **Subtitle completion guard** | Optimizer extends render span so final subtitle lines complete with readable hold. |
+| **Caption animation scheduler** | Fade-up, highlight, and typewriter progress derived from caption-animation track events. |
+| **Typewriter timing** | Reveal paced by `availableDurationMs / characterCount`; accelerates when windows are tight. |
+| **Image motion scheduler** | Pan-left, pan-right, zoom, and legacy Ken Burns map to image-motion track events. |
+| **Transition scheduler** | Outgoing-scene tail overlays; duration clamped to a safe fraction of scene length. |
+| **Timeline optimizer** | Safe pre-render pass — clamps animation/transition tails, flags dense subtitles and short scenes. |
+| **Drift correction** | Export preflight refits scene durations to voiceover; optimizer preserves narration/audio alignment. |
+| **WebM/MP4 export sync** | Frame loop and FFmpeg mux use Master Timeline `renderDurationMs`; voiceover stays primary authority. |
+
+**Pipeline integration:**
+
+```
+buildMasterTimeline(script, { mode })
+  → optimizeMasterTimeline()
+  → preview playback | export preflight | canvas frame loop | FFmpeg mux
+```
+
+Preview mode respects editor scene timing unless voiceover refit is requested. Export mode refits scenes to measured voiceover when valid. Development builds expose timeline diagnostics (authority, lane spans, optimizer findings, drift warnings).
+
+Shipped in [2.6.0](./CHANGELOG.md#260).
+
+---
+
+## Rendering Pipeline
+
+All video output is produced client-side through the Timeline Intelligence Runtime.
+
+```
+FootieScript
+  ↓
+Master Timeline (build + optimize)
+  ↓
+Canvas (per-frame resolve)
   ↓
 Browser Rendering
   ↓
@@ -173,13 +229,13 @@ WebM / MP4
 
 | Stage | Description |
 |-------|-------------|
-| **Timeline** | Authoritative edit state — scene order, durations, transforms, captions, transitions, audio settings. |
+| **Master Timeline** | Built and optimized from draft state; authoritative render duration and event lookup. |
 | **Canvas** | HTML5 Canvas 2D per frame: background, scene image (with motion), captions, transitions, FootieBitz watermark. |
-| **Browser Rendering** | Frame loop synced to voiceover duration; MediaRecorder captures canvas + audio for WebM. |
-| **FFmpeg.wasm** | Client-side MP4 mux — video stream plus mixed voiceover and background music. |
-| **WebM / MP4** | WebM for fast in-browser capture; MP4 for compatibility and quality. |
+| **Browser Rendering** | Frame loop indexed by Master Timeline `timeMs`; MediaRecorder captures canvas for WebM. |
+| **FFmpeg.wasm** | Client-side mux — video stream plus mixed voiceover and background music at timeline render duration. |
+| **WebM / MP4** | WebM stream-copy fast path; MP4 H.264/AAC encode; both aligned to the same render span. |
 
-**Audio synchronization** uses the Web Audio API in preview and export. Subtitle timing follows narration alignment through preview and export.
+**Audio synchronization** uses the Web Audio API in preview and an audio-mix pipeline in export. Subtitles, caption animations, image motion, and transitions resolve from Master Timeline events — preview and export read the same clock.
 
 ---
 
@@ -188,12 +244,13 @@ WebM / MP4
 | Principle | Summary |
 |-----------|---------|
 | **Modular architecture** | Features grouped by creator workflow and intelligence concern; typed contracts between modules. |
-| **Single source of truth** | One draft document for title, narration, scenes, voiceover, and export settings; preview and export read the same state. |
+| **Single source of truth** | One draft document for title, narration, scenes, voiceover, and export settings; Master Timeline unifies preview and export timing. |
+| **Shared render clock** | Absolute timestamps on Master Timeline eliminate preview/export drift for subtitles, motion, and transitions. |
 | **Layered intelligence** | Bundle → Knowledge Graph → Graph Context → Prompt Intelligence → OpenAI; no layer skips ahead. |
 | **Provider abstraction** | Provider Registry decouples orchestration from API Football, Static Knowledge, and future backends. |
 | **Extensible storytelling modes** | Story modes drive intent, research planning, narrative structure, and beat templates. |
 | **Offline-first editing** | After generation, editing, preview, and export work without network calls; drafts in localStorage. |
-| **Browser-first rendering** | Canvas + FFmpeg.wasm + MediaRecorder; predictable hosting, aligned preview and export timing. |
+| **Browser-first rendering** | Canvas + FFmpeg.wasm + MediaRecorder; Master Timeline aligns preview playback and export frame loops. |
 
 ---
 

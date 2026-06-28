@@ -22,7 +22,7 @@ Items marked complete ship in the current product. In-progress and planned work 
 
 ## Completed
 
-*Shipped through [2.5.0](./CHANGELOG.md#250) and earlier releases.*
+*Shipped through [2.6.0](./CHANGELOG.md#260) and earlier releases.*
 
 ### Story Creation
 
@@ -57,6 +57,22 @@ Items marked complete ship in the current product. In-progress and planned work 
 - [x] WebM — In-browser capture via MediaRecorder
 - [x] MP4 — FFmpeg.wasm muxing
 - [x] Audio synchronization — Voiceover and background music aligned to subtitles
+
+### Timeline Intelligence Runtime
+
+*Shipped in [2.6.0](./CHANGELOG.md#260) — Timeline Intelligence Runtime.*
+
+- [x] **Master Timeline** — Canonical absolute-timestamp clock for preview and export
+- [x] **Shared preview/export timing** — Same scene, subtitle, and animation resolution at each `timeMs`
+- [x] **Render duration authority** — `renderDurationMs` spans audio, narration, scenes, subtitles, animations, and transitions
+- [x] **Subtitle completion guard** — Final subtitle hold through render end
+- [x] **Caption animation scheduler** — Fade-up, highlight, and typewriter effects inside subtitle windows
+- [x] **Typewriter timing** — Character pacing with safe acceleration on short windows
+- [x] **Image motion scheduler** — Pan, zoom, and Ken Burns presets via timeline events
+- [x] **Transition scheduler** — Scene-tail overlays with safe duration clamping
+- [x] **Timeline optimizer** — Pre-render clamping and diagnostics for dense or short scenes
+- [x] **Drift correction** — Export preflight refit with preserved audio alignment
+- [x] **WebM/MP4 export sync** — Mux duration follows Master Timeline render span
 
 ---
 
