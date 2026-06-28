@@ -1,200 +1,238 @@
 # ShortForge Studio
 
-**Product:** [ShortForge Studio](#overview) — a creator platform for cinematic short-form football videos.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?logo=openai&logoColor=white)](https://openai.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?logo=vercel&logoColor=white)](https://vercel.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Creator watermark:** Exported and previewed videos carry a **FootieBitz** watermark (the creator/channel brand). The app UI and metadata use ShortForge Studio.
+**AI-powered storytelling platform for creating research-backed short-form videos.**
+
+ShortForge Studio helps creators turn a simple idea into a fully edited, narrated short-form video — without a traditional editing suite. Write a brief, gather supporting research, generate a grounded script, review and refine the narration, build timed scenes, edit on a timeline, preview in the browser, and export production-ready video.
+
+The platform is built around one principle: **the story drives everything else.** Narration is written and spoken before scenes are planned, so timing follows the voice.
+
+Exported videos carry a **FootieBitz** watermark (creator/channel branding). The product name is **ShortForge Studio**.
 
 ---
 
-## Overview
+## Table of Contents
 
-ShortForge Studio turns ideas, events, and research into polished 9:16 shorts. Creators write stories, create narration, build storyboards, edit scenes in a timeline, preview in the browser, and download production-ready video — without a traditional editing suite.
-
-The product is built around one principle: **the story drives everything else.** Narration is written and spoken before scenes are planned, so timing follows the voice — not the other way around.
-
-Drafts persist in **localStorage** (browser-only MVP). Use **Save Draft** in the editor to keep work across sessions on the same device.
+- [Features](#features)
+- [Story Creation Pipeline](#story-creation-pipeline)
+- [Intelligence Runtime](#intelligence-runtime)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Current Capabilities](#current-capabilities)
+- [Documentation](#documentation)
+- [Why ShortForge Studio](#why-shortforge-studio)
+- [Getting Started](#getting-started)
+- [License](#license)
 
 ---
 
 ## Features
 
-| Area | What creators get |
-|------|-------------------|
-| **Research** | Smart Research and Research Preview — supporting facts gathered before writing |
-| **Story** | Documentary-style narration from topic, tone, duration, and story type |
-| **Narration** | Natural voiceovers with voice and speed controls |
-| **Storyboard** | Timed scenes built from reviewed copy and measured narration |
-| **Editor** | Timeline — scenes, images, captions, transitions, Ken Burns motion |
-| **Preview** | Interactive 9:16 playback synced to narration |
-| **Export** | Client-side MP4 (and optional WebM) with mixed narration and background music |
-| **Drafts** | Dashboard to list, open, and delete saved stories in this browser |
+### Story Creation
+
+- **AI script generation** — Documentary-style narration from topic, tone, duration, and story mode
+- **Storytelling modes** — Story, tactical review, match preview/recap, player analysis, top 5, historical explainer, and opinion/debate
+- **Research-backed content** — Smart Research and Research Preview gather verified football context before writing
+- **Script review** — Edit title and narration on a dedicated review screen before audio production
+- **Voiceover** — Natural TTS with voice and speed controls
+- **Scene generation** — Audio-first storyboards timed to measured narration
+
+### Editing Studio
+
+- **Timeline editor** — Arrange scenes, captions, and transitions on a vertical 9:16 canvas
+- **Scene management** — Add, reorder, and refine individual scenes
+- **Image positioning** — Pan, zoom, and Ken Burns motion per scene
+- **Background music** — Optional bed with volume control in preview and export
+- **Voiceover controls** — Regenerate narration and adjust playback speed
+- **Subtitle synchronization** — Captions aligned to narration timing
+- **Live preview** — Interactive device-frame playback synced to audio
+
+### Export
+
+- **Browser rendering** — Client-side compositing; no server-side video farm
+- **WebM export** — In-browser capture via MediaRecorder
+- **MP4 export** — High-quality muxing via FFmpeg.wasm
+- **Audio synchronization** — Voiceover and background music mixed in the final file
+- **Draft persistence** — Save and reload work across sessions (browser localStorage)
 
 ---
 
-## Workflow
+## Story Creation Pipeline
 
-### Current workflow
+The creator-facing workflow from brief to download:
 
 ```
-Landing
-  ↓
 Create
   ↓
-Research
+Review
   ↓
-Story
+Voiceover
   ↓
-Narration
-  ↓
-Storyboard
+Scene Generation
   ↓
 Editor
+  ↓
+Preview
   ↓
 Export
 ```
 
-| Step | Where it happens | What happens |
-|------|------------------|--------------|
-| **Landing** | `/` | Product overview, feature cards, links to create or drafts |
-| **Create** | `/create` | Brief — topic, story type, tone, duration, quality, Smart Research |
-| **Research** | `/create` | Optional preview via `POST /api/research-football` before writing |
-| **Story** | `/create` → `/create/review/[draftId]` | Write story (`script-only` generation), then edit title and narration |
-| **Narration** | `/create/review/[draftId]` | Create narration via `POST /api/generate-voiceover` |
-| **Storyboard** | `/create/review/[draftId]` | Build storyboard (`scenes-only` generation) timed to narration |
-| **Editor** | `/editor/[draftId]` | Refine timeline, images, captions, transitions; preview |
-| **Export** | `/editor/[draftId]` | Download production-ready video from the browser |
+| Stage | What happens |
+|-------|----------------|
+| **Create** | Enter a topic, story mode, tone, duration, and optional notes. Smart Research and Research Preview run the Intelligence Runtime when enabled. |
+| **Review** | Edit title and narration, confirm the script, and prepare for audio production. |
+| **Voiceover** | OpenAI TTS generates narration; measured duration drives all downstream timing. |
+| **Scene Generation** | Scenes, captions, and transitions are planned against the voiceover (audio-first). |
+| **Editor** | Refine scenes, images, motion, music, and captions on the timeline. |
+| **Preview** | Live 9:16 playback validates timing, subtitles, and audio mix. |
+| **Export** | Canvas rendering and FFmpeg.wasm produce downloadable WebM or MP4. |
 
-Incomplete drafts (no storyboard yet) open on the **review** route. Editor-ready drafts open on **`/editor/[draftId]`**.
+For the full system path including research and rendering, see [ARCHITECTURE.md](./ARCHITECTURE.md#high-level-flow).
 
 ---
 
-## Architecture
+## Intelligence Runtime
 
-ShortForge Studio is a Next.js App Router application organized into **product routes**, **feature modules**, and **shared services**. Internal names (`FootieScript`, `generate-script`, `StoryDocumentStore`, pipeline stages) are unchanged in code.
+ShortForge Studio is not a single prompt to an LLM. Research, reasoning, and story planning run in structured layers before script generation.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Product shell (pages + layout)                             │
-│  Landing · Create · Review · Editor · Drafts                │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│  Client features                                            │
-│  create/ · drafts/ · editor/ · preview/ · export/ · research/│
-└──────────────────────────┬──────────────────────────────────┘
-                           │ FootieScript + Draft model
-┌──────────────────────────▼──────────────────────────────────┐
-│  Server API routes (Node.js)                                │
-│  /api/generate-script · /api/generate-voiceover               │
-│  /api/research-football                                     │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                    OpenAI + API-Football
+User Brief
+  ↓
+Intent Engine
+  ↓
+Entity Resolver
+  ↓
+Competition Resolver
+  ↓
+Query Orchestrator
+  ↓
+Provider Registry
+  ↓
+  ├── API Football
+  ├── Static Knowledge
+  └── Future Providers
+  ↓
+Canonical Research Bundle
+  ↓
+Knowledge Graph
+  ↓
+Graph Context
+  ↓
+Prompt Intelligence
+  ↓
+OpenAI
 ```
 
-| Layer | Responsibility |
-|-------|----------------|
-| **Product shell** | `LandingPage`, `CreateStoryFlow`, `ScriptReviewFlow`, `DraftEditorFlow`, navigation |
-| **Drafts** | `StoryDocumentStore`, localStorage persistence, pipeline routing (`script_review` → `voiceover_ready` → `editor_ready`) |
-| **Generation** | Audio-first services — script, voiceover, scene planning (server) |
-| **Editing** | Timeline, scene cards, captions, images, transitions (client) |
-| **Rendering** | Preview playback and canvas export (client) |
+| Layer | Purpose |
+|-------|---------|
+| **User Brief** | Topic, story mode, tone, duration, and optional creator notes. |
+| **Intent Engine** | Classifies story type (preview, recap, ranking, player focus, opinion, etc.). |
+| **Entity Resolver** | Identifies players, teams, and competitions referenced in the brief. |
+| **Competition Resolver** | Maps competitions and seasons to provider-ready identifiers. |
+| **Query Orchestrator** | Plans research calls, order, and fallbacks. |
+| **Provider Registry** | Routes calls to registered backends with diagnostics. |
+| **API Football** | Live fixtures, statistics, rankings, and player data. |
+| **Static Knowledge** | Curated fallback when live providers return sparse results. |
+| **Canonical Research Bundle** | Normalized merge of provider results with provenance. |
+| **Knowledge Graph** | Facts, entities, and relationships with confidence metadata. |
+| **Graph Context** | Mode-aware research context — ranked facts, entities, grounding rules, warnings. |
+| **Prompt Intelligence** | Narrative plan, fact selection, and production prompt text for the LLM. |
+| **OpenAI** | Generates narration from structured context — not raw provider JSON. |
 
-**Data model:** `FootieScript` holds title, narration, scenes, timeline items, voiceover, voice/export/background settings. Drafts wrap `FootieScript` with metadata and a `pipelineStage`.
+Prompt Intelligence is the **primary** production prompt path. Graph Context text is used as a **fallback** when Prompt Intelligence cannot produce a valid prompt.
 
-**Generation modes** (`POST /api/generate-script`): `script-only` (create flow), `scenes-only` (review flow storyboard), `full` (legacy one-shot).
+Deep dive: [ARCHITECTURE.md — Intelligence Runtime](./ARCHITECTURE.md#intelligence-runtime)
 
-Deeper reading: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) · [`docs/GENERATION.md`](./docs/GENERATION.md) · [`docs/EDITING.md`](./docs/EDITING.md) · [`docs/RENDERING.md`](./docs/RENDERING.md)
+---
 
-### Repository layout
+## Technology Stack
+
+| Category | Technologies |
+|----------|--------------|
+| **Frontend** | Next.js, React, TypeScript, Tailwind CSS, Lucide React |
+| **AI** | OpenAI (script + TTS), Prompt Intelligence, Knowledge Graph, Entity Resolution, Intent Engine |
+| **Media** | FFmpeg.wasm, Web Audio API, HTML Canvas |
+| **Research** | API Football, Static Knowledge Provider |
+| **Infrastructure** | Vercel, TypeScript, ESLint |
+
+---
+
+## Project Structure
 
 ```
 footiebitz/
 ├── src/
-│   ├── app/                          # App Router pages + API routes
-│   │   ├── page.tsx                  # Landing (/)
-│   │   ├── create/                   # Create + review routes
-│   │   ├── editor/[draftId]/         # Editor
-│   │   ├── drafts/                   # Draft dashboard
-│   │   └── api/
-│   │       ├── generate-script/
-│   │       ├── generate-voiceover/
-│   │       └── research-football/
-│   ├── components/                   # Shell, landing, composer, workspace
+│   ├── app/                    # Routes: landing, create, review, editor, drafts, API
+│   ├── components/             # Shell, landing, shared UI
 │   ├── features/
-│   │   ├── create/                   # Create + ScriptReviewFlow
-│   │   ├── drafts/                   # Draft model, storage, StoryDocumentStore
-│   │   ├── research/                 # Football research + grounding
-│   │   ├── story/                    # Types, timing, generation services
-│   │   ├── editor/                   # Timeline, scene cards, controls
-│   │   ├── preview/                  # Playback and device frame
-│   │   └── export/                   # Canvas render and FFmpeg mux
-│   ├── lib/                          # AI prompts, voiceover sync, verify tests
-│   └── types/                        # Shared API types (footiebitz.ts)
-├── docs/
-├── README.md
-└── ROADMAP.md
+│   │   ├── create/             # Brief, Research Preview, script review
+│   │   ├── intelligence/       # Intent, entities, orchestrator, Knowledge Graph, Prompt Intelligence
+│   │   ├── research/           # Research context and script integration
+│   │   ├── story/              # Script types, generation, timing
+│   │   ├── editor/             # Timeline, scenes, captions, transitions
+│   │   ├── preview/            # Device-frame playback
+│   │   ├── export/             # Canvas render, FFmpeg mux, audio mix
+│   │   └── drafts/             # Draft model and localStorage persistence
+│   ├── lib/                    # Shared utilities and verify scripts
+│   └── types/                  # Shared API and domain types
+├── ARCHITECTURE.md
+├── CHANGELOG.md
+├── ROADMAP.md
+└── README.md
 ```
 
 ---
 
-## Routes
+## Current Capabilities
 
-| Route | Purpose |
-|-------|---------|
-| **`/`** | Landing — hero, features, documentation anchor, CTAs |
-| **`/create`** | Create — brief, Smart Research, Write Story |
-| **`/create/review/[draftId]`** | Story review — edit copy, narration, build storyboard |
-| **`/editor/[draftId]`** | Editor — timeline, preview, export, Save Draft |
-| **`/drafts`** | Draft dashboard — list, open, delete (local browser) |
+ShortForge Studio ships a production-ready creator workflow for football short-form video:
 
-| API route | Purpose |
-|-----------|---------|
-| **`POST /api/generate-script`** | Script-only, scenes-only, or full audio-first generation |
-| **`POST /api/generate-voiceover`** | Narration audio from current script |
-| **`POST /api/research-football`** | Research Preview / Smart Research context |
+- **Multi-stage story creation** — Create → Review → Voiceover → Scene Generation → Editor → Preview → Export
+- **Research-backed scripts** — Intelligence Runtime feeds Prompt Intelligence before LLM generation
+- **Timeline editing** — Scenes, images, captions, transitions, and Ken Burns motion
+- **Voiceover and background music** — TTS with regeneration; optional music bed in preview and export
+- **Draft persistence** — Save, list, open, and delete drafts in the browser
+- **Browser rendering** — MP4 (FFmpeg.wasm) and WebM (MediaRecorder); no server video encoding
 
-**Draft persistence:** localStorage key `footiebitz:drafts:v1`. No cloud sync or sign-in yet.
+Release history: [CHANGELOG.md](./CHANGELOG.md) · Planned work: [ROADMAP.md](./ROADMAP.md)
 
 ---
 
-## Tech Stack
+## Documentation
 
-| Layer | Technology |
-|-------|------------|
-| Framework | [Next.js 16](https://nextjs.org) (App Router), React 19, TypeScript |
-| Styling | Tailwind CSS v4, Lucide React |
-| AI | OpenAI Responses API, OpenAI TTS (`tts-1`) |
-| Research | API-Football (server-side), grounding utilities |
-| Preview | React, CSS animations |
-| Export | HTML5 Canvas 2D, MediaRecorder, FFmpeg.wasm |
-| Deployment | Vercel-compatible serverless routes |
+| Document | Description |
+|----------|-------------|
+| [README.md](./README.md) | Product overview, features, and getting started |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, pipelines, and design principles |
+| [ROADMAP.md](./ROADMAP.md) | Completed, in-progress, and planned product work |
+| [CHANGELOG.md](./CHANGELOG.md) | Version history ([Keep a Changelog](https://keepachangelog.com/)) |
 
----
-
-## Roadmap
-
-| Version | Theme |
-|---------|--------|
-| **v2.0** | Product Identity |
-| **v2.1** | UX Polish |
-| **v2.2** | Football Intelligence |
-| **v2.3** | Stability Sprint |
-| **v3** | Platform Expansion |
-
-Details: [ROADMAP.md](./ROADMAP.md) · Long-term vision: [docs/FUTURE.md](./docs/FUTURE.md)
+Additional implementation notes live in [`docs/`](./docs/).
 
 ---
 
-## Installation
+## Why ShortForge Studio
+
+This is not a thin wrapper around a chat completion. ShortForge Studio runs a **structured Intelligence Runtime** — from intent classification and entity resolution through Knowledge Graph assembly, Graph Context, and Prompt Intelligence — before a single word of narration is generated.
+
+The platform performs **research**, **reasoning**, **story planning**, **script generation**, **voiceover**, **scene generation**, **editing**, and **rendering** as distinct stages. Grounding rules and forbidden claims prevent invented stats from reaching the script.
+
+---
+
+## Getting Started
 
 ### Prerequisites
 
-- Node.js 18 or later
+- Node.js 18+
 - npm
-- An [OpenAI API key](https://platform.openai.com/api-keys)
+- [OpenAI API key](https://platform.openai.com/api-keys)
 
-### Clone and install
+### Setup
 
 ```bash
 git clone https://github.com/your-username/footiebitz.git
@@ -202,73 +240,22 @@ cd footiebitz
 npm install
 ```
 
----
-
-## Environment Variables
-
-Create a `.env.local` file in the project root:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | OpenAI API key for script generation and TTS |
-| `OPENAI_SCRIPT_MODEL` | No | Override the default model for all quality tiers |
-| `API_FOOTBALL_KEY` | No | API-Football key for Smart Research (when enabled) |
-
-Example:
+Create `.env.local`:
 
 ```env
 OPENAI_API_KEY=sk-...
+API_FOOTBALL_KEY=...   # optional — enables Smart Research
 ```
 
----
-
-## Running Locally
+### Run
 
 ```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) or go to [http://localhost:3000/create](http://localhost:3000/create).
-
-```bash
+npm run dev      # http://localhost:3000
 npm run lint
 npm run build
 ```
 
-Regression checks live in `package.json` (`test:*` scripts). Common smoke tests:
-
-```bash
-npm run test:script-review-workflow
-npm run test:drafts
-npm run test:audio-first-qa
-```
-
----
-
-## Deployment
-
-Deploy to [Vercel](https://vercel.com) or any Node.js host supporting Next.js App Router.
-
-1. Connect the repository.
-2. Set `OPENAI_API_KEY` (and optional research keys) in environment variables.
-3. Deploy. Generation routes use the Node.js runtime with extended timeout.
-
-Export runs entirely in the browser — no server-side video rendering required.
-
----
-
-## Contributing
-
-ShortForge Studio is organized by feature domains (`create`, `drafts`, `story`, `editor`, `preview`, `export`, `research`). Preview and export share timing and caption logic to stay aligned.
-
-When proposing a change:
-
-1. Describe the **creator problem** being solved.
-2. Identify the affected layer — generation, editing, or rendering.
-3. Note whether voiceover or scene timing must stay unchanged.
-4. Run relevant verify scripts and `npm run build`.
-
-Start with [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for system context.
+Deploy to [Vercel](https://vercel.com) with environment variables configured. Export runs entirely in the browser.
 
 ---
 

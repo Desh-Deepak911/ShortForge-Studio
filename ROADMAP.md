@@ -1,125 +1,106 @@
 # ShortForge Studio Roadmap
 
-Phased plan from today's browser studio to a full creator platform.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Product:** ShortForge Studio · **Creator watermark:** FootieBitz
+This roadmap outlines where **ShortForge Studio** is today and where it is heading — from research-backed script creation through timeline editing to browser-side export.
 
-For implemented capabilities see [docs/FEATURES.md](./docs/FEATURES.md). For long-term vision see [docs/FUTURE.md](./docs/FUTURE.md).
-
----
-
-## v2.0 — Product Identity
-
-**Goal:** ShortForge Studio reads as a creator platform, not a technical AI tool.
-
-**Shipped / in progress:**
-
-- ✔ Product rebrand — ShortForge Studio (UI, metadata, docs)
-- ✔ Creator watermark — FootieBitz on preview and export only
-- ✔ Staged creator workflow — Landing → Create → Research → Story → Narration → Storyboard → Editor → Export
-- ✔ Navigation — Home, Create, Drafts, Documentation
-- ✔ Consistent product language — Write, Create, Build, Edit, Preview, Download, Publish
-- ✔ Landing page — cinematic hero, feature cards, documentation section
-- ✔ Review route — `/create/review/[draftId]` for story, narration, and storyboard before the editor
-
-**Outcome:** Creators understand the journey at a glance; internal architecture (`FootieScript`, API routes, pipeline stages) stays stable.
+Items marked complete ship in the current product. In-progress and planned work may shift as priorities change. Release notes: [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 
-## v2.1 — UX Polish
+## Table of Contents
 
-**Goal:** The studio feels calm, fast, and trustworthy in daily use.
-
-- **Autosave** — continuous draft persistence without manual Save Draft
-- **Durable media** — voiceover and uploads that survive full page reload (IndexedDB or similar)
-- **Loading and error copy** — clear, creator-friendly feedback at every step
-- **Mobile polish** — sticky actions, touch targets, and review/editor layouts on small screens
-- **Draft dashboard** — richer status chips, sorting, and resume hints
-- **Empty states** — guided entry on create, drafts, and editor
-- **Keyboard and focus** — accessible navigation through forms and timeline
-
-**Outcome:** Creators pick up where they left off without thinking about storage or broken blob URLs.
+- [Completed](#completed)
+- [In Progress](#in-progress)
+- [Planned](#planned)
+- [Long Term Vision](#long-term-vision)
+- [Related Documentation](#related-documentation)
 
 ---
 
-## v2.2 — Football Intelligence
+## Completed
 
-**Goal:** Research and story quality feel purpose-built for football content.
+*Shipped through [2.5.0](./CHANGELOG.md#250) and earlier releases.*
 
-- **Smarter Smart Research** — richer match, player, and competition context with clearer Research Summary
-- **Grounding QA** — fewer unsupported claims; better warnings when data is missing
-- **Story templates** — match preview, player profile, top 5, recap formats as starting points
-- **Ranking and stats** — reliable top-N and standings in research and story output
-- **Targeted rewrite** — refresh narration or scenes without restarting the full flow
-- **Research cache** — reuse preview results within a session to reduce API calls
+### Story Creation
 
-**Outcome:** Football shorts start from facts creators can trust, not generic narration.
+- [x] Multi-stage workflow — Create → Review → Voiceover → Scene Generation → Editor → Preview → Export
+- [x] Script review — Edit title and narration before audio production
+- [x] Voiceover — TTS with voice and speed controls
+- [x] Scene generation — Audio-first storyboards timed to measured narration
 
----
+### Editing Studio
 
-## v2.3 — Stability Sprint
+- [x] Timeline editing — Scene order, captions, and transitions on a 9:16 canvas
+- [x] Image positioning — Pan, zoom, and Ken Burns motion per scene
+- [x] Background music — Volume control in preview and export
+- [x] Draft persistence — Save, list, and reload drafts in the browser
 
-**Goal:** Production confidence — regressions caught early, edge cases handled.
+### Intelligence Runtime
 
-- **Verify coverage** — expand QA scripts for review flow, research grounding, export parity
-- **Hydration and routing** — incomplete drafts always land on the correct route
-- **Export reliability** — preview/export timing parity, narration drift warnings, format edge cases
-- **Performance** — generation timeouts, streaming progress, large timeline responsiveness
-- **Documentation sync** — ARCHITECTURE, GENERATION, and README stay aligned with code
-- **Dependency hygiene** — lint, build, and typecheck clean on supported Node versions
+- [x] Intent Engine — Classify story type from natural-language briefs
+- [x] Entity Resolver — Identify players, teams, and related entities
+- [x] Competition Resolver — Map leagues, cups, and seasons for research scope
+- [x] Query Orchestrator — Plan and execute provider calls with fallbacks
+- [x] Provider Registry — Route to live and static research backends
+- [x] Canonical Research Bundle — Normalized merge of provider results
+- [x] Knowledge Graph — Provenance-aware facts and relationships
+- [x] Graph Context — Mode-aware research context for generation
+- [x] Prompt Intelligence — Narrative planning, fact selection, production prompts (primary path)
+- [x] Research Preview — Preview research before script generation
 
-**Outcome:** Ship-ready studio with predictable behaviour across browsers and brief types.
+### Export
 
----
-
-## v3 — Platform Expansion
-
-**Goal:** ShortForge Studio becomes a daily production home — beyond one browser, with team and publish workflows.
-
-### Authentication *(planned)*
-
-- Individual accounts with projects synced across devices
-- Team and organisation accounts with roles
-
-### Cloud storage *(planned)*
-
-- Cloud-backed drafts tied to accounts
-- Durable media library — images and voiceover survive beyond a single session
-- Asset folders reusable across projects
-
-### Publishing
-
-- Direct publish to YouTube Shorts, TikTok, and Instagram Reels
-- Schedule posts and platform metadata (title, description, cover)
-- Post-publish links back to the studio project
-
-### Platform features
-
-- Series and templates across projects
-- Collaboration — review links, comments, approval
-- Analytics hooks — export and publish history
-
-**Outcome:** Creators move from idea to live post without leaving ShortForge Studio — solo or as a team.
+- [x] Browser rendering — Client-side canvas compositing
+- [x] WebM — In-browser capture via MediaRecorder
+- [x] MP4 — FFmpeg.wasm muxing
+- [x] Audio synchronization — Voiceover and background music aligned to subtitles
 
 ---
 
-## Version overview
+## In Progress
 
-| Version | Theme | Creator promise |
-|---------|--------|-----------------|
-| **v2.0** | Product Identity | Clear brand, language, and staged workflow |
-| **v2.1** | UX Polish | Autosave, durable media, polished daily use |
-| **v2.2** | Football Intelligence | Research and stories built for football |
-| **v2.3** | Stability Sprint | Reliable, tested, documented |
-| **v3** | Platform Expansion | Accounts, cloud drafts, publish |
+### Script Validator
+
+Post-generation validation before voiceover and scene generation.
+
+- [ ] **Fact verification** — Cross-check narration against Graph Context and ranked facts
+- [ ] **Claim extraction** — Identify script assertions that require grounding support
+- [ ] **Confidence scoring** — Surface low-confidence lines for creator review
 
 ---
 
-## Related documentation
+## Planned
 
-| Document | Contents |
-|----------|----------|
-| [README.md](./README.md) | Overview, workflow, routes, tech stack |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System layers and data flow |
-| [docs/FEATURES.md](./docs/FEATURES.md) | Implemented capabilities today |
-| [docs/FUTURE.md](./docs/FUTURE.md) | Long-term product vision |
+| Initiative | Description |
+|------------|-------------|
+| **Scene Intelligence** | Beat-aware scene planning — caption density, transitions, visuals grounded in research |
+| **Media Intelligence** | Asset-aware image, motion, and style recommendations |
+| **Multi-provider research** | Additional backends via Provider Registry beyond API Football and Static Knowledge |
+| **Automatic visual recommendations** | Suggested imagery and motion from narration segments and story mode |
+| **Additional storytelling domains** | Extend Intelligence Runtime beyond football without replacing the editor or export pipeline |
+| **Collaborative editing** | Shared drafts and review workflows (requires cloud-backed state) |
+| **Cloud rendering** | Optional server-side export for longer or heavier workloads |
+| **Story Intelligence Engine** | Unified cross-stage story planning above the current runtime |
+
+---
+
+## Long Term Vision
+
+ShortForge Studio is designed as a **domain-independent storytelling platform**. Football is the first supported knowledge domain — live API research, Static Knowledge fallbacks, and mode-aware Prompt Intelligence tuned for match stories, rankings, and player analysis.
+
+The Intelligence Runtime (Intent Engine → Provider Registry → Knowledge Graph → Graph Context → Prompt Intelligence) is built so new domains plug in at the research and narrative layers. The **Story Creation Pipeline** and **Rendering Pipeline** stay the same as the product expands.
+
+Architecture detail: [ARCHITECTURE.md](./ARCHITECTURE.md) · Product overview: [README.md](./README.md)
+
+---
+
+## Related Documentation
+
+| Document | Description |
+|----------|-------------|
+| [README.md](./README.md) | Features, workflows, getting started |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and pipelines |
+| [CHANGELOG.md](./CHANGELOG.md) | Version history |
