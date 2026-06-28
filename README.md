@@ -16,6 +16,15 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 
 ---
 
+## Interface
+
+<img width="2442" height="1656" alt="image" src="https://github.com/user-attachments/assets/ba96dbbf-c0a7-44e4-8b35-a82efea56090" />
+
+<img width="2448" height="1650" alt="image" src="https://github.com/user-attachments/assets/e9283aaf-672d-49e7-8b5c-2141c4f769e3" />
+
+<img width="2410" height="1698" alt="image" src="https://github.com/user-attachments/assets/868eaded-3ac4-43b5-93ee-07beaf2b6119" />
+
+
 ## Table of Contents
 
 - [Features](#features)
