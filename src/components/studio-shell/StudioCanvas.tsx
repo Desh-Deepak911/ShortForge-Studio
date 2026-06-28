@@ -1,6 +1,7 @@
 import {
   studioShellCanvasMaxWidth,
   studioShellCanvasRegion,
+  studioShellCanvasRegionForm,
   studioShellRegionPadding,
 } from "@/lib/studioUi";
 
@@ -24,11 +25,13 @@ export default function StudioCanvas({
   centerContent = true,
   "aria-label": ariaLabel = "Preview canvas",
 }: StudioCanvasProps) {
+  const regionClass = centerContent ? studioShellCanvasRegion : studioShellCanvasRegionForm;
+
   return (
     <main
       id={id}
       aria-label={ariaLabel}
-      className={`${studioShellCanvasRegion} ${studioShellRegionPadding} ${className}`.trim()}
+      className={`${regionClass} ${studioShellRegionPadding} ${className}`.trim()}
     >
       {centerContent ? (
         <div className={`${studioShellCanvasMaxWidth} min-h-0 min-w-0 flex-1`}>{children}</div>

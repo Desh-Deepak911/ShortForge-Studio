@@ -30,7 +30,7 @@ export default function StudioInspector({
       aria-label={ariaLabel}
       className={`${widthClass} border-t border-border/40 bg-surface/15 lg:border-l lg:border-t-0 ${className}`.trim()}
     >
-      <div className={`flex min-h-0 flex-1 flex-col ${studioShellRegionPadding}`}>{children}</div>
+      <div className={`flex min-w-0 flex-col ${studioShellRegionPadding}`}>{children}</div>
     </aside>
   );
 }

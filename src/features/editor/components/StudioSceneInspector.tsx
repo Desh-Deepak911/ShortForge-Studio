@@ -179,7 +179,7 @@ export default function StudioSceneInspector({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 pb-1">
+    <div className="flex min-w-0 flex-col gap-2 pb-1">
       <div className={studioInspectorSummaryStrip}>
         <div className="flex items-start gap-2.5">
           <span className={studioStoryboardScenePill} aria-label={`Scene ${safeIndex + 1}`}>

@@ -414,6 +414,7 @@ export default function VideoPreview({
         </button>
         <button
           type="button"
+          data-preview-action="voice"
           onClick={playWithBrowserVoice}
           disabled={isPlaying}
           className={studioPreviewPill}

@@ -17,10 +17,10 @@ export default function InspectorResolver() {
   const panelIds = useMemo(() => registry.resolve(selection), [registry, selection]);
 
   return (
-    <>
+    <div className="flex min-w-0 flex-col gap-2">
       {panelIds.map((panelId) => (
         <InspectorPanel key={panelId} panelId={panelId} />
       ))}
-    </>
+    </div>
   );
 }

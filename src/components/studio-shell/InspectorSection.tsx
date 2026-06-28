@@ -6,6 +6,8 @@ import { useState, type ReactNode, type SyntheticEvent } from "react";
 import {
   studioInspectorSection,
   studioInspectorSectionBody,
+  studioInspectorSectionContent,
+  studioInspectorSectionContentInner,
   studioInspectorSectionSummary,
   studioInspectorSectionTitle,
   studioSubtleText,
@@ -26,6 +28,7 @@ export interface InspectorSectionProps {
 
 /**
  * Collapsible inspector block — compact sections for scene properties.
+ * Sections stack in document flow; body uses grid rows for smooth expand/collapse.
  */
 export default function InspectorSection({
   title,
@@ -73,7 +76,11 @@ export default function InspectorSection({
           aria-hidden
         />
       </summary>
-      <div className={studioInspectorSectionBody}>{children}</div>
+      <div className={studioInspectorSectionContent}>
+        <div className={studioInspectorSectionContentInner}>
+          <div className={studioInspectorSectionBody}>{children}</div>
+        </div>
+      </div>
     </details>
   );
 }

@@ -47,7 +47,7 @@ export default function BriefCanvas({
   onSubmit,
 }: BriefCanvasProps) {
   return (
-    <section id="studio-brief" className="flex min-h-0 w-full min-w-0 flex-col">
+    <section id="studio-brief" className="min-w-0 w-full">
       <div className="mb-1 min-w-0">
         <p className={studioStepLabel}>Brief</p>
         <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
@@ -60,7 +60,7 @@ export default function BriefCanvas({
 
       <form
         id={CREATE_BRIEF_FORM_ID}
-        className="mt-4 flex min-w-0 flex-1 flex-col space-y-4 sm:space-y-5"
+        className="mt-4 w-full space-y-4 sm:space-y-5"
         onSubmit={(event) => {
           event.preventDefault();
           onSubmit();

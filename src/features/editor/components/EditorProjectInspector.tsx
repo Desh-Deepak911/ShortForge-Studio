@@ -20,7 +20,7 @@ export default function EditorProjectInspector({
   onScriptChange,
 }: EditorProjectInspectorProps) {
   return (
-    <div className="shrink-0 border-t border-border/20 pt-2">
+    <div className="min-w-0 shrink-0 border-t border-border/20 pt-2">
       <InspectorSection title="Project" description="Draft, voice, music, and narration audio.">
         <div className="space-y-4">
           <StoryReview story={script} onStoryChange={onScriptChange} variant="storyboard" />

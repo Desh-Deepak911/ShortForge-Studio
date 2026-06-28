@@ -376,6 +376,10 @@ export const studioShellInspectorWidthCompact =
 export const studioShellCanvasRegion =
   "flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto overscroll-contain";
 
+/** Brief/script canvas — top-aligned forms; avoids preview centering on inputs. */
+export const studioShellCanvasRegionForm =
+  "flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start overflow-y-auto overscroll-contain";
+
 /** Preview frame sizing inside canvas (9:16 device). */
 export const studioShellCanvasMaxWidth =
   "w-full max-w-[min(100%,26.25rem)] sm:max-w-[min(100%,28rem)]";
@@ -471,7 +475,14 @@ export const studioTimelineRailDuration =
 
 /** Collapsible inspector section container. */
 export const studioInspectorSection =
-  "group/details min-w-0 rounded-xl bg-surface/25 ring-1 ring-border/15";
+  "group/details w-full min-w-0 shrink-0 rounded-xl bg-surface/25 ring-1 ring-border/15";
+
+/** Animated accordion body wrapper — overflow hidden only on inner content. */
+export const studioInspectorSectionContent =
+  "grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none group-open/details:grid-rows-[1fr]";
+
+/** Inner clip for accordion height animation. */
+export const studioInspectorSectionContentInner = "overflow-hidden min-h-0";
 
 /** Inspector section summary row. */
 export const studioInspectorSectionSummary =

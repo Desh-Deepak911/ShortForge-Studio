@@ -192,11 +192,9 @@ function StoryWorkspaceContent({
           </div>
         }
         inspector={
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
-            <InspectorContextProvider script={script} onScriptChange={onScriptChange}>
-              <InspectorResolver />
-            </InspectorContextProvider>
-          </div>
+          <InspectorContextProvider script={script} onScriptChange={onScriptChange}>
+            <InspectorResolver />
+          </InspectorContextProvider>
         }
         timeline={
           <StudioTimeline id="studio-timeline-rail" script={script} onScriptChange={onScriptChange} />
