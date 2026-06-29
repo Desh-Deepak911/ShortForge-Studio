@@ -1,8 +1,8 @@
 import "server-only";
 
 import { resolveQualityMode, resolveScriptModel } from "@/lib/ai";
-import { DEFAULT_VOICEOVER_VOICE, resolveVoiceoverVoice } from "@/lib/voiceoverOptions";
-import { syncFootieScript } from "@/lib/voiceover";
+import { DEFAULT_VOICEOVER_VOICE, resolveVoiceoverVoice } from "@/lib/utils/voiceoverOptions";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 import type { AudioFirstGenerationResult, FootieScript, StoryScript } from "@/features/story/types";
 import {
   attachVoiceoverTimingMs,

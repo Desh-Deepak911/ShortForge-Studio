@@ -15,7 +15,7 @@ import {
   studioSelectChevronCompact,
   studioStepLabel,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import { SCRIPT_MODE_OPTIONS } from "@/types/footiebitz";
 
 import {

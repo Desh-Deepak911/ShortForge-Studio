@@ -4,13 +4,13 @@ import { PenLine, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { StudioHeader, StudioHeaderBar } from "@/components/studio-shell";
-import { PRODUCT_NAME } from "@/lib/product-brand";
+import { PRODUCT_NAME } from "@/lib/constants/product-brand";
 import {
   studioBadge,
   studioIconBox,
   studioNavPrimaryButton,
   studioNavExportButton,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 import { CREATE_BRIEF_FORM_ID } from "./create-brief.constants";
 

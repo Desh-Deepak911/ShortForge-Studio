@@ -3,6 +3,11 @@
 import RibbonAction, { RibbonMetric } from "@/components/studio-shell/RibbonAction";
 import RibbonSection from "@/components/studio-shell/RibbonSection";
 import {
+  openSmartEditImageToolFromContext,
+  SMART_EDIT_HAS_IMAGE_COPY,
+} from "@/features/tool/components/SmartEditImageAction";
+import { useSmartEditImageContext } from "@/features/tool/hooks/useSmartEditImageContext";
+import {
   clampSceneImageScale,
   normalizeSceneImageFitMode,
 } from "@/features/story/utils";
@@ -29,9 +34,15 @@ export default function ImageRibbonContext({
 }: ImageRibbonContextProps) {
   const activeFitMode = normalizeSceneImageFitMode(fitMode);
   const zoomPercent = `${Math.round(clampSceneImageScale(scale) * 100)}%`;
+  const smartEditContext = useSmartEditImageContext();
 
   return (
     <RibbonSection title="Image" icon={<span aria-hidden>🖼</span>}>
+      <RibbonAction
+        label="Smart Edit"
+        onClick={() => openSmartEditImageToolFromContext(smartEditContext)}
+        title={SMART_EDIT_HAS_IMAGE_COPY}
+      />
       <RibbonAction
         label="Replace"
         accept="image/*"

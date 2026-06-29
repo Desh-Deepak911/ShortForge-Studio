@@ -13,7 +13,7 @@ import {
   studioFieldLabel,
   studioSelectChevronCompact,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { QualityMode, ScriptMode } from "@/types/footiebitz";
 import { MAX_SCENE_COUNT, MIN_SCENE_COUNT } from "@/types/footiebitz";
 

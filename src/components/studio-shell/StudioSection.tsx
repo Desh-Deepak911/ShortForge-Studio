@@ -1,7 +1,7 @@
 import {
   studioShellSectionDesc,
   studioShellSectionTitle,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 import type { StudioSectionProps } from "./studio-shell.types";
 

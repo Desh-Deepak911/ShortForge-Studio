@@ -1,4 +1,4 @@
-import { studioShellPanelSurface } from "@/lib/studioUi";
+import { studioShellPanelSurface } from "@/lib/utils/studioUi";
 
 import type { StudioPanelProps } from "./studio-shell.types";
 

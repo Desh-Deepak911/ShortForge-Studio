@@ -52,7 +52,7 @@ import {
   studioPanel,
   studioSecondaryButton,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { ScriptMode } from "@/types/footiebitz";
 
 interface ResearchPreviewPanelProps {

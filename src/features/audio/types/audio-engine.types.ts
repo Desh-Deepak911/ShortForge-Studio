@@ -1,5 +1,5 @@
 import type { StoryBackgroundMusic, StoryVoiceSettings } from "@/features/story/types";
-import type { VoiceoverSpeedOption } from "@/lib/voiceoverOptions";
+import type { VoiceoverSpeedOption } from "@/lib/utils/voiceoverOptions";
 
 /** Resolved voiceover track — mirrors FootieScript voice fields. */
 export interface VoiceoverTrack {

@@ -11,7 +11,7 @@ import {
   studioInspectorSectionSummary,
   studioInspectorSectionTitle,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 export interface InspectorSectionProps {
   title: string;

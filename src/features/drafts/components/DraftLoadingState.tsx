@@ -1,7 +1,7 @@
 "use client";
 
 import { AppShell } from "@/components/layout";
-import { studioPanel, studioSubtleText } from "@/lib/studioUi";
+import { studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
 
 /** Stable SSR/client shell — no localStorage, draft title, or workflow actions. */
 export default function DraftLoadingState() {

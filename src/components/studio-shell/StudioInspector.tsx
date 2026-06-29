@@ -2,7 +2,7 @@ import {
   studioShellInspectorWidth,
   studioShellInspectorWidthCompact,
   studioShellRegionPadding,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 import type { StudioShellRegionProps } from "./studio-shell.types";
 

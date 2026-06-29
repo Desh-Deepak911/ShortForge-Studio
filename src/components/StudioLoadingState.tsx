@@ -8,7 +8,7 @@ import {
   studioWorkspaceGrid,
   studioWorkspaceMain,
   studioWorkspacePanel,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import {
   GENERATION_LOADING_STEPS,
   type GenerationLoadingStep,

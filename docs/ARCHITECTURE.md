@@ -89,13 +89,13 @@ Drafts (/drafts) → reopen editor
 | Stage | What happens | Key code |
 |-------|--------------|----------|
 | **Landing** | Marketing page; links to create or drafts | `src/app/page.tsx`, `src/components/LandingPage.tsx` |
-| **Create prompt** | User enters topic, tone, duration, scene count, quality on `/create` | `CreateStoryFlow`, `StoryComposer` |
+| **Create prompt** | User enters topic, tone, duration, scene count, quality on `/create` | `CreateStoryFlow`, `BriefCanvas` |
 | **Story** | Server generates title + continuous narration via OpenAI | `script-generation.service.ts`, `lib/ai/prompts.ts` |
 | **Voiceover** | Server synthesizes MP3 from narration; duration measured from audio | `voiceover.service.ts` |
 | **Story (scenes)** | Server plans timed scenes fitted to voiceover length | `scene-planning.service.ts`, `audio-first-generation.service.ts` |
 | **Draft created** | Client calls `createDraft(script)` → redirect `/editor/[draftId]` | `draft-storage.service.ts`, `CreateStoryFlow` |
 | **Editor load** | `getDraft(draftId)` hydrates React state; **no AI on open** | `DraftEditorFlow`, `StoryWorkspace` |
-| **Editor edits** | User edits scenes, images, captions, transitions | `TimelineEditor`, `lib/voiceover.ts` |
+| **Editor edits** | User edits scenes, images, captions, transitions | `StudioTimeline`, `StudioSceneInspector`, `src/lib/utils/voiceover.ts` |
 | **Save Draft** | `serializeEditorStateForDraft()` → `updateDraft()` → localStorage | `draft-serialization.utils.ts`, `AppShell` |
 | **Preview** | React playback with narration-synced clock | `VideoPreview`, `usePreviewPlayback` |
 | **Export** | Canvas frame loop + optional FFmpeg mux | `video-render.service.ts`, `ffmpeg.utils.ts` |
@@ -175,7 +175,7 @@ The user's brief is assembled from UI inputs and passed to AI prompt builders.
 
 | Input | Source |
 |-------|--------|
-| Topic | `StoryComposer` textarea |
+| Topic | `BriefCanvas` textarea in `CreateStoryFlow` |
 | Tone | `dramatic` \| `funny` \| `tactical` \| `news` \| `emotional` |
 | Duration | 15–60 seconds |
 | Scene count | 3–12 |
@@ -212,7 +212,7 @@ Converts narration text to MP3 and resolves duration for scene timing.
 | `lib/audio/mp3-duration.utils.ts` | MP3 length measurement |
 
 - Model: OpenAI `tts-1`
-- Default voice: `alloy` (see `lib/voiceoverOptions.ts`)
+- Default voice: `alloy` (see `lib/utils/voiceoverOptions.ts`)
 - Speed presets applied at TTS or adjusted post-generation
 - Duration source: measured from MP3, or estimated from word count as fallback
 
@@ -245,40 +245,116 @@ If audio-first fails, `/api/generate-script` falls back to legacy `generateFooti
 
 ## Layer 2 — Editing
 
-Editing is entirely **client-side**. The production timeline mutates `FootieScript` in React state; changes are immediately visible in preview.
+Editing is entirely **client-side**. The production editor mutates `FootieScript` in React state; changes are immediately visible in preview.
 
-**Shell:** `src/components/StoryWorkspace.tsx`  
-**Timeline:** `src/features/editor/components/TimelineEditor.tsx`  
-**State helpers:** `src/lib/voiceover.ts` (`syncFootieScript`, `applyStoryUpdate`, `applySceneUpdate`)
+**Shell:** `StoryWorkspace` → `StudioShell`  
+**Timeline:** `StudioTimeline` (`src/features/timeline-editor/`)  
+**Inspector:** `InspectorResolver` → `StudioSceneInspector`  
+**State helpers:** `src/lib/utils/voiceover.ts` (`syncFootieScript`, `applyStoryUpdate`, `applySceneUpdate`)
+
+### Studio Shell
+
+`StudioShell` (`src/components/studio-shell/`) is the editor layout frame:
+
+| Region | Component | Role |
+|--------|-----------|------|
+| Header | `EditorStudioHeader` | Project title, Save Draft, Export |
+| Sidebar | `EditorProjectSidebar` | Scene list, quick jump, voiceover status |
+| Canvas | `VideoPreview` + `StudioContextRibbon` | 9:16 preview and image quick actions |
+| Inspector | `InspectorResolver` | Selection-driven property panels |
+| Timeline | `StudioTimeline` | Horizontal scene rail, reorder, playhead |
+
+Mobile uses a bottom action bar for Scenes / Preview / Download.
+
+### Selection Engine
+
+`EditorSelectionProvider` (`src/features/editor/selection/`) owns editor focus state:
+
+- Selected scene index and id
+- Image-edit mode (canvas pan/zoom drag)
+- Ribbon visibility (`image` context when a scene has an image)
+- Playback lock (blocks canvas edit during preview/export)
+
+Selection phases: `Idle` → `Selected` → `Hover` → `Editing` → `PlaybackLocked`. Preview, sidebar, timeline, ribbon, and inspector all read the same selection context.
+
+### Inspector Registry
+
+Inspectors resolve from selection via `InspectorRegistry` (`src/features/editor/inspector/`):
+
+| Panel id | Component | When shown |
+|----------|-----------|------------|
+| `scene` | `SceneInspector` → `StudioSceneInspector` | Scene selected |
+| `image`, `caption`, `transition`, `audio` | Placeholder panels | Registered; scene panel is primary today |
+| `project` | `ProjectInspector` → `EditorProjectInspector` | Story-level voice + review |
+
+`InspectorResolver` calls `registry.resolve(selection)` and renders matching `InspectorPanel` stacks.
+
+### Context Ribbon
+
+`StudioContextRibbon` shows contextual quick actions above the preview canvas. When an image scene is selected, `ImageRibbonContext` exposes fit/fill, reset, and replace-image without opening the full inspector.
+
+### Canvas Editing System
+
+With `enableCanvasEdit` on `VideoPreview`:
+
+- **`EditorCanvasEditLayer`** — drag pan on the active scene image
+- **`EditorCanvasSelectionLayer`** — selection chrome and guides
+- Image transform patches flow through `applySceneImageSettings()` / `applyResetSceneImageSettings()`
+- Canvas edit is disabled during playback and export
+
+### Timeline Editor v1
+
+`StudioTimeline` replaces the legacy vertical storyboard stack:
+
+| Operation | Implementation |
+|-----------|----------------|
+| Select scene | Click scene block → updates selection |
+| Reorder | Drag scene blocks on the rail |
+| Add / duplicate / delete | Context menu + `timeline-editor.commands.ts` |
+| Playhead | `TimelinePlaybackHead` synced from preview clock via `TimelinePlaybackPort` |
+| Transitions | `TimelineTransitionMarker` between scene blocks |
+
+Scene CRUD still uses `timeline.utils.ts` and `src/lib/utils/voiceover.ts` helpers under the hood.
+
+### Scene inspector (production editing surface)
+
+`StudioSceneInspector` is the per-scene editing surface (duration, type, captions, image upload, motion, transitions):
+
+| Concern | UI |
+|---------|-----|
+| Duration, scene type | Inspector fields |
+| Image upload / remove | `MediaPicker`, `useSceneImageUpload` |
+| Fit / fill / zoom | Context ribbon + inspector; canvas drag for pan |
+| Ken Burns motion | `MotionPanel` / `SceneImageMotionControl` |
+| Caption mode & copy | `CaptionModeControl`, textareas |
+| Subtitle effects | `SubtitleEffectControl` |
+| Transitions | `TransitionCard` for outgoing transition |
+| Smart Edit handoff | `SmartEditImageAction` opens external image tool |
+
+### Smart Edit (manual handoff)
+
+Advanced image editing uses an **external tool handoff** — not an in-app canvas:
+
+- `SmartEditImageAction` builds a URL via `buildSmartEditImageToolUrl()` (`src/lib/utils/smart-image-tool.utils.ts`)
+- Opens the Smart Edit tool in a new tab/window with `draftId`, `sceneId`, and return route
+- Creator saves in the external tool; image returns via the existing upload/replace flow
+
+Optional landing route: `/tool` (`SmartImageToolBridge`).
 
 ```mermaid
 flowchart TB
   WS[StoryWorkspace]
-  WS --> SR[StoryReview — title & narration]
-  WS --> TE[TimelineEditor]
-  WS --> VS[VoiceSettingsCard]
-  WS --> NP[NarrationPanel]
-  WS --> VP[VideoPreview]
-  WS --> EP[ExportPanel]
-  TE --> SC[SceneCard]
-  TE --> TC[TransitionCard]
-  SC --> IMG[SceneFrameImage]
-  SC --> CAP[CaptionModeControl]
-  SC --> FX[SubtitleEffectControl]
+  WS --> SS[StudioShell]
+  SS --> SB[EditorProjectSidebar]
+  SS --> VP[VideoPreview + Canvas Edit]
+  SS --> CR[StudioContextRibbon]
+  SS --> IR[InspectorResolver]
+  SS --> ST[StudioTimeline]
+  IR --> SI[StudioSceneInspector]
+  VP --> SEL[EditorSelectionProvider]
+  ST --> SEL
+  SB --> SEL
 ```
-
-### Scene editor
-
-`TimelineEditor` manages the ordered list of scenes and transition cards.
-
-| Operation | Utility |
-|-----------|---------|
-| Add / delete / duplicate | `timeline.utils.ts` |
-| Move up / down | Reorder + `recalculateSceneTimings()` |
-| Add buffer scene | Quick-insert typed placeholder (Intro, Context, etc.) |
-| Add transition | Insert `TransitionTimelineItem` after selected scene |
-
-Each scene is rendered as a **`SceneCard`** with duration control, caption mode, image controls, and type selector.
 
 ### Image upload
 
@@ -290,8 +366,8 @@ Each scene is rendered as a **`SceneCard`** with duration control, caption mode,
 
 Pan position stored as normalized `x`, `y` offsets on `SceneImage`.
 
-- Editor: **`SceneFrameImage`** — drag on desktop and touch
-- Patches via `applySceneImageSettings()` in `lib/voiceover.ts`
+- Editor: **`EditorCanvasEditLayer`** + **`SceneFrameImage`** — drag on desktop and touch
+- Patches via `applySceneImageSettings()` in `src/lib/utils/voiceover.ts`
 - Draw: **`drawSceneImageInFrame()`** in `scene.utils.ts` (shared by preview and export)
 
 ### Fit / Fill
@@ -303,7 +379,7 @@ Pan position stored as normalized `x`, `y` offsets on `SceneImage`.
 | `fit` | Full image visible inside 9:16 frame (letterbox) |
 | `fill` | Image covers frame (may crop) |
 
-Control: **`SceneImageZoomControl`** in `SceneCard`.
+Control: **Context ribbon** (`ImageRibbonContext`) and **inspector** image section.
 
 ### Zoom
 
@@ -318,13 +394,13 @@ Per-scene `captionMode` (`src/features/story/utils/caption.utils.ts`):
 | `generated` (default) | AI scene `subtitle` — static for full scene |
 | `subtitles` | `subtitleText` split into timed chunks from narration |
 
-Toggle: **`CaptionModeControl`**.
+Toggle: **`CaptionModeControl`** in `StudioSceneInspector`.
 
 ### Subtitle editing
 
 In subtitles mode:
 
-- User edits `subtitleText` on the scene card
+- User edits `subtitleText` in the scene inspector
 - **`splitSubtitleChunks()`** (`subtitle.utils.ts`) breaks text into phrase chunks (max ~5 words / 34 chars)
 - Chunks timed evenly across scene duration
 - Effects: **`SubtitleEffectControl`** — `fade-up`, `typewriter`, `highlight`
@@ -338,7 +414,7 @@ Story-level `FootieScript.voiceSettings`:
 - Voice — OpenAI TTS voice id
 - Speed — 0.75x to 1.4x presets
 
-UI: **`VoiceSettingsCard`**. Regeneration: **`NarrationPanel`** → `/api/generate-voiceover`.
+UI: **`VoiceSettingsCard`** in `EditorProjectInspector`. Regeneration: **`NarrationPanel`** → `/api/generate-voiceover`.
 
 ### Scene duration editing
 
@@ -358,7 +434,7 @@ Transition cards (`TransitionTimelineItem`) sit between scenes in `timelineItems
 | `effect` | `cut`, `fade`, `slide-left`, `slide-right`, `zoom-in`, `zoom-out`, `blur` |
 | `durationMs` | Overlay length, capped at 40% of outgoing scene |
 
-UI: **`TransitionCard`**. Logic: **`transition-overlay.utils.ts`**.
+UI: **`TransitionCard`** in scene inspector; markers on **`StudioTimeline`**. Logic: **`transition-overlay.utils.ts`**.
 
 **Model:** Transitions render as a **tail overlay** on the outgoing scene only. They do not extend total timeline duration. Captions hide during the overlay window.
 
@@ -371,9 +447,42 @@ Optional slow zoom during scene playback, on top of manual pan/zoom.
 | `imageMotion.type` | `none`, `zoom-in`, `zoom-out` |
 | `imageMotion.intensity` | `subtle` (→1.05×), `medium` (→1.10×), `strong` (→1.16×) |
 
-- Math: **`scene-image-motion.utils.ts`** — `resolveSceneImageMotionProgress()`, `resolveSceneImageMotionScale()`
-- UI: **`SceneImageMotionControl`** inside `SceneImageZoomControl`
+- Math: **`scene-image-motion.utils.ts`** — driven by Master Timeline image-motion track
+- UI: **`MotionPanel`** / **`SceneImageMotionControl`** in scene inspector
 - Progress is linear from scene start (0) to scene end (1)
+
+---
+
+## Timeline Intelligence Runtime
+
+Preview and export share one **Master Timeline** built from `FootieScript`:
+
+```
+FootieScript → buildMasterTimeline() → optimizeMasterTimeline() → preview / export clocks
+```
+
+Tracks: scenes, subtitles, caption animations, image motion, transitions, audio.  
+**Module:** `src/features/timeline-intelligence/`  
+**Authority:** `renderDurationMs` spans narration, scenes, subtitles, and transition tails.
+
+Deep dive: [README.md — Timeline Intelligence Runtime](../README.md#timeline-intelligence-runtime)
+
+---
+
+## Content Intelligence / Story Structure Intelligence
+
+Research-backed generation runs before script writing:
+
+```
+User Brief → Intent → Entity/Competition Resolution → Provider Registry → Knowledge Graph
+  → Graph Context → Prompt Intelligence → OpenAI
+```
+
+**Modules:** `src/features/intelligence/`, `src/features/research/`  
+**Story structure QA:** `src/verification/research/storyStructureIntelligenceQa.verify.ts`  
+Prompt Intelligence is the primary production prompt path; Graph Context is fallback.
+
+Deep dive: [README.md — Intelligence Runtime](../README.md#intelligence-runtime)
 
 ---
 
@@ -485,56 +594,58 @@ footiebitz/src/
 ├── app/
 │   ├── page.tsx                      # Landing (/)
 │   ├── create/page.tsx               # Story generation (/create)
+│   ├── create/review/[draftId]/      # Script review
 │   ├── editor/[draftId]/page.tsx     # Editor (/editor/[draftId])
 │   ├── drafts/page.tsx               # Draft dashboard (/drafts)
-│   ├── layout.tsx
-│   └── api/
-│       ├── generate-script/route.ts  # Audio-first generation
-│       └── generate-voiceover/route.ts
+│   ├── tool/page.tsx                 # Optional Smart Edit landing
+│   └── api/                          # generate-script, generate-voiceover, intelligence, research
 │
-├── components/                       # Shell, landing, composer, workspace
+├── components/
+│   ├── studio-shell/                 # StudioShell, ContextRibbon, ExportDrawer
+│   ├── StoryWorkspace.tsx            # Editor orchestration
 │   ├── LandingPage.tsx
-│   ├── StoryComposer.tsx             # Prompt UI (used on /create)
-│   ├── StoryWorkspace.tsx            # Post-generation layout
-│   ├── layout/AppShell.tsx           # Header incl. Save Draft
-│   ├── StoryReview.tsx
-│   ├── NarrationPanel.tsx
-│   ├── ExportPanel.tsx
-│   └── VoiceSettingsCard.tsx
+│   └── layout/AppShell.tsx           # Header incl. Save Draft
 │
 ├── features/
+│   ├── create/                       # CreateStoryFlow, BriefCanvas, script review
 │   ├── drafts/                       # Draft model + localStorage
-│   │   ├── types/
-│   │   ├── services/draft-storage.service.ts
-│   │   ├── utils/draft-serialization.utils.ts
-│   │   └── components/               # DraftEditorFlow, DraftsDashboard
-│   │
-│   ├── create/                       # /create orchestration
-│   │   └── components/CreateStoryFlow.tsx
-│   │
-│   ├── story/                        # Domain model + generation + shared utils
-│   │   ├── types/                    # FootieScript, FootieScene, TimelineItem
-│   │   ├── services/                 # AI pipelines (server-only)
-│   │   └── utils/                    # Timing, subtitles, images, transitions
-│   │
-│   ├── editor/                       # Layer 2 — timeline UI
-│   │   └── components/
-│   │       ├── TimelineEditor.tsx
-│   │       ├── SceneCard.tsx
-│   │       └── …
-│   │
-│   ├── preview/                      # Layer 3 — preview renderer
-│   └── export/                       # Layer 3 — export renderer
+│   ├── editor/                       # Selection, inspector registry, scene inspector
+│   ├── timeline-editor/              # StudioTimeline v1 rail
+│   ├── timeline-intelligence/        # Master Timeline, optimizer, schedulers
+│   ├── intelligence/                 # Intent, entities, graph, prompt intelligence
+│   ├── research/                     # Research context integration
+│   ├── story/                        # Domain model, generation, shared utils
+│   ├── preview/                      # VideoPreview, playback
+│   ├── export/                       # Canvas render, FFmpeg mux
+│   └── tool/                         # SmartEditImageAction, external tool bridge
 │
 ├── lib/
 │   ├── ai/                           # Prompts, schema, OpenAI client
-│   ├── voiceover.ts                  # syncFootieScript, applyStoryUpdate
-│   └── *.verify.ts                   # Regression tests
+│   ├── audio/                        # MP3 duration helpers
+│   ├── constants/                    # Product metadata, navigation, studio constants
+│   ├── football/                     # API-Football client
+│   └── utils/                        # voiceover state helpers, studioUi, blob URLs
+│
+├── verification/                     # QA scripts (*.verify.ts) — not imported by production
+│   ├── audio/, canonical/, drafts/, editor/, entity/, export/
+│   ├── football/, graph/, research/, timeline/, ui/, utils/
+│   └── README.md
 │
 ├── hooks/
 └── types/
-    └── footiebitz.ts                 # API request/response types
 ```
+
+### Verification layout
+
+Regression scripts live under `src/verification/<domain>/`. Naming:
+
+| Pattern | Purpose |
+|---------|---------|
+| `<feature>.verify.ts` | Focused contract test for one subsystem |
+| `<feature>Qa.verify.ts` | Broader QA; often asserts cross-file invariants |
+
+Run via `npm run test:<feature>` or batch domains: `npm run test:verification`, `test:verification:export`, etc.  
+`tsconfig.json` excludes `**/*.verify.ts` from the production build.
 
 ---
 
@@ -567,7 +678,7 @@ Preview and export intentionally call the same pure functions so visual output s
 | Image draw | `drawSceneImageInFrame()`, `resolveSceneImageMotionScale()` |
 | Caption mode | `normalizeCaptionMode()` |
 
-Regression tests in `src/lib/*.verify.ts` enforce parity (e.g. `test:export-subtitle-qa`, `test:transition-qa`, `test:timing-subtitle-qa`).
+Regression tests in `src/verification/` enforce parity (e.g. `test:export-subtitle-qa`, `test:transition-qa`, `test:timing-subtitle-qa`). See `src/verification/README.md`.
 
 ---
 

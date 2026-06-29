@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { PRODUCT_NAME } from "@/lib/product-brand";
-import { isPrimaryNavLinkActive, PRIMARY_NAV_LINKS } from "@/lib/product-navigation";
+import { PRODUCT_NAME } from "@/lib/constants/product-brand";
+import { isPrimaryNavLinkActive, PRIMARY_NAV_LINKS } from "@/lib/constants/product-navigation";
 import {
   studioFooter,
   studioHeader,
@@ -14,7 +14,7 @@ import {
   studioNavExportButton,
   studioNavPrimaryButton,
   studioShellContainer,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 interface SiteNavProps {
   children?: ReactNode;

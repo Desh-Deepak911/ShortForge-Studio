@@ -6,7 +6,7 @@ import {
   createSceneImageFromUrl,
   getSceneImageUrl,
 } from "@/features/story/utils";
-import { applySceneUpdate } from "@/lib/voiceover";
+import { applySceneUpdate } from "@/lib/utils/voiceover";
 import type { FootieScript } from "@/features/story/types";
 
 function isBlobUrl(url: string) {

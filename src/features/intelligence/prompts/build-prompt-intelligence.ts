@@ -5,6 +5,10 @@ import { getNarrationWordBudget } from "@/features/story/utils/narration-duratio
 
 import { buildNarrativePlan } from "./build-narrative-plan";
 import { isSparseGraphContext } from "./graph-context-sparse.utils";
+import {
+  buildStoryStructureStyleRules,
+  STORY_STRUCTURE_NARRATION_RULES,
+} from "./story-structure-intelligence.utils";
 import type { NarrativePlan } from "./narrative-plan.types";
 import type {
   FactUsagePlan,
@@ -151,12 +155,20 @@ function buildStyleRules(context: GraphContext, narrativePlan: NarrativePlan): P
     },
     {
       id: "structure",
-      text: `Follow the ${narrativePlan.structure.replace(/_/g, " ")} narrative structure.`,
+      text: `Follow the ${narrativePlan.structureLabel} arc in spoken order.`,
     },
     {
       id: "fact-discipline",
       text: "Use only facts listed in the research context — do not invent scores, stats, dates, or records.",
     },
+    ...buildStoryStructureStyleRules(context.selectedMode).map((text, index) => ({
+      id: `story-structure-${index + 1}`,
+      text,
+    })),
+    ...STORY_STRUCTURE_NARRATION_RULES.map((text, index) => ({
+      id: `narration-discipline-${index + 1}`,
+      text,
+    })),
   ];
 
   if (context.selectedMode === "top_5") {
@@ -238,9 +250,9 @@ function buildNarrativeDirectiveSection(
   factIndex: Map<string, GraphContextFact>,
 ): PromptSection | null {
   const lines: string[] = [
-    `Structure: ${narrativePlan.structure.replace(/_/g, " ")}`,
+    `Structure: ${narrativePlan.structureLabel}`,
     "",
-    "Beats:",
+    "Beats (planning labels — do not speak these words in narration):",
   ];
 
   for (const beat of narrativePlan.beats) {
@@ -248,8 +260,9 @@ function buildNarrativeDirectiveSection(
       .map((factId) => factIndex.get(factId)?.text.trim())
       .filter(Boolean);
 
+    const timingNote = beat.openingHook ? " ~1–2 spoken seconds" : "";
     lines.push(
-      `- ${beat.label} (~${beat.targetWordCount} words, ${beat.tone}): ${beat.purpose}`,
+      `- ${beat.label} (~${beat.targetWordCount} words${timingNote}, ${beat.tone}): ${beat.purpose}`,
     );
 
     if (factTexts.length > 0) {

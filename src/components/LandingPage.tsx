@@ -11,14 +11,14 @@ import {
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
-import { PRODUCT_NAME } from "@/lib/product-brand";
-import { WORKFLOW_STEPS } from "@/lib/studioConstants";
+import { PRODUCT_NAME } from "@/lib/constants/product-brand";
+import { WORKFLOW_STEPS } from "@/lib/constants/studioConstants";
 import {
   studioPanel,
   studioPrimaryButton,
   studioSecondaryButton,
   studioStepLabel,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 const FEATURES: {
   title: string;

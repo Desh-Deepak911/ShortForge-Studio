@@ -6,7 +6,7 @@ import {
   studioSegment,
   studioSegmentActive,
   studioSegmentedControl,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { SubtitleEffect } from "@/features/story/types";
 
 const SUBTITLE_EFFECT_OPTIONS: { value: SubtitleEffect; label: string }[] = [

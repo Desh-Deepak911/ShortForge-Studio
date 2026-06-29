@@ -4,7 +4,7 @@ import { normalizeCaptionMode } from "@/features/story/utils";
 import { getDisplayCaption, type DisplayCaptionScene } from "@/features/story/utils";
 
 import { renderSceneCaptionContent } from "@/features/editor/components/subtitleEffectPreview";
-import { studioPreviewCaption } from "@/lib/studioUi";
+import { studioPreviewCaption } from "@/lib/utils/studioUi";
 
 interface CaptionOverlayProps {
   scene: DisplayCaptionScene & { id?: string };

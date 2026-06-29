@@ -35,7 +35,7 @@ import {
   formatProviderDiagnosticsForDevView,
   formatProviderExecutionSummaryForDevView,
 } from "@/features/create/utils/provider-diagnostics-display.utils";
-import { studioGhostButton, studioPanel, studioSubtleText } from "@/lib/studioUi";
+import { studioGhostButton, studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
 import type { ScriptMode } from "@/types/footiebitz";
 
 interface ResearchPreviewDeveloperViewProps {

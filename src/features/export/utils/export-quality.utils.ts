@@ -1,7 +1,7 @@
 import type { FootieScript } from "@/features/story/types";
 import type { ExportSettings } from "@/features/story/types";
 
-import { getStoryVoiceoverDurationSec } from "@/lib/voiceover";
+import { getStoryVoiceoverDurationSec } from "@/lib/utils/voiceover";
 
 export type ExportQualityId = "720p" | "1080p" | "1440p" | "4k";
 

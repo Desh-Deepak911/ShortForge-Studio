@@ -1,9 +1,9 @@
 # Data Model
 
-ShortForge Studio stores all studio state in a single in-memory **`FootieScript`** object on the client. There is no database or project persistence yet — refresh clears everything.
+ShortForge Studio stores all studio state in a single in-memory **`FootieScript`** object on the client. Drafts persist to browser **localStorage** via `draft-storage.service.ts`.
 
 **Source of truth:** `src/features/story/types/story.types.ts`  
-**Normalization:** `syncFootieScript()` in `src/lib/voiceover.ts`  
+**Normalization:** `syncFootieScript()` in `src/lib/utils/voiceover.ts`  
 **Render snapshot:** `ExportScene` in `src/features/export/services/export-payload.service.ts`
 
 ---
@@ -191,11 +191,11 @@ interface FootieScene {
 |-------|----------------|-----|
 | `id` | ❌ System | Assigned on create/duplicate; normalized on sync |
 | `start`, `end` | ❌ Computed | Derived from cumulative durations |
-| `duration` | ✅ Yes | Number input on `SceneCard` (1–20 seconds) |
+| `duration` | ✅ Yes | Number input on `StudioSceneInspector` (1–20 seconds) |
 | `startMs`, `endMs`, `durationMs` | ❌ Computed | Set by `recalculateSceneTimings()` |
 | `durationSource` | ⚙️ Indirect | `"manual"` on duration edit; `"voiceover"` from generation/refit |
 | `subtitle` | ✅ Yes | Textarea when `captionMode === "generated"` |
-| `sceneType` | ✅ Yes | Select on `SceneCard` |
+| `sceneType` | ✅ Yes | Select on `StudioSceneInspector` |
 | `narration` | ❌ Derived | Excerpt from story narration; synced on generation/refit |
 | `image` | ✅ Yes | Upload, pan, zoom, fit, motion (see Image + ImageMotion) |
 | `uploadedImage` | ⚙️ Legacy | Migrated to `image`; not edited directly |
@@ -441,7 +441,7 @@ interface SceneImage {
 |-------|----------------|-----|
 | `imageMotion.type` | ✅ Yes | `SceneImageMotionControl` |
 | `imageMotion.intensity` | ✅ Yes | `SceneImageMotionControl` |
-| `url` | ✅ Yes | File upload / remove on `SceneCard` |
+| `url` | ✅ Yes | File upload / remove on `StudioSceneInspector` |
 | `scale` | ✅ Yes | Zoom slider |
 | `x`, `y` | ✅ Yes | Drag on `SceneFrameImage` |
 | `fitMode` | ✅ Yes | Fit/Fill toggle |
@@ -503,68 +503,37 @@ Legacy stories without `timelineItems` get them auto-built with default fade tra
 | Item | User editable? |
 |------|----------------|
 | Scene order | ✅ Yes (move up/down) |
-| Scene content | ✅ Yes (via `SceneCard`) |
+| Scene content | ✅ Yes (via `StudioSceneInspector`) |
 | Transition effect/duration | ✅ Yes (via `TransitionCard`) |
 | Timeline item ids | ❌ System |
 | Scene embedding in timeline | ❌ Synced from `scenes` array |
 
 ---
 
-## Draft (planned)
+## Draft (MVP)
 
-Project persistence is **not implemented**. The following is the intended future model.
+Project persistence uses browser localStorage. Each draft wraps a canonical `FootieScript` plus metadata.
+
+| Concern | Implementation |
+|---------|----------------|
+| Storage | `localStorage` key `footiebitz:drafts:v1` |
+| Module | `src/features/drafts/` — `draft-storage.service.ts`, `DraftEditorFlow`, `DraftsDashboard` |
+| Save | Manual **Save Draft** in editor header |
+| Load | `getDraft(draftId)` on `/editor/[draftId]` mount |
+
+**Limitation:** Blob URLs (voiceover, uploaded images) may break after full page reload until durable media storage ships.
 
 ```typescript
-/** PLANNED — not implemented */
 interface FootieDraft {
-  /** Stable project id (UUID). */
   id: string;
-
-  /** ISO timestamp of last save. */
+  title: string;
+  promptPreview?: string;
+  status: DraftStatus;
+  createdAt: string;
   updatedAt: string;
-
-  /** Optional user-facing project name. */
-  name?: string;
-
-  /** The full studio story state. */
   script: FootieScript;
-
-  /** Serialized image blobs or storage references. */
-  assets?: DraftAsset[];
-
-  /** Generation metadata for reproducibility. */
-  generationMeta?: {
-    topic: string;
-    tone: Tone;
-    qualityMode: QualityMode;
-    sceneCount: number;
-    generatedAt: string;
-    audioFirstApplied?: boolean;
-  };
-}
-
-/** PLANNED — not implemented */
-interface DraftAsset {
-  id: string;
-  sceneId: string;
-  mimeType: string;
-  /** IndexedDB key, cloud URL, or base64. */
-  storageRef: string;
 }
 ```
-
-### Planned relationships
-
-```
-User
- └── many FootieDraft
-       └── one FootieScript
-       └── many DraftAsset (scene images, voiceover blob)
-```
-
-### Current workaround
-
-All state lives in `page.tsx` React state. Blob URLs for images and voiceover are lost on refresh. See [FUTURE.md](./FUTURE.md) for persistence plans.
 
 ---
 
@@ -648,7 +617,7 @@ interface GenerateScriptRequest {
 }
 ```
 
-These are transient brief inputs in `StoryComposer` — not part of `FootieScript` after generation.
+These are transient brief inputs in `CreateStoryFlow` / `BriefCanvas` — not part of `FootieScript` after generation.
 
 ---
 

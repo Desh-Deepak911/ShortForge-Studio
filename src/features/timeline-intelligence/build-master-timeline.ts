@@ -21,8 +21,8 @@ import {
 } from "@/features/story/utils/timeline.utils";
 import { getStoryVoiceSettings } from "@/features/story/utils/voice-settings.utils";
 import type { FootieScene, FootieScript } from "@/features/story/types";
-import { resolveVoiceoverSpeed } from "@/lib/voiceoverOptions";
-import { syncFootieScript } from "@/lib/voiceover";
+import { resolveVoiceoverSpeed } from "@/lib/utils/voiceoverOptions";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 import { estimateTypewriterRevealDurationMs } from "@/features/story/utils/subtitle-effect.utils";
 
 import { authoritiesMayDiverge, resolveTimelineAuthority } from "./timeline-authority";

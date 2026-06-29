@@ -3,7 +3,7 @@ import {
   studioShellRegionPadding,
   studioShellTimelineHeight,
   studioShellTimelineHeightCompact,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 import type { StudioShellRegionProps } from "./studio-shell.types";
 

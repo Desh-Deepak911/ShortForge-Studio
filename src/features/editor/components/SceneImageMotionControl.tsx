@@ -13,7 +13,7 @@ import {
   studioImageFitSegmentActive,
   studioImageFitSegmentedControlStacked,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type {
   SceneImageMotion,
   SceneImageMotionIntensity,

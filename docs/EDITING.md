@@ -2,9 +2,42 @@
 
 The Editing layer is where creators refine AI output after generation. Every change is a **local, immediate mutation** of `FootieScript` in React state — no server round-trip, no automatic re-generation.
 
-**Entry point:** `StoryWorkspace` → `TimelineEditor` + `SceneCard`  
-**State layer:** `src/lib/voiceover.ts`  
-**UI:** `src/features/editor/components/`
+**Entry point:** `StoryWorkspace` → `StudioShell`  
+**Timeline:** `StudioTimeline` (`src/features/timeline-editor/`)  
+**Inspector:** `StudioSceneInspector` via `InspectorResolver`  
+**State layer:** `src/lib/utils/voiceover.ts`  
+**Selection:** `src/features/editor/selection/`
+
+---
+
+## Studio layout (Studio UX 2.1+)
+
+`StoryWorkspace` wraps the editor in `EditorSelectionProvider` and `StudioShell`:
+
+| Region | Component | Editable content |
+|--------|-----------|------------------|
+| Header | `EditorStudioHeader` | Save Draft, Export |
+| Sidebar | `EditorProjectSidebar` | Scene list, quick jump |
+| Canvas | `VideoPreview` + `StudioContextRibbon` | Preview; fit/fill/reset/replace when image selected |
+| Inspector | `InspectorResolver` → `StudioSceneInspector` | Scene duration, type, captions, image, motion, transitions |
+| Project panel | `EditorProjectInspector` | Title, narration (`StoryReview`), voice settings |
+| Timeline | `StudioTimeline` | Scene rail, reorder, playhead, context menu |
+| Export | `ExportDrawer` → `ExportPanel` | Quality, audio mode, download |
+
+The legacy vertical `TimelineEditor` / `SceneCard` stack has been removed. All production scene editing flows through the shell layout above.
+
+---
+
+## Selection Engine
+
+`EditorSelectionProvider` coordinates focus across sidebar, timeline, preview, ribbon, and inspector:
+
+- **Scene selection** — sidebar row or timeline block updates `selectedSceneIndex`
+- **Image edit mode** — canvas drag on `EditorCanvasEditLayer` when idle (not during playback/export)
+- **Ribbon context** — `ImageRibbonContext` when selected scene has an image
+- **Playback lock** — preview/export blocks canvas edits
+
+Inspectors resolve from selection via `InspectorRegistry` (`InspectorResolver`).
 
 ---
 
@@ -32,7 +65,7 @@ Editing never calls OpenAI. The only paths that hit the server after initial gen
 | Action | Trigger | API |
 |--------|---------|-----|
 | Regenerate voiceover | User clicks **Apply Changes** in `VoiceSettingsCard` | `POST /api/generate-voiceover` |
-| Create new story | User submits a new brief in `StoryComposer` | `POST /api/generate-script` |
+| Create new story | User submits a new brief in `CreateStoryFlow` | `POST /api/generate-script` |
 
 Scene edits, image uploads, caption changes, duration tweaks, and transition updates are **pure client-side** state updates.
 
@@ -65,23 +98,6 @@ flowchart LR
 
 ---
 
-## UI structure
-
-`StoryWorkspace` lays out the post-generation studio:
-
-| Section | Component | Editable content |
-|---------|-----------|------------------|
-| Story Draft | `StoryReview` | Title, full narration |
-| Production Timeline | `TimelineEditor` | Scenes, transitions, images, captions |
-| Voice Settings | `VoiceSettingsCard` | Voice, speed (+ explicit Apply) |
-| Narration | `NarrationPanel` | Audio preview only (read-only) |
-| Preview | `VideoPreview` | Playback (reflects edits live) |
-| Export | `ExportPanel` | Quality, audio mode, download |
-
-`TimelineEditor` renders in **storyboard** mode inside the workspace — a vertical list of `SceneCard` and `TransitionCard` items.
-
----
-
 ## Scene editing
 
 ### Purpose
@@ -90,21 +106,17 @@ Adjust the production timeline structure: which scenes exist, in what order, and
 
 ### Operations
 
-Implemented in `timeline.utils.ts`, wired through `TimelineEditor`:
+Implemented in `timeline.utils.ts` and `timeline-editor.commands.ts`, wired through `StudioTimeline`:
 
 | Action | Behavior |
 |--------|----------|
-| **Add scene** | Inserts blank scene (3s default) at chosen position |
-| **Duplicate** | Clones scene including image settings and caption fields |
-| **Delete** | Removes scene; syncs timeline items |
-| **Move up / down** | Reorders scenes; `recalculateSceneTimings()` |
-| **Add buffer scene** | Quick-insert Intro (3s), Context (4s), Transition (2s), or Ending (4s) |
-| **Add transition** | Inserts `TransitionTimelineItem` after selected scene |
-| **Scene type** | Optional `intro`, `context`, `match`, `transition`, `ending` |
-
-### Scene types and placeholders
-
-Scenes without uploaded images show a type-labelled gradient placeholder in preview and export. Buffer scenes help creators pad the timeline around narration beats without changing the voiceover script.
+| **Select scene** | Sidebar or timeline block → selection sync |
+| **Reorder** | Drag scene blocks on timeline rail |
+| **Add scene** | Context menu — blank scene (3s default) |
+| **Duplicate** | Context menu — clones scene including image settings |
+| **Delete** | Context menu — removes scene; syncs timeline items |
+| **Add transition** | Via scene inspector `TransitionCard` |
+| **Scene type** | Select in `StudioSceneInspector` |
 
 ### State helper
 
@@ -122,7 +134,7 @@ Replace AI placeholders with creator-provided visuals and control how each image
 
 | Detail | Value |
 |--------|-------|
-| Component | `MediaPicker` / upload zone on `SceneCard` |
+| Component | `MediaPicker` in `StudioSceneInspector`; ribbon **Replace** |
 | Formats | PNG, JPG, WEBP |
 | Storage | `SceneImage.url` as client `blob:` URL |
 | Remove | Clears image; placeholder returns |
@@ -133,8 +145,8 @@ Legacy `uploadedImage` string URLs migrate to `SceneImage` on `syncFootieScript(
 
 Drag to pan inside the frame. Stored as normalized `SceneImage.x` and `SceneImage.y`.
 
-- Editor: `SceneFrameImage` — mouse and touch drag
-- Selecting a scene card activates that scene in preview (`onActivate`)
+- Editor: `EditorCanvasEditLayer` on `VideoPreview` — mouse and touch drag
+- Selecting a scene activates that scene in preview
 - Draw: `drawSceneImageInFrame()` — shared by preview and export
 
 ### Image zoom
@@ -142,7 +154,7 @@ Drag to pan inside the frame. Stored as normalized `SceneImage.x` and `SceneImag
 Manual scale multiplier on `SceneImage.scale`.
 
 - Range: **0.5× – 3×** (`MIN_SCENE_IMAGE_SCALE`, `MAX_SCENE_IMAGE_SCALE`)
-- UI: slider in `SceneImageZoomControl`
+- UI: context ribbon and inspector image controls
 - **Reset** restores default transform via `applyResetSceneImageSettings()`
 
 ### Fit / Fill
@@ -154,7 +166,11 @@ Manual scale multiplier on `SceneImage.scale`.
 | `fit` | Full image visible; may letterbox |
 | `fill` | Image covers frame; may crop edges |
 
-Toggle in `SceneImageZoomControl`. Default when omitted: **fill**.
+Toggle in **Context Ribbon** (`ImageRibbonContext`) or scene inspector. Default when omitted: **fill**.
+
+### Smart Edit (external handoff)
+
+For advanced image work, `SmartEditImageAction` opens the external Smart Edit tool with scene context. The creator returns via the normal upload/replace flow — there is no in-app pixel editor.
 
 ### State helpers
 
@@ -177,20 +193,18 @@ Two distinct editing surfaces depending on caption mode (see [Caption modes](#ca
 
 | Field | Editor | Notes |
 |-------|--------|-------|
-| `subtitleText` | Textarea on `SceneCard` | Editable on-screen copy |
+| `subtitleText` | Textarea in `StudioSceneInspector` | Editable on-screen copy |
 | `subtitleEffect` | `SubtitleEffectControl` | fade-up, typewriter, highlight |
 
 **Chunking:** `splitSubtitleChunks()` breaks text into timed phrases (~5 words / 34 chars max). Chunks divide scene duration evenly. One chunk visible at a time.
 
 **Default seed:** Switching to subtitles mode seeds `subtitleText` from the scene narration excerpt if empty (`mergeSubtitleTextOnSubtitlesModeSwitch`). Existing user text is never overwritten.
 
-**UX copy on scene card:** *"Subtitles are based on narration, but you can edit them for better on-screen readability."*
-
 ### Generated mode (`captionMode: "generated"`)
 
 | Field | Editor | Notes |
 |-------|--------|-------|
-| `subtitle` | Textarea on `SceneCard` | Static caption for full scene |
+| `subtitle` | Textarea in `StudioSceneInspector` | Static caption for full scene |
 
 No chunk timing — caption displays for the entire scene duration.
 
@@ -225,7 +239,7 @@ Choose narrator voice and speed. Changes to preferences are stored immediately; 
 
 ### Controls
 
-`VoiceSettingsCard` — story-level, not per-scene:
+`VoiceSettingsCard` in `EditorProjectInspector` — story-level, not per-scene:
 
 | Setting | Options | Storage |
 |---------|---------|---------|
@@ -246,8 +260,6 @@ On success, `applyVoiceoverChanges()`:
 
 On failure, state rolls back to the pre-request baseline (`restoreVoiceoverBaseline`).
 
-Helper text: *"Regenerates the voiceover and redistributes scene timings proportionally."*
-
 ### Narration text changes
 
 Editing narration in `StoryReview` clears the stale voiceover blob (`applyStoryUpdate` → `narrationNeedsRefresh`) but does **not** auto-regenerate. The user sees narration panel without audio until they click Apply Changes.
@@ -264,7 +276,7 @@ Control how long each scene's visuals and captions appear on screen.
 
 | Detail | Value |
 |--------|-------|
-| UI | Number input on `SceneCard` header |
+| UI | Number input in `StudioSceneInspector` |
 | Range | 1–20 seconds |
 | Fields set | `duration`, `durationMs`, `durationSource: "manual"` |
 | Recalculation | `recalculateSceneTimings()` — cumulative `startMs` / `endMs` |
@@ -277,12 +289,6 @@ Audio-first stories arrive with durations fitted to measured voiceover length vi
 ### Visual vs audio timing
 
 Manual duration edits change **visual pacing only**. The voiceover MP3 is not re-stretched. During preview, narration plays at natural length while scene boundaries are visual. Export video length follows scene timing; FFmpeg muxes the narration track separately.
-
-Timeline helper text states: *"Visual scenes do not change the narration."*
-
-### Read-only narration window
-
-Each `SceneCard` shows when narration plays during that scene's time window (`scene.start` – `scene.end`). This is context only — editing the window requires changing scene duration or order, not the narration text timing directly.
 
 ---
 
@@ -299,24 +305,8 @@ Per-scene switch between static AI captions and narration-derived timed subtitle
 | **Generated** | `generated` | AI `subtitle` field | Static — full scene |
 | **Subtitles** | `subtitles` | `subtitleText` | Timed chunks across scene |
 
-Toggle: `CaptionModeControl` on each `SceneCard`.  
+Toggle: `CaptionModeControl` in `StudioSceneInspector`.  
 Default for new/legacy stories: **generated**.
-
-### Mode switch behaviour
-
-Switching to subtitles:
-
-- Seeds `subtitleText` from narration excerpt if user has not set copy
-- Does **not** overwrite existing `subtitleText`
-- Enables subtitle effect controls
-
-Switching to generated:
-
-- Shows `subtitle` textarea
-- Hides chunk-based subtitle editor
-- Static caption for scene duration
-
-Caption mode is **per-scene** — no story-wide default toggle in UI.
 
 ---
 
@@ -328,7 +318,7 @@ Add visual effects between scenes during the outgoing scene's final moments.
 
 ### Editor model
 
-Transition cards (`TransitionCard`) sit **between scenes** in `timelineItems`. They are editor metadata — not AI-generated, never rendered as on-screen text in preview/export.
+Transition metadata edited via `TransitionCard` in the scene inspector; markers shown on `StudioTimeline`.
 
 | Property | Options / behaviour |
 |----------|---------------------|
@@ -344,8 +334,6 @@ Transitions are **tail overlays** on the outgoing scene only:
 - Do not extend total timeline duration
 - Captions hidden during active overlay
 - Shared resolver: `resolveSceneTransitionOverlay()`
-
-Timeline copy: *"Transitions between scenes are visual only — no narration or media required."*
 
 ### State helper
 
@@ -368,68 +356,38 @@ Stored on `SceneImage.imageMotion`:
 | `type` | `none`, `zoom-in`, `zoom-out` |
 | `intensity` | `subtle` (→1.05×), `medium` (→1.10×), `strong` (→1.16×) |
 
-UI: `SceneImageMotionControl` inside `SceneImageZoomControl` (visible when scene has an image).
+UI: `MotionPanel` / `SceneImageMotionControl` in scene inspector (visible when scene has an image).
 
 ### Behaviour
 
-- Progress: linear 0→1 over scene duration (`resolveSceneImageMotionProgress`)
-- Scale: multiplied on top of manual zoom (`resolveSceneImageMotionScale`)
+- Progress: linear 0→1 over scene duration (Master Timeline image-motion track)
+- Scale: multiplied on top of manual zoom
 - Applied in preview (`PreviewFrame`) and export (`video-render.service.ts`)
 - Default when omitted: **none** / **subtle**
-
-Ken Burns is playback-only — the editor shows a live preview when the scene is active.
 
 ---
 
 ## Current UX decisions
 
-Design choices reflected in the current editor implementation:
+### Shell-first layout
 
-### First draft, not final cut
-
-Timeline helper copy explains that ShortForge Studio creates a first draft. Buffer scene buttons (Intro, Context, Transition, Ending) help creators pad structure without re-generating.
-
-### Visual layer separated from narration
-
-Scenes control **when** images and captions appear. They do not edit the narration script. This avoids accidental voiceover invalidation when restructuring the timeline.
+Sidebar for navigation, canvas for preview, inspector for properties, timeline rail for structure — replaces the long vertical scene-card scroll.
 
 ### Scene activation syncs preview
 
-Clicking or focusing a `SceneCard` calls `onActivate` → updates `selectedSceneIndex` in preview. Creators see framing and caption changes in context without hunting for the right scene.
+Selecting a scene in the sidebar or timeline updates preview context. Canvas edit applies to the active scene image.
 
-### Storyboard layout over wizard steps
+### Visual layer separated from narration
 
-Post-generation editing uses a single workspace grid (draft + timeline + preview + export) rather than linear step-by-step gates. Story draft is collapsible (`<details open>`) to reduce scroll on mobile.
+Scenes control **when** images and captions appear. They do not edit the narration script.
 
 ### Voice prefs vs voice audio
 
-Voice and speed selectors apply immediately to **preferences**. Audio file replacement requires an explicit **Apply Changes** click — preventing surprise API calls and credit usage on every slider move.
+Voice and speed selectors apply immediately to **preferences**. Audio file replacement requires an explicit **Apply Changes** click.
 
-### Fail-safe voiceover apply
+### Draft persistence
 
-If voiceover regeneration fails, the hook restores the full pre-request baseline (scenes, timings, audio URL) so a failed API call cannot leave the story in a partial state.
-
-### Narration edit invalidates audio, not scenes
-
-Changing narration text clears `voiceoverUrl` but preserves all scene edits. The user consciously re-applies voice when ready.
-
-### Upload progress visibility
-
-Timeline shows `Images uploaded: N/M` with a progress bar — nudging creators toward complete visual coverage before export without blocking export.
-
-### Transition cards are invisible in output
-
-Editor shows "Transition to next scene" label; preview/export render only the effect overlay. Creators understand transitions as post-production polish, not content scenes.
-
-### No persistence UX yet
-
-All edits live in React state. Refresh loses work. No save indicator — a known gap documented in [FUTURE.md](./FUTURE.md).
-
-### Mobile affordances
-
-- Compact footer controls on scene cards (move, duplicate, delete)
-- Bottom action bar in workspace for quick preview/export navigation
-- Touch drag supported on `SceneFrameImage`
+Drafts save to browser localStorage via **Save Draft** in the editor header. Blob URLs may still break after reload until durable media storage ships.
 
 ---
 
@@ -446,7 +404,7 @@ All edits live in React state. Refresh loses work. No save indicator — a known
 | `applyVoiceoverChanges()` | Audio + proportional timing refit | Scene content, captions, images, transitions |
 | `syncFootieScript(next, prev)` | Normalization + timeline sync | User subtitle text, transition-only edits |
 
-All paths flow through `page.tsx` → `handleStoryChange` → `applyStoryUpdate`.
+All paths flow through draft editor handlers → `applyStoryUpdate`.
 
 ---
 
@@ -455,23 +413,23 @@ All paths flow through `page.tsx` → `handleStoryChange` → `applyStoryUpdate`
 ```
 src/
 ├── components/
-│   ├── StoryWorkspace.tsx       # Editor layout shell
-│   ├── StoryReview.tsx          # Title + narration edit
-│   ├── VoiceSettingsCard.tsx    # Voice/speed + Apply Changes
-│   └── NarrationPanel.tsx       # Audio preview
-├── features/editor/components/
-│   ├── TimelineEditor.tsx       # Scene list + buffer inserts
-│   ├── SceneCard.tsx            # Per-scene editing surface
-│   ├── SceneFrameImage.tsx      # Pan drag preview
-│   ├── SceneImageZoomControl.tsx
-│   ├── SceneImageMotionControl.tsx
-│   ├── CaptionModeControl.tsx
-│   ├── SubtitleEffectControl.tsx
-│   └── TransitionCard.tsx
-├── hooks/
-│   └── useStoryVoiceoverApply.ts
-└── lib/
-    └── voiceover.ts             # All apply* state helpers
+│   ├── StoryWorkspace.tsx           # Editor orchestration
+│   └── studio-shell/                # StudioShell, ContextRibbon, ExportDrawer
+├── features/
+│   ├── editor/
+│   │   ├── selection/               # EditorSelectionProvider
+│   │   ├── inspector/               # InspectorRegistry, InspectorResolver
+│   │   └── components/
+│   │       ├── StudioSceneInspector.tsx
+│   │       ├── EditorProjectSidebar.tsx
+│   │       ├── EditorCanvasEditLayer.tsx
+│   │       ├── MotionPanel.tsx
+│   │       └── TransitionCard.tsx
+│   └── timeline-editor/
+│       └── StudioTimeline.tsx       # Timeline Editor v1
+├── lib/utils/
+│   └── voiceover.ts                 # All apply* state helpers
+└── verification/editor/             # scene-image-qa, smart-edit QA scripts
 ```
 
 ---

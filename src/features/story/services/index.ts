@@ -31,10 +31,6 @@ export {
   type ScriptOnlyStoryGenerationResult,
 } from "./audio-first-generation.service";
 export {
-  generateStoryWithAudioFirstPipeline,
-  type AudioFirstStoryPipelineInput,
-} from "./story-pipeline.service";
-export {
   generateVoiceover,
   generateVoiceoverFromScript,
   generateVoiceoverMp3,

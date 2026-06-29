@@ -23,7 +23,7 @@ import {
   resolveBriefResearchConfidenceLabel,
   resolveBriefToneLabel,
 } from "@/features/create/utils/review-brief-display.utils";
-import { consumeGenerateScriptStream } from "@/lib/generateScriptStream";
+import { consumeGenerateScriptStream } from "@/lib/utils/generateScriptStream";
 import {
   studioPrimaryButton,
   studioSecondaryButton,
@@ -31,8 +31,8 @@ import {
   studioSectionTitle,
   studioPanel,
   studioSubtleText,
-} from "@/lib/studioUi";
-import { applyStoryUpdate, syncFootieScript } from "@/lib/voiceover";
+} from "@/lib/utils/studioUi";
+import { applyStoryUpdate, syncFootieScript } from "@/lib/utils/voiceover";
 import type { GenerateScriptResponse, GenerationLoadingStep } from "@/types/footiebitz";
 import {
   DEFAULT_SCENE_COUNT,

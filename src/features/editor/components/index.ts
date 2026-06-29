@@ -10,7 +10,6 @@ export {
   CANVAS_GUIDE_LABELS,
 } from "../utils/resolveCanvasGuides.utils";
 export type { CanvasGuideKind, CanvasGuideThresholds } from "../utils/resolveCanvasGuides.utils";
-export { default as SceneRibbonContext } from "./SceneRibbonContext";
 export { default as ImageRibbonContext } from "./ImageRibbonContext";
 export type { ImageRibbonContextProps } from "./ImageRibbonContext";
 export { useSceneImageUpload } from "../hooks/useSceneImageUpload";
@@ -22,7 +21,6 @@ export {
   areCanvasEditHintsDismissed,
   dismissCanvasEditHints,
 } from "./canvasOverlayStorage";
-export { default as EditorCanvasZoomBadge } from "./EditorCanvasZoomBadge";
 export { default as EditorCanvasSelectionLayer } from "./EditorCanvasSelectionLayer";
 export {
   EditorSelectionProvider,
@@ -42,14 +40,9 @@ export type {
 } from "../selection";
 export { default as CaptionModeControl } from "./CaptionModeControl";
 export { default as MediaPicker } from "./MediaPicker";
-export { default as SceneCaptionOverlay } from "./SceneCaptionOverlay";
-export { default as SceneCard } from "./SceneCard";
-export type { SceneCardProps } from "./SceneCard";
 export { default as SceneFrameImage } from "./SceneFrameImage";
 export { default as SceneImageInspector } from "./SceneImageInspector";
-export { default as SceneImageZoomControl } from "./SceneImageZoomControl";
 export { default as SubtitleEffectControl } from "./SubtitleEffectControl";
-export { default as TimelineEditor } from "./TimelineEditor";
 export { default as StudioSceneInspector } from "./StudioSceneInspector";
 export { default as EditorProjectSidebar } from "./EditorProjectSidebar";
 export { default as EditorProjectInspector } from "./EditorProjectInspector";

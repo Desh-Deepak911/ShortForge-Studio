@@ -3,7 +3,7 @@ import { normalizeExportSettings, resolveExportSettings } from "@/features/expor
 import type { ExportSettings, FootieScript } from "@/features/story/types";
 import { normalizeStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
 import { normalizeStoryVoiceSettings } from "@/features/story/utils/voice-settings.utils";
-import { syncFootieScript } from "@/lib/voiceover";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import {
   persistDraftAudioInScript,

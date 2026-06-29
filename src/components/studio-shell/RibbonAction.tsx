@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { studioRibbonAction, studioRibbonActionActive } from "@/lib/studioUi";
+import { studioRibbonAction, studioRibbonActionActive } from "@/lib/utils/studioUi";
 
 export interface RibbonActionProps {
   label: string;

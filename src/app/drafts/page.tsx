@@ -1,6 +1,6 @@
 import { SiteNav, StudioPage } from "@/components/layout";
 import DraftsDashboard from "@/features/drafts/components/DraftsDashboard";
-import { pageMetadata } from "@/lib/product-metadata";
+import { pageMetadata } from "@/lib/constants/product-metadata";
 
 export const metadata = pageMetadata(
   "Drafts",

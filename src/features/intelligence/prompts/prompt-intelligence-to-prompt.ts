@@ -13,6 +13,7 @@ import {
   type PromptCompressionLevel,
 } from "./graph-context-sparse.utils";
 import type { PromptIntelligenceResult } from "./prompt-intelligence.types";
+import { STORY_STRUCTURE_NARRATION_RULES } from "./story-structure-intelligence.utils";
 
 export interface PromptIntelligenceToPromptTextInput {
   result: PromptIntelligenceResult;
@@ -165,16 +166,24 @@ function buildGraphAlignedWarningsBlock(context: GraphContext): string[] {
   ];
 }
 
+function buildStoryStructureRulesBlock(): string[] {
+  return [
+    "STORY STRUCTURE RULES",
+    ...STORY_STRUCTURE_NARRATION_RULES.map((rule) => `- ${rule}`),
+  ];
+}
+
 function buildNarrativePlanBlock(result: PromptIntelligenceResult): string[] {
   const { narrativePlan } = result;
 
   return [
     "NARRATIVE PLAN",
-    `Structure: ${narrativePlan.structure.replace(/_/g, " ")}`,
-    ...narrativePlan.beats.map(
-      (beat) =>
-        `- ${beat.label} (~${beat.targetWordCount} words, ${beat.tone}): ${beat.purpose}`,
-    ),
+    `Structure: ${narrativePlan.structureLabel}`,
+    "Beats (planning only — do not speak beat labels aloud):",
+    ...narrativePlan.beats.map((beat) => {
+      const timingNote = beat.openingHook ? ", ~1–2 spoken seconds" : "";
+      return `- ${beat.label} (~${beat.targetWordCount} words${timingNote}, ${beat.tone}): ${beat.purpose}`;
+    }),
   ];
 }
 
@@ -182,7 +191,7 @@ function buildRankedFactsBlock(
   result: PromptIntelligenceResult,
   graphContext: GraphContext,
 ): string[] {
-  if (result.narrativePlan.structure !== "ranked_countdown") {
+  if (result.narrativePlan.structure !== "countdown_ranked_reveal") {
     return [];
   }
 
@@ -368,6 +377,7 @@ export function promptIntelligenceToPromptText(
   pushBlock(lines, buildLengthBudgetBlock(result));
   pushBlock(lines, buildStyleBlock(result));
   pushBlock(lines, buildNarrativePlanBlock(result));
+  pushBlock(lines, buildStoryStructureRulesBlock());
 
   const rankedBlock = buildRankedFactsBlock(result, context);
   const rankedFactIds = new Set(context.rankedFacts.map((fact) => fact.id));

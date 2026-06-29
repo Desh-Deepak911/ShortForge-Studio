@@ -8,7 +8,7 @@ import {
   intentMatchesScriptMode,
   resolveSuggestedContentTypeLabel,
 } from "@/features/intelligence";
-import { studioPanel, studioSubtleText } from "@/lib/studioUi";
+import { studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
 import type { ScriptMode } from "@/types/footiebitz";
 
 const MIN_TOPIC_LENGTH = 4;

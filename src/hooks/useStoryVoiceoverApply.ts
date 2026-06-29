@@ -8,8 +8,8 @@ import type { FootieScript } from "@/features/story/types";
 import {
   applyVoiceoverRegeneration,
   resolveVoiceoverDurationFromBlob,
-} from "@/lib/voiceover";
-import { DEFAULT_VOICEOVER_VOICE } from "@/lib/voiceoverOptions";
+} from "@/lib/utils/voiceover";
+import { DEFAULT_VOICEOVER_VOICE } from "@/lib/utils/voiceoverOptions";
 
 function restoreVoiceoverBaseline(
   current: FootieScript,

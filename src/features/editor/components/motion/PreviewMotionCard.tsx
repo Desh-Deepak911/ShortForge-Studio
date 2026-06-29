@@ -2,7 +2,7 @@
 
 import { Play, Smartphone } from "lucide-react";
 
-import { studioCompactButton } from "@/lib/studioUi";
+import { studioCompactButton } from "@/lib/utils/studioUi";
 
 import { invokeStudioPreviewMotion } from "./motion-panel.utils";
 import {

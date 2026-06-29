@@ -3,7 +3,7 @@
 import StoryReview from "@/components/StoryReview";
 import { StudioPanel } from "@/components/studio-shell";
 import type { FootieScript } from "@/features/story/types";
-import { studioStepLabel, studioSubtleText } from "@/lib/studioUi";
+import { studioStepLabel, studioSubtleText } from "@/lib/utils/studioUi";
 
 export interface ScriptCanvasProps {
   script: FootieScript;

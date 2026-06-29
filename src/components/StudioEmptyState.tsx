@@ -8,7 +8,7 @@ import {
   studioEmptyStateIcon,
   studioEmptyStateTitle,
   studioPrimaryButton,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 interface StudioEmptyStateProps {
   onGenerate: () => void;

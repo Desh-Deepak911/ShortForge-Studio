@@ -1,5 +1,5 @@
 import { createEmptyScene, duplicateScene, getSceneImageUrl } from "@/features/story/utils";
-import { applyScenesUpdate } from "@/lib/voiceover";
+import { applyScenesUpdate } from "@/lib/utils/voiceover";
 import type { FootieScene, FootieScript } from "@/features/story/types";
 
 export interface TimelineSceneCommandResult {

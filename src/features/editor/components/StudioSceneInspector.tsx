@@ -9,6 +9,9 @@ import SceneImageInspector from "@/features/editor/components/SceneImageInspecto
 import SceneImageMotionControl from "@/features/editor/components/SceneImageMotionControl";
 import SubtitleEffectControl from "@/features/editor/components/SubtitleEffectControl";
 import TransitionCard from "@/features/editor/components/TransitionCard";
+import SmartEditImageAction, {
+  SMART_EDIT_HAS_IMAGE_COPY,
+} from "@/features/tool/components/SmartEditImageAction";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import { useEditorSelection } from "@/features/editor/selection";
 import { resolveSafeSceneIndex } from "@/features/editor/selection/selection.utils";
@@ -34,13 +37,13 @@ import {
   studioTextarea,
   studioUploadButton,
   studioUploadZone,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import {
   applyResetSceneImageSettings,
   applySceneImageSettings,
   applySceneUpdate,
   applyTransitionUpdate,
-} from "@/lib/voiceover";
+} from "@/lib/utils/voiceover";
 import type {
   CaptionMode,
   FootieScript,
@@ -253,10 +256,41 @@ export default function StudioSceneInspector({
         open={inspectorImageEditing ? true : undefined}
       >
         {hasImage ? (
-          <div className="flex flex-wrap gap-2">
-            <label className={studioUploadButton}>
-              <ImagePlus className="h-3.5 w-3.5" />
-              Replace
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <SmartEditImageAction hasImage buttonOnly sceneId={scene.id} />
+              <label className={studioUploadButton}>
+                <ImagePlus className="h-3.5 w-3.5" />
+                Replace
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    handleImageUpload(scene.id, event.target.files?.[0] ?? null);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => removeImage(scene.id)}
+                className={studioDestructiveButton}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove
+              </button>
+            </div>
+            <p className={studioSubtleText}>{SMART_EDIT_HAS_IMAGE_COPY}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <label className={studioUploadZone}>
+              <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-surface-elevated/50 ring-1 ring-border/25">
+                <ImagePlus className="h-4 w-4 text-muted" />
+              </div>
+              <p className="text-sm font-medium text-foreground/85">Add scene image</p>
+              <p className="mt-1 text-xs text-muted">Portrait 9:16 · PNG, JPG, or WEBP</p>
               <input
                 type="file"
                 accept="image/*"
@@ -267,32 +301,8 @@ export default function StudioSceneInspector({
                 }}
               />
             </label>
-            <button
-              type="button"
-              onClick={() => removeImage(scene.id)}
-              className={studioDestructiveButton}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Remove
-            </button>
+            <SmartEditImageAction hasImage={false} sceneId={scene.id} />
           </div>
-        ) : (
-          <label className={studioUploadZone}>
-            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-surface-elevated/50 ring-1 ring-border/25">
-              <ImagePlus className="h-4 w-4 text-muted" />
-            </div>
-            <p className="text-sm font-medium text-foreground/85">Add scene image</p>
-            <p className="mt-1 text-xs text-muted">Portrait 9:16 · PNG, JPG, or WEBP</p>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => {
-                handleImageUpload(scene.id, event.target.files?.[0] ?? null);
-                event.target.value = "";
-              }}
-            />
-          </label>
         )}
 
         {sceneImage ? (
@@ -300,6 +310,7 @@ export default function StudioSceneInspector({
             variant="standalone"
             showHeader={false}
             hideMotion
+            showSmartEdit={false}
             controlId={`inspector-scene-image-zoom-${scene.id}`}
             scale={sceneImage.scale}
             fitMode={sceneImage.fitMode}

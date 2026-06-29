@@ -1,4 +1,4 @@
-import { studioTimelineRailScroll } from "@/lib/studioUi";
+import { studioTimelineRailScroll } from "@/lib/utils/studioUi";
 
 /** Timeline rail scroller — extends studio scrollbar conventions with smooth follow. */
 export const timelineEditorRailScroll = `${studioTimelineRailScroll} scroll-smooth [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-border/10 [&::-webkit-scrollbar-thumb]:bg-border/55 [&::-webkit-scrollbar-thumb]:hover:bg-border/70`;

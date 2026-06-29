@@ -3,7 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { studioGhostButton } from "@/lib/studioUi";
+import { studioGhostButton } from "@/lib/utils/studioUi";
 
 interface CopyButtonProps {
   text: string;

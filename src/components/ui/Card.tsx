@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { studioCard } from "@/lib/studioUi";
+import { studioCard } from "@/lib/utils/studioUi";
 
 interface CardProps {
   children: ReactNode;

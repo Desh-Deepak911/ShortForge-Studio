@@ -31,7 +31,7 @@ import {
   studioSidebarSceneThumb,
   studioSidebarSceneTitle,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { FootieScene, FootieScript, SceneType } from "@/features/story/types";
 
 export interface EditorProjectSidebarProps {

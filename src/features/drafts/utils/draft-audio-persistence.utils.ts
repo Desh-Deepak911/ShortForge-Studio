@@ -7,7 +7,7 @@ import {
 import type { FootieScript, StoryBackgroundMusic } from "@/features/story/types";
 import { normalizeStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
 import { normalizeStoryVoiceSettings } from "@/features/story/utils/voice-settings.utils";
-import { createAudioBlobUrl, createVoiceoverBlobUrl } from "@/lib/voiceover";
+import { createAudioBlobUrl, createVoiceoverBlobUrl } from "@/lib/utils/voiceover";
 
 /** Optional persisted audio payloads stored on draft scripts (JSON-safe). */
 export type DraftPersistedScript = FootieScript & {

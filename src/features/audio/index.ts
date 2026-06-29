@@ -29,8 +29,6 @@ export {
 
 export type { VoiceoverTrackUpdate } from "./services/audio-engine.service";
 
-export { useAudioEngine, type UseAudioEngineResult } from "./hooks/useAudioEngine";
-
 export { fetchAudioBlobFromUrl, normalizeVoiceoverBlob } from "./utils/audio-blob.utils";
 export { getCanonicalVoiceover } from "./utils/canonical-voiceover.utils";
 export {

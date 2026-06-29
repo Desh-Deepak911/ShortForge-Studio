@@ -54,9 +54,13 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 
 ### Editing Studio
 
-- **Timeline editor** — Arrange scenes, captions, and transitions on a vertical 9:16 canvas
-- **Scene management** — Add, reorder, and refine individual scenes
-- **Image positioning** — Pan, zoom, and Ken Burns motion per scene
+- **Studio Shell** — Sidebar, canvas preview, inspector, and timeline rail layout
+- **Timeline Editor v1** — `StudioTimeline` scene rail with drag reorder and playhead sync
+- **Selection Engine** — Shared focus state across sidebar, timeline, preview, and inspector
+- **Canvas editing** — Pan/zoom on scene images directly in the preview frame
+- **Scene management** — Add, reorder, and refine scenes via inspector + timeline
+- **Smart Edit handoff** — External image tool for advanced manual edits
+- **Image positioning** — Pan, zoom, fit/fill, and Ken Burns motion per scene
 - **Background music** — Optional bed with volume control in preview and export
 - **Voiceover controls** — Regenerate narration and adjust playback speed
 - **Subtitle synchronization** — Captions aligned to narration timing with completion guard for final lines
@@ -219,25 +223,38 @@ Shipped in **v2.6.0 — Timeline Intelligence Runtime**. Deep dive: [ARCHITECTUR
 ```
 footiebitz/
 ├── src/
-│   ├── app/                    # Routes: landing, create, review, editor, drafts, API
-│   ├── components/             # Shell, landing, shared UI
+│   ├── app/                    # Routes: landing, create, review, editor, drafts, tool, API
+│   ├── components/
+│   │   ├── studio-shell/       # StudioShell, ContextRibbon, ExportDrawer
+│   │   └── StoryWorkspace.tsx  # Editor orchestration
 │   ├── features/
-│   │   ├── create/             # Brief, Research Preview, script review
-│   │   ├── intelligence/       # Intent, entities, orchestrator, Knowledge Graph, Prompt Intelligence
+│   │   ├── create/             # CreateStoryFlow, BriefCanvas, script review
+│   │   ├── intelligence/       # Intent, entities, graph, Prompt Intelligence
 │   │   ├── research/           # Research context and script integration
-│   │   ├── story/              # Script types, generation, timing
-│   │   ├── editor/             # Timeline, scenes, captions, transitions
-│   │   ├── preview/            # Device-frame playback
+│   │   ├── story/              # Script types, generation, timing utils
+│   │   ├── editor/             # Selection, inspector registry, StudioSceneInspector
+│   │   ├── timeline-editor/    # StudioTimeline v1
 │   │   ├── timeline-intelligence/  # Master Timeline, schedulers, optimizer
+│   │   ├── preview/            # Device-frame playback
 │   │   ├── export/             # Canvas render, FFmpeg mux, audio mix
-│   │   └── drafts/             # Draft model and localStorage persistence
-│   ├── lib/                    # Shared utilities and verify scripts
+│   │   ├── drafts/             # Draft model and localStorage persistence
+│   │   └── tool/               # SmartEditImageAction external handoff
+│   ├── lib/
+│   │   ├── ai/                 # Prompts, schema, OpenAI client
+│   │   ├── audio/              # MP3 duration helpers
+│   │   ├── constants/          # Product metadata, navigation, studio constants
+│   │   ├── football/           # API-Football client
+│   │   └── utils/              # voiceover state helpers, studioUi, blob URLs
+│   ├── verification/           # QA scripts (*.verify.ts) by domain — not in production build
 │   └── types/                  # Shared API and domain types
+├── docs/                       # Implementation reference (ARCHITECTURE, EDITING, …)
 ├── ARCHITECTURE.md
 ├── CHANGELOG.md
 ├── ROADMAP.md
 └── README.md
 ```
+
+Verification scripts: `src/verification/<domain>/*.verify.ts` — run via `npm run test:<feature>` or `npm run test:verification`. See `src/verification/README.md`.
 
 ---
 

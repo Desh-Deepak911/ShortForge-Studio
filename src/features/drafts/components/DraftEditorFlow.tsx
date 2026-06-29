@@ -17,8 +17,8 @@ import {
   studioSecondaryButton,
   studioSectionDesc,
   studioSectionTitle,
-} from "@/lib/studioUi";
-import { applyStoryUpdate, syncFootieScript } from "@/lib/voiceover";
+} from "@/lib/utils/studioUi";
+import { applyStoryUpdate, syncFootieScript } from "@/lib/utils/voiceover";
 
 const SAVE_CONFIRMATION_MS = 3000;
 

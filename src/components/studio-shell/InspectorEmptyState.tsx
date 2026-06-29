@@ -2,7 +2,7 @@
 
 import { MousePointerClick } from "lucide-react";
 
-import { studioSubtleText } from "@/lib/studioUi";
+import { studioSubtleText } from "@/lib/utils/studioUi";
 
 export interface InspectorEmptyStateProps {
   message?: string;

@@ -137,7 +137,7 @@ Refine the AI-generated production timeline: reorder scenes, change types, edit 
 
 | Operation | Location |
 |-----------|----------|
-| Add scene | `TimelineEditor` — empty scene with 3s default |
+| Add scene | `StudioTimeline` — empty scene with 3s default |
 | Delete scene | Removes scene + associated transitions |
 | Duplicate scene | Clones scene including image settings |
 | Move up / down | Reorders list; `recalculateSceneTimings()` |
@@ -146,14 +146,14 @@ Refine the AI-generated production timeline: reorder scenes, change types, edit 
 | Scene type | Intro, Context, Match, Transition, Ending |
 | Title & narration | `StoryReview` — story-level copy edit |
 
-UI: `TimelineEditor.tsx`, `SceneCard.tsx`. State: `lib/voiceover.ts` (`applyStoryUpdate`, `applySceneUpdate`).
+UI: `StudioTimeline.tsx`, `StudioSceneInspector.tsx`. State: `src/lib/utils/voiceover.ts` (`applyStoryUpdate`, `applySceneUpdate`).
 
 ### Known limitations
 
 - No drag-and-drop reorder — move up/down buttons only
 - No scene split or merge
 - No undo/redo stack
-- Changes lost on page refresh
+- Draft JSON persists via Save Draft; blob URLs (images, voiceover) may break after reload
 - Transition cards are editor-only metadata — never rendered as on-screen text
 
 ### Future improvements
@@ -178,7 +178,7 @@ Let creators control how long each scene appears on screen, independent of the i
 
 | Capability | Details |
 |------------|---------|
-| Range | 1–20 seconds per scene (`SceneCard` number input) |
+| Range | 1–20 seconds per scene (`StudioSceneInspector` number input) |
 | Fields set | `duration`, `durationMs`, `durationSource: "manual"` |
 | Recalculation | `recalculateSceneTimings()` updates cumulative `startMs` / `endMs` |
 | Total | Story `totalDuration` = sum of scene durations |
@@ -218,7 +218,7 @@ Two modes per scene (`CaptionMode`):
 | **Generated** | `generated` | Static AI `subtitle` for full scene duration (default) |
 | **Subtitles** | `subtitles` | Timed chunks from `subtitleText` / narration excerpt |
 
-Toggle: `CaptionModeControl` on each `SceneCard`.  
+Toggle: `CaptionModeControl` on each `StudioSceneInspector`.  
 Normalization: `caption.utils.ts` → `normalizeCaptionMode()`.
 
 ### Known limitations
@@ -291,7 +291,7 @@ Let creators edit the on-screen subtitle copy in subtitles mode, separate from t
 |------------|---------|
 | Field | `FootieScene.subtitleText` |
 | Default source | Scene `narration` excerpt when `subtitleText` empty |
-| Editor | Textarea on `SceneCard` when caption mode is `subtitles` |
+| Editor | Textarea on `StudioSceneInspector` when caption mode is `subtitles` |
 | Chunking | `splitSubtitleChunks()` — max ~5 words / 34 chars per chunk |
 | Timing | Chunks divide scene duration evenly |
 | Wrap | Max 3 visible lines, 90% frame width |
@@ -331,8 +331,8 @@ Display the AI-written scene subtitle as a static on-screen caption for the full
 | Source | `FootieScene.subtitle` from scene planning AI |
 | Mode | `captionMode: "generated"` (default) |
 | Display | Full caption visible entire scene |
-| Editor | Editable text field on `SceneCard` |
-| Preview | `CaptionOverlay` or `SceneCaptionOverlay` |
+| Editor | Editable text field on `StudioSceneInspector` |
+| Preview | `CaptionOverlay` |
 | Export | `drawExportGeneratedCaption()` — wrapped text in content-sized pill |
 
 Scene planning prompt asks AI for short punchy subtitles per scene (`scene-planning.service.ts`).
@@ -367,7 +367,7 @@ Attach a custom image to each scene so the vertical short uses creator-provided 
 |------------|---------|
 | Input | File picker — PNG, JPG, WEBP |
 | Storage | `SceneImage.url` as client `blob:` URL |
-| UI | `MediaPicker` / upload zone on `SceneCard` |
+| UI | `MediaPicker` / upload zone on `StudioSceneInspector` |
 | Remove | Clears image; placeholder gradient shown |
 | Legacy | `uploadedImage` string URLs migrate to `SceneImage` on sync |
 | Export checklist | `ExportPanel` warns when images missing |
@@ -441,7 +441,7 @@ Scale the uploaded image within the frame to focus on detail or show more contex
 |------------|---------|
 | Field | `SceneImage.scale` |
 | Range | 0.5× – 3× (`MIN_SCENE_IMAGE_SCALE`, `MAX_SCENE_IMAGE_SCALE`) |
-| UI | Slider in `SceneImageZoomControl` |
+| UI | Context ribbon + inspector; canvas drag on `EditorCanvasEditLayer` |
 | Draw | Applied in `drawSceneImageInFrame()` and preview transform |
 
 Zoom combines multiplicatively with Ken Burns motion scale at playback time.
@@ -477,7 +477,7 @@ Control how the image maps to the 9:16 frame: show the entire image (letterbox) 
 | **Fill** | `fill` | Image covers frame; edges may crop |
 
 Field: `SceneImage.fitMode`.  
-UI: toggle in `SceneImageZoomControl`.  
+UI: toggle in context ribbon / scene inspector.  
 Draw: `getSceneImageDrawDimensions()` in `scene.utils.ts`.
 
 Default: **fill** when not specified.
@@ -660,20 +660,21 @@ Component: `VideoPreview.tsx`. Timing: `previewTimeline.ts`, `previewSceneTiming
 
 | Feature | Primary UI | Primary code |
 |---------|------------|--------------|
-| Story Generation | `StoryComposer` | `audio-first-generation.service.ts` |
+| Story Generation | `CreateStoryFlow`, `BriefCanvas` | `audio-first-generation.service.ts` |
 | Voiceover | `VoiceSettingsCard`, `NarrationPanel` | `voiceover.service.ts` |
 | Voice Speed | `VoiceSettingsCard` | `voiceoverOptions.ts` |
-| Scene Editing | `TimelineEditor`, `SceneCard` | `timeline.utils.ts` |
-| Manual Scene Duration | `SceneCard` duration input | `recalculateSceneTimings()` |
+| Scene Editing | `StudioTimeline`, `StudioSceneInspector` | `timeline.utils.ts` |
+| Manual Scene Duration | `StudioSceneInspector` duration input | `recalculateSceneTimings()` |
 | Subtitle Modes | `CaptionModeControl` | `caption.utils.ts` |
 | Subtitle Effects | `SubtitleEffectControl` | `subtitle-effect.utils.ts` |
-| Editable Narration Subtitles | `SceneCard` textarea | `subtitle.utils.ts` |
-| Generated Captions | `SceneCard` subtitle field | `drawExportGeneratedCaption()` |
-| Scene Image Upload | `SceneCard` upload zone | `MediaPicker` |
-| Image Position | `SceneFrameImage` drag | `scene.utils.ts` |
-| Image Zoom | `SceneImageZoomControl` | `scene.utils.ts` |
-| Fit / Fill | `SceneImageZoomControl` | `getSceneImageDrawDimensions()` |
-| Ken Burns | `SceneImageMotionControl` | `scene-image-motion.utils.ts` |
+| Editable Narration Subtitles | `StudioSceneInspector` textarea | `subtitle.utils.ts` |
+| Generated Captions | `StudioSceneInspector` subtitle field | `drawExportGeneratedCaption()` |
+| Scene Image Upload | `StudioSceneInspector` upload zone | `MediaPicker` |
+| Image Position | `EditorCanvasEditLayer` drag | `scene.utils.ts` |
+| Image Zoom | Context ribbon / inspector | `scene.utils.ts` |
+| Fit / Fill | Context ribbon / inspector | `getSceneImageDrawDimensions()` |
+| Ken Burns | `MotionPanel` | `scene-image-motion.utils.ts` |
+| Smart Edit handoff | `SmartEditImageAction` | `smart-image-tool.utils.ts` |
 | Scene Transitions | `TransitionCard` | `transition-overlay.utils.ts` |
 | Export | `ExportPanel` | `video-render.service.ts` |
 | Preview | `VideoPreview` | `usePreviewPlayback`, `PreviewFrame` |

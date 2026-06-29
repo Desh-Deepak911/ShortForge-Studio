@@ -2,7 +2,7 @@ import {
   DEFAULT_VOICEOVER_SPEED,
   resolveVoiceoverSpeed,
   resolveVoiceoverVoice,
-} from "@/lib/voiceoverOptions";
+} from "@/lib/utils/voiceoverOptions";
 import type { FootieScript, StoryVoiceSettings } from "@/features/story/types";
 
 type VoiceSettingsInput = Pick<FootieScript, "voiceSettings"> & {

@@ -14,7 +14,7 @@ import {
   studioSelectChevronCompact,
   studioSelectCompact,
   studioTransitionConnector,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { TransitionEffect, TransitionTimelineItem } from "@/features/story/types";
 
 interface TransitionCardProps {

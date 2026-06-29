@@ -1,5 +1,5 @@
 import ScriptReviewFlow from "@/features/create/components/ScriptReviewFlow";
-import { pageMetadata } from "@/lib/product-metadata";
+import { pageMetadata } from "@/lib/constants/product-metadata";
 
 export const metadata = pageMetadata(
   "Story",

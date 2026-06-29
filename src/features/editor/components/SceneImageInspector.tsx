@@ -4,6 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 
 import SceneImageMotionControl from "@/features/editor/components/SceneImageMotionControl";
+import SmartEditImageAction from "@/features/tool/components/SmartEditImageAction";
 import { useEditorSelectionOptional } from "@/features/editor/selection";
 import {
   MAX_SCENE_IMAGE_SCALE,
@@ -21,7 +22,7 @@ import {
   studioRange,
   studioRangeTouchHost,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { SceneImageFitMode, SceneImageMotion } from "@/features/story/types";
 
 const ZOOM_STEP = 0.05;
@@ -76,6 +77,8 @@ export interface SceneImageInspectorProps {
   showHeader?: boolean;
   /** When true, motion controls are omitted (compose separately in inspector). */
   hideMotion?: boolean;
+  /** When false, omits Smart Edit (e.g. when parent renders it in the upload action row). */
+  showSmartEdit?: boolean;
   /** When set, position hint copy is scoped to this scene vs the active selection. */
   sceneId?: string;
 }
@@ -93,6 +96,7 @@ export default function SceneImageInspector({
   variant = "standalone",
   showHeader = true,
   hideMotion = false,
+  showSmartEdit = true,
   sceneId,
 }: SceneImageInspectorProps) {
   const selection = useEditorSelectionOptional();
@@ -230,6 +234,12 @@ export default function SceneImageInspector({
           imageMotion={imageMotion}
           onMotionChange={onMotionChange}
         />
+      ) : null}
+
+      {showSmartEdit ? (
+        <InspectorSubsection title="Smart Edit">
+          <SmartEditImageAction hasImage sceneId={sceneId} />
+        </InspectorSubsection>
       ) : null}
     </div>
   );

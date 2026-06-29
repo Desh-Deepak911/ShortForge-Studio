@@ -1,6 +1,10 @@
 import type { ScriptMode, Tone } from "@/types/footiebitz";
 import { buildResearchUnavailablePromptRules } from "@/features/research/utils/research-grounding.utils";
 import {
+  buildStoryStructurePromptLines,
+  STORY_STRUCTURE_NARRATION_RULES,
+} from "@/features/intelligence/prompts/story-structure-intelligence.utils";
+import {
   buildTop5ModeFocus,
   buildTop5StructureRule,
   hasRankedPlayerDataInContextText,
@@ -48,52 +52,6 @@ const SCRIPT_MODE_GUIDANCE: Record<ScriptMode, string> = {
     "Historical documentary — context, timeline of key moments, and legacy. Explain why this moment, rivalry, or record still matters.",
   opinion_debate:
     "Balanced debate — present the strongest case on each side, then land a clear, confident final take. Acknowledge counter-arguments without sounding neutral.",
-};
-
-const SCRIPT_MODE_FOCUS: Record<ScriptMode, string[]> = {
-  story: [
-    "Open with a cinematic hook tied to the brief.",
-    "Build context, stakes, and emotional weight through the middle.",
-    "Close with a memorable line that lands the story.",
-  ],
-  tactical_review: [
-    "Set up the tactical question or matchup.",
-    "Cover formations, pressing, midfield control, and transitions.",
-    "Highlight key patterns and the turning point that changed the shape of the game.",
-  ],
-  match_preview: [
-    "Establish stakes and what is on the line.",
-    "Reference form and recent momentum in general terms unless stats are provided.",
-    "Spotlight key battles or match-ups to watch.",
-    "End with a prediction-style tease — who has the edge and why.",
-  ],
-  match_recap: [
-    "Open on the result or defining moment (only if provided in the brief or context).",
-    "Walk through turning points and momentum shifts.",
-    "Use key stats only when supplied — otherwise describe impact in qualitative terms.",
-    "Close with what the result means going forward.",
-  ],
-  player_analysis: [
-    "Introduce the player and their role in the system.",
-    "Strengths and weaknesses with evidence from the brief or context.",
-    "Impact on the match or moment in focus.",
-    "Brief future angle — trajectory, fit, or what comes next.",
-  ],
-  top_5: [
-    "Open with a hook that frames the countdown.",
-    "Five ranked beats — each entry gets a hook, one clear reason, and a punchy transition to the next.",
-    "Build energy toward #1; make the top pick feel earned.",
-  ],
-  historical_explainer: [
-    "Hook the viewer with why this history still matters.",
-    "Walk a clear timeline of context and key moments.",
-    "Land on legacy — what it means today.",
-  ],
-  opinion_debate: [
-    "Frame the debate question clearly.",
-    "Give the strongest version of each side — fair, not straw-manned.",
-    "Land a strong final take with conviction.",
-  ],
 };
 
 const STATS_AND_CONTEXT_RULES = `Stats and context rules (strict):
@@ -281,9 +239,9 @@ function formatStoryScriptWordBudgetSection(
     lines.push(
       "",
       "30-second structure (compress for length — keep the selected mode's voice and intent):",
-      "- Punchy hook — no long setup.",
-      "- 3 compact beats in the middle.",
-      "- Strong ending.",
+      "- Short, punchy opening — ~1–2 spoken seconds, no long setup.",
+      "- 2–3 compact beats in the middle.",
+      "- Payoff ending tied to the brief — not a generic sign-off.",
     );
   }
 
@@ -314,9 +272,10 @@ export function buildStoryScriptPrompt(
     (promptOptions.top5RankedDataAvailable === true ||
       (promptOptions.top5RankedDataAvailable !== false && rankedDataInContext));
   const top5MissingRankings = isTop5Mode && !hasRankedPlayerData;
-  const modeFocus = (isTop5Mode ? buildTop5ModeFocus(hasRankedPlayerData) : SCRIPT_MODE_FOCUS[scriptMode])
-    .map((line) => `- ${line}`)
-    .join("\n");
+  const modeFocus = isTop5Mode && !hasRankedPlayerData
+    ? buildTop5ModeFocus(false).map((line) => `- ${line}`).join("\n")
+    : buildStoryStructurePromptLines(scriptMode).join("\n");
+  const storyStructureRules = STORY_STRUCTURE_NARRATION_RULES.map((rule) => `- ${rule}`).join("\n");
   const lengthSection = wordBudget
     ? formatStoryScriptWordBudgetSection(duration, wordBudget, {
         hasResearchedContext,
@@ -396,6 +355,9 @@ Tone: ${tone} — ${toneGuide}
 Mode structure — cover these beats in order:
 ${modeFocus}
 
+Story structure narration rules:
+${storyStructureRules}
+
 ${contextRules}
 
 Writing rules:
@@ -403,7 +365,9 @@ Writing rules:
 - Output exactly two fields: \`title\` and \`narration\`. Nothing else.
 - Do not output scenes, captions, subtitles, timestamps, image prompts, hashtags, or extra metadata.
 ${structureRule}
-- Open with a strong hook. Use full sentences and vivid language suitable for TTS.
+- Open with a short, punchy first line (~1–2 spoken seconds when possible). Use full sentences and vivid language suitable for TTS.
+- Do not say planning labels aloud (hook, story, conclusion, payoff, or beat titles).
+- End with a factual or emotional payoff — not generic like/subscribe CTAs.
 - Make the narration unmistakably fit the selected script mode — structure, emphasis, and vocabulary should match the mode voice above.
 ${factualGroundingRule ? `\n${factualGroundingRule}` : ""}
 ${researchedSelectivityRule ? `\n${researchedSelectivityRule}` : ""}

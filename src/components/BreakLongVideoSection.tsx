@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { PRODUCT_NAME } from "@/lib/product-brand";
+import { PRODUCT_NAME } from "@/lib/constants/product-brand";
 import {
   studioBadge,
   studioCard,
@@ -23,7 +23,7 @@ import {
   studioStepLabel,
   studioSubtleText,
   studioUploadZone,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 const COMING_SOON_MESSAGE = `Coming soon: ${PRODUCT_NAME} will extract audio, detect key moments, and create multiple shorts from one upload.`;
 

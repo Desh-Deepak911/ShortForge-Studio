@@ -16,14 +16,14 @@ import TimelineDeveloperView from "@/features/timeline-intelligence/TimelineDeve
 import { VideoPreview } from "@/features/preview/components";
 import type { SceneImageTransformPatch } from "@/features/story/utils";
 import { getSceneImage } from "@/features/story/utils";
-import { applySceneImageSettings, applyResetSceneImageSettings } from "@/lib/voiceover";
+import { applySceneImageSettings, applyResetSceneImageSettings } from "@/lib/utils/voiceover";
 import {
   studioMobileActionBar,
   studioMobileActionButton,
   studioMobileActionButtonPrimary,
   studioShellEditorCanvasMaxWidth,
   studioShellEditorPreviewWrap,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { ExportSettings, FootieScript, SceneImage } from "@/features/story/types";
 
 interface StoryWorkspaceProps {

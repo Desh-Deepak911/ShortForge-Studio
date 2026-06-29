@@ -13,7 +13,7 @@ import {
   volumeToPercent,
 } from "@/features/story/utils";
 import type { BackgroundMusicSource, FootieScript } from "@/features/story/types";
-import { revokeBlobUrl } from "@/lib/blobUrl";
+import { revokeBlobUrl } from "@/lib/utils/blobUrl";
 import {
   studioChip,
   studioChipActive,
@@ -25,7 +25,7 @@ import {
   studioSegmentActive,
   studioSegmentedControl,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 interface BackgroundMusicCardProps {
   script: FootieScript;

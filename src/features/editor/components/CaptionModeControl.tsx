@@ -1,7 +1,7 @@
 "use client";
 
 import { normalizeCaptionMode } from "@/features/story/utils";
-import { studioFieldLabel, studioSegment, studioSegmentActive, studioSegmentedControl } from "@/lib/studioUi";
+import { studioFieldLabel, studioSegment, studioSegmentActive, studioSegmentedControl } from "@/lib/utils/studioUi";
 import type { CaptionMode } from "@/features/story/types";
 
 const CAPTION_STYLE_OPTIONS: { value: CaptionMode; label: string }[] = [

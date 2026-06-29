@@ -50,7 +50,7 @@ The user's football brief plus generation controls assembled in the studio UI.
 
 | Field | Source | Constraints |
 |-------|--------|-------------|
-| Topic | `StoryComposer` textarea | Required |
+| Topic | `BriefCanvas` in `CreateStoryFlow` | Required |
 | Tone | UI selector | `dramatic`, `funny`, `tactical`, `news`, `emotional` |
 | Duration | UI selector | 15–60 seconds (guides narration length) |
 | Scene count | UI selector | 3–12 scenes (default 6) |
@@ -433,7 +433,7 @@ Stream responses may include `usedFallback: true` on the complete event.
 | `lib/ai/openai.client.ts` | OpenAI client |
 | `utils/timeline.utils.ts` | `attachEvenVoiceoverTiming`, `attachVoiceoverTimingMs` |
 | `utils/audio-first.utils.ts` | Duration resolution, result packaging |
-| `lib/generateScriptStream.ts` | Client NDJSON consumer |
+| `lib/utils/generateScriptStream.ts` | Client NDJSON consumer |
 
 ---
 

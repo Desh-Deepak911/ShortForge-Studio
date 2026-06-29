@@ -24,10 +24,10 @@ import CreateBriefInspector from "@/features/create/components/CreateBriefInspec
 import CreateStudioHeader from "@/features/create/components/CreateStudioHeader";
 import { createDraft } from "@/features/drafts";
 import { seedDraftSession } from "@/features/drafts/session";
-import { consumeGenerateScriptStream } from "@/lib/generateScriptStream";
-import { SAMPLE_TOPICS, WORKFLOW_STEPS } from "@/lib/studioConstants";
-import { studioPanel, studioSubtleText } from "@/lib/studioUi";
-import { syncFootieScript } from "@/lib/voiceover";
+import { consumeGenerateScriptStream } from "@/lib/utils/generateScriptStream";
+import { SAMPLE_TOPICS, WORKFLOW_STEPS } from "@/lib/constants/studioConstants";
+import { studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 import type {
   GenerateScriptResponse,
   QualityMode,

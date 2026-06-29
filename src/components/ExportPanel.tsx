@@ -62,9 +62,9 @@ import {
   studioStickyMobileFooterAboveBar,
   studioSubtleText,
   studioWarningPanel,
-} from "@/lib/studioUi";
-import { CREATOR_BRAND } from "@/lib/product-brand";
-import { syncFootieScript } from "@/lib/voiceover";
+} from "@/lib/utils/studioUi";
+import { CREATOR_BRAND } from "@/lib/constants/product-brand";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 import { sceneHasImage } from "@/features/story/utils";
 import type { ExportSettings, FootieScript } from "@/features/story/types";
 

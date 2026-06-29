@@ -10,7 +10,7 @@ import {
   studioFieldLabel,
   studioInput,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { GenerationLoadingStep, ScriptMode } from "@/types/footiebitz";
 import { MAX_SCENE_COUNT, MIN_SCENE_COUNT, SCRIPT_MODE_OPTIONS } from "@/types/footiebitz";
 

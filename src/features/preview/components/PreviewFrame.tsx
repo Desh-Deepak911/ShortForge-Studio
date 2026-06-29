@@ -6,7 +6,7 @@ import { sceneHasImage } from "@/features/story/utils";
 import {
   studioPreviewDevice,
   studioPreviewScreen,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { FootieScene, SceneType } from "@/features/story/types";
 
 import type { PreviewSceneFrame } from "@/features/preview/utils";

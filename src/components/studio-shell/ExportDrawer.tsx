@@ -12,7 +12,7 @@ import {
   studioShellSectionDesc,
   studioShellSectionTitle,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 export interface ExportDrawerProps {
   open: boolean;

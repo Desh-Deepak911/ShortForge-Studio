@@ -4,12 +4,12 @@ import { Download, PenLine, Save } from "lucide-react";
 import Link from "next/link";
 
 import { StudioHeader, StudioHeaderBar } from "@/components/studio-shell";
-import { PRODUCT_NAME } from "@/lib/product-brand";
+import { PRODUCT_NAME } from "@/lib/constants/product-brand";
 import {
   studioBadge,
   studioIconBox,
   studioNavExportButton,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 export interface EditorStudioHeaderProps {
   projectTitle: string;

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { studioRibbonSection, studioRibbonSectionTitle } from "@/lib/studioUi";
+import { studioRibbonSection, studioRibbonSectionTitle } from "@/lib/utils/studioUi";
 
 export interface RibbonSectionProps {
   title: string;

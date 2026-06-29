@@ -6,14 +6,14 @@ import {
 } from "@/features/story/utils";
 import { resolveStoryDurationSec } from "@/features/story/utils";
 import type { FootieScript, StoryBackgroundMusic } from "@/features/story/types";
-import { revokeBlobUrl } from "@/lib/blobUrl";
-import { createVoiceoverBlobUrl } from "@/lib/voiceover";
+import { revokeBlobUrl } from "@/lib/utils/blobUrl";
+import { createVoiceoverBlobUrl } from "@/lib/utils/voiceover";
 import {
   DEFAULT_VOICEOVER_VOICE,
   resolveVoiceoverSpeed,
   resolveVoiceoverVoice,
   type VoiceoverSpeedOption,
-} from "@/lib/voiceoverOptions";
+} from "@/lib/utils/voiceoverOptions";
 
 import type {
   AudioEngineSnapshot,

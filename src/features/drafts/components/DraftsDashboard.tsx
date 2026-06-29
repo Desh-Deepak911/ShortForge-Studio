@@ -17,7 +17,7 @@ import {
   studioSectionTitle,
   studioStepLabel,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 function formatDraftTimestamp(iso: string): string {
   const date = new Date(iso);

@@ -22,6 +22,16 @@ export {
 } from "./prompt-intelligence-to-prompt";
 
 export {
+  buildStoryStructurePromptLines,
+  buildStoryStructureStyleRules,
+  resolveStoryStructureForMode,
+  STORY_STRUCTURE_NARRATION_RULES,
+  type StoryStructureArc,
+  type StoryStructureBeatTemplate,
+  type StoryStructureDefinition,
+} from "./story-structure-intelligence.utils";
+
+export {
   buildPromptIntelligenceDevSummary,
   formatPromptIntelligenceDevSummaryForDev,
   type PromptIntelligenceDevBeatSummary,

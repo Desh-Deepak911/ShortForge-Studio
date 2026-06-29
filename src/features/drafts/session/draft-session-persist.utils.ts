@@ -1,6 +1,6 @@
 import { getCanonicalVoiceover } from "@/features/audio";
 import type { FootieScript } from "@/features/story/types";
-import { syncFootieScript } from "@/lib/voiceover";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import { getDraft, updateDraft } from "../services";
 import type { Draft, DraftPipelineStage } from "../types";

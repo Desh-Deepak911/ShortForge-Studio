@@ -10,7 +10,6 @@ const eslintConfig = defineConfig([
       "@next/next/no-img-element": "off",
     },
     files: [
-      "src/features/editor/components/TimelineEditor.tsx",
       "src/features/editor/components/SceneFrameImage.tsx",
       "src/features/preview/components/VideoPreview.tsx",
     ],

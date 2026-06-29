@@ -1,7 +1,7 @@
 "use client";
 
 import { useEditorSelectionOptional } from "@/features/editor/selection";
-import { studioContextRibbon } from "@/lib/studioUi";
+import { studioContextRibbon } from "@/lib/utils/studioUi";
 
 import type { RibbonContextId, StudioContextRibbonProps } from "./ribbonContext.types";
 

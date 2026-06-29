@@ -7,7 +7,7 @@ import { getCanonicalVoiceover } from "@/features/audio";
 import { getStoryVoiceSettings } from "@/features/story/utils";
 import type { FootieScript } from "@/features/story/types";
 import { useStoryVoiceoverApply } from "@/hooks/useStoryVoiceoverApply";
-import { applyStoryVoiceSettings } from "@/lib/voiceover";
+import { applyStoryVoiceSettings } from "@/lib/utils/voiceover";
 import {
   studioChip,
   studioChipActive,
@@ -18,7 +18,7 @@ import {
   studioSelect,
   studioSelectChevron,
   studioSubtleText,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import {
   DEFAULT_VOICEOVER_VOICE,
   VOICEOVER_SPEED_OPTIONS,
@@ -26,7 +26,7 @@ import {
   VOICE_SPEED_LABELS,
   type VoiceoverSpeedOption,
   type VoiceoverVoiceOption,
-} from "@/lib/voiceoverOptions";
+} from "@/lib/utils/voiceoverOptions";
 
 interface VoiceSettingsCardProps {
   script: FootieScript;

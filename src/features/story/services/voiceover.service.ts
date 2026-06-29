@@ -8,7 +8,7 @@ import {
   DEFAULT_VOICEOVER_VOICE,
   resolveVoiceoverSpeed,
   resolveVoiceoverVoice,
-} from "@/lib/voiceoverOptions";
+} from "@/lib/utils/voiceoverOptions";
 import type { StoryScript, VoiceoverResult } from "@/features/story/types";
 import { adjustVoiceoverDurationForSpeed } from "@/features/story/utils/voiceover-duration.utils";
 import { toVoiceoverResultFromMp3 } from "@/features/story/utils";
@@ -19,7 +19,7 @@ const MAX_INPUT_LENGTH = 4096;
 /** OpenAI TTS accepts a `speed` parameter on speech.create. */
 const OPENAI_TTS_SUPPORTS_PLAYBACK_SPEED = true;
 
-export { resolveVoiceoverVoice } from "@/lib/voiceoverOptions";
+export { resolveVoiceoverVoice } from "@/lib/utils/voiceoverOptions";
 
 export interface GenerateVoiceoverInput {
   narration: string;

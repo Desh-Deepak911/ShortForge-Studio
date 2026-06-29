@@ -3,7 +3,7 @@ import { applyMasterTimelineSceneTiming } from "@/features/timeline-intelligence
 import { buildOptimizedMasterTimeline } from "@/features/timeline-intelligence/build-optimized-master-timeline.utils";
 import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 import type { FootieScript } from "@/features/story/types";
-import { syncFootieScript } from "@/lib/voiceover";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import { resolveNarrationVoiceoverMismatchWarning } from "./export-narration-voiceover.utils";
 

@@ -6,7 +6,7 @@ import {
   studioStepLabel,
   studioSubtleText,
   studioSuccessPanel,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 import type { FootieScript } from "@/features/story/types";
 
 interface NarrationPanelProps {

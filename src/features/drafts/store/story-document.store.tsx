@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import type { FootieScript } from "@/features/story/types";
-import { syncFootieScript } from "@/lib/voiceover";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import type { Draft, DraftPipelineStage } from "../types";
 import { resolveDraftScriptForEditor } from "../utils/draft-load.utils";

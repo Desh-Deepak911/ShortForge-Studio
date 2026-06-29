@@ -6,7 +6,7 @@ import {
   studioShellMaxWidth,
   studioShellPanelGap,
   studioShellRoot,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 import StudioCanvas from "./StudioCanvas";
 import StudioHeader from "./StudioHeader";

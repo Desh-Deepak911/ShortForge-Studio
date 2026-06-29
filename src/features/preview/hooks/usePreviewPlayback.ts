@@ -21,7 +21,7 @@ import {
 } from "@/features/preview/utils";
 import { logPreviewMasterTimelineDiagnostics } from "@/features/timeline-intelligence/preview-timeline-diagnostics.dev.utils";
 import type { FootieScript } from "@/features/story/types";
-import { getStoryVoiceoverDurationSec } from "@/lib/voiceover";
+import { getStoryVoiceoverDurationSec } from "@/lib/utils/voiceover";
 
 export type PlaybackMode = "browser" | "narration";
 

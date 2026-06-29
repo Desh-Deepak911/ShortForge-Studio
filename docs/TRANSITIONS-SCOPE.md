@@ -125,4 +125,4 @@ Each transition PR must verify:
 | Preview playback | `usePreviewPlayback.ts`, `VideoPreview.tsx` |
 | Export render | `video-render.service.ts`, `export-payload.service.ts` |
 | Timeline utils | `timeline.utils.ts` |
-| Transition editor | `TransitionCard.tsx`, `TimelineEditor.tsx` |
+| Transition editor | `TransitionCard.tsx`, `StudioTimeline.tsx`, `StudioSceneInspector.tsx` |

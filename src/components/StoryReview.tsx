@@ -20,7 +20,7 @@ import {
   studioSubtleText,
   studioTextarea,
   studioWarningPanel,
-} from "@/lib/studioUi";
+} from "@/lib/utils/studioUi";
 
 interface StoryReviewProps {
   story: FootieScript;

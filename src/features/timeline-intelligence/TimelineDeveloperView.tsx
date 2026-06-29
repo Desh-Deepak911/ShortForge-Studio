@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 
 import type { FootieScript } from "@/features/story/types";
-import { studioGhostButton, studioPanel, studioSubtleText } from "@/lib/studioUi";
+import { studioGhostButton, studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
 
 import {
   buildTimelineDevDiagnostics,
