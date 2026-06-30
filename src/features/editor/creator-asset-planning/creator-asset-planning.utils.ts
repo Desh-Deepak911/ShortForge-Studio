@@ -31,7 +31,6 @@ export function buildScriptHash(script: FootieScript): string {
     script.narration.trim(),
     script.scenes.length,
     script.totalDuration,
-    script.voiceoverDurationMs ?? 0,
   ].join("|");
 }
 

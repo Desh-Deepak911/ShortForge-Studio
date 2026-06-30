@@ -11,6 +11,11 @@ import { runAssetIntelligence } from "@/features/asset-intelligence";
 import { runStudioIntelligence } from "@/features/studio-intelligence/studio-intelligence-runtime";
 import { mapBlueprintsToScenes } from "@/features/studio-intelligence/blueprint-adapter/blueprint-mapper";
 import {
+  buildCreatorAssetPlanningSnapshotForGeneratedScenes,
+  isAssetIntelligencePlanningEnabled,
+  tryBuildCreatorAssetPlanningSnapshotForGeneratedScenes,
+} from "@/features/editor/creator-asset-planning/creator-asset-planning-generation.utils";
+import {
   createPlanningCache,
   readPlanningCache,
   readPlanningData,
@@ -24,19 +29,50 @@ import {
   buildScriptHash,
   cacheCreatorAssetPlanning,
   hasPlanningChanged,
+  hydrateCreatorAssetPlanningCache,
 } from "@/features/editor/creator-asset-planning/creator-asset-planning.utils";
+import { tryGenerateScenesFromStudioIntelligence } from "@/features/story/services/studio-intelligence-scene-plan.utils";
+import type { FootieScene } from "@/features/story/types";
+import { ensureTimelineItems, getStoryTotalDuration } from "@/features/story/utils";
 import { ASSET_INTELLIGENCE_GOLDEN_FIXTURES } from "@/verification/asset-intelligence/fixtures/asset-intelligence-golden-fixtures.registry";
 import { buildAssetIntelligenceFixtureInput } from "@/verification/asset-intelligence/fixtures/build-asset-intelligence-fixture-input.utils";
+import { STUDIO_INTELLIGENCE_GOLDEN_FIXTURES } from "@/verification/studio-intelligence/fixtures/golden-fixtures.registry";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MODULE_ROOT = join(__dirname, "../components/creator-asset-studio");
 const WORKSPACE_PATH = join(__dirname, "../../../components/StoryWorkspace.tsx");
 const PLANNING_HOOK_PATH = join(__dirname, "useCreatorAssetPlanningCache.ts");
+const SCENE_PLANNER_PATH = join(__dirname, "../../story/services/scene-planning.service.ts");
 
 function test(name: string, fn: () => void) {
   fn();
   console.log(`  ✓ ${name}`);
+}
+
+function withEnv(values: Record<string, string | undefined>, fn: () => void): void {
+  const previous = new Map<string, string | undefined>();
+
+  for (const [key, value] of Object.entries(values)) {
+    previous.set(key, process.env[key]);
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  try {
+    fn();
+  } finally {
+    for (const [key, value] of previous.entries()) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
 }
 
 function buildSamplePlanning() {
@@ -65,6 +101,34 @@ function buildSampleScript() {
   });
 }
 
+function buildAiGeneratedScenes(narration: string, sceneCount: number): FootieScene[] {
+  return Array.from({ length: sceneCount }, (_, index) => ({
+    id: String(index + 1),
+    start: index * 5,
+    end: (index + 1) * 5,
+    duration: 5,
+    subtitle: `Scene ${index + 1}`,
+    narration,
+    sceneType: index === 0 ? "intro" : index === sceneCount - 1 ? "ending" : "context",
+  }));
+}
+
+function buildSyncedScript(input: {
+  title: string;
+  narration: string;
+  scenes: FootieScene[];
+  voiceoverDurationMs?: number;
+}) {
+  return syncFootieScript({
+    title: input.title,
+    narration: input.narration,
+    totalDuration: getStoryTotalDuration(input.scenes),
+    scenes: input.scenes,
+    timelineItems: ensureTimelineItems(input.scenes),
+    voiceoverDurationMs: input.voiceoverDurationMs,
+  });
+}
+
 function assertNoIntelligenceExecutionInPresentationLayer(): void {
   const forbiddenPatterns = [
     /\brunStudioIntelligence\s*\(/,
@@ -72,6 +136,13 @@ function assertNoIntelligenceExecutionInPresentationLayer(): void {
     /\bbuildRecommendationsFromAssetIntelligence\s*\(/,
     /\bbuildAssetProviderPlan\s*\(/,
     /\bvalidateAssetRecommendations\s*\(/,
+  ];
+
+  const forbiddenProviderPatterns = [
+    /\bfetch\s*\(/,
+    /\battachImage\b/,
+    /\battachSceneImage\b/,
+    /\bproviderApi\b/,
   ];
 
   const files = [
@@ -96,12 +167,22 @@ function assertNoIntelligenceExecutionInPresentationLayer(): void {
         `${file} must remain a presentation-only module`,
       );
     }
+    for (const pattern of forbiddenProviderPatterns) {
+      assert.doesNotMatch(
+        contents,
+        pattern,
+        `${file} must not call provider APIs or attach images`,
+      );
+    }
   }
 
   for (const filePath of [WORKSPACE_PATH, PLANNING_HOOK_PATH]) {
     const contents = readFileSync(filePath, "utf8");
     for (const pattern of forbiddenPatterns) {
       assert.doesNotMatch(contents, pattern, `${filePath} must not execute intelligence`);
+    }
+    for (const pattern of forbiddenProviderPatterns) {
+      assert.doesNotMatch(contents, pattern, `${filePath} must not call provider APIs`);
     }
   }
 }
@@ -281,6 +362,215 @@ test("scene plan generation path can build planning without editor execution", (
   assert.ok(planning.recommendation.sceneRecommendations.length > 0);
   assert.ok(planning.providerPlan.sceneResults.length > 0);
   assert.ok(planning.validationResult.validationScore > 0);
+});
+
+test("default AI scene path can produce assetPlanningSnapshot", () => {
+  withEnv({ ASSET_INTELLIGENCE_ENABLED: "true" }, () => {
+    assert.equal(isAssetIntelligencePlanningEnabled(), true);
+
+    const fixture = ASSET_INTELLIGENCE_GOLDEN_FIXTURES[0];
+    const sceneCount = 6;
+    const scenes = buildAiGeneratedScenes(fixture.narration, sceneCount);
+    const voiceoverDurationMs = 30_000;
+    const script = buildSyncedScript({
+      title: fixture.topic,
+      narration: fixture.narration,
+      scenes,
+      voiceoverDurationMs,
+    });
+
+    const snapshot = buildCreatorAssetPlanningSnapshotForGeneratedScenes({
+      script,
+      scenes,
+      title: fixture.topic,
+      narration: fixture.narration,
+      topic: fixture.topic,
+      scriptMode: fixture.mode,
+      sceneCount,
+      voiceoverDurationMs,
+    });
+
+    assert.ok(snapshot.planning.recommendation.sceneRecommendations.length > 0);
+    assert.ok(snapshot.planning.providerPlan.sceneResults.length > 0);
+    assert.equal(snapshot.sceneCount, sceneCount);
+  });
+});
+
+test("SI scene-plan success still produces assetPlanningSnapshot", () => {
+  withEnv({ ASSET_INTELLIGENCE_ENABLED: "true" }, () => {
+    const fixture = STUDIO_INTELLIGENCE_GOLDEN_FIXTURES[0];
+    const sceneCount = 6;
+    const voiceoverDurationMs =
+      fixture.input.targetDurationMs ?? fixture.input.targetDurationSec * 1000;
+
+    const siResult = tryGenerateScenesFromStudioIntelligence({
+      topic: fixture.input.topic,
+      narration: fixture.input.narration,
+      voiceoverDurationMs,
+      sceneCount,
+      scriptMode: fixture.input.mode,
+    });
+
+    assert.equal(siResult.success, true, siResult.success ? undefined : siResult.reason);
+    if (!siResult.success) {
+      return;
+    }
+
+    const script = buildSyncedScript({
+      title: fixture.input.topic,
+      narration: fixture.input.narration,
+      scenes: siResult.scenes,
+      voiceoverDurationMs,
+    });
+
+    const snapshot = buildCreatorAssetPlanningSnapshotForGeneratedScenes({
+      script,
+      scenes: siResult.scenes,
+      title: fixture.input.topic,
+      narration: fixture.input.narration,
+      topic: fixture.input.topic,
+      scriptMode: fixture.input.mode,
+      sceneCount,
+      voiceoverDurationMs,
+      assetPlanningContext: siResult.assetPlanningContext,
+    });
+
+    assert.ok(snapshot.planning.recommendation.sceneRecommendations.length > 0);
+    assert.equal(snapshot.sceneCount, sceneCount);
+  });
+});
+
+test("SI failure → AI fallback path still produces assetPlanningSnapshot", () => {
+  withEnv({ ASSET_INTELLIGENCE_ENABLED: "true" }, () => {
+    const fixture = ASSET_INTELLIGENCE_GOLDEN_FIXTURES[1];
+    const sceneCount = 5;
+    const voiceoverDurationMs = 30_000;
+    const scenes = buildAiGeneratedScenes(fixture.narration, sceneCount);
+    const script = buildSyncedScript({
+      title: fixture.topic,
+      narration: fixture.narration,
+      scenes,
+      voiceoverDurationMs,
+    });
+
+    const snapshot = tryBuildCreatorAssetPlanningSnapshotForGeneratedScenes({
+      script,
+      scenes,
+      title: fixture.topic,
+      narration: fixture.narration,
+      topic: fixture.topic,
+      scriptMode: fixture.mode,
+      sceneCount,
+      voiceoverDurationMs,
+    });
+
+    assert.ok(snapshot);
+    assert.ok(snapshot!.planning.recommendation.sceneRecommendations.length > 0);
+  });
+});
+
+test("asset planning failure does not fail storyboard generation helper", () => {
+  withEnv({ ASSET_INTELLIGENCE_ENABLED: "true" }, () => {
+    const snapshot = tryBuildCreatorAssetPlanningSnapshotForGeneratedScenes({
+      script: buildSyncedScript({
+        title: "",
+        narration: "",
+        scenes: [],
+      }),
+      scenes: [],
+      title: "",
+      narration: "",
+      topic: "",
+      sceneCount: 0,
+      voiceoverDurationMs: 0,
+    });
+
+    assert.equal(snapshot, undefined);
+  });
+});
+
+test("cache read succeeds after voiceoverDurationMs changes", () => {
+  resetPlanningCachesForTests();
+
+  const fixture = ASSET_INTELLIGENCE_GOLDEN_FIXTURES[0];
+  const sceneCount = 6;
+  const scenes = buildAiGeneratedScenes(fixture.narration, sceneCount);
+  const initialVoiceoverDurationMs = 28_000;
+  const scriptAtGeneration = buildSyncedScript({
+    title: fixture.topic,
+    narration: fixture.narration,
+    scenes,
+    voiceoverDurationMs: initialVoiceoverDurationMs,
+  });
+
+  withEnv({ ASSET_INTELLIGENCE_ENABLED: "true" }, () => {
+    const snapshot = buildCreatorAssetPlanningSnapshotForGeneratedScenes({
+      script: scriptAtGeneration,
+      scenes,
+      title: fixture.topic,
+      narration: fixture.narration,
+      topic: fixture.topic,
+      scriptMode: fixture.mode,
+      sceneCount,
+      voiceoverDurationMs: initialVoiceoverDurationMs,
+    });
+
+    hydrateCreatorAssetPlanningCache("story-voiceover", snapshot);
+
+    const scriptAtRead = buildSyncedScript({
+      title: fixture.topic,
+      narration: fixture.narration,
+      scenes,
+      voiceoverDurationMs: 31_500,
+    });
+
+    assert.notEqual(
+      scriptAtGeneration.voiceoverDurationMs,
+      scriptAtRead.voiceoverDurationMs,
+    );
+    assert.equal(buildScriptHash(scriptAtGeneration), buildScriptHash(scriptAtRead));
+
+    const planning = readPlanningData("story-voiceover", {
+      scriptHash: buildScriptHash(scriptAtRead),
+      sceneCount: scriptAtRead.scenes.length,
+      storyMode: fixture.mode,
+    });
+
+    assert.ok(planning);
+    assert.ok(planning!.recommendation.sceneRecommendations.length > 0);
+  });
+});
+
+test("scene planner attaches asset planning on all successful paths", () => {
+  const scenePlanner = readFileSync(SCENE_PLANNER_PATH, "utf8");
+
+  assert.match(scenePlanner, /finalizeSuccessfulScenePlan/);
+  assert.match(scenePlanner, /tryBuildCreatorAssetPlanningSnapshotForGeneratedScenes/);
+  assert.match(scenePlanner, /assetPlanningContext: studioIntelligenceResult\.assetPlanningContext/);
+  assert.match(scenePlanner, /source: "ai_fallback"/);
+});
+
+test("buildScriptHash excludes voiceoverDurationMs", () => {
+  const fixture = ASSET_INTELLIGENCE_GOLDEN_FIXTURES[0];
+  const scenes = buildAiGeneratedScenes(fixture.narration, 4);
+  const base = buildSyncedScript({
+    title: fixture.topic,
+    narration: fixture.narration,
+    scenes,
+    voiceoverDurationMs: 20_000,
+  });
+  const remeasured = buildSyncedScript({
+    title: fixture.topic,
+    narration: fixture.narration,
+    scenes,
+    voiceoverDurationMs: 42_000,
+  });
+
+  assert.equal(buildScriptHash(base), buildScriptHash(remeasured));
+  assert.doesNotMatch(
+    readFileSync(join(__dirname, "creator-asset-planning.utils.ts"), "utf8"),
+    /voiceoverDurationMs/,
+  );
 });
 
 console.log("All creator asset planning cache checks passed.");

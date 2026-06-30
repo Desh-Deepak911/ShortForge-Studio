@@ -15,9 +15,14 @@ import {
 import type { QualityMode, ScriptMode } from "@/types/footiebitz";
 import { resolveSceneCount } from "@/types/footiebitz";
 
+import type { AssetPlanningContext } from "@/features/editor/creator-asset-planning/creator-asset-planning-generation.utils";
+import { tryBuildCreatorAssetPlanningSnapshotForGeneratedScenes } from "@/features/editor/creator-asset-planning/creator-asset-planning-generation.utils";
+import type { CreatorAssetPlanningSnapshot } from "@/features/editor/creator-asset-planning/creator-asset-planning.types";
+import { ensureTimelineItems, getStoryTotalDuration } from "@/features/story/utils";
+import { syncFootieScript } from "@/lib/utils/voiceover";
+
 import { cleanJsonText } from "./story-parse.service";
 import type { ScenePlanOutcomeMeta } from "@/features/story/utils/studio-intelligence-scene-plan-dev.utils";
-import type { CreatorAssetPlanningSnapshot } from "@/features/editor/creator-asset-planning/creator-asset-planning.types";
 import {
   isStudioIntelligenceScenePlanEnabled,
   logStudioIntelligenceScenePlanDebug,
@@ -147,6 +152,46 @@ function buildStudioIntelligenceScenePlanMeta(
   };
 }
 
+function finalizeSuccessfulScenePlan(input: {
+  scenes: FootieScene[];
+  scenePlanMeta?: ScenePlanOutcomeMeta;
+  prompt: string;
+  script: StoryScript;
+  narration: string;
+  voiceoverDurationMs: number;
+  sceneCount: number;
+  scriptMode?: ScriptMode;
+  assetPlanningContext?: AssetPlanningContext;
+}): Extract<ScenePlanningResult, { success: true }> {
+  const syncedScript = syncFootieScript({
+    title: input.script.title.trim() || input.prompt.trim(),
+    narration: input.narration.trim(),
+    totalDuration: getStoryTotalDuration(input.scenes),
+    scenes: input.scenes,
+    timelineItems: ensureTimelineItems(input.scenes),
+    voiceoverDurationMs: input.voiceoverDurationMs,
+  });
+
+  const assetPlanningSnapshot = tryBuildCreatorAssetPlanningSnapshotForGeneratedScenes({
+    script: syncedScript,
+    scenes: input.scenes,
+    title: syncedScript.title,
+    narration: syncedScript.narration,
+    topic: input.prompt.trim(),
+    scriptMode: input.scriptMode,
+    sceneCount: input.sceneCount,
+    voiceoverDurationMs: input.voiceoverDurationMs,
+    assetPlanningContext: input.assetPlanningContext,
+  });
+
+  return {
+    success: true,
+    scenes: input.scenes,
+    scenePlanMeta: input.scenePlanMeta,
+    assetPlanningSnapshot,
+  };
+}
+
 async function requestScenePlanText(
   model: string,
   prompt: string,
@@ -209,12 +254,17 @@ export async function generateScenesFromScriptAndAudio(
     });
 
     if (studioIntelligenceResult.success) {
-      return {
-        success: true,
+      return finalizeSuccessfulScenePlan({
         scenes: studioIntelligenceResult.scenes,
         scenePlanMeta: buildStudioIntelligenceScenePlanMeta(studioIntelligenceResult.diagnostics),
-        assetPlanningSnapshot: studioIntelligenceResult.assetPlanningSnapshot,
-      };
+        prompt,
+        script: input.script,
+        narration,
+        voiceoverDurationMs,
+        sceneCount,
+        scriptMode: input.scriptMode,
+        assetPlanningContext: studioIntelligenceResult.assetPlanningContext,
+      });
     }
 
     logStudioIntelligenceScenePlanDebug("falling back to AI scene planner", {
@@ -228,6 +278,7 @@ export async function generateScenesFromScriptAndAudio(
       narration,
       voiceoverDurationMs,
       sceneCount,
+      scriptMode: input.scriptMode,
       qualityMode: options.qualityMode,
       model: options.model,
     });
@@ -236,13 +287,19 @@ export async function generateScenesFromScriptAndAudio(
       return aiScenesResult;
     }
 
-    return {
-      ...aiScenesResult,
+    return finalizeSuccessfulScenePlan({
+      scenes: aiScenesResult.scenes,
       scenePlanMeta: {
         source: "ai_fallback",
         densityAdapted: false,
       },
-    };
+      prompt,
+      script: input.script,
+      narration,
+      voiceoverDurationMs,
+      sceneCount,
+      scriptMode: input.scriptMode,
+    });
   }
 
   return requestAiScenePlan({
@@ -251,6 +308,7 @@ export async function generateScenesFromScriptAndAudio(
     narration,
     voiceoverDurationMs,
     sceneCount,
+    scriptMode: input.scriptMode,
     qualityMode: options.qualityMode,
     model: options.model,
   });
@@ -262,6 +320,7 @@ async function requestAiScenePlan(input: {
   narration: string;
   voiceoverDurationMs: number;
   sceneCount: number;
+  scriptMode?: ScriptMode;
   qualityMode?: QualityMode;
   model?: string;
 }): Promise<ScenePlanningResult> {
@@ -292,7 +351,15 @@ async function requestAiScenePlan(input: {
     const withNarration = attachSceneNarrationFromScript(timedScenes, input.narration);
     const scenes = applyGeneratedStorySceneCaptions(withNarration);
 
-    return { success: true, scenes };
+    return finalizeSuccessfulScenePlan({
+      scenes,
+      prompt: input.prompt,
+      script: input.script,
+      narration: input.narration,
+      voiceoverDurationMs: input.voiceoverDurationMs,
+      sceneCount: input.sceneCount,
+      scriptMode: input.scriptMode,
+    });
   } catch (error) {
     return {
       success: false,
