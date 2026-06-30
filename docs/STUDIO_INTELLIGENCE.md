@@ -1,8 +1,10 @@
-# Studio Intelligence 3.3 – 3.5
+# Studio Intelligence v1 (3.3 – 3.6)
 
-Studio Intelligence is a **planning subsystem** in ShortForge Studio. It transforms story input (topic, narration, mode, duration) into structured planning metadata — beats, arcs, scene blueprints, visual/asset/motion hints, and timing — and, when explicitly enabled, into production-shaped **`FootieScene[]`** via the Blueprint Adapter and FootieScript Materializer.
+Studio Intelligence is a **planning subsystem** in ShortForge Studio. It transforms story input (topic, narration, mode, duration) into structured planning metadata — beats, arcs, scene blueprints, visual/asset/motion hints, timing, and coherence validation — and, when explicitly enabled, into production-shaped **`FootieScene[]`** via the Blueprint Adapter and FootieScript Materializer.
 
-**Status:** Planning frozen at **3.3I (runtime) + 3.4D (adapter)** · **3.5 Production Wiring complete (opt-in / dev-gated, scenes-only v1)**
+**Status:** **Studio Intelligence v1 frozen** — 3.3I runtime · 3.4D adapter · 3.5 opt-in production wiring · **3.6 validation & alignment complete**
+
+**Change policy:** Future Studio Intelligence work on this codebase should be **bug fixes** or **explicit feature milestones** (starting with **3.7 Asset Intelligence**). Do not make ad-hoc planner, adapter, or materializer changes without a scoped milestone and verification.
 
 Deep dive companion: [ARCHITECTURE.md — Studio Intelligence layer](./ARCHITECTURE.md#studio-intelligence-layer)
 
@@ -96,7 +98,9 @@ resolveStoryStrategy(input.mode)
       ↓
 Narrative Beat Detection → Arc Builder → Scene Planner → Visual Planner → Dynamic Timing
       ↓
-StudioIntelligenceResult
+Mode Template Normalization → Story Coherence Validator   ← 3.6D, 3.6G (planning-only)
+      ↓
+StudioIntelligenceResult (+ storyValidation)
       ↓
 Scene Density Adapter (adaptSceneDensity)     ← 3.5E, production-wired
       ↓
@@ -124,8 +128,10 @@ FootieScene[]
 | 5 | Scene Planner | `scene-planner.ts` |
 | 6 | Visual Planner | `visual-planner.ts` |
 | 7 | Dynamic Timing Planner | `dynamic-timing-planner.ts` |
+| 8 | Mode template normalization | `mode-templates/mode-template-planner.ts` |
+| 9 | Story coherence validation | `story-validator/story-validator.ts` |
 
-Each planner accepts an optional `StoryStrategy`. When omitted, the runtime resolves strategy from `input.mode` or falls back to the default strategy.
+Each planner accepts an optional `StoryStrategy`. When omitted, the runtime resolves strategy from `input.mode` or falls back to the default strategy. The story validator is read-only — it does not mutate blueprints.
 
 ---
 
@@ -342,6 +348,36 @@ Adapter architecture, blueprint mapper, enrichment, golden fixture validation.
 | **3.5F** | Dev/staging toggle + debug badge |
 | **3.5G** | Production wiring freeze audit + documentation |
 
+### Studio Intelligence 3.6 (complete — frozen as part of v1)
+
+Planning-only validation and alignment. No new production wiring beyond 3.5 dual gates.
+
+| Phase | Deliverable |
+|-------|-------------|
+| **3.6B** | **Intent Engine v2** — `src/features/intent-engine/`; improved script-mode classification from briefs |
+| **3.6C** | **Strategy-aware planning** — `StoryStrategy` biases beat, arc, scene, visual, and timing planners |
+| **3.6D** | **Mode templates** — Nine templates (default, debate, comparison, countdown, biography, history, tactical, match preview, news) normalize blueprint slots |
+| **3.6E** | **Adapter richness** — Semantic slot metadata (`semanticSlotId`, `contentPattern`, `planningTags`, …) through adapter + materializer sidecar |
+| **3.6F** | **Prompt ↔ Studio Intelligence alignment** — `prompt-studio-alignment/` bridge; shared ScriptMode ↔ strategy ↔ template ↔ prompt structure metadata |
+| **3.6G** | **Story Coherence Validator** — `validateStoryCoherence()` on `StudioIntelligenceResult`; scores, warnings, repair suggestions (planning-only) |
+
+---
+
+## v1 freeze policy
+
+Studio Intelligence **v1 is formally frozen** after 3.6G. This includes:
+
+- All planners through `runStudioIntelligence()` (beats → arcs → blueprints → visuals → timing → mode templates → story validation)
+- Blueprint Adapter 3.4 and FootieScript Materializer 3.5B
+- Scene Density Adapter 3.5E
+- Opt-in scenes-only production wiring 3.5D
+
+**Allowed without a new milestone:** bug fixes, verification fixes, documentation, and diagnostics that do not change default production behavior.
+
+**Requires a new milestone:** new planner behavior, adapter/materializer contract changes, production wiring expansion (e.g. audio-first), or editor/preview integration.
+
+**Next milestone:** **3.7 Asset Intelligence** — use blueprint asset queries to recommend or fetch imagery and clips.
+
 ---
 
 ## Verification
@@ -365,19 +401,23 @@ npm run test:studio-intelligence-footie-script-materializer
 npm run test:studio-intelligence-materializer-golden-fixtures
 npm run test:studio-intelligence-scene-density
 npm run test:studio-intelligence-scene-plan-wiring
+
+# 3.6 — validation & alignment
+npm run test:intent-engine-quality
+npm run test:studio-intelligence-strategy-planning
+npm run test:studio-intelligence-mode-templates
+npm run test:studio-intelligence-adapter-richness
+npm run test:studio-intelligence-prompt-alignment
+npm run test:studio-intelligence-story-validator
 ```
 
 ---
 
 ## Future roadmap
 
-### 3.6 — Broader validation / production rollout criteria
+### 3.7 — Asset Intelligence (next)
 
-Expand SI scene planning beyond scenes-only v1: audio-first wiring, rollout metrics, and criteria for enabling dual gates in production without the dev toggle.
-
-### 3.7 — Asset Intelligence
-
-Use blueprint asset queries to fetch or recommend imagery and clips.
+Use blueprint asset queries and planning metadata to fetch or recommend imagery and clips.
 
 ### 3.8 — Smart Editing Intelligence
 
@@ -389,7 +429,7 @@ Use planning metadata to suggest timeline edits, caption emphasis, and motion pr
 
 | Document | Contents |
 |----------|----------|
-| [README.md — Studio Intelligence](../README.md#studio-intelligence-33--35) | Product-level summary |
+| [README.md — Studio Intelligence](../README.md#studio-intelligence-v1) | Product-level summary |
 | [ARCHITECTURE.md — Studio Intelligence layer](./ARCHITECTURE.md#studio-intelligence-layer) | Default vs opt-in production paths |
 | [GENERATION.md — Stage 4](./GENERATION.md#stage-4--scene-planning) | AI vs SI scene planning |
-| [ROADMAP.md — Studio Intelligence](../ROADMAP.md#studio-intelligence-33) | Phase checklist |
+| [ROADMAP.md — Studio Intelligence v1](../ROADMAP.md#studio-intelligence-v1) | Phase checklist |

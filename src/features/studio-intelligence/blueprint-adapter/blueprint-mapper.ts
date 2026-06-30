@@ -17,6 +17,9 @@ import type {
   SceneMappingDecision,
 } from "./blueprint-adapter.types";
 import {
+  resolveBlueprintSemanticMetadata,
+} from "./blueprint-adapter-semantics.utils";
+import {
   aggregateAdapterStatistics,
   buildAdapterDiagnostics,
   clampAdapterConfidence,
@@ -363,6 +366,7 @@ export function mapBlueprintToScene(
   blueprint: SceneBlueprint,
   input?: BlueprintAdapterInput,
   order = 0,
+  blueprintCount = 1,
 ): BlueprintMappedScene {
   const context: BlueprintMapperContext = {
     warnings: [],
@@ -370,16 +374,18 @@ export function mapBlueprintToScene(
     fallbacksUsed: [],
   };
 
-  return buildMappedScene(blueprint, input, order, context);
+  return buildMappedScene(blueprint, input, order, blueprintCount, context);
 }
 
 function buildMappedScene(
   blueprint: SceneBlueprint,
   input: BlueprintAdapterInput | undefined,
   order: number,
+  blueprintCount: number,
   context: BlueprintMapperContext,
 ): BlueprintMappedScene {
-  void input;
+  const strategyId = input?.strategyId ?? "default";
+  const semantics = resolveBlueprintSemanticMetadata(blueprint, order, blueprintCount, strategyId);
 
   collectBlueprintWarnings(blueprint, context);
 
@@ -450,6 +456,23 @@ function buildMappedScene(
       blueprint.beatIds.length > 0 ? "direct" : "omitted",
       blueprint.beatIds.length > 0 ? 0.95 : 0.5,
     ),
+    createMappingDecision(
+      blueprint.id,
+      "semanticSlotId",
+      blueprint.title,
+      semantics.semanticSlotId,
+      "direct",
+      0.95,
+      "Mode template slot semantics preserved in mapped metadata.",
+    ),
+    createMappingDecision(
+      blueprint.id,
+      "contentPattern",
+      blueprint.kind,
+      semantics.contentPattern,
+      semantics.contentPattern === "generic_scene" ? "fallback" : "direct",
+      semantics.contentPattern === "generic_scene" ? 0.7 : 0.95,
+    ),
   ];
 
   return {
@@ -476,6 +499,7 @@ function buildMappedScene(
     captionHints,
     timingMetadata,
     narrationMetadata: createPlaceholderNarrationMetadata(blueprint),
+    ...semantics,
     confidence,
     mappingDecisions,
   };
@@ -572,7 +596,7 @@ export function mapBlueprintsToScenes(input: BlueprintAdapterInput): BlueprintAd
       fallbacksUsed: [],
     };
 
-    const mappedScene = buildMappedScene(blueprint, input, index, context);
+    const mappedScene = buildMappedScene(blueprint, input, index, blueprints.length, context);
 
     warnings.push(...context.warnings);
     for (const field of context.unmappedFields) {

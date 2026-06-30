@@ -17,7 +17,7 @@ import type {
 import { normalizeSceneIds } from "@/features/story/utils";
 
 /** Current FootieScript materializer contract version. */
-export const FOOTIE_SCRIPT_MATERIALIZER_VERSION = "0.1.0";
+export const FOOTIE_SCRIPT_MATERIALIZER_VERSION = "0.2.0";
 
 export const DEFAULT_MAX_SUBTITLE_WORDS = 12;
 

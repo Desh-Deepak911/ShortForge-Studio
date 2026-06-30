@@ -5,6 +5,12 @@ import {
 import type { SceneBlueprint, SceneBlueprintCollection, TimingBlueprint } from "./scene-blueprint.types";
 import type { StoryStrategy } from "./story-strategy/story-strategy.types";
 import { resolvePlannerStrategy } from "./story-strategy/planner-strategy.utils";
+import type { PlannerStrategyDiagnostics } from "./story-strategy/strategy-planning-diagnostics.utils";
+import {
+  isDefaultStoryStrategy,
+  recordStrategyDecision,
+  recordStrategyInfluence,
+} from "./story-strategy/strategy-planning-diagnostics.utils";
 import {
   calculateBlueprintCollectionStats,
   clampBlueprintConfidence,
@@ -69,7 +75,10 @@ export function calculateTargetDurationMs(
 }
 
 /** Calculates a relative timing weight for one blueprint. */
-export function calculateBlueprintTimingWeight(blueprint: SceneBlueprint): number {
+export function calculateBlueprintTimingWeight(
+  blueprint: SceneBlueprint,
+  strategy?: StoryStrategy,
+): number {
   const roleWeight = ROLE_WEIGHTS[blueprint.role] ?? 1;
   const kindWeight = KIND_WEIGHTS[blueprint.kind] ?? 1;
   const importanceBoost = 0.75 + blueprint.importance.value * 0.55;
@@ -90,7 +99,34 @@ export function calculateBlueprintTimingWeight(blueprint: SceneBlueprint): numbe
       break;
   }
 
-  return Math.max(0.35, roleWeight * kindWeight * importanceBoost * tierMultiplier);
+  let weight = Math.max(0.35, roleWeight * kindWeight * importanceBoost * tierMultiplier);
+
+  if (strategy && !isDefaultStoryStrategy(strategy.id)) {
+    const bias = strategy.timingBias;
+
+    if (blueprint.role === "intro" || blueprint.kind === "hook_opener") {
+      weight *= bias.hookMultiplier;
+    }
+
+    if (blueprint.role === "evidence" || blueprint.kind === "stat_moment") {
+      weight *= bias.evidenceMultiplier;
+    }
+
+    if (
+      blueprint.role === "climax" ||
+      blueprint.role === "payoff" ||
+      blueprint.kind === "match_highlight" ||
+      blueprint.kind === "closing_moment"
+    ) {
+      weight *= bias.climaxMultiplier;
+    }
+
+    if (blueprint.role === "cta" || blueprint.kind === "cta_card") {
+      weight *= bias.ctaMultiplier;
+    }
+  }
+
+  return weight;
 }
 
 /** Normalizes timing weights into millisecond allocations that sum to the target. */
@@ -123,7 +159,32 @@ export function normalizeDurationAllocation(weights: number[], targetDurationMs:
 }
 
 /** Infers pacing from blueprint role and importance. */
-export function inferPacingFromRoleAndImportance(blueprint: SceneBlueprint): TimingBlueprint["pacing"] {
+export function inferPacingFromRoleAndImportance(
+  blueprint: SceneBlueprint,
+  strategy?: StoryStrategy,
+): TimingBlueprint["pacing"] {
+  if (strategy && !isDefaultStoryStrategy(strategy.id)) {
+    const preferred = strategy.timingBias.preferredPacing;
+
+    if (blueprint.role === "intro" || blueprint.kind === "hook_opener" || blueprint.role === "cta") {
+      return preferred === "slow" ? "normal" : "punchy";
+    }
+
+    if (preferred === "fast" || preferred === "punchy") {
+      if (blueprint.role === "evidence" || blueprint.role === "conflict") {
+        return "fast";
+      }
+    }
+
+    if (preferred === "slow" && (blueprint.role === "context" || blueprint.role === "payoff")) {
+      return "normal";
+    }
+
+    if (preferred === "punchy" && blueprint.kind === "ranked_reveal") {
+      return "punchy";
+    }
+  }
+
   if (blueprint.role === "intro" || blueprint.kind === "hook_opener") {
     return "punchy";
   }
@@ -176,7 +237,11 @@ export function enforceTimingBounds(timing: TimingBlueprint): TimingBlueprint {
   };
 }
 
-function buildTimingBlueprint(blueprint: SceneBlueprint, suggestedDurationMs: number): TimingBlueprint {
+function buildTimingBlueprint(
+  blueprint: SceneBlueprint,
+  suggestedDurationMs: number,
+  strategy?: StoryStrategy,
+): TimingBlueprint {
   const minDurationMs = clampSceneTimingDuration(Math.round(suggestedDurationMs * 0.72));
   const maxDurationMs = clampSceneTimingDuration(Math.round(suggestedDurationMs * 1.35));
 
@@ -184,7 +249,7 @@ function buildTimingBlueprint(blueprint: SceneBlueprint, suggestedDurationMs: nu
     suggestedDurationMs,
     minDurationMs,
     maxDurationMs,
-    pacing: inferPacingFromRoleAndImportance(blueprint),
+    pacing: inferPacingFromRoleAndImportance(blueprint, strategy),
     reason: `Dynamic timing allocated ${suggestedDurationMs}ms for ${blueprint.role}/${blueprint.kind}.`,
   });
 }
@@ -193,16 +258,17 @@ function buildTimingBlueprint(blueprint: SceneBlueprint, suggestedDurationMs: nu
 export function allocateDurationAcrossBlueprints(
   blueprints: SceneBlueprint[],
   targetDurationMs: number,
+  strategy?: StoryStrategy,
 ): TimingBlueprint[] {
   if (blueprints.length === 0) {
     return [];
   }
 
-  const weights = blueprints.map((blueprint) => calculateBlueprintTimingWeight(blueprint));
+  const weights = blueprints.map((blueprint) => calculateBlueprintTimingWeight(blueprint, strategy));
   const allocations = normalizeDurationAllocation(weights, targetDurationMs);
 
   return blueprints.map((blueprint, index) =>
-    buildTimingBlueprint(blueprint, allocations[index] ?? STUDIO_INTELLIGENCE_MIN_SCENE_DURATION_MS),
+    buildTimingBlueprint(blueprint, allocations[index] ?? STUDIO_INTELLIGENCE_MIN_SCENE_DURATION_MS, strategy),
   );
 }
 
@@ -227,14 +293,32 @@ export function applyDynamicTiming(
   collection: SceneBlueprintCollection,
   input?: StudioIntelligenceInput,
   strategy?: StoryStrategy,
+  diagnostics?: PlannerStrategyDiagnostics,
 ): SceneBlueprintCollection {
-  void resolvePlannerStrategy(input, strategy);
+  const resolvedStrategy = resolvePlannerStrategy(input, strategy);
+
+  if (diagnostics && !isDefaultStoryStrategy(resolvedStrategy.id)) {
+    recordStrategyInfluence(diagnostics, "timingBias.hookMultiplier");
+    recordStrategyInfluence(diagnostics, "timingBias.evidenceMultiplier");
+    recordStrategyInfluence(diagnostics, "timingBias.climaxMultiplier");
+    recordStrategyInfluence(diagnostics, "timingBias.ctaMultiplier");
+    recordStrategyInfluence(diagnostics, "timingBias.preferredPacing");
+    recordStrategyDecision(
+      diagnostics,
+      `Timing bias pacing ${resolvedStrategy.timingBias.preferredPacing} with evidence x${resolvedStrategy.timingBias.evidenceMultiplier}.`,
+    );
+  }
+
   if (collection.blueprints.length === 0) {
     return createEmptySceneBlueprintCollection();
   }
 
   const targetDurationMs = calculateTargetDurationMs(input, collection);
-  const timings = allocateDurationAcrossBlueprints(collection.blueprints, targetDurationMs);
+  const timings = allocateDurationAcrossBlueprints(
+    collection.blueprints,
+    targetDurationMs,
+    resolvedStrategy,
+  );
   const blueprints = collection.blueprints.map((blueprint, index) =>
     cloneBlueprintWithTiming(blueprint, timings[index] ?? blueprint.timing),
   );

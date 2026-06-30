@@ -27,6 +27,27 @@ function makeImportance(value: number): SceneImportanceScore {
   };
 }
 
+function defaultSemanticFields(): Pick<
+  BlueprintMappedScene,
+  | "semanticSlotId"
+  | "semanticSlotLabel"
+  | "semanticRole"
+  | "templateId"
+  | "templateApplied"
+  | "contentPattern"
+  | "planningTags"
+> {
+  return {
+    semanticSlotId: "hook",
+    semanticSlotLabel: "Hook",
+    semanticRole: "Hook",
+    templateId: "default",
+    templateApplied: false,
+    contentPattern: "hook_scene",
+    planningTags: ["template:default", "slot:hook", "pattern:hook_scene"],
+  };
+}
+
 function makeMappedScene(
   partial: Partial<BlueprintMappedScene> & Pick<BlueprintMappedScene, "id" | "order">,
 ): BlueprintMappedScene {
@@ -79,6 +100,7 @@ function makeMappedScene(
     mappingDecisions: partial.mappingDecisions ?? [],
     captionText: partial.captionText ?? "Haaland changed the title race",
     assetSearchQuery: partial.assetSearchQuery ?? "Erling Haaland portrait",
+    ...defaultSemanticFields(),
     ...partial,
   };
 }

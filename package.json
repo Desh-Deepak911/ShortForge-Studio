@@ -104,7 +104,13 @@
     "test:studio-intelligence-footie-script-materializer": "tsx src/features/studio-intelligence/footie-script-materializer/footie-script-materializer.verify.ts && tsx src/verification/studio-intelligence/footieScriptMaterializer.verify.ts",
     "test:studio-intelligence-materializer-golden-fixtures": "tsx src/verification/studio-intelligence/studioIntelligenceMaterializerGoldenFixtures.verify.ts",
     "test:studio-intelligence-scene-density": "tsx src/features/studio-intelligence/scene-density/scene-density.verify.ts",
-    "test:studio-intelligence-scene-plan-wiring": "tsx src/verification/studio-intelligence/studioIntelligenceScenePlanWiring.verify.ts"
+    "test:studio-intelligence-scene-plan-wiring": "tsx src/verification/studio-intelligence/studioIntelligenceScenePlanWiring.verify.ts",
+    "test:studio-intelligence-strategy-planning": "tsx src/verification/studio-intelligence/strategyAwarePlanning.verify.ts",
+    "test:studio-intelligence-mode-templates": "tsx src/features/studio-intelligence/mode-templates/mode-template.verify.ts && tsx src/verification/studio-intelligence/modeTemplatePlanning.verify.ts",
+    "test:studio-intelligence-adapter-richness": "tsx src/verification/studio-intelligence/adapterRichness.verify.ts",
+    "test:studio-intelligence-prompt-alignment": "tsx src/verification/studio-intelligence/promptStudioAlignment.verify.ts",
+    "test:studio-intelligence-story-validator": "tsx src/features/studio-intelligence/story-validator/story-validator.verify.ts && tsx src/verification/studio-intelligence/storyCoherenceValidator.verify.ts",
+    "test:intent-engine-quality": "tsx src/verification/intent-engine/intentEngineQuality.verify.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

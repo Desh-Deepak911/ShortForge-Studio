@@ -5,6 +5,13 @@ import {
 import type { NarrativeArc, NarrativeArcType, NarrativeBeat, NarrativeBeatType } from "./studio-intelligence.types";
 import type { StoryStrategy } from "./story-strategy/story-strategy.types";
 import { resolvePlannerStrategy } from "./story-strategy/planner-strategy.utils";
+import type { PlannerStrategyDiagnostics } from "./story-strategy/strategy-planning-diagnostics.utils";
+import {
+  isDefaultStoryStrategy,
+  recordStrategyDecision,
+  recordStrategyFallback,
+  recordStrategyInfluence,
+} from "./story-strategy/strategy-planning-diagnostics.utils";
 
 const OPENING_BEAT_TYPES = new Set<NarrativeBeatType>([
   "hook",
@@ -295,8 +302,19 @@ export function determineDominantPurpose(beats: NarrativeBeat[]): string | undef
   return dominant;
 }
 
-export function suggestArcSceneCount(type: NarrativeArcType, beatCount: number): number {
-  const range = NARRATIVE_ARC_SCENE_COUNT_RANGES[type];
+export function suggestArcSceneCount(
+  type: NarrativeArcType,
+  beatCount: number,
+  strategy?: StoryStrategy,
+): number {
+  const arcRange = NARRATIVE_ARC_SCENE_COUNT_RANGES[type];
+  const range =
+    strategy && !isDefaultStoryStrategy(strategy.id)
+      ? {
+          min: Math.max(arcRange.min, strategy.sceneDensity.minScenesPerArc),
+          max: Math.max(arcRange.max, strategy.sceneDensity.maxScenesPerArc),
+        }
+      : arcRange;
   const safeBeatCount = Math.max(0, beatCount);
 
   if (safeBeatCount <= 1) {
@@ -321,8 +339,21 @@ function buildArc(
   startBeatIndex: number,
   endBeatIndex: number,
   arcOrder: number,
+  strategy?: StoryStrategy,
 ): NarrativeArc {
   const arcBeats = beats.slice(startBeatIndex, endBeatIndex + 1);
+  let averageImportance = calculateArcImportance(arcBeats);
+
+  if (
+    strategy &&
+    !isDefaultStoryStrategy(strategy.id) &&
+    (type === "ending" || type === "resolution" || type === "climax")
+  ) {
+    averageImportance = Math.min(
+      1,
+      Math.round(averageImportance * strategy.arcStrategy.endingArcWeight * 1000) / 1000,
+    );
+  }
 
   return {
     id: createArcId(arcOrder),
@@ -333,10 +364,10 @@ function buildArc(
     startBeatIndex,
     endBeatIndex,
     estimatedDurationMs: calculateArcDuration(arcBeats),
-    averageImportance: calculateArcImportance(arcBeats),
+    averageImportance,
     dominantEmotion: determineDominantEmotion(arcBeats),
     dominantPurpose: determineDominantPurpose(arcBeats),
-    suggestedSceneCount: suggestArcSceneCount(type, arcBeats.length),
+    suggestedSceneCount: suggestArcSceneCount(type, arcBeats.length, strategy),
   };
 }
 
@@ -500,8 +531,25 @@ export function groupEndingArc(
 }
 
 /** Groups detected narrative beats into higher-level narrative arcs. */
-export function buildNarrativeArcs(beats: NarrativeBeat[], strategy?: StoryStrategy): NarrativeArc[] {
-  void resolvePlannerStrategy(undefined, strategy);
+export function buildNarrativeArcs(
+  beats: NarrativeBeat[],
+  strategy?: StoryStrategy,
+  diagnostics?: PlannerStrategyDiagnostics,
+): NarrativeArc[] {
+  const resolvedStrategy = resolvePlannerStrategy(undefined, strategy);
+
+  if (diagnostics && !isDefaultStoryStrategy(resolvedStrategy.id)) {
+    recordStrategyInfluence(diagnostics, "arcStrategy.preferredArcSequence");
+    recordStrategyInfluence(diagnostics, "arcStrategy.prioritizeConflictArc");
+    recordStrategyInfluence(diagnostics, "arcStrategy.endingArcWeight");
+    recordStrategyInfluence(diagnostics, "sceneDensity.minScenesPerArc");
+    recordStrategyInfluence(diagnostics, "sceneDensity.maxScenesPerArc");
+    recordStrategyDecision(
+      diagnostics,
+      `Preferred arc sequence: ${resolvedStrategy.arcStrategy.preferredArcSequence.join(" → ")}.`,
+    );
+  }
+
   const orderedBeats = sortBeats(beats);
 
   if (orderedBeats.length === 0) {
@@ -517,12 +565,19 @@ export function buildNarrativeArcs(beats: NarrativeBeat[], strategy?: StoryStrat
     const preferredType = resolveArcTypeForBeat(currentBeat, cursor, total, orderedBeats);
 
     let grouping =
+      (resolvedStrategy.arcStrategy.prioritizeConflictArc &&
+      (preferredType === "conflict" || currentBeat.type === "conflict" || currentBeat.type === "counterpoint")
+        ? groupConflictArc(orderedBeats, cursor)
+        : null) ??
       (preferredType === "opening" || preferredType === "setup" || cursor === 0
         ? groupOpeningArc(orderedBeats, cursor)
         : null) ??
       (preferredType === "conflict" ? groupConflictArc(orderedBeats, cursor) : null) ??
       (preferredType === "ending" || preferredType === "resolution" || preferredType === "climax"
         ? groupEndingArc(orderedBeats, cursor)
+        : null) ??
+      (resolvedStrategy.arcStrategy.prioritizeDevelopmentArc
+        ? groupDevelopmentArc(orderedBeats, cursor)
         : null) ??
       groupDevelopmentArc(orderedBeats, cursor) ??
       groupConflictArc(orderedBeats, cursor) ??
@@ -533,10 +588,13 @@ export function buildNarrativeArcs(beats: NarrativeBeat[], strategy?: StoryStrat
         type: preferredType === "setup" ? "setup" : preferredType,
         endIndex: cursor,
       };
+      if (diagnostics) {
+        recordStrategyFallback(diagnostics, `Single-beat arc fallback at beat ${cursor + 1}.`);
+      }
     }
 
     arcs.push(
-      buildArc(grouping.type, orderedBeats, cursor, grouping.endIndex, arcs.length),
+      buildArc(grouping.type, orderedBeats, cursor, grouping.endIndex, arcs.length, resolvedStrategy),
     );
 
     cursor = grouping.endIndex + 1;

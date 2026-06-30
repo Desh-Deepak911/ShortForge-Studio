@@ -294,3 +294,39 @@ export {
   subtitlesWithinWordCap,
   validateMappedSceneLineage,
 } from "./footie-script-materializer";
+
+export type {
+  PromptStudioAlignmentDiagnostics,
+  PromptStudioAlignmentInput,
+  PromptStudioAlignmentStatus,
+  PromptStudioModeProfile,
+} from "./prompt-studio-alignment";
+
+export {
+  PROMPT_STUDIO_MODE_PROFILES,
+  getPromptStudioModeProfile,
+  isPromptStudioAligned,
+  resolvePromptStructureArcForMode,
+  resolvePromptStudioAlignment,
+  resolveScriptModeForStudioStrategy,
+  resolveStudioStrategyForScriptMode,
+  topicSuggestsHeadToHeadComparison,
+} from "./prompt-studio-alignment";
+
+export type {
+  StoryCoherenceRuleId,
+  StoryCoherenceRuleResult,
+  StoryRepairCandidate,
+  StoryRepairSuggestion,
+  StoryValidationResult,
+  StoryValidatorContext,
+  StoryValidatorVersion,
+} from "./story-validator";
+
+export {
+  STORY_VALIDATOR_VERSION,
+  createEmptyStoryValidationResult,
+  evaluateAllStoryCoherenceRules,
+  isStoryCoherent,
+  validateStoryCoherence,
+} from "./story-validator";

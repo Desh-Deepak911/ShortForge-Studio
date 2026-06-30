@@ -18,6 +18,12 @@ import type {
 } from "./scene-blueprint.types";
 import type { StoryStrategy } from "./story-strategy/story-strategy.types";
 import { resolvePlannerStrategy } from "./story-strategy/planner-strategy.utils";
+import type { PlannerStrategyDiagnostics } from "./story-strategy/strategy-planning-diagnostics.utils";
+import {
+  isDefaultStoryStrategy,
+  recordStrategyDecision,
+  recordStrategyInfluence,
+} from "./story-strategy/strategy-planning-diagnostics.utils";
 import {
   calculateBlueprintCollectionStats,
   clampBlueprintConfidence,
@@ -31,6 +37,8 @@ import { clampSceneDurationMs, resolveSceneImportanceTier } from "./studio-intel
 
 const HIGH_IMPORTANCE_THRESHOLD = 0.65;
 const LOW_IMPORTANCE_THRESHOLD = 0.5;
+const RANKING_BEAT_PATTERN =
+  /\b(top\s+\d+|#\d+|\d+(?:st|nd|rd|th)\b|number\s+(one|two|three|four|five|\d+)|countdown|ranked|ranking|at number)\b/i;
 
 function sortBeats(beats: NarrativeBeat[]): NarrativeBeat[] {
   return [...beats].sort((left, right) => left.order - right.order);
@@ -86,10 +94,23 @@ function extractHighlightWords(text: string): string[] {
   return [...new Set(words)].slice(0, 3);
 }
 
-function resolveTargetSceneCount(arc: NarrativeArc): number {
+function resolveTargetSceneCount(arc: NarrativeArc, strategy?: StoryStrategy): number {
   const beatCount = arc.beats.length;
   if (beatCount === 0) {
     return 0;
+  }
+
+  if (strategy && !isDefaultStoryStrategy(strategy.id)) {
+    const densityTarget = Math.max(
+      strategy.sceneDensity.minScenesPerArc,
+      Math.min(strategy.sceneDensity.maxScenesPerArc, beatCount),
+    );
+
+    if (strategy.id === "countdown" && arc.type === "development") {
+      return Math.max(densityTarget, beatCount);
+    }
+
+    return Math.max(1, Math.min(densityTarget, beatCount));
   }
 
   return Math.max(1, Math.min(arc.suggestedSceneCount, beatCount));
@@ -99,9 +120,20 @@ function shouldStartNewBlueprintGroup(
   arc: NarrativeArc,
   beat: NarrativeBeat,
   currentGroup: NarrativeBeat[],
+  strategy?: StoryStrategy,
 ): boolean {
   if (currentGroup.length === 0) {
     return false;
+  }
+
+  if (strategy?.id === "debate" && (beat.type === "conflict" || beat.type === "counterpoint")) {
+    return !currentGroup.some(
+      (item) => item.type === "conflict" || item.type === "counterpoint" || item.type === "evidence",
+    );
+  }
+
+  if (strategy?.id === "countdown" && RANKING_BEAT_PATTERN.test(beat.text)) {
+    return true;
   }
 
   if (isHighImportanceBeat(beat)) {
@@ -237,18 +269,46 @@ function splitGroupsToTarget(groups: NarrativeBeat[][], targetCount: number): Na
   return result;
 }
 
-function groupBeatsForArc(arc: NarrativeArc): NarrativeBeat[][] {
+function splitRankingBeats(groups: NarrativeBeat[][]): NarrativeBeat[][] {
+  const result: NarrativeBeat[][] = [];
+
+  for (const group of groups) {
+    let buffer: NarrativeBeat[] = [];
+
+    for (const beat of group) {
+      if (RANKING_BEAT_PATTERN.test(beat.text)) {
+        if (buffer.length > 0) {
+          result.push(buffer);
+          buffer = [];
+        }
+
+        result.push([beat]);
+        continue;
+      }
+
+      buffer.push(beat);
+    }
+
+    if (buffer.length > 0) {
+      result.push(buffer);
+    }
+  }
+
+  return result;
+}
+
+function groupBeatsForArc(arc: NarrativeArc, strategy?: StoryStrategy): NarrativeBeat[][] {
   const beats = sortBeats(arc.beats);
   if (beats.length === 0) {
     return [];
   }
 
-  const targetCount = resolveTargetSceneCount(arc);
+  const targetCount = resolveTargetSceneCount(arc, strategy);
   const groups: NarrativeBeat[][] = [];
   let current: NarrativeBeat[] = [];
 
   for (const beat of beats) {
-    if (shouldStartNewBlueprintGroup(arc, beat, current)) {
+    if (shouldStartNewBlueprintGroup(arc, beat, current, strategy)) {
       groups.push(current);
       current = [];
     }
@@ -260,8 +320,18 @@ function groupBeatsForArc(arc: NarrativeArc): NarrativeBeat[][] {
     groups.push(current);
   }
 
-  let normalized = splitHighImportanceBeats(groups);
-  normalized = mergeAdjacentGroups(normalized, targetCount);
+  const isolateHighImportance = strategy?.sceneDensity.isolateHighImportanceBeats ?? true;
+  let normalized = isolateHighImportance ? splitHighImportanceBeats(groups) : groups;
+
+  if (strategy?.id === "countdown") {
+    normalized = splitRankingBeats(normalized);
+  }
+
+  const groupLowImportance = strategy?.sceneDensity.groupLowImportanceBeats ?? true;
+  if (groupLowImportance) {
+    normalized = mergeAdjacentGroups(normalized, targetCount);
+  }
+
   normalized = splitGroupsToTarget(normalized, targetCount);
 
   return normalized;
@@ -423,61 +493,99 @@ function createGroupedTimingBlueprint(beats: NarrativeBeat[], arc: NarrativeArc)
 }
 
 /** Creates a caption blueprint for a beat. */
-export function createCaptionBlueprintForBeat(beat: NarrativeBeat): CaptionBlueprint {
+export function createCaptionBlueprintForBeat(
+  beat: NarrativeBeat,
+  strategy?: StoryStrategy,
+): CaptionBlueprint {
   const highlightWords = extractHighlightWords(beat.text);
+  let caption: CaptionBlueprint;
 
   if (beat.type === "hook") {
-    return {
+    caption = {
       emphasis: "phrase",
       highlightWords,
       captionStyleHint: "bold_hook",
       reason: "Hook beat favors bold phrase emphasis.",
     };
-  }
-
-  if (beat.type === "evidence") {
-    return {
+  } else if (beat.type === "evidence") {
+    caption = {
       emphasis: "stat",
       highlightWords,
       captionStyleHint: "stat_highlight",
       reason: "Evidence beat favors stat emphasis.",
     };
-  }
-
-  if (beat.type === "conflict" || beat.type === "counterpoint" || beat.type === "reveal") {
-    return {
+  } else if (beat.type === "conflict" || beat.type === "counterpoint" || beat.type === "reveal") {
+    caption = {
       emphasis: "phrase",
       highlightWords,
       captionStyleHint: "debate",
       reason: "Conflict beat favors debate styling.",
     };
-  }
-
-  if (beat.type === "cta") {
-    return {
+  } else if (beat.type === "cta") {
+    caption = {
       emphasis: "phrase",
       highlightWords,
       captionStyleHint: "cta",
       reason: "CTA beat favors action styling.",
     };
+  } else {
+    caption = {
+      emphasis: highlightWords.length > 0 ? "word" : "none",
+      highlightWords,
+      captionStyleHint: "default",
+      reason: "Default caption planning for beat.",
+    };
   }
 
-  return {
-    emphasis: highlightWords.length > 0 ? "word" : "none",
-    highlightWords,
-    captionStyleHint: "default",
-    reason: "Default caption planning for beat.",
-  };
+  if (strategy && !isDefaultStoryStrategy(strategy.id)) {
+    return {
+      ...caption,
+      emphasis: strategy.captionBias.defaultEmphasis,
+      captionStyleHint: strategy.captionBias.styleHint,
+      highlightWords: strategy.captionBias.highlightStats ? highlightWords : caption.highlightWords,
+      reason: `${caption.reason} Strategy caption bias applied (${strategy.id}).`,
+    };
+  }
+
+  return caption;
 }
 
-function createGroupedCaptionBlueprint(beats: NarrativeBeat[]): CaptionBlueprint {
+function createGroupedCaptionBlueprint(
+  beats: NarrativeBeat[],
+  strategy?: StoryStrategy,
+): CaptionBlueprint {
   const primary = primaryBeat(beats);
-  const caption = createCaptionBlueprintForBeat(primary);
+  const caption = createCaptionBlueprintForBeat(primary, strategy);
 
   return {
     ...caption,
     highlightWords: [...new Set(beats.flatMap((beat) => extractHighlightWords(beat.text)))].slice(0, 4),
     reason: beats.length > 1 ? "Grouped caption derived from primary beat." : caption.reason,
+  };
+}
+
+function createDefaultMotionBlueprint(
+  importance: SceneImportanceScore,
+  strategy?: StoryStrategy,
+): MotionBlueprint {
+  const intensity = mapImportanceToMotionIntensity(importance);
+  const strategyIntensity =
+    strategy && !isDefaultStoryStrategy(strategy.id)
+      ? strategy.motionBias.defaultIntensity
+      : intensity;
+
+  const resolvedIntensity =
+    strategy?.motionBias.boostHighImportance && importance.tier === "high"
+      ? strategyIntensity === "low"
+        ? "medium"
+        : strategyIntensity
+      : strategyIntensity;
+
+  return {
+    suggestedMotion:
+      resolvedIntensity === "high" ? "push_in" : resolvedIntensity === "medium" ? "ken_burns" : "static",
+    intensity: resolvedIntensity,
+    reason: "Default motion derived from importance and strategy bias.",
   };
 }
 
@@ -518,24 +626,26 @@ function createDefaultAssetBlueprint(
   beat: NarrativeBeat,
   visual: VisualBlueprint,
   input?: StudioIntelligenceInput,
+  strategy?: StoryStrategy,
 ): AssetBlueprint {
+  const orientation =
+    strategy && !isDefaultStoryStrategy(strategy.id)
+      ? strategy.assetBias.preferredOrientation === "any"
+        ? visual.visualIntentType === "player_portrait"
+          ? "portrait"
+          : "landscape"
+        : strategy.assetBias.preferredOrientation
+      : visual.visualIntentType === "player_portrait"
+        ? "portrait"
+        : "landscape";
+
   return {
     assetRequirementType: mapVisualIntentToAssetRequirement(visual.visualIntentType),
     searchQuery: normalizeAssetSearchQuery(beat.text || input?.topic || ""),
     fallbackQuery: normalizeAssetSearchQuery(beat.purpose ?? beat.label ?? input?.topic),
-    preferredOrientation: visual.visualIntentType === "player_portrait" ? "portrait" : "landscape",
+    preferredOrientation: orientation,
     imageCount: 1,
     reason: "Default asset plan until asset intelligence runs.",
-  };
-}
-
-function createDefaultMotionBlueprint(importance: SceneImportanceScore): MotionBlueprint {
-  const intensity = mapImportanceToMotionIntensity(importance);
-
-  return {
-    suggestedMotion: intensity === "high" ? "push_in" : intensity === "medium" ? "ken_burns" : "static",
-    intensity,
-    reason: "Default motion derived from importance.",
   };
 }
 
@@ -570,6 +680,7 @@ function buildBlueprintFromBeatGroup(
   beats: NarrativeBeat[],
   order: number,
   input?: StudioIntelligenceInput,
+  strategy?: StoryStrategy,
 ): SceneBlueprint {
   const primary = primaryBeat(beats);
   const role = chooseSceneBlueprintRole(arc, primary, primary.order);
@@ -581,11 +692,11 @@ function buildBlueprintFromBeatGroup(
       : createGroupedTimingBlueprint(beats, arc);
   const caption =
     beats.length === 1
-      ? createCaptionBlueprintForBeat(primary)
-      : createGroupedCaptionBlueprint(beats);
+      ? createCaptionBlueprintForBeat(primary, strategy)
+      : createGroupedCaptionBlueprint(beats, strategy);
   const visual = createDefaultVisualBlueprint(primary, arc, kind);
-  const asset = createDefaultAssetBlueprint(primary, visual, input);
-  const motion = createDefaultMotionBlueprint(importance);
+  const asset = createDefaultAssetBlueprint(primary, visual, input, strategy);
+  const motion = createDefaultMotionBlueprint(importance, strategy);
 
   return {
     id: createSceneBlueprintId(order),
@@ -612,10 +723,12 @@ export function planScenesForArc(
   input?: StudioIntelligenceInput,
   strategy?: StoryStrategy,
 ): SceneBlueprint[] {
-  void resolvePlannerStrategy(input, strategy);
-  const beatGroups = groupBeatsForArc(arc);
+  const resolvedStrategy = resolvePlannerStrategy(input, strategy);
+  const beatGroups = groupBeatsForArc(arc, resolvedStrategy);
 
-  return beatGroups.map((beats, index) => buildBlueprintFromBeatGroup(arc, beats, index, input));
+  return beatGroups.map((beats, index) =>
+    buildBlueprintFromBeatGroup(arc, beats, index, input, resolvedStrategy),
+  );
 }
 
 /** Plans scene blueprints from narrative arcs. */
@@ -623,14 +736,31 @@ export function planSceneBlueprintsFromArcs(
   arcs: NarrativeArc[],
   input?: StudioIntelligenceInput,
   strategy?: StoryStrategy,
+  diagnostics?: PlannerStrategyDiagnostics,
 ): SceneBlueprintCollection {
-  void resolvePlannerStrategy(input, strategy);
+  const resolvedStrategy = resolvePlannerStrategy(input, strategy);
+
+  if (diagnostics && !isDefaultStoryStrategy(resolvedStrategy.id)) {
+    recordStrategyInfluence(diagnostics, "sceneDensity.isolateHighImportanceBeats");
+    recordStrategyInfluence(diagnostics, "sceneDensity.groupLowImportanceBeats");
+    recordStrategyInfluence(diagnostics, "preferredStructure");
+    recordStrategyInfluence(diagnostics, "captionBias");
+    recordStrategyInfluence(diagnostics, "motionBias");
+    recordStrategyDecision(
+      diagnostics,
+      `Scene density ${resolvedStrategy.sceneDensity.minScenesPerArc}-${resolvedStrategy.sceneDensity.maxScenesPerArc} with structure ${resolvedStrategy.preferredStructure}.`,
+    );
+    if (resolvedStrategy.plannerHints.length > 0) {
+      recordStrategyDecision(diagnostics, resolvedStrategy.plannerHints[0] ?? "Strategy planner hint applied.");
+    }
+  }
+
   if (arcs.length === 0) {
     return createEmptySceneBlueprintCollection();
   }
 
   const orderedArcs = [...arcs].sort((left, right) => left.startBeatIndex - right.startBeatIndex);
-  const blueprints = orderedArcs.flatMap((arc) => planScenesForArc(arc, input, strategy));
+  const blueprints = orderedArcs.flatMap((arc) => planScenesForArc(arc, input, resolvedStrategy));
   const stats = calculateBlueprintCollectionStats(blueprints);
 
   return {

@@ -3,6 +3,7 @@ import type { BlueprintMappedScene } from "../blueprint-adapter/blueprint-adapte
 import type {
   BlueprintSceneMediaHints,
   BlueprintSceneMotionHints,
+  BlueprintSceneSemanticMetadata,
   BlueprintSceneVisualHints,
 } from "../blueprint-adapter/blueprint-adapter.types";
 import type { VisualIntentType } from "../studio-intelligence.types";
@@ -26,7 +27,7 @@ export interface MaterializedSceneLineage {
 }
 
 /** Planning hints retained as metadata — not written to persisted FootieScript fields in v1. */
-export interface MaterializedScenePlanningMetadata {
+export interface MaterializedScenePlanningMetadata extends BlueprintSceneSemanticMetadata {
   visualIntentType: VisualIntentType;
   visualHints: BlueprintSceneVisualHints;
   mediaHints: BlueprintSceneMediaHints;

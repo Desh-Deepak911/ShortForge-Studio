@@ -12,6 +12,7 @@ export type {
   BlueprintSceneMotionHints,
   BlueprintSceneNarrationMetadata,
   BlueprintSceneNarrationStrategy,
+  BlueprintSceneSemanticMetadata,
   BlueprintSceneTimingMetadata,
   BlueprintSceneVisualHints,
   NarrationSlicingStrategy,
@@ -44,6 +45,14 @@ export {
   sliceNarrationFromBlueprintSummary,
   sliceNarrationProportionally,
 } from "./blueprint-adapter-enrichment.utils";
+
+export {
+  isCollapsedSemanticKind,
+  resolveBlueprintSemanticMetadata,
+  resolveContentPattern,
+  sceneHasPreservedTemplateSemantics,
+  visualIntentSupportsContentPattern,
+} from "./blueprint-adapter-semantics.utils";
 
 export {
   collectBlueprintMapperWarnings,

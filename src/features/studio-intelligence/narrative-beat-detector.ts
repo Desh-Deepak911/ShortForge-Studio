@@ -11,6 +11,12 @@ import type {
 } from "./studio-intelligence.types";
 import type { StoryStrategy } from "./story-strategy/story-strategy.types";
 import { resolvePlannerStrategy } from "./story-strategy/planner-strategy.utils";
+import type { PlannerStrategyDiagnostics } from "./story-strategy/strategy-planning-diagnostics.utils";
+import {
+  isDefaultStoryStrategy,
+  recordStrategyDecision,
+  recordStrategyInfluence,
+} from "./story-strategy/strategy-planning-diagnostics.utils";
 import {
   clampSceneDurationMs,
   estimateReadingTimeMs,
@@ -84,7 +90,19 @@ function isEarlyBeat(index: number, total: number): boolean {
   return index / Math.max(1, total - 1) <= 0.35;
 }
 
-function resolveTimingWeight(type: NarrativeBeatType): number {
+function resolveHookWindow(strategy?: StoryStrategy): number {
+  return strategy?.hookStrategy.maxOpeningBeats ?? HOOK_WINDOW;
+}
+
+function resolveTimingWeight(type: NarrativeBeatType, strategy?: StoryStrategy): number {
+  if (
+    strategy &&
+    !isDefaultStoryStrategy(strategy.id) &&
+    type === "hook"
+  ) {
+    return strategy.hookStrategy.timingWeight;
+  }
+
   switch (type) {
     case "hook":
       return DEFAULT_TIMING_WEIGHTS.hook;
@@ -118,9 +136,13 @@ function resolveTimingWeight(type: NarrativeBeatType): number {
   }
 }
 
-function buildTimingSuggestion(sentence: string, type: NarrativeBeatType): TimingSuggestion {
+function buildTimingSuggestion(
+  sentence: string,
+  type: NarrativeBeatType,
+  strategy?: StoryStrategy,
+): TimingSuggestion {
   const durationMs = clampSceneDurationMs(estimateReadingTimeMs(sentence));
-  const weight = resolveTimingWeight(type);
+  const weight = resolveTimingWeight(type, strategy);
 
   return {
     durationMs,
@@ -216,6 +238,7 @@ export function classifySentenceBeat(
   sentence: string,
   index: number,
   total: number,
+  strategy?: StoryStrategy,
 ): NarrativeBeatType {
   const normalized = sentence.trim();
   if (!normalized) {
@@ -223,6 +246,18 @@ export function classifySentenceBeat(
   }
 
   const lower = normalized.toLowerCase();
+  const hookWindow = resolveHookWindow(strategy);
+  const emphasis = strategy?.hookStrategy.emphasis;
+
+  if (strategy?.id === "debate" && index === 0) {
+    if (/\?/.test(normalized) || DEBATE_PATTERN.test(lower)) {
+      return emphasis === "stakes" ? "conflict" : "hook";
+    }
+  }
+
+  if (emphasis === "question" && index < hookWindow && /\?/.test(normalized)) {
+    return "hook";
+  }
 
   if (CTA_PATTERN.test(lower)) {
     return "cta";
@@ -262,10 +297,18 @@ export function classifySentenceBeat(
     CTA_PATTERN.test(lower);
 
   if (
-    index < HOOK_WINDOW &&
+    index < hookWindow &&
     !hasSpecializedBeatSignal &&
     (index === 0 || isPunchySentence(normalized) || HOOK_PATTERN.test(lower) || /\?$/.test(normalized))
   ) {
+    return "hook";
+  }
+
+  if (emphasis === "cold_open" && index === 0 && !hasSpecializedBeatSignal) {
+    return isPunchySentence(normalized) || HOOK_PATTERN.test(lower) ? "hook" : "context";
+  }
+
+  if (emphasis === "stakes" && index === 0 && CONFLICT_PATTERN.test(lower)) {
     return "hook";
   }
 
@@ -309,7 +352,10 @@ export function classifySentenceBeat(
 }
 
 /** Scores beat importance from type, order, and sentence characteristics. */
-export function scoreBeatImportance(beat: NarrativeBeat): SceneImportanceScore {
+export function scoreBeatImportance(
+  beat: NarrativeBeat,
+  strategy?: StoryStrategy,
+): SceneImportanceScore {
   let value = 0.45;
   const rationales: string[] = [];
 
@@ -360,6 +406,36 @@ export function scoreBeatImportance(beat: NarrativeBeat): SceneImportanceScore {
     value += 0.03;
   }
 
+  if (strategy && !isDefaultStoryStrategy(strategy.id)) {
+    if (strategy.id === "countdown" && beat.type === "evidence") {
+      value += 0.06;
+      rationales.push("Countdown strategy boosts ranked evidence beats.");
+    }
+
+    if (strategy.id === "debate" && (beat.type === "conflict" || beat.type === "counterpoint")) {
+      value += 0.05;
+      rationales.push("Debate strategy boosts tension beats.");
+    }
+
+    if (
+      strategy.id === "biography" &&
+      (beat.type === "turning_point" || beat.type === "reveal" || beat.type === "climax")
+    ) {
+      value += 0.05;
+      rationales.push("Biography strategy boosts rise/peak beats.");
+    }
+
+    if (strategy.id === "history" && (beat.type === "turning_point" || beat.type === "context")) {
+      value += 0.04;
+      rationales.push("History strategy boosts context and turning-point beats.");
+    }
+
+    if (strategy.id === "tactical_analysis" && beat.type === "evidence") {
+      value += 0.05;
+      rationales.push("Tactical strategy boosts evidence beats.");
+    }
+  }
+
   const clamped = Math.min(1, Math.max(0, value));
   const tier = resolveSceneImportanceTier(clamped);
 
@@ -378,8 +454,20 @@ function createBeatId(order: number): string {
 export function detectNarrativeBeats(
   input: StudioIntelligenceInput,
   strategy?: StoryStrategy,
+  diagnostics?: PlannerStrategyDiagnostics,
 ): NarrativeBeat[] {
-  void resolvePlannerStrategy(input, strategy);
+  const resolvedStrategy = resolvePlannerStrategy(input, strategy);
+
+  if (diagnostics && !isDefaultStoryStrategy(resolvedStrategy.id)) {
+    recordStrategyInfluence(diagnostics, "hookStrategy.emphasis");
+    recordStrategyInfluence(diagnostics, "hookStrategy.maxOpeningBeats");
+    recordStrategyInfluence(diagnostics, "hookStrategy.timingWeight");
+    recordStrategyDecision(
+      diagnostics,
+      `Hook emphasis ${resolvedStrategy.hookStrategy.emphasis} with max ${resolvedStrategy.hookStrategy.maxOpeningBeats} opening beats.`,
+    );
+  }
+
   const narration = normalizeNarrationText(input.narration);
   const sentences = splitNarrationIntoSentences(narration);
 
@@ -388,14 +476,14 @@ export function detectNarrativeBeats(
   }
 
   return sentences.map((sentence, index) => {
-    const type = classifySentenceBeat(sentence, index, sentences.length);
+    const type = classifySentenceBeat(sentence, index, sentences.length, resolvedStrategy);
     const draftBeat: NarrativeBeat = {
       id: createBeatId(index),
       type,
       label: NARRATIVE_BEAT_TYPE_LABELS[type],
       text: sentence,
       order: index,
-      timing: buildTimingSuggestion(sentence, type),
+      timing: buildTimingSuggestion(sentence, type, resolvedStrategy),
       importance: { value: 0.5, tier: "medium" },
       emotion: inferBeatEmotion(sentence),
       purpose: inferBeatPurpose(sentence),
@@ -403,7 +491,7 @@ export function detectNarrativeBeats(
 
     return {
       ...draftBeat,
-      importance: scoreBeatImportance(draftBeat),
+      importance: scoreBeatImportance(draftBeat, resolvedStrategy),
     };
   });
 }

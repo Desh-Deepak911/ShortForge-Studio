@@ -41,6 +41,14 @@ function stripStrategyFields<T extends Record<string, unknown>>(value: T): T {
 
   if (clone.diagnostics && typeof clone.diagnostics === "object") {
     delete (clone.diagnostics as Record<string, unknown>).strategyHandoffTrace;
+    delete (clone.diagnostics as Record<string, unknown>).strategyInfluenceApplied;
+    delete (clone.diagnostics as Record<string, unknown>).strategyDecisions;
+    delete (clone.diagnostics as Record<string, unknown>).fallbackReasons;
+    delete (clone.diagnostics as Record<string, unknown>).strategyApplicationScore;
+    delete (clone.diagnostics as Record<string, unknown>).modeTemplateApplied;
+    delete (clone.diagnostics as Record<string, unknown>).modeTemplateId;
+    delete (clone.diagnostics as Record<string, unknown>).templateSlotsMatched;
+    delete (clone.diagnostics as Record<string, unknown>).templateFallbacks;
   }
 
   return clone;

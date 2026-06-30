@@ -283,6 +283,11 @@ const MODE_STORY_STRUCTURE: Record<ScriptMode, StoryStructureDefinition> = {
   story: STORY_MODE_STRUCTURE,
 };
 
+/**
+ * Per-mode Prompt Intelligence story structures.
+ * Cross-layer ScriptMode ↔ StoryStrategy ↔ ModeTemplate alignment lives in
+ * `@/features/studio-intelligence/prompt-studio-alignment`.
+ */
 export function resolveStoryStructureForMode(mode: ScriptMode): StoryStructureDefinition {
   return MODE_STORY_STRUCTURE[mode];
 }

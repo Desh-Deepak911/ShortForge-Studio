@@ -8,8 +8,16 @@ import {
   resolveScriptModeFromStrategy,
   resolveStructureLabelFromStrategy,
 } from "./story-strategy/planner-strategy.utils";
+import {
+  computeStrategyApplicationScore,
+  createEmptyStrategyPlanningDiagnostics,
+  flattenStrategyDecisions,
+  flattenStrategyFallbackReasons,
+  flattenStrategyInfluenceApplied,
+} from "./story-strategy/strategy-planning-diagnostics.utils";
 import type { StoryStrategy, StoryStrategyId } from "./story-strategy/story-strategy.types";
 import { resolveStoryStrategy } from "./story-strategy/story-strategy.utils";
+import { DEFAULT_STORY_STRATEGY_ID } from "./story-strategy/story-strategy.constants";
 import type {
   NarrativeArc,
   NarrativeBeat,
@@ -24,6 +32,9 @@ import {
   createEmptyStudioIntelligenceResult,
   normalizeNarrationText,
 } from "./studio-intelligence.utils";
+import { applyModeTemplateToBlueprints } from "./mode-templates";
+import type { ModeTemplateApplicationDiagnostics } from "./mode-templates/mode-template.types";
+import { validateStoryCoherence, createEmptyStoryValidationResult } from "./story-validator";
 import { enrichBlueprintsWithVisuals } from "./visual-planner";
 
 export const STUDIO_INTELLIGENCE_PLANNER_STEPS = [
@@ -34,6 +45,8 @@ export const STUDIO_INTELLIGENCE_PLANNER_STEPS = [
   "scene_planner",
   "visual_planner",
   "dynamic_timing_planner",
+  "mode_template_normalization",
+  "story_coherence_validation",
 ] as const;
 
 function cloneInput(input: StudioIntelligenceInput): StudioIntelligenceInput {
@@ -206,7 +219,11 @@ function buildDiagnostics(
   unsupportedPatterns: string[],
   executionTimeEstimateMs: number,
   strategyHandoffTrace: readonly StoryStrategyId[],
+  strategyPlanning = createEmptyStrategyPlanningDiagnostics(DEFAULT_STORY_STRATEGY_ID),
+  modeTemplateDiagnostics?: ModeTemplateApplicationDiagnostics,
 ): StudioIntelligenceDiagnostics {
+  const strategyApplicationScore = computeStrategyApplicationScore(strategyPlanning);
+
   return {
     warnings,
     plannerStepsExecuted: steps,
@@ -214,6 +231,14 @@ function buildDiagnostics(
     executionTimeEstimateMs,
     unsupportedPatterns,
     strategyHandoffTrace,
+    strategyInfluenceApplied: flattenStrategyInfluenceApplied(strategyPlanning),
+    strategyDecisions: flattenStrategyDecisions(strategyPlanning),
+    fallbackReasons: flattenStrategyFallbackReasons(strategyPlanning),
+    strategyApplicationScore,
+    modeTemplateApplied: modeTemplateDiagnostics?.modeTemplateApplied,
+    modeTemplateId: modeTemplateDiagnostics?.modeTemplateId,
+    templateSlotsMatched: modeTemplateDiagnostics?.templateSlotsMatched,
+    templateFallbacks: modeTemplateDiagnostics?.templateFallbacks,
   };
 }
 
@@ -251,6 +276,7 @@ export function runStudioIntelligence(input: StudioIntelligenceInput): StudioInt
       originalInput,
       normalizedNarration,
       structure: createStructurePlanFromStrategy(normalizedInput, resolvedStrategy),
+      storyValidation: createEmptyStoryValidationResult(resolvedStrategy.id),
       diagnostics: buildDiagnostics(
         steps,
         ["Empty narration provided; planners skipped after normalization."],
@@ -263,24 +289,54 @@ export function runStudioIntelligence(input: StudioIntelligenceInput): StudioInt
   }
 
   steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[2]);
-  const beats = detectNarrativeBeats(normalizedInput, resolvedStrategy);
+  const strategyPlanning = createEmptyStrategyPlanningDiagnostics(resolvedStrategy.id);
+  const beats = detectNarrativeBeats(
+    normalizedInput,
+    resolvedStrategy,
+    strategyPlanning.beatDetector,
+  );
   strategyHandoffTrace.push(resolvedStrategy.id);
 
   steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[3]);
-  const arcs = buildNarrativeArcs(beats, resolvedStrategy);
+  const arcs = buildNarrativeArcs(beats, resolvedStrategy, strategyPlanning.arcBuilder);
   strategyHandoffTrace.push(resolvedStrategy.id);
 
   steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[4]);
-  const plannedCollection = planSceneBlueprintsFromArcs(arcs, normalizedInput, resolvedStrategy);
+  const plannedCollection = planSceneBlueprintsFromArcs(
+    arcs,
+    normalizedInput,
+    resolvedStrategy,
+    strategyPlanning.scenePlanner,
+  );
   strategyHandoffTrace.push(resolvedStrategy.id);
 
   steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[5]);
-  const visualCollection = enrichBlueprintsWithVisuals(plannedCollection, normalizedInput, resolvedStrategy);
+  const visualCollection = enrichBlueprintsWithVisuals(
+    plannedCollection,
+    normalizedInput,
+    resolvedStrategy,
+    strategyPlanning.visualPlanner,
+  );
   strategyHandoffTrace.push(resolvedStrategy.id);
 
   steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[6]);
-  const sceneBlueprintCollection = applyDynamicTiming(visualCollection, normalizedInput, resolvedStrategy);
+  const timedCollection = applyDynamicTiming(
+    visualCollection,
+    normalizedInput,
+    resolvedStrategy,
+    strategyPlanning.dynamicTiming,
+  );
   strategyHandoffTrace.push(resolvedStrategy.id);
+  strategyPlanning.strategyApplicationScore = computeStrategyApplicationScore(strategyPlanning);
+
+  steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[7]);
+  const modeTemplateResult = applyModeTemplateToBlueprints(
+    timedCollection,
+    resolvedStrategy,
+    normalizedInput,
+  );
+  const sceneBlueprintCollection = modeTemplateResult.collection;
+  const modeTemplateDiagnostics = modeTemplateResult.diagnostics;
 
   const base = createEmptyStudioIntelligenceResult(normalizedInput, resolvedStrategy);
   const warnings: string[] = [];
@@ -311,6 +367,8 @@ export function runStudioIntelligence(input: StudioIntelligenceInput): StudioInt
       unsupportedPatterns,
       Date.now() - startedAt,
       strategyHandoffTrace,
+      strategyPlanning,
+      modeTemplateDiagnostics,
     ),
     summary: {
       storyStructure: base.structure.arcLabel,
@@ -318,11 +376,23 @@ export function runStudioIntelligence(input: StudioIntelligenceInput): StudioInt
       estimatedDurationMs: 0,
       recommendedStoryMode: resolveScriptModeFromStrategy(resolvedStrategy),
     },
+    storyValidation: createEmptyStoryValidationResult(resolvedStrategy.id),
   };
+
+  steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[8]);
+  const storyValidation = validateStoryCoherence({
+    ...partialResult,
+    summary: buildSummary(partialResult),
+  });
 
   return {
     ...partialResult,
     summary: buildSummary(partialResult),
+    diagnostics: {
+      ...partialResult.diagnostics,
+      plannerStepsExecuted: steps,
+    },
+    storyValidation,
   };
 }
 

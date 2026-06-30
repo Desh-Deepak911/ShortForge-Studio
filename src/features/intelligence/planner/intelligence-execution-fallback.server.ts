@@ -23,6 +23,8 @@ export function buildEmptyAssembledContext(input: {
       intent: "story",
       confidence: "low",
       confidencePercent: 0,
+      confidenceScore: 0,
+      matchedPatterns: [],
       reasoning: "Research unavailable.",
       topic: {
         competitionWords: [],

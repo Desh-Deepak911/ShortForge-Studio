@@ -1,105 +1,75 @@
-import type {
-  Intent,
-  IntentAnalysis,
-  IntentConfidence,
-  IntentPatternRule,
-  IntentScore,
-  SubIntent,
-  SubIntentScore,
-  TopicParseResult,
-} from "./intent-types";
+export {
+  combineIntentText,
+  emptyTopicAnalysis,
+  emptyTopicParseResult,
+  formatIntentLabel,
+  formatSubIntentLabel,
+  isMatchTopic,
+  normalizeIntentTopic,
+  splitMatchTopic,
+} from "@/features/intent-engine";
 
-const MATCH_TOPIC_PATTERN = /\s+vs\.?\s+|\s+v\.?\s+/i;
-
-const PAST_MATCH_SIGNALS: RegExp[] = [
-  /\brecap\b/i,
-  /\bhighlights\b/i,
-  /\bfull[- ]time\b/i,
-  /\bft\b/i,
-  /\blast night\b/i,
-  /\byesterday\b/i,
-  /\bresult\b/i,
-  /\bbeat\b/i,
-  /\bdefeated\b/i,
-  /\bwon \d/i,
-  /\bdrew \d/i,
-  /\blost \d/i,
-  /\b\d-\d\b/,
-];
-
-const FUTURE_MATCH_SIGNALS: RegExp[] = [
-  /\bpreview\b/i,
-  /\bbuild[- ]up\b/i,
-  /\bbefore kick[- ]?off\b/i,
-  /\bahead of\b/i,
-  /\bupcoming\b/i,
-  /\bthis weekend\b/i,
-  /\btonight\b/i,
-  /\btomorrow\b/i,
-  /\bwho will win\b/i,
-];
-
-export function normalizeIntentTopic(topic: string): string {
-  return topic.trim().replace(/\s+/g, " ");
-}
-
-export function combineIntentText(topic: string, context?: string): string {
-  const normalizedTopic = normalizeIntentTopic(topic);
-  const normalizedContext = context?.trim().replace(/\s+/g, " ") ?? "";
-
-  if (!normalizedContext) {
-    return normalizedTopic;
-  }
-
-  if (!normalizedTopic) {
-    return normalizedContext;
-  }
-
-  return `${normalizedTopic} ${normalizedContext}`;
-}
-
-export function isMatchTopic(text: string): boolean {
-  return MATCH_TOPIC_PATTERN.test(text);
-}
-
-export function splitMatchTopic(topic: string): string[] {
-  return topic
-    .split(/\s+vs\.?\s+|\s+v\.?\s+/i)
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
+/** @deprecated Use intent-engine weighted scoring — kept for backward compatibility. */
 export function hasPastMatchSignals(text: string): boolean {
-  return PAST_MATCH_SIGNALS.some((pattern) => pattern.test(text));
+  return (
+    /\brecap\b/i.test(text) ||
+    /\bhighlights\b/i.test(text) ||
+    /\bfull[- ]time\b/i.test(text) ||
+    /\bft\b/i.test(text) ||
+    /\blast night\b/i.test(text) ||
+    /\byesterday\b/i.test(text) ||
+    /\bresult\b/i.test(text) ||
+    /\bbeat\b/i.test(text) ||
+    /\bdefeated\b/i.test(text) ||
+    /\bwon \d/i.test(text) ||
+    /\bdrew \d/i.test(text) ||
+    /\blost \d/i.test(text) ||
+    /\b\d-\d\b/.test(text)
+  );
 }
 
+/** @deprecated Use intent-engine weighted scoring — kept for backward compatibility. */
 export function hasFutureMatchSignals(text: string): boolean {
-  return FUTURE_MATCH_SIGNALS.some((pattern) => pattern.test(text));
+  return (
+    /\bpreview\b/i.test(text) ||
+    /\bbuild[- ]up\b/i.test(text) ||
+    /\bbefore kick[- ]?off\b/i.test(text) ||
+    /\bahead of\b/i.test(text) ||
+    /\bupcoming\b/i.test(text) ||
+    /\bthis weekend\b/i.test(text) ||
+    /\btonight\b/i.test(text) ||
+    /\btomorrow\b/i.test(text) ||
+    /\bwho will win\b/i.test(text)
+  );
 }
 
-export function scorePatternRules(text: string, rules: IntentPatternRule[]): IntentScore[] {
-  const scores = new Map<Intent, IntentScore>();
+/** @deprecated Use intent-engine weighted scoring — kept for backward compatibility. */
+export function scorePatternRules(
+  text: string,
+  rules: { id: string; weight: number; pattern: RegExp; label: string }[],
+) {
+  const scores = new Map<string, { intent: string; score: number; signals: string[] }>();
 
   for (const rule of rules) {
     if (!rule.pattern.test(text)) {
       continue;
     }
 
-    const intent = rule.id as Intent;
-    const existing = scores.get(intent) ?? { intent, score: 0, signals: [] };
+    const existing = scores.get(rule.id) ?? { intent: rule.id, score: 0, signals: [] };
     existing.score += rule.weight;
     existing.signals.push(rule.label);
-    scores.set(intent, existing);
+    scores.set(rule.id, existing);
   }
 
   return [...scores.values()].sort((a, b) => b.score - a.score);
 }
 
+/** @deprecated Use intent-engine weighted scoring — kept for backward compatibility. */
 export function scoreSubIntentRules(
   text: string,
-  rules: { subIntent: SubIntent; weight: number; pattern: RegExp; label: string }[],
-): SubIntentScore[] {
-  const scores = new Map<SubIntent, SubIntentScore>();
+  rules: { subIntent: string; weight: number; pattern: RegExp; label: string }[],
+) {
+  const scores = new Map<string, { subIntent: string; score: number; signals: string[] }>();
 
   for (const rule of rules) {
     if (!rule.pattern.test(text)) {
@@ -119,31 +89,33 @@ export function scoreSubIntentRules(
   return [...scores.values()].sort((a, b) => b.score - a.score);
 }
 
+/** @deprecated Use intent-engine confidence scoring — kept for backward compatibility. */
 export function resolveIntentConfidence(
-  top: IntentScore | undefined,
-  runnerUp: IntentScore | undefined,
-): IntentConfidence {
+  top: { score: number } | undefined,
+  runnerUp: { score: number } | undefined,
+) {
   if (!top || top.score <= 0) {
-    return "low";
+    return "low" as const;
   }
 
   const gap = runnerUp ? top.score - runnerUp.score : top.score;
 
   if (top.score >= 4 && gap >= 2) {
-    return "high";
+    return "high" as const;
   }
 
   if (top.score >= 2 && gap >= 1) {
-    return "medium";
+    return "medium" as const;
   }
 
-  return "low";
+  return "low" as const;
 }
 
+/** @deprecated Use intent-engine confidence scoring — kept for backward compatibility. */
 export function resolveConfidencePercent(
-  primary: IntentScore,
-  runnerUp: IntentScore | undefined,
-  confidence: IntentConfidence,
+  primary: { score: number },
+  runnerUp: { score: number } | undefined,
+  confidence: "high" | "medium" | "low",
 ): number {
   if (primary.score <= 0) {
     return 0;
@@ -164,54 +136,17 @@ export function resolveConfidencePercent(
   return Math.min(67, Math.max(38, capped));
 }
 
+/** @deprecated Use intent-engine reasoning builder — kept for backward compatibility. */
 export function buildReasoning(
-  intentScore: IntentScore,
-  subIntentScore: SubIntentScore | undefined,
-  confidence: IntentConfidence,
+  intentScore: { intent: string; score: number; signals: string[] },
+  subIntentScore: { subIntent: string; signals: string[] } | undefined,
+  confidence: "high" | "medium" | "low",
 ): string {
-  const intentPart = `Primary intent "${formatIntentLabel(intentScore.intent)}" from: ${intentScore.signals.join(", ")}.`;
+  const intentPart = `Primary intent "${intentScore.intent}" from: ${intentScore.signals.join(", ")}.`;
   const subPart = subIntentScore
-    ? ` Sub-intent "${formatSubIntentLabel(subIntentScore.subIntent)}" from: ${subIntentScore.signals.join(", ")}.`
+    ? ` Sub-intent "${subIntentScore.subIntent}" from: ${subIntentScore.signals.join(", ")}.`
     : "";
   const confidencePart = ` Confidence is ${confidence} (score ${intentScore.score}).`;
 
   return `${intentPart}${subPart}${confidencePart}`.trim();
-}
-
-export function formatIntentLabel(intent: Intent): string {
-  return intent
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-export function formatSubIntentLabel(subIntent: SubIntent): string {
-  return subIntent
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-export function emptyTopicParseResult(normalizedText = ""): TopicParseResult {
-  return {
-    competitionWords: [],
-    rankingWords: [],
-    playerKeywords: [],
-    matchKeywords: [],
-    predictionKeywords: [],
-    historyKeywords: [],
-    comparisonKeywords: [],
-    normalizedText,
-  };
-}
-
-export function emptyTopicAnalysis(): IntentAnalysis {
-  return {
-    intent: "story",
-    confidence: "low",
-    confidencePercent: 0,
-    reasoning:
-      'No topic provided — defaulting to Story with low confidence. Add a brief to improve intent detection.',
-    topic: emptyTopicParseResult(),
-  };
 }

@@ -113,6 +113,17 @@ export interface BlueprintAdapterInput {
   intelligenceRunId?: string;
 }
 
+/** Semantic metadata preserved from mode templates through adapter mapping. */
+export interface BlueprintSceneSemanticMetadata {
+  semanticSlotId: string;
+  semanticSlotLabel: string;
+  semanticRole: string;
+  templateId: StoryStrategyId;
+  templateApplied: boolean;
+  contentPattern: string;
+  planningTags: readonly string[];
+}
+
 /**
  * Intermediate mapped scene plan — adapter output contract before FootieScript materialization.
  * Defined without FootieScript imports; 3.4B+ will map this shape to production scene types.
@@ -144,6 +155,14 @@ export interface BlueprintMappedScene {
   captionHints: BlueprintSceneCaptionHints;
   timingMetadata: BlueprintSceneTimingMetadata;
   narrationMetadata: BlueprintSceneNarrationMetadata;
+  /** Mode-template semantic slot metadata carried through mapping. */
+  semanticSlotId: string;
+  semanticSlotLabel: string;
+  semanticRole: string;
+  templateId: StoryStrategyId;
+  templateApplied: boolean;
+  contentPattern: string;
+  planningTags: readonly string[];
   /** Normalized mapping confidence in `[0, 1]`. */
   confidence: number;
   mappingDecisions: readonly SceneMappingDecision[];
@@ -187,6 +206,12 @@ export interface BlueprintAdapterDiagnostics {
   lowConfidenceSceneIds: readonly string[];
   /** Warning counts grouped by warning code. */
   warningCountsByType: Readonly<Partial<Record<string, number>>>;
+  /** Ratio of mapped scenes with semantic slot metadata in `[0, 1]`. */
+  semanticCoverage?: number;
+  /** Rich blueprint kinds mapped to generic production scene types. */
+  collapsedSemanticKinds?: readonly string[];
+  /** Count of scenes preserving mode-template slot semantics. */
+  modeTemplateSemanticsPreserved?: number;
 }
 
 /** Aggregate statistics for a blueprint adapter pass. */

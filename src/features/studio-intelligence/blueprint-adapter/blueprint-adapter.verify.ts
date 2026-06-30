@@ -111,6 +111,13 @@ test("BlueprintMappedScene and SceneMappingDecision compile as contract shapes",
       slicingStrategy: "blueprint_summary",
       narrationConfidence: 0.95,
     },
+    semanticSlotId: "hook",
+    semanticSlotLabel: "Hook",
+    semanticRole: "Hook",
+    templateId: "default",
+    templateApplied: false,
+    contentPattern: "hook_scene",
+    planningTags: ["template:default", "slot:hook", "pattern:hook_scene"],
     mappingDecisions: [decision],
   };
 
@@ -181,7 +188,7 @@ test("createBlueprintAdapterWarning builds structured warnings", () => {
 });
 
 test("architecture phase exposes adapter contract utilities", () => {
-  assert.equal(BLUEPRINT_ADAPTER_VERSION, "0.3.0");
+  assert.equal(BLUEPRINT_ADAPTER_VERSION, "0.4.0");
   assert.equal(typeof createEmptyBlueprintAdapterResult, "function");
   assert.equal(typeof isValidBlueprintAdapterResult, "function");
 });

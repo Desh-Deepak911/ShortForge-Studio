@@ -10,6 +10,7 @@ import {
   resolveSupportedStoryStructure,
 } from "./studio-intelligence.constants";
 import { createEmptySceneBlueprintCollection } from "./scene-blueprint.utils";
+import { createEmptyStoryValidationResult } from "./story-validator";
 import {
   resolveScriptModeFromStrategy,
   resolveStructureLabelFromStrategy,
@@ -179,6 +180,7 @@ export function createEmptyStudioIntelligenceResult(
     strategyId: resolvedStrategy.id,
     plannerConfigurationVersion: STORY_STRATEGY_VERSION,
     scenePlans: [],
+    storyValidation: createEmptyStoryValidationResult(resolvedStrategy.id),
     generatedAt: new Date(0).toISOString(),
   };
 }

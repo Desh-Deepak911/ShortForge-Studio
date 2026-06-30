@@ -10,9 +10,13 @@ import type {
 import type { MotionBlueprintSuggestion } from "../scene-blueprint.types";
 import type { VisualIntentType } from "../studio-intelligence.types";
 import { resolveNarrationSlicingStrategy } from "./blueprint-adapter-enrichment.utils";
+import {
+  isCollapsedSemanticKind,
+  sceneHasPreservedTemplateSemantics,
+} from "./blueprint-adapter-semantics.utils";
 
 /** Current blueprint adapter contract version. */
-export const BLUEPRINT_ADAPTER_VERSION = "0.3.0";
+export const BLUEPRINT_ADAPTER_VERSION = "0.4.0";
 
 const LOW_CONFIDENCE_THRESHOLD = 0.45;
 
@@ -254,6 +258,30 @@ export function buildAdapterDiagnostics(options: {
   narrationSlicingStrategy?: NarrationSlicingStrategy;
 }): BlueprintAdapterDiagnostics {
   const statistics = aggregateAdapterStatistics(options.mappedScenes);
+  const sceneCount = options.mappedScenes.length;
+
+  let semanticsPreserved = 0;
+  const collapsedKinds = new Set<string>();
+
+  for (const scene of options.mappedScenes) {
+    if (sceneHasPreservedTemplateSemantics(scene)) {
+      semanticsPreserved += 1;
+    }
+
+    if (
+      isCollapsedSemanticKind(scene.blueprintKind, scene.contentPattern, scene.proposedSceneType)
+    ) {
+      collapsedKinds.add(scene.blueprintKind);
+    }
+  }
+
+  const semanticCoverage =
+    sceneCount === 0
+      ? 0
+      : clampAdapterConfidence(
+          options.mappedScenes.filter((scene) => Boolean(scene.semanticSlotId)).length /
+            sceneCount,
+        );
 
   return {
     mappingVersion: BLUEPRINT_ADAPTER_VERSION,
@@ -266,6 +294,9 @@ export function buildAdapterDiagnostics(options: {
       options.narrationSlicingStrategy ?? resolveNarrationSlicingStrategy(options.mappedScenes),
     lowConfidenceSceneIds: collectLowConfidenceSceneIds(options.mappedScenes),
     warningCountsByType: countWarningsByType(options.warnings),
+    semanticCoverage,
+    collapsedSemanticKinds: [...collapsedKinds],
+    modeTemplateSemanticsPreserved: semanticsPreserved,
   };
 }
 

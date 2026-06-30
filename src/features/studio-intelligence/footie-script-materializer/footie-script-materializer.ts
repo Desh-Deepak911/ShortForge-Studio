@@ -117,6 +117,13 @@ function buildMaterializedDrafts(
         materializerConfidence: clampMaterializerConfidence(mappedScene.confidence),
       },
       metadata: {
+        semanticSlotId: mappedScene.semanticSlotId,
+        semanticSlotLabel: mappedScene.semanticSlotLabel,
+        semanticRole: mappedScene.semanticRole,
+        templateId: mappedScene.templateId,
+        templateApplied: mappedScene.templateApplied,
+        contentPattern: mappedScene.contentPattern,
+        planningTags: [...mappedScene.planningTags],
         visualIntentType: mappedScene.visualIntentType,
         visualHints: { ...mappedScene.visualHints },
         mediaHints: { ...mappedScene.mediaHints },

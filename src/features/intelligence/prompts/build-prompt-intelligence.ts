@@ -5,6 +5,7 @@ import { getNarrationWordBudget } from "@/features/story/utils/narration-duratio
 
 import { buildNarrativePlan } from "./build-narrative-plan";
 import { isSparseGraphContext } from "./graph-context-sparse.utils";
+import { resolvePromptStudioAlignment } from "@/features/studio-intelligence/prompt-studio-alignment";
 import {
   buildStoryStructureStyleRules,
   STORY_STRUCTURE_NARRATION_RULES,
@@ -476,6 +477,11 @@ export function buildPromptIntelligence(
     0,
   );
 
+  const alignment = resolvePromptStudioAlignment({
+    mode: graphContext.selectedMode,
+    topic: graphContext.topic,
+  });
+
   return {
     queryId: graphContext.queryId,
     selectedMode: graphContext.selectedMode,
@@ -496,6 +502,11 @@ export function buildPromptIntelligence(
       strategyId: narrativePlan.structure,
       sparseContext: isSparseContext(graphContext),
       warnings: [...graphContext.warnings],
+      promptStructureId: alignment.promptStructureId,
+      studioStrategyId: alignment.studioStrategyId,
+      modeTemplateId: alignment.modeTemplateId,
+      alignmentStatus: alignment.alignmentStatus,
+      mismatchWarnings: alignment.mismatchWarnings,
     },
   };
 }

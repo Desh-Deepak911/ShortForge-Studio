@@ -38,6 +38,8 @@ export function legacyIntelligenceAnalysisToPartial(
       ...(legacy.subIntent ? { subIntent: legacy.subIntent } : {}),
       confidence: "medium",
       confidencePercent: 0,
+      confidenceScore: 0,
+      matchedPatterns: [],
       reasoning: "Legacy analysis — intent confidence not available.",
       topic: {
         competitionWords: [],

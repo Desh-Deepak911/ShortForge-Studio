@@ -2,6 +2,7 @@ import type { ScriptMode } from "@/types/footiebitz";
 
 import type { SceneBlueprintCollection } from "./scene-blueprint.types";
 import type { StoryStrategy, StoryStrategyId } from "./story-strategy/story-strategy.types";
+import type { StoryValidationResult } from "./story-validator/story-validator.types";
 
 /** High-level narrative beat categories for planning — not spoken labels. */
 export type NarrativeBeatType =
@@ -216,6 +217,22 @@ export interface StudioIntelligenceDiagnostics {
   unsupportedPatterns: string[];
   /** Planning-only trace confirming one strategy object was propagated. */
   strategyHandoffTrace?: readonly StoryStrategyId[];
+  /** Strategy bias fields applied during planning (developer diagnostics). */
+  strategyInfluenceApplied?: readonly string[];
+  /** Human-readable strategy-driven planner decisions. */
+  strategyDecisions?: readonly string[];
+  /** Reasons a planner fell back to heuristic defaults. */
+  fallbackReasons?: readonly string[];
+  /** Normalized score (0–1) indicating how much strategy shaped the plan. */
+  strategyApplicationScore?: number;
+  /** Whether a mode template normalization pass ran. */
+  modeTemplateApplied?: boolean;
+  /** Mode template id applied during normalization. */
+  modeTemplateId?: StoryStrategyId;
+  /** Number of blueprint slots matched to template semantics. */
+  templateSlotsMatched?: number;
+  /** Template normalization fallbacks or partial matches. */
+  templateFallbacks?: readonly string[];
 }
 
 /** High-level summary of a Studio Intelligence planning run. */
@@ -248,6 +265,8 @@ export interface StudioIntelligenceResult {
   strategyId: StoryStrategyId;
   plannerConfigurationVersion: string;
   scenePlans: ScenePlan[];
+  /** Story coherence validation attached after planning — does not mutate blueprints. */
+  storyValidation: StoryValidationResult;
   /** ISO timestamp when the plan was produced. */
   generatedAt: string;
 }

@@ -13,7 +13,7 @@ Items marked complete ship in the current product. In-progress and planned work 
 ## Table of Contents
 
 - [Completed](#completed)
-- [Studio Intelligence 3.3](#studio-intelligence-33)
+- [Studio Intelligence v1](#studio-intelligence-v1)
 - [In Progress](#in-progress)
 - [Planned](#planned)
 - [Long Term Vision](#long-term-vision)
@@ -77,9 +77,13 @@ Items marked complete ship in the current product. In-progress and planned work 
 
 ---
 
+## Studio Intelligence v1
+
+**Status: complete and frozen.** Planning (3.3–3.6), Blueprint Adapter (3.4), and opt-in production wiring (3.5) ship as **Studio Intelligence v1**. Default production behavior remains the AI scene planner unless both dual gates pass. **Next:** [3.7 Asset Intelligence](#studio-intelligence-37-asset-intelligence).
+
 ## Studio Intelligence 3.3
 
-*Planning-only subsystem — frozen at 3.3I. Not production-wired.*
+*Planning subsystem — frozen at 3.3I as part of v1.*
 
 - [x] **3.3A Foundation** — Types, constants, utilities, empty result shell
 - [x] **3.3B Beat Detection** — Heuristic narrative beat classifier from narration
@@ -117,11 +121,30 @@ Items marked complete ship in the current product. In-progress and planned work 
 
 **Fallback:** SI failure, density failure, or materializer mismatch → AI scene planner (same response shape).
 
-**Next:**
+## Studio Intelligence 3.6
 
-- [ ] **3.6 Broader validation / production rollout** — Audio-first SI wiring, rollout metrics, production enablement criteria beyond dev toggle
+*Complete — validation, alignment, and planning richness. Frozen as part of v1. No additional production wiring beyond 3.5.*
+
+- [x] **3.6B Intent Engine v2** — `src/features/intent-engine/`; improved mode classification; `test:intent-engine-quality`
+- [x] **3.6C Strategy-aware planning** — Story strategy influences beat, arc, scene, visual, and timing planners; `test:studio-intelligence-strategy-planning`
+- [x] **3.6D Mode templates** — Explicit mode templates for countdown, debate, biography, history, tactical, match preview, news; `test:studio-intelligence-mode-templates`
+- [x] **3.6E Adapter richness** — Semantic slot metadata preserved through adapter + materializer sidecar; `test:studio-intelligence-adapter-richness`
+- [x] **3.6F Prompt ↔ Studio Intelligence alignment** — Shared mode-structure bridge; `test:studio-intelligence-prompt-alignment`
+- [x] **3.6G Story Coherence Validator** — Post-planning audit on `StudioIntelligenceResult`; `test:studio-intelligence-story-validator`
+
+**Next (post-v1):**
+
+- [ ] **3.7 Asset Intelligence** — Asset-aware recommendations from blueprint queries
 
 Detail: [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md)
+
+---
+
+## Studio Intelligence 3.7 Asset Intelligence
+
+*Next Studio Intelligence milestone — not started.*
+
+Use blueprint asset queries and planning metadata to fetch or recommend imagery and clips. Does not change v1 planner contracts until explicitly scoped.
 
 ---
 
@@ -149,8 +172,6 @@ Post-generation validation before voiceover and scene generation.
 | **Collaborative editing** | Shared drafts and review workflows (requires cloud-backed state) |
 | **Cloud rendering** | Optional server-side export for longer or heavier workloads |
 | **Story Intelligence Engine** | Unified cross-stage story planning above the current runtime |
-| **Studio Intelligence 3.6 Broader validation / production rollout** | Audio-first wiring, rollout criteria, metrics beyond dev-gated scenes-only v1 |
-| **Studio Intelligence 3.7 Asset Intelligence** | Asset-aware recommendations from blueprint queries |
 | **Studio Intelligence 3.8 Smart Editing Intelligence** | Planning metadata handoff to editor suggestions |
 
 ---
@@ -171,5 +192,5 @@ Architecture detail: [ARCHITECTURE.md](./ARCHITECTURE.md) · Product overview: [
 |----------|-------------|
 | [README.md](./README.md) | Features, workflows, getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and pipelines |
-| [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence 3.3 + Blueprint Adapter 3.4 |
+| [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |

@@ -13,9 +13,20 @@ export interface PromptIntelligenceDiagnostics {
   selectedSectionCount: number;
   selectedLineCount: number;
   narrativeBeatCount: number;
+  /** @deprecated Prefer `promptStructureId` — legacy field holds narrative arc id. */
   strategyId: string;
   sparseContext: boolean;
   warnings: string[];
+  /** Prompt Intelligence story structure arc id. */
+  promptStructureId?: string;
+  /** Resolved Studio Intelligence story strategy id. */
+  studioStrategyId?: string;
+  /** Mode template id aligned with the studio strategy. */
+  modeTemplateId?: string;
+  /** Cross-layer alignment status. */
+  alignmentStatus?: "aligned" | "partial" | "mismatch";
+  /** Non-fatal alignment notes when status is partial or mismatch. */
+  mismatchWarnings?: readonly string[];
 }
 
 /**

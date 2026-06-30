@@ -10,12 +10,18 @@ import type {
   SceneBlueprintRole,
   VisualBlueprint,
 } from "./scene-blueprint.types";
+import type { StoryStrategy } from "./story-strategy/story-strategy.types";
 import {
   strategyFallbackQuery,
   strategyIntroVisualOverride,
   resolvePlannerStrategy,
 } from "./story-strategy/planner-strategy.utils";
-import type { StoryStrategy } from "./story-strategy/story-strategy.types";
+import type { PlannerStrategyDiagnostics } from "./story-strategy/strategy-planning-diagnostics.utils";
+import {
+  isDefaultStoryStrategy,
+  recordStrategyDecision,
+  recordStrategyInfluence,
+} from "./story-strategy/strategy-planning-diagnostics.utils";
 import {
   calculateBlueprintCollectionStats,
   clampBlueprintConfidence,
@@ -192,7 +198,16 @@ export function inferCompositionFromVisualIntent(intent: VisualIntentType): stri
   }
 }
 
-function resolvePreferredOrientation(intent: VisualIntentType): AssetBlueprintOrientation {
+function resolvePreferredOrientation(
+  intent: VisualIntentType,
+  strategy?: StoryStrategy,
+): AssetBlueprintOrientation {
+  if (strategy && !isDefaultStoryStrategy(strategy.id)) {
+    if (strategy.assetBias.preferredOrientation !== "any") {
+      return strategy.assetBias.preferredOrientation;
+    }
+  }
+
   switch (intent) {
     case "player_portrait":
       return "portrait";
@@ -294,6 +309,42 @@ function resolveTextOverlay(
   return undefined;
 }
 
+function applyStrategyVisualBias(
+  strategy: StoryStrategy,
+  blueprint: SceneBlueprint,
+  inferred: VisualIntentType,
+): VisualIntentType {
+  if (isDefaultStoryStrategy(strategy.id)) {
+    return inferred;
+  }
+
+  if (strategy.visualBias.favorComparisonSplit && (blueprint.role === "conflict" || blueprint.kind === "debate_split")) {
+    return "comparison_split";
+  }
+
+  if (strategy.visualBias.favorStatOverlay && (blueprint.role === "evidence" || blueprint.kind === "stat_moment")) {
+    return "stat_overlay";
+  }
+
+  if (strategy.visualBias.favorArchiveFootage && (blueprint.role === "context" || blueprint.role === "payoff")) {
+    return "archive_footage";
+  }
+
+  if (blueprint.role === "intro" && strategy.hookStrategy.preferPortraitVisual) {
+    return "player_portrait";
+  }
+
+  if (blueprint.role === "intro" || blueprint.kind === "hook_opener") {
+    return strategy.visualBias.primaryIntent as VisualIntentType;
+  }
+
+  if (strategy.visualBias.secondaryIntent && blueprint.role === "evidence") {
+    return strategy.visualBias.secondaryIntent as VisualIntentType;
+  }
+
+  return inferred;
+}
+
 /** Creates a visual blueprint for a scene blueprint. */
 export function createVisualBlueprintForScene(
   blueprint: SceneBlueprint,
@@ -304,7 +355,8 @@ export function createVisualBlueprintForScene(
   const plannerStrategy = resolvePlannerStrategy(input, strategy);
   const introBias = strategyIntroVisualOverride(plannerStrategy, blueprint.role);
   const inferred = inferVisualIntentFromRole(blueprint.role, blueprint.kind, blueprint.summary);
-  const visualIntentType = introBias ?? inferred;
+  const visualIntentType =
+    introBias ?? applyStrategyVisualBias(plannerStrategy, blueprint, inferred);
   const subject =
     extractSubjectFromSummary(blueprint.summary) ??
     resolveEntities(input)[0] ??
@@ -327,13 +379,14 @@ export function createAssetBlueprintForScene(
   input?: StudioIntelligenceInput,
   strategy?: StoryStrategy,
 ): AssetBlueprint {
+  const plannerStrategy = resolvePlannerStrategy(input, strategy);
   const assetRequirementType = mapVisualIntentToAssetRequirement(visual.visualIntentType);
 
   return {
     assetRequirementType,
     searchQuery: buildAssetSearchQuery(blueprint, visual, input),
-    fallbackQuery: buildFallbackAssetQuery(blueprint, input, strategy),
-    preferredOrientation: resolvePreferredOrientation(visual.visualIntentType),
+    fallbackQuery: buildFallbackAssetQuery(blueprint, input, plannerStrategy),
+    preferredOrientation: resolvePreferredOrientation(visual.visualIntentType, plannerStrategy),
     imageCount: resolveImageCount(blueprint.kind, visual.visualIntentType),
     reason: `Asset planner mapped ${visual.visualIntentType} to ${assetRequirementType}.`,
   };
@@ -366,8 +419,30 @@ function resolveMotionSuggestion(
 export function createMotionBlueprintForScene(
   blueprint: SceneBlueprint,
   visual: VisualBlueprint,
+  strategy?: StoryStrategy,
 ): MotionBlueprint {
-  const intensity = mapImportanceToMotionIntensity(blueprint.importance);
+  const plannerStrategy = strategy ? resolvePlannerStrategy(undefined, strategy) : undefined;
+  let intensity = mapImportanceToMotionIntensity(blueprint.importance);
+
+  if (plannerStrategy && !isDefaultStoryStrategy(plannerStrategy.id)) {
+    intensity = plannerStrategy.motionBias.defaultIntensity;
+
+    if (plannerStrategy.motionBias.boostHighImportance && blueprint.importance.tier === "high") {
+      intensity = intensity === "low" ? "medium" : intensity;
+    }
+
+    if (
+      plannerStrategy.motionBias.preferPushInOnHook &&
+      (blueprint.role === "intro" || blueprint.kind === "hook_opener")
+    ) {
+      return {
+        suggestedMotion: "push_in",
+        intensity,
+        reason: "Strategy prefers push-in motion on hook scenes.",
+      };
+    }
+  }
+
   const suggestedMotion = resolveMotionSuggestion(intensity, visual.visualIntentType);
 
   return {
@@ -389,7 +464,7 @@ function enrichBlueprint(
 ): SceneBlueprint {
   const visual = createVisualBlueprintForScene(blueprint, input, strategy);
   const asset = createAssetBlueprintForScene(blueprint, visual, input, strategy);
-  const motion = createMotionBlueprintForScene(blueprint, visual);
+  const motion = createMotionBlueprintForScene(blueprint, visual, strategy);
 
   return {
     ...blueprint,
@@ -411,14 +486,30 @@ export function enrichBlueprintsWithVisuals(
   collection: SceneBlueprintCollection,
   input?: StudioIntelligenceInput,
   strategy?: StoryStrategy,
+  diagnostics?: PlannerStrategyDiagnostics,
 ): SceneBlueprintCollection {
-  void resolvePlannerStrategy(input, strategy);
+  const resolvedStrategy = resolvePlannerStrategy(input, strategy);
+
+  if (diagnostics && !isDefaultStoryStrategy(resolvedStrategy.id)) {
+    recordStrategyInfluence(diagnostics, "visualBias.primaryIntent");
+    recordStrategyInfluence(diagnostics, "visualBias.favorComparisonSplit");
+    recordStrategyInfluence(diagnostics, "visualBias.favorStatOverlay");
+    recordStrategyInfluence(diagnostics, "visualBias.favorArchiveFootage");
+    recordStrategyInfluence(diagnostics, "assetBias.preferredOrientation");
+    recordStrategyInfluence(diagnostics, "motionBias.defaultIntensity");
+    recordStrategyDecision(
+      diagnostics,
+      `Visual bias ${resolvedStrategy.visualBias.primaryIntent} with motion ${resolvedStrategy.motionBias.defaultIntensity}.`,
+    );
+  }
 
   if (collection.blueprints.length === 0) {
     return createEmptySceneBlueprintCollection();
   }
 
-  const blueprints = collection.blueprints.map((blueprint) => enrichBlueprint(blueprint, input, strategy));
+  const blueprints = collection.blueprints.map((blueprint) =>
+    enrichBlueprint(blueprint, input, resolvedStrategy),
+  );
   const stats = calculateBlueprintCollectionStats(blueprints);
 
   return {
