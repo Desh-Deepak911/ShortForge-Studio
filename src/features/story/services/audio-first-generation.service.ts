@@ -14,10 +14,11 @@ import {
   getStoryTotalDuration,
   secondsToMs,
 } from "@/features/story/utils";
-import type { QualityMode, ScriptMode, Tone } from "@/types/footiebitz";
+import type { QualityMode, ScriptMode, ScenePlanDevDebug, Tone } from "@/types/footiebitz";
 import { resolveSceneCount } from "@/types/footiebitz";
 
 import { generateScenesFromScriptAndAudio } from "./scene-planning.service";
+import { resolveScenePlanDevDebug } from "@/features/story/utils/studio-intelligence-scene-plan-dev.utils";
 import { generateStoryScript } from "./script-generation.service";
 import {
   generateVoiceoverFromScript,
@@ -46,7 +47,7 @@ export type AudioFirstStoryGenerationResult =
   | { success: false; error: string };
 
 export type ScriptOnlyStoryGenerationResult =
-  | { success: true; footieScript: FootieScript; scriptLengthWarning?: string }
+  | { success: true; footieScript: FootieScript; scriptLengthWarning?: string; scenePlanDevDebug?: ScenePlanDevDebug }
   | { success: false; error: string };
 
 export interface GenerateScenesForReviewedScriptInput {
@@ -58,6 +59,8 @@ export interface GenerateScenesForReviewedScriptInput {
   tone?: Tone;
   qualityMode?: QualityMode;
   model?: string;
+  scriptMode?: ScriptMode;
+  useStudioIntelligenceScenes?: boolean;
   onProgress?: AudioFirstProgressCallback;
 }
 
@@ -181,6 +184,8 @@ export async function generateScenesForReviewedScript(
       script,
       voiceoverDurationMs,
       sceneCount,
+      scriptMode: input.scriptMode,
+      useStudioIntelligenceScenes: input.useStudioIntelligenceScenes,
     },
     { qualityMode, model },
   );
@@ -200,6 +205,7 @@ export async function generateScenesForReviewedScript(
       scenes: scenesResult.scenes,
       timelineItems: ensureTimelineItems(scenesResult.scenes),
     }),
+    scenePlanDevDebug: resolveScenePlanDevDebug(scenesResult.scenePlanMeta),
   };
 }
 

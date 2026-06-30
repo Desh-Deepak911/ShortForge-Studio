@@ -178,13 +178,15 @@ Step 2 of 4: *"Generating voiceover..."*
 
 ### What it is
 
-A second AI call that designs **visual scene beats** — subtitles and optional scene types — mapped across the locked narration. The AI does **not** rewrite narration or output timestamps.
+Designs **visual scene beats** — subtitles and optional scene types — mapped across the locked narration. The AI does **not** rewrite narration or output timestamps.
+
+Two planners exist; **AI is the default**. Studio Intelligence runs only on the Review **scenes-only** path when dual gates pass (see [Studio Intelligence 3.5](./STUDIO_INTELLIGENCE.md#35-production-wiring-opt-in--dev-gated)).
 
 ### Service
 
 `generateScenesFromScriptAndAudio()` — `src/features/story/services/scene-planning.service.ts`
 
-### AI call
+### Default: AI scene planner
 
 | Property | Value |
 |----------|-------|
@@ -194,7 +196,32 @@ A second AI call that designs **visual scene beats** — subtitles and optional 
 | Max output tokens | 1200 |
 | Output format | JSON with exactly `sceneCount` scene objects |
 
-### Prompt intent
+Used when:
+
+- `STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED` is not `true`, **or**
+- `useStudioIntelligenceScenes` is false / omitted (default), **or**
+- Studio Intelligence pipeline fails (automatic fallback)
+
+### Opt-in: Studio Intelligence scene planner (3.5, scenes-only v1)
+
+When **both** gates are open:
+
+1. `STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED=true`
+2. `useStudioIntelligenceScenes=true` (Review dev toggle; omitted by default)
+
+Pipeline (`tryGenerateScenesFromStudioIntelligence`):
+
+```
+runStudioIntelligence → adaptSceneDensity → mapBlueprintsToScenes → materializeMappedScenesToFootieScript
+```
+
+**Fallback to AI** when env off, request flag false, SI failure, density adaptation failure, or materialized scene count mismatch. Response shape unchanged (`FootieScene[]` inside `FootieScript`).
+
+**Not wired:** Audio-first `full` mode (`generateAudioFirstStory`) does not pass SI flags. Create one-shot flow unchanged.
+
+**Dev/staging:** Review toggle hidden in production unless `NEXT_PUBLIC_STUDIO_INTELLIGENCE_SCENE_PLAN_TOGGLE=true`. Optional dev badge; no raw SI diagnostics in production UI.
+
+### AI prompt intent
 
 `buildScenePlanPrompt()` tells the model:
 
@@ -425,7 +452,9 @@ Stream responses may include `usedFallback: true` on the complete event.
 | `services/audio-first-generation.service.ts` | Pipeline orchestrator |
 | `services/script-generation.service.ts` | Stage 2 — narration script |
 | `services/voiceover.service.ts` | Stage 3 — TTS |
-| `services/scene-planning.service.ts` | Stage 4 — scene plan |
+| `services/scene-planning.service.ts` | Stage 4 — AI or opt-in SI scene plan |
+| `services/studio-intelligence-scene-plan.utils.ts` | Dual-gate SI pipeline (runtime → density → adapter → materializer) |
+| `services/studio-intelligence-scene-plan.service.ts` | Server re-export of scene-plan utils |
 | `services/story-generation.service.ts` | Legacy single-call generation |
 | `services/story-parse.service.ts` | JSON cleaning and parsing |
 | `lib/ai/prompts.ts` | Prompt templates |

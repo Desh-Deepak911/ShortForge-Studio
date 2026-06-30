@@ -20,6 +20,15 @@ export {
   type ScenePlanningResult,
 } from "./scene-planning.service";
 export {
+  isStudioIntelligenceScenePlanEnabled,
+  isStudioIntelligenceScenePlanDebugEnabled,
+  tryGenerateScenesFromStudioIntelligence,
+  type StudioIntelligenceScenePlanDiagnostics,
+  type StudioIntelligenceScenePlanGateInput,
+  type TryGenerateScenesFromStudioIntelligenceInput,
+  type TryGenerateScenesFromStudioIntelligenceResult,
+} from "./studio-intelligence-scene-plan.service";
+export {
   applyAudioFirstTiming,
   generateAudioFirstStory,
   generateScenesForReviewedScript,

@@ -31,6 +31,8 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 - [Story Creation Pipeline](#story-creation-pipeline)
 - [Intelligence Runtime](#intelligence-runtime)
 - [Timeline Intelligence Runtime](#timeline-intelligence-runtime)
+- [Studio Intelligence 3.3 + 3.5](#studio-intelligence-33--35)
+- [Blueprint Adapter 3.4](#blueprint-adapter-34)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 - [Current Capabilities](#current-capabilities)
@@ -206,6 +208,72 @@ Shipped in **v2.6.0 — Timeline Intelligence Runtime**. Deep dive: [ARCHITECTUR
 
 ---
 
+## Studio Intelligence 3.3 + 3.5
+
+Studio Intelligence is a **planning subsystem** that turns story input into structured planning metadata — narrative beats, arcs, scene blueprints, visual/asset hints, and timing — before FootieScript scenes exist.
+
+**3.5 status:** Scene planning is **opt-in / dev-gated** on the Review **scenes-only** path only. Default production behavior remains the existing AI scene planner.
+
+```
+Story Input
+      ↓
+Studio Intelligence Runtime
+      ↓
+Scene Density Adapter (when requested count ≠ blueprint count)
+      ↓
+Blueprint Adapter
+      ↓
+FootieScript Materializer
+      ↓
+FootieScene[]  →  same downstream as AI path
+```
+
+| Property | Detail |
+|----------|--------|
+| **Planning module** | `src/features/studio-intelligence/` — frozen at 3.3I (runtime) + 3.4D (adapter) |
+| **Production wiring** | **3.5 complete (opt-in)** — scenes-only v1 via dual gates |
+| **Entry point (planning)** | `runStudioIntelligence()` |
+| **Entry point (production)** | `tryGenerateScenesFromStudioIntelligence()` in `studio-intelligence-scene-plan.utils.ts` |
+| **Output** | `FootieScene[]` (materialized) or AI fallback scenes |
+
+**Dual gates (both required for SI scene planning):**
+
+1. Server env: `STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED=true`
+2. Request flag: `useStudioIntelligenceScenes=true` (Review dev toggle only; omitted by default)
+
+**Fallback to AI scene planner when:** env off, request flag false, SI pipeline failure, density adaptation failure, or materializer scene-count mismatch.
+
+**Dev/staging toggle:** “Use Studio Intelligence scene planning” in Review → Storyboard. Hidden in production unless `NEXT_PUBLIC_STUDIO_INTELLIGENCE_SCENE_PLAN_TOGGLE=true`. Dev badge may show *Studio Intelligence used*, *AI fallback used*, or *Scene density adapted* — no raw diagnostics in production UI.
+
+**Unchanged by 3.5:**
+
+- **Default generation** — Create flow and audio-first `full` mode still use AI scene planning
+- **Editor, Preview, Export, Audio, Timeline Intelligence, Drafts** — no SI integration
+- **Audio-first scenes path** — `generateAudioFirstStory()` does not pass SI flags
+
+Deep dive: [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) · Architecture: [ARCHITECTURE.md — Studio Intelligence layer](./ARCHITECTURE.md#studio-intelligence-layer)
+
+---
+
+## Blueprint Adapter 3.4 + Materializer 3.5B
+
+The **Blueprint Adapter** maps `StudioIntelligenceResult` → `BlueprintMappedScene[]`. The **FootieScript Materializer** (3.5B) maps adapter output → production-shaped `FootieScene[]`.
+
+| Property | Detail |
+|----------|--------|
+| **Adapter entry point** | `mapBlueprintsToScenes()` |
+| **Materializer entry point** | `materializeMappedScenesToFootieScript()` |
+| **Status** | Complete — wired behind 3.5 dual gates on scenes-only generation |
+| **Output** | Mapped scenes with lineage, timing, hints; materialized scenes with subtitles and voiceover-fitted timings |
+
+**Key guarantees:**
+
+- **Lineage preservation** — every mapped scene carries `sourceBlueprintId`, `sourceArcId`, and `sourceBeatIds`
+- **Scene density adapter (3.5E)** — aligns blueprint count to requested scene count before adapter/materializer when possible
+- **Golden fixture validation** — `npm run test:studio-intelligence-golden-fixtures`, `npm run test:studio-intelligence-materializer-golden-fixtures`, `npm run test:studio-intelligence-scene-density`
+
+---
+
 ## Technology Stack
 
 | Category | Technologies |
@@ -235,6 +303,7 @@ footiebitz/
 │   │   ├── editor/             # Selection, inspector registry, StudioSceneInspector
 │   │   ├── timeline-editor/    # StudioTimeline v1
 │   │   ├── timeline-intelligence/  # Master Timeline, schedulers, optimizer
+│   │   ├── studio-intelligence/    # Planning + adapter + materializer; 3.5 opt-in scenes-only wiring
 │   │   ├── preview/            # Device-frame playback
 │   │   ├── export/             # Canvas render, FFmpeg mux, audio mix
 │   │   ├── drafts/             # Draft model and localStorage persistence
@@ -280,6 +349,7 @@ Latest release: **v2.6.0 — Timeline Intelligence Runtime** · [CHANGELOG.md](.
 |----------|-------------|
 | [README.md](./README.md) | Product overview, features, and getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, pipelines, and design principles |
+| [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence 3.3 + Blueprint Adapter 3.4 — planners, adapter, freeze guarantees |
 | [ROADMAP.md](./ROADMAP.md) | Completed, in-progress, and planned product work |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history ([Keep a Changelog](https://keepachangelog.com/)) |
 

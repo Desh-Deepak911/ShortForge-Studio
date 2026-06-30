@@ -33,7 +33,8 @@ import {
   studioSubtleText,
 } from "@/lib/utils/studioUi";
 import { applyStoryUpdate, syncFootieScript } from "@/lib/utils/voiceover";
-import type { GenerateScriptResponse, GenerationLoadingStep } from "@/types/footiebitz";
+import { isStudioIntelligenceScenePlanToggleVisible } from "@/features/story/utils/studio-intelligence-scene-plan-dev.utils";
+import type { GenerateScriptResponse, GenerationLoadingStep, ScenePlanDevDebug } from "@/types/footiebitz";
 import {
   DEFAULT_SCENE_COUNT,
   MAX_SCENE_COUNT,
@@ -184,6 +185,8 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
   const [createScenesError, setCreateScenesError] = useState<string | null>(null);
   const [scenesCreatedSuccessfully, setScenesCreatedSuccessfully] = useState(false);
   const [storyboardStep, setStoryboardStep] = useState<GenerationLoadingStep>(3);
+  const [useStudioIntelligenceScenes, setUseStudioIntelligenceScenes] = useState(false);
+  const [scenePlanDevDebug, setScenePlanDevDebug] = useState<ScenePlanDevDebug | null>(null);
   const [voiceApplyControl, setVoiceApplyControl] = useState<{
     apply: () => void;
     canApply: boolean;
@@ -236,6 +239,7 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     script != null
       ? getCanonicalVoiceover(script)?.durationMs ?? script.voiceoverDurationMs
       : undefined;
+  const showStudioIntelligenceScenePlanToggle = isStudioIntelligenceScenePlanToggleVisible();
   const scriptVoiceoverUrl =
     script != null ? getCanonicalVoiceover(script)?.url : undefined;
 
@@ -382,6 +386,7 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     setIsCreatingScenes(true);
     setCreateScenesError(null);
     setScenesCreatedSuccessfully(false);
+    setScenePlanDevDebug(null);
     setStoryboardStep(3);
 
     try {
@@ -397,8 +402,10 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
           tone: creationBrief.tone,
           duration: creationBrief.duration,
           qualityMode: creationBrief.qualityMode,
+          scriptMode,
           sceneCount,
           stream: true,
+          ...(useStudioIntelligenceScenes ? { useStudioIntelligenceScenes: true } : {}),
         }),
       });
 
@@ -419,7 +426,10 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
 
       logCreateScenes("scenes API success", {
         sceneCount: data.data.scenes.length,
+        scenePlanDevDebug: data.scenePlanDevDebug,
       });
+
+      setScenePlanDevDebug(data.scenePlanDevDebug ?? null);
 
       const nextScriptWithScenes = mergeStoryboardOntoScript(script, data.data);
       scriptAutosaveReadyRef.current = true;
@@ -448,7 +458,17 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
         error instanceof Error ? error.message : "Failed to build storyboard",
       );
     }
-  }, [applyEditorReadyScript, creationBrief, draftId, flushPersist, router, sceneCount, script]);
+  }, [
+    applyEditorReadyScript,
+    creationBrief,
+    draftId,
+    flushPersist,
+    router,
+    sceneCount,
+    script,
+    scriptMode,
+    useStudioIntelligenceScenes,
+  ]);
 
   const handlePrimaryAction = useCallback(() => {
     if (hasStoryboard || scenesCreatedSuccessfully) {
@@ -621,6 +641,10 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
           storyboardStep={storyboardStep}
           createScenesError={createScenesError}
           voiceControlsDisabled={isCreatingScenes}
+          showStudioIntelligenceScenePlanToggle={showStudioIntelligenceScenePlanToggle}
+          useStudioIntelligenceScenes={useStudioIntelligenceScenes}
+          onUseStudioIntelligenceScenesChange={setUseStudioIntelligenceScenes}
+          scenePlanDevDebug={scenePlanDevDebug}
           onVoiceApplyControlReady={handleVoiceApplyControlReady}
         />
       }

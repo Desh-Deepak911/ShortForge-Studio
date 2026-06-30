@@ -108,6 +108,7 @@ interface GenerationParams {
   title?: string;
   narration?: string;
   voiceoverDurationMs?: number;
+  useStudioIntelligenceScenes?: boolean;
 }
 
 type GenerationSuccess = {
@@ -212,6 +213,8 @@ async function runGeneration(
       tone: params.tone,
       qualityMode: params.qualityMode,
       model: params.model,
+      scriptMode: params.scriptMode,
+      useStudioIntelligenceScenes: params.useStudioIntelligenceScenes === true,
       onProgress: emitProgress,
     });
 
@@ -229,6 +232,7 @@ async function runGeneration(
       response: {
         success: true,
         data: buildStoryResponse(scenesResult.footieScript),
+        scenePlanDevDebug: scenesResult.scenePlanDevDebug,
       },
     };
   }
@@ -391,6 +395,7 @@ export async function POST(request: Request) {
       title: body.title,
       narration: body.narration,
       voiceoverDurationMs: body.voiceoverDurationMs,
+      useStudioIntelligenceScenes: body.useStudioIntelligenceScenes === true,
     };
 
     if (body.stream) {

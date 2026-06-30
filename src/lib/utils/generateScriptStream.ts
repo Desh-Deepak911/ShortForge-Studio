@@ -53,6 +53,7 @@ export async function consumeGenerateScriptStream(
           researchApplied: event.researchApplied,
           researchWarning: event.researchWarning,
           scriptLengthWarning: event.scriptLengthWarning,
+          scenePlanDevDebug: event.scenePlanDevDebug,
           error: event.error,
           usedFallback: event.usedFallback,
         };

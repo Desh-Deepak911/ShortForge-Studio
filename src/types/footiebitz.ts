@@ -105,9 +105,19 @@ export interface GenerateScriptRequest {
   title?: string;
   narration?: string;
   voiceoverDurationMs?: number;
+  /** Opt-in Studio Intelligence scene planning — requires env kill switch. Defaults to false. */
+  useStudioIntelligenceScenes?: boolean;
 }
 
 export type GenerateScriptMode = "full" | "script-only" | "scenes-only";
+
+export type ScenePlanSource = "studio_intelligence" | "ai_fallback";
+
+/** Dev/staging only — omitted from production API responses and UI. */
+export interface ScenePlanDevDebug {
+  source: ScenePlanSource;
+  densityAdapted: boolean;
+}
 
 export const GENERATION_LOADING_STEPS = [
   "Writing your story...",
@@ -156,5 +166,7 @@ export interface GenerateScriptResponse {
   researchWarning?: string;
   /** Non-fatal script length budget warning after generation or compression. */
   scriptLengthWarning?: string;
+  /** Dev/staging only — how storyboard scenes were planned. */
+  scenePlanDevDebug?: ScenePlanDevDebug;
   error?: string;
 }

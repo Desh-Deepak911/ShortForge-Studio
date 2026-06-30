@@ -2,6 +2,7 @@
 
 import VoiceSettingsCard from "@/components/VoiceSettingsCard";
 import StudioLoadingState from "@/components/StudioLoadingState";
+import ScenePlanDevBadge from "@/features/create/components/ScenePlanDevBadge";
 import { StudioPanel, StudioSection } from "@/components/studio-shell";
 import type { StoryCreationBrief } from "@/features/drafts";
 import type { FootieScript } from "@/features/story/types";
@@ -11,7 +12,7 @@ import {
   studioInput,
   studioSubtleText,
 } from "@/lib/utils/studioUi";
-import type { GenerationLoadingStep, ScriptMode } from "@/types/footiebitz";
+import type { GenerationLoadingStep, ScenePlanDevDebug, ScriptMode } from "@/types/footiebitz";
 import { MAX_SCENE_COUNT, MIN_SCENE_COUNT, SCRIPT_MODE_OPTIONS } from "@/types/footiebitz";
 
 export interface ReviewInspectorProps {
@@ -35,6 +36,10 @@ export interface ReviewInspectorProps {
   storyboardStep: GenerationLoadingStep;
   createScenesError: string | null;
   voiceControlsDisabled: boolean;
+  showStudioIntelligenceScenePlanToggle: boolean;
+  useStudioIntelligenceScenes: boolean;
+  onUseStudioIntelligenceScenesChange: (enabled: boolean) => void;
+  scenePlanDevDebug?: ScenePlanDevDebug | null;
   onVoiceApplyControlReady?: (control: {
     apply: () => void;
     canApply: boolean;
@@ -67,6 +72,10 @@ export default function ReviewInspector({
   storyboardStep,
   createScenesError,
   voiceControlsDisabled,
+  showStudioIntelligenceScenePlanToggle,
+  useStudioIntelligenceScenes,
+  onUseStudioIntelligenceScenesChange,
+  scenePlanDevDebug,
   onVoiceApplyControlReady,
 }: ReviewInspectorProps) {
   return (
@@ -173,6 +182,27 @@ export default function ReviewInspector({
             />
           </div>
 
+          {showStudioIntelligenceScenePlanToggle ? (
+            <label className="mt-4 flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={useStudioIntelligenceScenes}
+                onChange={(event) => onUseStudioIntelligenceScenesChange(event.target.checked)}
+                disabled={isCreatingScenes || hasStoryboard || scenesCreatedSuccessfully}
+                className="mt-1 h-4 w-4 rounded border-border/40 bg-background text-accent focus:ring-accent/40"
+              />
+              <span>
+                <span className="block text-sm font-medium text-foreground/90">
+                  Use Studio Intelligence scene planning
+                </span>
+                <span className={`${studioSubtleText} mt-1 block`}>
+                  Dev/staging only. Requires server env{" "}
+                  <code className="text-xs">STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED=true</code>.
+                </span>
+              </span>
+            </label>
+          ) : null}
+
           {hasVoiceover && voiceoverDurationMs ? (
             <p className={`${studioSubtleText} mt-3`}>
               Narration duration: {Math.round(voiceoverDurationMs / 1000)}s — scenes will be timed to
@@ -211,6 +241,8 @@ export default function ReviewInspector({
               {createScenesError}
             </p>
           ) : null}
+
+          <ScenePlanDevBadge debug={scenePlanDevDebug} />
         </StudioPanel>
       </StudioSection>
     </div>

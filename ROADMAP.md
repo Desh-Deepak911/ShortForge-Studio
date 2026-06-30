@@ -13,6 +13,7 @@ Items marked complete ship in the current product. In-progress and planned work 
 ## Table of Contents
 
 - [Completed](#completed)
+- [Studio Intelligence 3.3](#studio-intelligence-33)
 - [In Progress](#in-progress)
 - [Planned](#planned)
 - [Long Term Vision](#long-term-vision)
@@ -76,6 +77,54 @@ Items marked complete ship in the current product. In-progress and planned work 
 
 ---
 
+## Studio Intelligence 3.3
+
+*Planning-only subsystem — frozen at 3.3I. Not production-wired.*
+
+- [x] **3.3A Foundation** — Types, constants, utilities, empty result shell
+- [x] **3.3B Beat Detection** — Heuristic narrative beat classifier from narration
+- [x] **3.3B.5 Arc Builder** — Beat grouping into narrative arcs
+- [x] **3.3C Blueprint Contract** — Scene blueprint types and collection stats
+- [x] **3.3D Scene Planner** — Arcs → scene blueprints with roles and captions
+- [x] **3.3E Visual Planner** — Visual intent, asset queries, motion suggestions
+- [x] **3.3F Dynamic Timing** — Duration allocation across blueprints
+- [x] **3.3G Runtime** — `runStudioIntelligence()` orchestrates full pipeline
+- [x] **3.3H Story Strategy** — Immutable strategy registry and mode resolution
+- [x] **3.3I Runtime Strategy Injection** — Strategy propagated through every planner
+
+## Blueprint Adapter 3.4
+
+*Adapter frozen at 3.4D. Production-wired behind 3.5 dual gates (scenes-only v1).*
+
+- [x] **3.4A Adapter Architecture** — Types, contract shell, isolation verification
+- [x] **3.4B Blueprint Mapper** — `mapBlueprintsToScenes()`, role/kind/timing/visual/asset/motion/caption mapping
+- [x] **3.4C Adapter Enrichment** — Narration slicing, coverage statistics, enhanced diagnostics
+- [x] **3.4D Golden Fixture Validation** — Six story-mode fixtures, full pipeline checks
+
+## Production Wiring 3.5
+
+*Complete — opt-in / dev-gated. Default production behavior unchanged.*
+
+- [x] **3.5A** — Production wiring architecture audit
+- [x] **3.5B** — FootieScript Materializer (`materializeMappedScenesToFootieScript`)
+- [x] **3.5C** — Materializer golden fixtures
+- [x] **3.5D** — Dual-gate scenes-only wiring (`STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED` + `useStudioIntelligenceScenes`)
+- [x] **3.5E** — Scene Density Adapter (`adaptSceneDensity`)
+- [x] **3.5F** — Dev/staging Review toggle + debug badge
+- [x] **3.5G** — Production wiring freeze audit + documentation
+
+**Dual gates:** Server env `STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED=true` **and** request `useStudioIntelligenceScenes=true`. Otherwise AI scene planner.
+
+**Fallback:** SI failure, density failure, or materializer mismatch → AI scene planner (same response shape).
+
+**Next:**
+
+- [ ] **3.6 Broader validation / production rollout** — Audio-first SI wiring, rollout metrics, production enablement criteria beyond dev toggle
+
+Detail: [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md)
+
+---
+
 ## In Progress
 
 ### Script Validator
@@ -100,6 +149,9 @@ Post-generation validation before voiceover and scene generation.
 | **Collaborative editing** | Shared drafts and review workflows (requires cloud-backed state) |
 | **Cloud rendering** | Optional server-side export for longer or heavier workloads |
 | **Story Intelligence Engine** | Unified cross-stage story planning above the current runtime |
+| **Studio Intelligence 3.6 Broader validation / production rollout** | Audio-first wiring, rollout criteria, metrics beyond dev-gated scenes-only v1 |
+| **Studio Intelligence 3.7 Asset Intelligence** | Asset-aware recommendations from blueprint queries |
+| **Studio Intelligence 3.8 Smart Editing Intelligence** | Planning metadata handoff to editor suggestions |
 
 ---
 
@@ -119,4 +171,5 @@ Architecture detail: [ARCHITECTURE.md](./ARCHITECTURE.md) · Product overview: [
 |----------|-------------|
 | [README.md](./README.md) | Features, workflows, getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and pipelines |
+| [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence 3.3 + Blueprint Adapter 3.4 |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |

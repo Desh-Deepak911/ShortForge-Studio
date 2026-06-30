@@ -12,10 +12,17 @@ import {
   attachEvenVoiceoverTiming,
   attachSceneNarrationFromScript,
 } from "@/features/story/utils";
-import type { QualityMode } from "@/types/footiebitz";
+import type { QualityMode, ScriptMode } from "@/types/footiebitz";
 import { resolveSceneCount } from "@/types/footiebitz";
 
 import { cleanJsonText } from "./story-parse.service";
+import type { ScenePlanOutcomeMeta } from "@/features/story/utils/studio-intelligence-scene-plan-dev.utils";
+import {
+  isStudioIntelligenceScenePlanEnabled,
+  logStudioIntelligenceScenePlanDebug,
+  tryGenerateScenesFromStudioIntelligence,
+  type StudioIntelligenceScenePlanDiagnostics,
+} from "./studio-intelligence-scene-plan.utils";
 
 const SCENE_PLAN_MAX_OUTPUT_TOKENS = 1200;
 
@@ -36,6 +43,8 @@ export interface GenerateScenesFromScriptAndAudioInput {
   script: StoryScript;
   voiceoverDurationMs: number;
   sceneCount: number;
+  scriptMode?: ScriptMode;
+  useStudioIntelligenceScenes?: boolean;
 }
 
 export interface GenerateScenesFromScriptAndAudioOptions {
@@ -44,7 +53,7 @@ export interface GenerateScenesFromScriptAndAudioOptions {
 }
 
 export type ScenePlanningResult =
-  | { success: true; scenes: FootieScene[] }
+  | { success: true; scenes: FootieScene[]; scenePlanMeta?: ScenePlanOutcomeMeta }
   | { success: false; error: string; kind: "empty"; response: unknown }
   | { success: false; error: string; kind: "parse_error"; rawText: string };
 
@@ -123,6 +132,15 @@ function buildPlannedScenes(rawScenes: RawPlannedScene[]): FootieScene[] {
   });
 }
 
+function buildStudioIntelligenceScenePlanMeta(
+  diagnostics: StudioIntelligenceScenePlanDiagnostics,
+): ScenePlanOutcomeMeta {
+  return {
+    source: "studio_intelligence",
+    densityAdapted: diagnostics.densityAdapterStrategy !== "none",
+  };
+}
+
 async function requestScenePlanText(
   model: string,
   prompt: string,
@@ -171,13 +189,82 @@ export async function generateScenesFromScriptAndAudio(
     };
   }
 
-  const qualityMode = resolveQualityMode(options.qualityMode);
-  const model = options.model ?? resolveScriptModel(qualityMode);
-  const aiPrompt = buildScenePlanPrompt(
+  if (
+    isStudioIntelligenceScenePlanEnabled({
+      requestFlag: input.useStudioIntelligenceScenes,
+    })
+  ) {
+    const studioIntelligenceResult = tryGenerateScenesFromStudioIntelligence({
+      topic: prompt,
+      narration,
+      voiceoverDurationMs,
+      sceneCount,
+      scriptMode: input.scriptMode,
+    });
+
+    if (studioIntelligenceResult.success) {
+      return {
+        success: true,
+        scenes: studioIntelligenceResult.scenes,
+        scenePlanMeta: buildStudioIntelligenceScenePlanMeta(studioIntelligenceResult.diagnostics),
+      };
+    }
+
+    logStudioIntelligenceScenePlanDebug("falling back to AI scene planner", {
+      reason: studioIntelligenceResult.reason,
+      diagnostics: studioIntelligenceResult.diagnostics,
+    });
+
+    const aiScenesResult = await requestAiScenePlan({
+      prompt,
+      script: input.script,
+      narration,
+      voiceoverDurationMs,
+      sceneCount,
+      qualityMode: options.qualityMode,
+      model: options.model,
+    });
+
+    if (!aiScenesResult.success) {
+      return aiScenesResult;
+    }
+
+    return {
+      ...aiScenesResult,
+      scenePlanMeta: {
+        source: "ai_fallback",
+        densityAdapted: false,
+      },
+    };
+  }
+
+  return requestAiScenePlan({
     prompt,
-    { title: input.script.title, narration },
-    sceneCount,
+    script: input.script,
+    narration,
     voiceoverDurationMs,
+    sceneCount,
+    qualityMode: options.qualityMode,
+    model: options.model,
+  });
+}
+
+async function requestAiScenePlan(input: {
+  prompt: string;
+  script: StoryScript;
+  narration: string;
+  voiceoverDurationMs: number;
+  sceneCount: number;
+  qualityMode?: QualityMode;
+  model?: string;
+}): Promise<ScenePlanningResult> {
+  const qualityMode = resolveQualityMode(input.qualityMode);
+  const model = input.model ?? resolveScriptModel(qualityMode);
+  const aiPrompt = buildScenePlanPrompt(
+    input.prompt,
+    { title: input.script.title, narration: input.narration },
+    input.sceneCount,
+    input.voiceoverDurationMs,
   );
 
   const { rawText, response } = await requestScenePlanText(model, aiPrompt);
@@ -192,10 +279,10 @@ export async function generateScenesFromScriptAndAudio(
   }
 
   try {
-    const rawScenes = parseScenePlanJson(rawText, sceneCount);
+    const rawScenes = parseScenePlanJson(rawText, input.sceneCount);
     const plannedScenes = buildPlannedScenes(rawScenes);
-    const timedScenes = attachEvenVoiceoverTiming(plannedScenes, voiceoverDurationMs);
-    const withNarration = attachSceneNarrationFromScript(timedScenes, narration);
+    const timedScenes = attachEvenVoiceoverTiming(plannedScenes, input.voiceoverDurationMs);
+    const withNarration = attachSceneNarrationFromScript(timedScenes, input.narration);
     const scenes = applyGeneratedStorySceneCaptions(withNarration);
 
     return { success: true, scenes };

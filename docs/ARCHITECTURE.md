@@ -486,6 +486,73 @@ Deep dive: [README.md — Intelligence Runtime](../README.md#intelligence-runtim
 
 ---
 
+## Studio Intelligence layer
+
+Studio Intelligence produces `StudioIntelligenceResult` from narration and story mode under `src/features/studio-intelligence/`. **3.5 Production Wiring** connects it to scene generation on the Review **scenes-only** path behind **dual gates**. Default production behavior remains the AI scene planner.
+
+### Default production path (unchanged)
+
+```
+Generation (audio-first or scenes-only, SI gates closed)
+  ↓
+AI scene planner (OpenAI)
+  ↓
+FootieScript
+  ↓
+Timeline Intelligence (Master Timeline)
+  ↓
+Studio (Editor · Preview · Export)
+```
+
+`POST /api/generate-script` produces `FootieScript` via script generation, voiceover (when applicable), and AI scene planning. Timeline Intelligence, editor, preview, and export are **unchanged** by Studio Intelligence 3.5.
+
+### Opt-in SI path (scenes-only v1, dual gates)
+
+When **both** `STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED=true` **and** `useStudioIntelligenceScenes=true`:
+
+```
+Review scenes-only request
+  ↓
+runStudioIntelligence()
+  ↓
+adaptSceneDensity(requestedSceneCount)
+  ↓
+mapBlueprintsToScenes()
+  ↓
+materializeMappedScenesToFootieScript()
+  ↓
+FootieScene[]  →  same FootieScript downstream contract
+  ↓
+Timeline Intelligence → Editor · Preview · Export
+```
+
+**Fallback:** Any SI, density, adapter, or materializer failure → AI scene planner (same response shape).
+
+**Not wired:** Audio-first `full` mode, Create one-shot flow, editor, preview, export, audio, timeline intelligence, drafts.
+
+**Dev/staging:** Review toggle “Use Studio Intelligence scene planning”; hidden in production unless `NEXT_PUBLIC_STUDIO_INTELLIGENCE_SCENE_PLAN_TOGGLE=true`. Optional dev badge (*Studio Intelligence used* / *AI fallback* / *Scene density adapted*); no raw diagnostics in production UI.
+
+### Planning pipeline (3.3)
+
+```
+Story Input (StudioIntelligenceInput)
+  ↓
+runStudioIntelligence()
+  ↓
+resolveStoryStrategy(mode)
+  ↓
+Beat Detection → Arc Builder → Scene Planner → Visual Planner → Dynamic Timing
+  ↓
+StudioIntelligenceResult
+```
+
+**Module:** `src/features/studio-intelligence/`  
+**Production bridge:** `src/features/story/services/studio-intelligence-scene-plan.utils.ts`  
+**Verification:** `src/verification/studio-intelligence/*.verify.ts`  
+**Deep dive:** [STUDIO_INTELLIGENCE.md](./STUDIO_INTELLIGENCE.md)
+
+---
+
 ## Layer 3 — Rendering
 
 Rendering turns `FootieScript` into visible frames. Two renderers exist — **Preview** (React/CSS) and **Export** (Canvas 2D) — sharing the same timing and layout utilities from `src/features/story/utils/`.
@@ -612,6 +679,7 @@ footiebitz/src/
 │   ├── editor/                       # Selection, inspector registry, scene inspector
 │   ├── timeline-editor/              # StudioTimeline v1 rail
 │   ├── timeline-intelligence/        # Master Timeline, optimizer, schedulers
+│   ├── studio-intelligence/          # Planning-only: beats → arcs → blueprints (3.3)
 │   ├── intelligence/                 # Intent, entities, graph, prompt intelligence
 │   ├── research/                     # Research context integration
 │   ├── story/                        # Domain model, generation, shared utils
@@ -629,6 +697,7 @@ footiebitz/src/
 ├── verification/                     # QA scripts (*.verify.ts) — not imported by production
 │   ├── audio/, canonical/, drafts/, editor/, entity/, export/
 │   ├── football/, graph/, research/, timeline/, ui/, utils/
+│   ├── studio-intelligence/          # Studio Intelligence 3.3 verification scripts
 │   └── README.md
 │
 ├── hooks/
@@ -687,6 +756,7 @@ Regression tests in `src/verification/` enforce parity (e.g. `test:export-subtit
 | Document | Contents |
 |----------|----------|
 | [GENERATION.md](./GENERATION.md) | AI pipeline details |
+| [STUDIO_INTELLIGENCE.md](./STUDIO_INTELLIGENCE.md) | Studio Intelligence 3.3 planning subsystem |
 | [EDITING.md](./EDITING.md) | Editor feature reference |
 | [RENDERING.md](./RENDERING.md) | Canvas and FFmpeg internals |
 | [DATA_MODEL.md](./DATA_MODEL.md) | Type definitions |
