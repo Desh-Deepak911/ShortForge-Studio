@@ -110,7 +110,13 @@
     "test:studio-intelligence-adapter-richness": "tsx src/verification/studio-intelligence/adapterRichness.verify.ts",
     "test:studio-intelligence-prompt-alignment": "tsx src/verification/studio-intelligence/promptStudioAlignment.verify.ts",
     "test:studio-intelligence-story-validator": "tsx src/features/studio-intelligence/story-validator/story-validator.verify.ts && tsx src/verification/studio-intelligence/storyCoherenceValidator.verify.ts",
-    "test:intent-engine-quality": "tsx src/verification/intent-engine/intentEngineQuality.verify.ts"
+    "test:intent-engine-quality": "tsx src/verification/intent-engine/intentEngineQuality.verify.ts",
+    "test:asset-intelligence": "tsx src/verification/asset-intelligence/assetIntelligence.verify.ts",
+    "test:asset-intelligence-golden-fixtures": "tsx src/verification/asset-intelligence/assetIntelligenceGoldenFixtures.verify.ts",
+    "test:asset-intelligence-recommendations": "tsx src/features/asset-intelligence/recommendation-engine/recommendation-engine.verify.ts",
+    "test:asset-intelligence-provider": "tsx src/features/asset-intelligence/providers/asset-provider.verify.ts",
+    "test:asset-intelligence-validator": "tsx src/features/asset-intelligence/validator/asset-validator.verify.ts",
+    "test:creator-asset-planning-cache": "tsx src/features/editor/creator-asset-planning/creatorAssetPlanningCache.verify.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

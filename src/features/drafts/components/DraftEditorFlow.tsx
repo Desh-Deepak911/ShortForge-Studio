@@ -42,6 +42,7 @@ export default function DraftEditorFlow({ draftId }: DraftEditorFlowProps) {
     isLoading,
     isNotFound,
     needsReviewRedirect,
+    draft,
     script: documentScript,
     updateScript,
     flushPersist,
@@ -66,6 +67,7 @@ export default function DraftEditorFlow({ draftId }: DraftEditorFlowProps) {
       key={draftId}
       draftId={draftId}
       documentScript={documentScript}
+      draft={draft}
       router={router}
       updateScript={updateScript}
       flushPersist={flushPersist}
@@ -81,6 +83,7 @@ function DraftEditorFlowBody({
   updateScript,
   flushPersist,
   isNotFound,
+  draft,
 }: DraftEditorFlowProps & {
   documentScript: FootieScript | null;
   router: ReturnType<typeof useRouter>;
@@ -92,6 +95,7 @@ function DraftEditorFlowBody({
     scriptOverride?: FootieScript,
   ) => Promise<Draft | null>;
   isNotFound: boolean;
+  draft: Draft | null;
 }) {
   const [draftEdits, setDraftEdits] = useState<DraftEdits | null>(null);
   const [saveConfirmation, setSaveConfirmation] = useState<string | null>(null);
@@ -275,6 +279,8 @@ function DraftEditorFlowBody({
       saveDraftConfirmation={saveConfirmation ?? autosaveSavedMessage}
       persistWarning={persistWarning}
       exportDisabled={studioScript.scenes.length === 0}
+      draftId={draftId}
+      scriptMode={draft?.creationBrief?.scriptMode}
     />
   );
 }

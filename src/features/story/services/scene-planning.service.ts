@@ -17,6 +17,7 @@ import { resolveSceneCount } from "@/types/footiebitz";
 
 import { cleanJsonText } from "./story-parse.service";
 import type { ScenePlanOutcomeMeta } from "@/features/story/utils/studio-intelligence-scene-plan-dev.utils";
+import type { CreatorAssetPlanningSnapshot } from "@/features/editor/creator-asset-planning/creator-asset-planning.types";
 import {
   isStudioIntelligenceScenePlanEnabled,
   logStudioIntelligenceScenePlanDebug,
@@ -53,7 +54,12 @@ export interface GenerateScenesFromScriptAndAudioOptions {
 }
 
 export type ScenePlanningResult =
-  | { success: true; scenes: FootieScene[]; scenePlanMeta?: ScenePlanOutcomeMeta }
+  | {
+      success: true;
+      scenes: FootieScene[];
+      scenePlanMeta?: ScenePlanOutcomeMeta;
+      assetPlanningSnapshot?: CreatorAssetPlanningSnapshot;
+    }
   | { success: false; error: string; kind: "empty"; response: unknown }
   | { success: false; error: string; kind: "parse_error"; rawText: string };
 
@@ -207,6 +213,7 @@ export async function generateScenesFromScriptAndAudio(
         success: true,
         scenes: studioIntelligenceResult.scenes,
         scenePlanMeta: buildStudioIntelligenceScenePlanMeta(studioIntelligenceResult.diagnostics),
+        assetPlanningSnapshot: studioIntelligenceResult.assetPlanningSnapshot,
       };
     }
 

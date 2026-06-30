@@ -5,6 +5,7 @@ import { ImagePlus, Timer, Trash2, ChevronDown } from "lucide-react";
 import InspectorEmptyState from "@/components/studio-shell/InspectorEmptyState";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
 import CaptionModeControl from "@/features/editor/components/CaptionModeControl";
+import CreatorAssetStudio from "@/features/editor/components/creator-asset-studio/CreatorAssetStudio";
 import SceneImageInspector from "@/features/editor/components/SceneImageInspector";
 import SceneImageMotionControl from "@/features/editor/components/SceneImageMotionControl";
 import SubtitleEffectControl from "@/features/editor/components/SubtitleEffectControl";
@@ -13,6 +14,7 @@ import SmartEditImageAction, {
   SMART_EDIT_HAS_IMAGE_COPY,
 } from "@/features/tool/components/SmartEditImageAction";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
+import { useInspectorContext } from "@/features/editor/inspector/InspectorContext";
 import { useEditorSelection } from "@/features/editor/selection";
 import { resolveSafeSceneIndex } from "@/features/editor/selection/selection.utils";
 import {
@@ -118,6 +120,7 @@ export default function StudioSceneInspector({
   onScriptChange,
 }: StudioSceneInspectorProps) {
   const { selectedSceneIndex, inspectorImageEditing } = useEditorSelection();
+  const { assetPlanning, creatorAssetStudioVisible } = useInspectorContext();
   const { replaceSceneImage, removeSceneImage } = useSceneImageUpload({ script, onScriptChange });
   const scenes = script.scenes;
   const timelineItems = ensureTimelineItems(scenes, script.timelineItems);
@@ -423,6 +426,10 @@ export default function StudioSceneInspector({
           </p>
         </div>
       </InspectorSection>
+
+      {creatorAssetStudioVisible ? (
+        <CreatorAssetStudio sceneIndex={safeIndex} planning={assetPlanning ?? null} />
+      ) : null}
     </div>
   );
 }

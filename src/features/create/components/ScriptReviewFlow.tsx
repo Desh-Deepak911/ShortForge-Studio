@@ -24,6 +24,7 @@ import {
   resolveBriefToneLabel,
 } from "@/features/create/utils/review-brief-display.utils";
 import { consumeGenerateScriptStream } from "@/lib/utils/generateScriptStream";
+import { hydrateCreatorAssetPlanningCache } from "@/features/editor/creator-asset-planning/creator-asset-planning.utils";
 import {
   studioPrimaryButton,
   studioSecondaryButton,
@@ -432,6 +433,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
       setScenePlanDevDebug(data.scenePlanDevDebug ?? null);
 
       const nextScriptWithScenes = mergeStoryboardOntoScript(script, data.data);
+      if (data.assetPlanningSnapshot) {
+        hydrateCreatorAssetPlanningCache(draftId, data.assetPlanningSnapshot);
+      }
       scriptAutosaveReadyRef.current = true;
 
       applyEditorReadyScript(nextScriptWithScenes);

@@ -2,7 +2,15 @@ import { mapBlueprintsToScenes } from "@/features/studio-intelligence/blueprint-
 import { materializeMappedScenesToFootieScript } from "@/features/studio-intelligence/footie-script-materializer";
 import { adaptSceneDensity } from "@/features/studio-intelligence/scene-density/scene-density-adapter";
 import { runStudioIntelligence } from "@/features/studio-intelligence/studio-intelligence-runtime";
+import { isCreatorAssetStudioVisible } from "@/features/editor/components/creator-asset-studio/creator-asset-studio.visibility.utils";
+import type { CreatorAssetPlanningSnapshot } from "@/features/editor/creator-asset-planning/creator-asset-planning.types";
+import {
+  buildCreatorAssetPlanningFromScenePlan,
+  buildCreatorAssetPlanningSnapshot,
+} from "@/features/editor/creator-asset-planning/creator-asset-planning.utils";
 import type { FootieScene } from "@/features/story/types";
+import { ensureTimelineItems, getStoryTotalDuration } from "@/features/story/utils";
+import { syncFootieScript } from "@/lib/utils/voiceover";
 import type { ScriptMode } from "@/types/footiebitz";
 import { resolveSceneCount, resolveScriptMode } from "@/types/footiebitz";
 
@@ -33,7 +41,12 @@ export interface StudioIntelligenceScenePlanDiagnostics {
 }
 
 export type TryGenerateScenesFromStudioIntelligenceResult =
-  | { success: true; scenes: FootieScene[]; diagnostics: StudioIntelligenceScenePlanDiagnostics }
+  | {
+      success: true;
+      scenes: FootieScene[];
+      diagnostics: StudioIntelligenceScenePlanDiagnostics;
+      assetPlanningSnapshot?: CreatorAssetPlanningSnapshot;
+    }
   | { success: false; reason: string; diagnostics?: StudioIntelligenceScenePlanDiagnostics };
 
 /** True only when both the request flag and env kill switch are enabled. */
@@ -180,10 +193,39 @@ export function tryGenerateScenesFromStudioIntelligence(
       materializerWarnings: diagnostics.materializerWarningCodes,
     });
 
+    let assetPlanningSnapshot: CreatorAssetPlanningSnapshot | undefined;
+    if (isCreatorAssetStudioVisible()) {
+      try {
+        const syncedScript = syncFootieScript({
+          title: topic,
+          narration,
+          totalDuration: getStoryTotalDuration(materializer.footieScenes),
+          scenes: materializer.footieScenes,
+          timelineItems: ensureTimelineItems(materializer.footieScenes),
+        });
+        const planning = buildCreatorAssetPlanningFromScenePlan({
+          intelligence,
+          mappedScenes: adapter.mappedScenes,
+          topic,
+        });
+        assetPlanningSnapshot = buildCreatorAssetPlanningSnapshot({
+          script: syncedScript,
+          storyMode: scriptMode,
+          planning,
+        });
+      } catch (planningError) {
+        logStudioIntelligenceScenePlanDebug("asset planning snapshot skipped", {
+          reason:
+            planningError instanceof Error ? planningError.message : "planning snapshot failed",
+        });
+      }
+    }
+
     return {
       success: true,
       scenes: materializer.footieScenes,
       diagnostics,
+      assetPlanningSnapshot,
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "studio intelligence scene plan failed";

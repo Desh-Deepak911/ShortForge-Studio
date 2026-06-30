@@ -168,5 +168,7 @@ export interface GenerateScriptResponse {
   scriptLengthWarning?: string;
   /** Dev/staging only — how storyboard scenes were planned. */
   scenePlanDevDebug?: ScenePlanDevDebug;
+  /** Optional Asset Intelligence planning snapshot for client cache hydration. */
+  assetPlanningSnapshot?: import("@/features/editor/creator-asset-planning/creator-asset-planning.types").CreatorAssetPlanningSnapshot;
   error?: string;
 }

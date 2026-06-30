@@ -54,6 +54,7 @@ export async function consumeGenerateScriptStream(
           researchWarning: event.researchWarning,
           scriptLengthWarning: event.scriptLengthWarning,
           scenePlanDevDebug: event.scenePlanDevDebug,
+          assetPlanningSnapshot: event.assetPlanningSnapshot,
           error: event.error,
           usedFallback: event.usedFallback,
         };

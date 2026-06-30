@@ -2,6 +2,7 @@ import type { ScriptMode } from "@/types/footiebitz";
 
 import type { SceneBlueprintCollection } from "./scene-blueprint.types";
 import type { StoryStrategy, StoryStrategyId } from "./story-strategy/story-strategy.types";
+
 import type { StoryValidationResult } from "./story-validator/story-validator.types";
 
 /** High-level narrative beat categories for planning — not spoken labels. */
@@ -267,6 +268,8 @@ export interface StudioIntelligenceResult {
   scenePlans: ScenePlan[];
   /** Story coherence validation attached after planning — does not mutate blueprints. */
   storyValidation: StoryValidationResult;
+  /** Asset Intelligence planning output — only when ASSET_INTELLIGENCE_ENABLED=true. */
+  assetIntelligence?: import("@/features/asset-intelligence/asset-intelligence.types").AssetIntelligenceResult;
   /** ISO timestamp when the plan was produced. */
   generatedAt: string;
 }

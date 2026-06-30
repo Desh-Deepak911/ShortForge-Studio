@@ -36,6 +36,11 @@ import { applyModeTemplateToBlueprints } from "./mode-templates";
 import type { ModeTemplateApplicationDiagnostics } from "./mode-templates/mode-template.types";
 import { validateStoryCoherence, createEmptyStoryValidationResult } from "./story-validator";
 import { enrichBlueprintsWithVisuals } from "./visual-planner";
+import {
+  isAssetIntelligenceEnabled,
+  runAssetIntelligence,
+} from "@/features/asset-intelligence/run-asset-intelligence";
+import { mapBlueprintsToScenes } from "./blueprint-adapter/blueprint-mapper";
 
 export const STUDIO_INTELLIGENCE_PLANNER_STEPS = [
   "normalize_input",
@@ -47,6 +52,7 @@ export const STUDIO_INTELLIGENCE_PLANNER_STEPS = [
   "dynamic_timing_planner",
   "mode_template_normalization",
   "story_coherence_validation",
+  "asset_intelligence",
 ] as const;
 
 function cloneInput(input: StudioIntelligenceInput): StudioIntelligenceInput {
@@ -385,6 +391,37 @@ export function runStudioIntelligence(input: StudioIntelligenceInput): StudioInt
     summary: buildSummary(partialResult),
   });
 
+  let assetIntelligence: StudioIntelligenceResult["assetIntelligence"];
+  if (isAssetIntelligenceEnabled()) {
+    steps.push(STUDIO_INTELLIGENCE_PLANNER_STEPS[9]);
+    const adapterResult = mapBlueprintsToScenes({
+      collection: sceneBlueprintCollection,
+      strategyId: resolvedStrategy.id,
+      topic: normalizedInput.topic,
+      normalizedNarration,
+    });
+
+    assetIntelligence = runAssetIntelligence({
+      topic: normalizedInput.topic,
+      studioIntelligence: {
+        ...partialResult,
+        summary: buildSummary(partialResult),
+        storyValidation,
+      },
+      mappedScenes: adapterResult.mappedScenes,
+      inputEntities: normalizedInput.entities,
+      sceneTexts: adapterResult.mappedScenes.map((scene) => ({
+        sceneId: scene.id,
+        narration: scene.narrationExcerpt,
+        caption: scene.captionText,
+        summary: scene.title,
+        title: scene.title,
+      })),
+      strategyId: resolvedStrategy.id,
+      modeTemplateId: modeTemplateDiagnostics?.modeTemplateId,
+    });
+  }
+
   return {
     ...partialResult,
     summary: buildSummary(partialResult),
@@ -393,6 +430,7 @@ export function runStudioIntelligence(input: StudioIntelligenceInput): StudioInt
       plannerStepsExecuted: steps,
     },
     storyValidation,
+    assetIntelligence,
   };
 }
 

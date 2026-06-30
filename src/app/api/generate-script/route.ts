@@ -233,6 +233,7 @@ async function runGeneration(
         success: true,
         data: buildStoryResponse(scenesResult.footieScript),
         scenePlanDevDebug: scenesResult.scenePlanDevDebug,
+        assetPlanningSnapshot: scenesResult.assetPlanningSnapshot,
       },
     };
   }

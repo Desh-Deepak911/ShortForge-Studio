@@ -8,6 +8,10 @@ import { ExportDrawer, StudioShell, StudioContextRibbon } from "@/components/stu
 import EditorProjectSidebar from "@/features/editor/components/EditorProjectSidebar";
 import ImageRibbonContext from "@/features/editor/components/ImageRibbonContext";
 import EditorStudioHeader from "@/features/editor/components/EditorStudioHeader";
+import {
+  useCreatorAssetPlanningCache,
+  useCreatorAssetStudioVisible,
+} from "@/features/editor/creator-asset-planning/useCreatorAssetPlanningCache";
 import { InspectorContextProvider, InspectorResolver } from "@/features/editor/inspector";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import { EditorSelectionProvider, useEditorSelection } from "@/features/editor/selection";
@@ -25,6 +29,7 @@ import {
   studioShellEditorPreviewWrap,
 } from "@/lib/utils/studioUi";
 import type { ExportSettings, FootieScript, SceneImage } from "@/features/story/types";
+import type { ScriptMode } from "@/types/footiebitz";
 
 interface StoryWorkspaceProps {
   script: FootieScript;
@@ -39,6 +44,8 @@ interface StoryWorkspaceProps {
   saveDraftConfirmation?: string | null;
   persistWarning?: string | null;
   exportDisabled?: boolean;
+  draftId?: string;
+  scriptMode?: ScriptMode;
 }
 
 export default function StoryWorkspace(props: StoryWorkspaceProps) {
@@ -66,10 +73,14 @@ function StoryWorkspaceContent({
   saveDraftConfirmation,
   persistWarning,
   exportDisabled = false,
+  draftId,
+  scriptMode,
 }: StoryWorkspaceProps) {
   const [exportDrawerOpen, setExportDrawerOpen] = useState(false);
   const [exportActive, setExportActive] = useState(false);
   const publishTimelinePlayback = useTimelinePlaybackPublisher();
+  const creatorAssetStudioVisible = useCreatorAssetStudioVisible();
+  const assetPlanning = useCreatorAssetPlanningCache(draftId, script, scriptMode);
   const {
     selectedSceneId,
   } = useEditorSelection();
@@ -192,7 +203,12 @@ function StoryWorkspaceContent({
           </div>
         }
         inspector={
-          <InspectorContextProvider script={script} onScriptChange={onScriptChange}>
+          <InspectorContextProvider
+            script={script}
+            onScriptChange={onScriptChange}
+            assetPlanning={assetPlanning}
+            creatorAssetStudioVisible={creatorAssetStudioVisible}
+          >
             <InspectorResolver />
           </InspectorContextProvider>
         }

@@ -19,6 +19,7 @@ import { resolveSceneCount } from "@/types/footiebitz";
 
 import { generateScenesFromScriptAndAudio } from "./scene-planning.service";
 import { resolveScenePlanDevDebug } from "@/features/story/utils/studio-intelligence-scene-plan-dev.utils";
+import type { CreatorAssetPlanningSnapshot } from "@/features/editor/creator-asset-planning/creator-asset-planning.types";
 import { generateStoryScript } from "./script-generation.service";
 import {
   generateVoiceoverFromScript,
@@ -47,7 +48,13 @@ export type AudioFirstStoryGenerationResult =
   | { success: false; error: string };
 
 export type ScriptOnlyStoryGenerationResult =
-  | { success: true; footieScript: FootieScript; scriptLengthWarning?: string; scenePlanDevDebug?: ScenePlanDevDebug }
+  | {
+      success: true;
+      footieScript: FootieScript;
+      scriptLengthWarning?: string;
+      scenePlanDevDebug?: ScenePlanDevDebug;
+      assetPlanningSnapshot?: CreatorAssetPlanningSnapshot;
+    }
   | { success: false; error: string };
 
 export interface GenerateScenesForReviewedScriptInput {
@@ -206,6 +213,7 @@ export async function generateScenesForReviewedScript(
       timelineItems: ensureTimelineItems(scenesResult.scenes),
     }),
     scenePlanDevDebug: resolveScenePlanDevDebug(scenesResult.scenePlanMeta),
+    assetPlanningSnapshot: scenesResult.assetPlanningSnapshot,
   };
 }
 
