@@ -40,21 +40,26 @@ export default function CopyButton({
     };
   }, []);
 
+  const feedbackLabel = copied ? "Copied" : label;
+
   return (
     <button
       type="button"
       onClick={handleCopy}
       disabled={!text.trim()}
+      aria-label={feedbackLabel}
+      title={!text.trim() ? "Nothing to copy" : feedbackLabel}
+      aria-live="polite"
       className={`${studioGhostButton} ${className}`}
     >
       {copied ? (
         <>
-          <Check className="h-3.5 w-3.5 text-accent" />
+          <Check className="h-3.5 w-3.5 text-accent" aria-hidden />
           Copied
         </>
       ) : (
         <>
-          <Copy className="h-3.5 w-3.5" />
+          <Copy className="h-3.5 w-3.5" aria-hidden />
           {label}
         </>
       )}

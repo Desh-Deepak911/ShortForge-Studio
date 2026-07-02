@@ -28,10 +28,10 @@ const menuPanelClassName =
   "min-w-[10.5rem] rounded-xl bg-surface-elevated/95 p-1 shadow-lg ring-1 ring-border/30 backdrop-blur-sm";
 
 const menuItemClassName =
-  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-foreground/90 hover:bg-surface/60 disabled:cursor-not-allowed disabled:opacity-45";
+  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-foreground/90 outline-none hover:bg-surface/60 focus-visible:ring-2 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-45";
 
 const menuItemDestructiveClassName =
-  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-45";
+  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-red-300/90 outline-none hover:bg-red-950/20 focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-45";
 
 function clampMenuPosition(x: number, y: number) {
   if (typeof window === "undefined") {
@@ -133,6 +133,7 @@ export default function TimelineContextMenu({
         role="menuitem"
         className={menuItemDestructiveClassName}
         disabled={!canDelete}
+        title={canDelete ? "Delete scene" : "Cannot delete the last scene"}
         onClick={() => onAction("delete")}
       >
         <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden />

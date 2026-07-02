@@ -262,6 +262,25 @@ On failure, state rolls back to the pre-request baseline (`restoreVoiceoverBasel
 
 Preview playback uses the canvas **Play** button — no native browser audio controls in the inspector.
 
+### Audio Mixer v1
+
+**Project Audio Studio** includes an **Audio Mixer** panel (between Background Music and Export Mix):
+
+| Control | Range | Storage |
+|---------|-------|---------|
+| Voice Volume | 0–200% | `audioMixer.voice.volume` |
+| Music Volume | 0–200% | `audioMixer.music.volume` (falls back to `backgroundMusic.volume`) |
+| Master Volume | 0–200% | `audioMixer.master.volume` |
+| Enable Ducking | on/off | `audioMixer.music.duckingEnabled` |
+| Ducking Strength | 0–100% | `audioMixer.music.duckingStrength` |
+| Peak Protection | on/off | `audioMixer.master.peakProtection` |
+
+`audioMixer` is written to the story **only after the first adjustment**. Legacy drafts without the field resolve defaults and play unchanged.
+
+Mixer changes update preview immediately and persist on save. They do **not** regenerate voiceover, restart export, or alter captions.
+
+Deep dive: [AUDIO_MIXER.md](./AUDIO_MIXER.md)
+
 ### Review flow
 
 `VoiceSettingsCard` in `ReviewInspector` still owns **Create / Update Narration** (Apply Changes) before the user enters the editor.

@@ -1,4 +1,11 @@
 import type { CreatorAssetPlanningSnapshot } from "@/features/editor/creator-asset-planning/creator-asset-planning.types";
+import type { ProjectAudioMixerSettings } from "@/features/audio-mixer/audio-mixer.types";
+import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.types";
+import type {
+  CreatorTemplateId,
+  CreatorTemplatePromptHints,
+} from "@/features/creator-templates/creator-template.types";
+import type { SpeechStylePreset } from "@/features/speech-style/speech-style.types";
 import type {
   ExportSettings,
   FootieScene,
@@ -40,6 +47,18 @@ export interface StoryCreationBrief {
   researchApplied?: boolean;
   /** Non-fatal research failure message when enableResearch was requested. */
   researchWarning?: string;
+  /** Built-in creator template selected on /create — omitted on legacy briefs. */
+  templateId?: CreatorTemplateId;
+  /** Structured prompt hints from the selected template — not consumed by generation yet. */
+  templatePromptHints?: CreatorTemplatePromptHints;
+  /** Optional voice default suggested by the template for later editor seeding. */
+  voiceId?: string;
+  /** Optional speech style preset suggested by the template for later editor seeding. */
+  speechStylePreset?: SpeechStylePreset;
+  /** Optional caption preset suggested by the template for later editor seeding. */
+  captionPreset?: CaptionPresetId;
+  /** Optional audio mixer defaults suggested by the template for later editor seeding. */
+  audioMixer?: ProjectAudioMixerSettings;
 }
 
 /** Voiceover audio attached to a draft. Mirrors `FootieScript` voiceover fields. */

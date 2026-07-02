@@ -8,6 +8,7 @@ import { resolveEditorVoiceoverStatus } from "@/features/audio/utils/voiceover-s
 import { VoiceLibraryPanel } from "@/features/voice-library";
 import { SpeechStylePanel } from "@/features/speech-style";
 import { formatDisplayDurationMs } from "@/lib/utils/formatDisplayDuration.utils";
+import { StudioStatus } from "@/components/studio-status";
 import {
   getDraftSessionSnapshot,
   subscribeDraftSessionStore,
@@ -29,11 +30,9 @@ import {
   studioChip,
   studioChipActive,
   studioCompactButton,
-  studioError,
   studioFieldLabel,
   studioPrimaryButton,
   studioSubtleText,
-  studioWarningPanel,
 } from "@/lib/utils/studioUi";
 
 export interface ProjectAudioVoiceoverSectionProps {
@@ -111,6 +110,15 @@ export default function ProjectAudioVoiceoverSection({
   const primaryCtaLabel = resolvePrimaryCtaLabel(status.kind);
   const usePrimaryStyle =
     status.kind === "missing" || status.kind === "unplayable" || status.kind === "stale";
+  const voiceoverDisabledReason = isBusy
+    ? regenerateLoading
+      ? "Voiceover is generating"
+      : uploadLoading
+        ? "Voiceover upload in progress"
+        : "Voiceover is updating"
+    : !hasNarration
+      ? "Add narration text in the project section first"
+      : undefined;
   const error = regenerateError ?? uploadError;
 
   const handleUploadChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,7 +198,7 @@ export default function ProjectAudioVoiceoverSection({
         />
 
         <div>
-          <p className={studioFieldLabel}>Speed</p>
+          <p className={studioFieldLabel}>Voice speed</p>
           <div className="mt-1.5 grid grid-cols-3 gap-1">
             {VOICEOVER_SPEED_OPTIONS.map((option) => {
               const active = selectedSpeed === option;
@@ -217,9 +225,7 @@ export default function ProjectAudioVoiceoverSection({
       </div>
 
       {status.kind === "stale" ? (
-        <div className={`${studioWarningPanel} px-2.5 py-2`}>
-          <p className="text-[11px] leading-relaxed">{status.detail}</p>
-        </div>
+        <StudioStatus variant="warning" layout="panel" description={status.detail} />
       ) : null}
 
       {status.kind === "unplayable" ? (
@@ -237,6 +243,7 @@ export default function ProjectAudioVoiceoverSection({
           type="button"
           onClick={() => void applyVoiceoverChanges()}
           disabled={isBusy || !hasNarration}
+          title={voiceoverDisabledReason}
           className={`${usePrimaryStyle ? studioPrimaryButton : studioCompactButton} w-full justify-center`}
         >
           {regenerateLoading ? (
@@ -289,10 +296,12 @@ export default function ProjectAudioVoiceoverSection({
       </div>
 
       {error ? (
-        <div className={studioError} role="alert">
-          <p className="text-xs font-medium leading-relaxed">Couldn&apos;t update voiceover</p>
-          <p className="mt-1 text-xs leading-relaxed">{error}</p>
-        </div>
+        <StudioStatus
+          variant="error"
+          layout="panel"
+          title="Couldn't update voiceover"
+          description={error}
+        />
       ) : null}
     </div>
   );

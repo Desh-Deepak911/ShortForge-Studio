@@ -3,10 +3,18 @@
 import { resolveSceneCaptionPreset } from "./caption-engine.utils";
 import { getCaptionPresets } from "./caption-preset.registry";
 import {
-  studioCard,
-  studioCardActive,
   studioCardTag,
   studioFieldLabel,
+  studioPickerCard,
+  studioPickerCardActive,
+  studioPickerCardDescription,
+  studioPickerCardDescriptionCompact,
+  studioPickerCardLabel,
+  studioPickerCardLabelLg,
+  studioPickerGrid,
+  studioPickerGridCompact,
+  studioPickerStack,
+  studioPickerStackCompact,
   studioSubtleText,
 } from "@/lib/utils/studioUi";
 
@@ -33,7 +41,7 @@ export default function CaptionPresetPanel({
   const presets = getCaptionPresets();
 
   return (
-    <section aria-label="Caption preset">
+    <section aria-label="Caption preset" className={compact ? studioPickerStackCompact : studioPickerStack}>
       <div className="space-y-1">
         <p className={studioFieldLabel}>Caption Preset</p>
         <p className={`${studioSubtleText} ${compact ? "text-[10px]" : "text-[11px]"}`}>
@@ -42,7 +50,7 @@ export default function CaptionPresetPanel({
       </div>
 
       <div
-        className={`mt-2 grid grid-cols-1 sm:grid-cols-2 ${compact ? "gap-1" : "gap-1.5"}`}
+        className={compact ? studioPickerGridCompact : studioPickerGrid}
         role="radiogroup"
         aria-label="Caption preset"
       >
@@ -56,20 +64,16 @@ export default function CaptionPresetPanel({
               aria-checked={active}
               disabled={disabled}
               onClick={() => onPresetSelect(preset.id)}
-              className={`${
-                active ? studioCardActive : studioCard
-              } flex w-full flex-col items-start gap-1 text-left`}
+              className={`${active ? studioPickerCardActive : studioPickerCard} ${
+                compact ? "px-1.5 py-1" : "px-2 py-1.5"
+              }`}
             >
-              <span className={`font-medium text-foreground/95 ${compact ? "text-xs" : "text-sm"}`}>
+              <span className={compact ? studioPickerCardLabel : studioPickerCardLabelLg}>
                 {preset.label}
               </span>
 
               {!compact ? (
-                <span
-                  className={`${studioSubtleText} line-clamp-1 ${compact ? "text-[10px]" : "text-[11px]"}`}
-                >
-                  {preset.description}
-                </span>
+                <span className={studioPickerCardDescription}>{preset.description}</span>
               ) : null}
 
               <span className="flex flex-wrap gap-0.5">
@@ -77,11 +81,7 @@ export default function CaptionPresetPanel({
                 <span className={studioCardTag}>{formatTokenLabel(preset.emphasisBehavior)}</span>
               </span>
 
-              <span
-                className={`${studioSubtleText} line-clamp-1 ${
-                  compact ? "text-[9px]" : "text-[10px]"
-                }`}
-              >
+              <span className={compact ? studioPickerCardDescriptionCompact : studioPickerCardDescription}>
                 {preset.recommendedUse.slice(0, 2).join(" · ")}
               </span>
             </button>

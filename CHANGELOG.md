@@ -11,11 +11,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
+- [3.0.0](#300)
+- [2.8.0](#280)
+- [2.7.0](#270)
 - [2.6.0](#260)
 - [2.5.0](#250)
-- [2.7.0](#270)
-- [2.8.0](#280)
 - [Related Documentation](#related-documentation)
+
+---
+
+## [3.0.0]
+
+**ShortForge Studio v3.0.0 — Production-ready creator platform**
+
+Feature-complete release for generating, editing, exporting, and publishing short-form videos. **Status: Feature frozen** — future work continues under v4.
+
+### Creator Experience
+
+- **Voice Library** — Browse, preview, and select voices from the editor
+- **Caption Engine v2** — Preset-driven caption styles with export-safe rendering
+- **Audio Mixer** — Voice, music, and master volume for preview and export
+- **Export parity** — Preview and export aligned on timing, audio, and caption behavior
+
+### Creator Templates
+
+- **Template Registry** — Curated starting points for story types and defaults
+- **Prompt-aware generation** — Templates shape brief and script generation inputs
+- **Template Picker** — Searchable template selection in the create flow
+
+### Publishing
+
+- **Publishing Packages** — Post-export metadata bundles per platform
+- **Queue** — Manual upload tracking and scheduling reminders
+- **Metadata Generator** — Platform-specific titles, descriptions, and tags
+- **Export Profiles** — Platform presets for format, resolution, and quality
+
+### UX
+
+- **Studio Shell** — Unified editor chrome: sidebar, canvas, inspector, timeline
+- **Accessibility** — Keyboard navigation, focus management, aria-live feedback
+- **Inspector Polish** — Consistent section rhythm, pickers, and scroll behavior
+- **Overlay Unification** — Shared drawers, modals, and confirmation dialogs
 
 ---
 

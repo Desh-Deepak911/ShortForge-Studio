@@ -287,6 +287,7 @@ function DraftEditorFlowBody({
       exportDisabled={studioScript.scenes.length === 0}
       draftId={draftId}
       scriptMode={draft?.creationBrief?.scriptMode}
+      creationBrief={draft?.creationBrief}
     />
   );
 }

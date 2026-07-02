@@ -7,6 +7,8 @@ import ResearchPreviewPanel from "@/features/create/components/ResearchPreviewPa
 import { StudioPanel, StudioSection } from "@/components/studio-shell";
 import type { EntityPreviewDisplay } from "@/features/create/types/entity-preview.types";
 import type { ResearchPreviewState } from "@/features/create/types/research-preview.types";
+import { CreatorTemplatePicker } from "@/features/creator-templates/components";
+import type { CreatorTemplateId } from "@/features/creator-templates";
 import {
   studioComposerInput,
   studioComposerSelect,
@@ -28,6 +30,9 @@ export interface CreateBriefInspectorProps {
   onQualityModeChange: (mode: QualityMode) => void;
   sceneCount: number;
   onSceneCountChange: (count: number) => void;
+  duration: number;
+  selectedTemplateId: CreatorTemplateId | "";
+  onTemplateChange: (templateId: CreatorTemplateId | "") => void;
   loading: boolean;
   topic: string;
   scriptMode: ScriptMode;
@@ -50,6 +55,9 @@ export default function CreateBriefInspector({
   onQualityModeChange,
   sceneCount,
   onSceneCountChange,
+  duration,
+  selectedTemplateId,
+  onTemplateChange,
   loading,
   topic,
   scriptMode,
@@ -134,6 +142,19 @@ export default function CreateBriefInspector({
               />
             </div>
           </details>
+        </StudioPanel>
+      </StudioSection>
+
+      <StudioSection title="Creator template" description="Reusable formats with smart defaults.">
+        <StudioPanel>
+          <CreatorTemplatePicker
+            selectedTemplateId={selectedTemplateId}
+            onTemplateChange={onTemplateChange}
+            scriptMode={scriptMode}
+            sceneCount={sceneCount}
+            duration={duration}
+            disabled={loading}
+          />
         </StudioPanel>
       </StudioSection>
 

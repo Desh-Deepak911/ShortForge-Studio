@@ -154,6 +154,7 @@ test("1. initial generated story exports with voiceover + music", () => {
   const preflight = prepareStoryForExport(editorScript);
   const mix = buildAudioMixFromStory(preflight.story);
   const musicSettings = resolveExportBackgroundMusicMixSettingsFromMix(
+    preflight.story,
     mix,
     true,
     preflight.exportDurationMs,
@@ -269,6 +270,7 @@ test("6. background music uses final normalized export duration", () => {
   const preflight = prepareStoryForExport(edited);
   const mix = buildAudioMixFromStory(preflight.story);
   const musicSettings = resolveExportBackgroundMusicMixSettingsFromMix(
+    preflight.story,
     mix,
     true,
     preflight.exportDurationMs,

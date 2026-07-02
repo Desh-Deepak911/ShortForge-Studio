@@ -1,5 +1,6 @@
 import type { AssetAttachMetadata } from "@/features/asset-attach/asset-attach.types";
 import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.types";
+import type { PlatformExportPresetId } from "@/features/export-profiles/export-profile.types";
 import type { SpeechStylePreset } from "@/features/speech-style";
 
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
@@ -144,6 +145,8 @@ export interface StoryVoiceSettings {
   expressiveDelivery?: boolean;
 }
 
+import type { ProjectAudioMixerSettings } from "@/features/audio-mixer/audio-mixer.types";
+
 export type BackgroundMusicSource = "none" | "upload" | "library";
 
 /** Story-level background music preferences. Omitted on legacy stories — defaults applied on sync. */
@@ -176,6 +179,8 @@ export interface ExportSettings {
   format: ExportFormat;
   quality: ExportQualityTier;
   resolution: ExportResolution;
+  /** Optional platform preset — omitted on legacy exports. */
+  exportProfileId?: PlatformExportPresetId;
 }
 
 export interface FootieScript {
@@ -197,6 +202,8 @@ export interface FootieScript {
   voiceSettings?: StoryVoiceSettings;
   /** Story-level background music preferences. Optional for legacy stories. */
   backgroundMusic?: StoryBackgroundMusic;
+  /** Unified mixer overrides — optional; legacy music fields remain authoritative until adopted. */
+  audioMixer?: ProjectAudioMixerSettings;
   /** Download filename, format, quality tier, and resolution. Optional for legacy stories. */
   exportSettings?: ExportSettings;
 }

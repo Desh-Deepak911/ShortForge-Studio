@@ -2,6 +2,7 @@
 
 import VoiceSettingsCard from "@/components/VoiceSettingsCard";
 import StudioLoadingState from "@/components/StudioLoadingState";
+import { StudioStatus } from "@/components/studio-status";
 import ScenePlanDevBadge from "@/features/create/components/ScenePlanDevBadge";
 import { StudioPanel, StudioSection } from "@/components/studio-shell";
 import type { StoryCreationBrief } from "@/features/drafts";
@@ -213,10 +214,10 @@ export default function ReviewInspector({
           {isCreatingScenes ? (
             <div className="mt-4">
               <StudioLoadingState
-                topic={creationBrief?.topic ?? script.title}
-                tone={creationBrief?.tone ?? "dramatic"}
-                duration={creationBrief?.duration ?? script.totalDuration}
+                variant="compact"
                 loadingStep={storyboardStep}
+                title="Building storyboard..."
+                subtitle="Preparing scenes and arranging your storyboard."
               />
             </div>
           ) : scenesCreatedSuccessfully || hasStoryboard ? (
@@ -237,9 +238,12 @@ export default function ReviewInspector({
           )}
 
           {createScenesError ? (
-            <p className="mt-3 text-sm text-red-300/90" role="alert">
-              {createScenesError}
-            </p>
+            <StudioStatus
+              variant="error"
+              layout="panel"
+              description={createScenesError}
+              className="mt-3"
+            />
           ) : null}
 
           <ScenePlanDevBadge debug={scenePlanDevDebug} />

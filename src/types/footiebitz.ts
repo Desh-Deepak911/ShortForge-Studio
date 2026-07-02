@@ -1,4 +1,8 @@
 import type { AudioFirstGenerationResult, FootieScript } from "@/features/story/types";
+import type {
+  CreatorTemplateId,
+  CreatorTemplatePromptHints,
+} from "@/features/creator-templates/creator-template.types";
 
 export type Tone = "dramatic" | "funny" | "tactical" | "news" | "emotional";
 
@@ -107,6 +111,9 @@ export interface GenerateScriptRequest {
   voiceoverDurationMs?: number;
   /** Opt-in Studio Intelligence scene planning — requires env kill switch. Defaults to false. */
   useStudioIntelligenceScenes?: boolean;
+  /** Creator template metadata — optional until Prompt Intelligence consumes it. */
+  templateId?: CreatorTemplateId;
+  templatePromptHints?: CreatorTemplatePromptHints;
 }
 
 export type GenerateScriptMode = "full" | "script-only" | "scenes-only";

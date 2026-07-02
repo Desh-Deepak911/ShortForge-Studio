@@ -27,6 +27,7 @@ import {
   EXPORT_BACKGROUND_MUSIC_MIXING_ENABLED,
   isExportBackgroundMusicActiveFromMix,
   resolveExportBackgroundMusicMixSettingsFromMix,
+  resolveExportVoiceStemGain,
   type ExportBackgroundMusicMixSettings,
 } from "@/features/export/utils/export-background-music.utils";
 import {
@@ -652,12 +653,14 @@ async function muxExportVideoWithVoiceover(
   voiceoverInput: ExportAudioInput,
   exportDurationSec: number,
   outputFormat: ExportAudioMuxOutputFormat,
+  voiceGain: number,
   onMuxProgress?: (muxPercent: number) => void,
 ): Promise<Blob> {
   const { muxVideoWithAudio } = await import("@/features/export/utils/ffmpeg.utils");
   return muxVideoWithAudio(silentBlob, voiceoverInput, {
     videoDurationSec: exportDurationSec,
     outputFormat,
+    voiceGain,
     onProgress: onMuxProgress,
   });
 }
@@ -669,6 +672,7 @@ async function muxExportVideoWithAudioMix(options: {
   voiceoverInput?: ExportAudioInput;
   backgroundMusicInput?: ExportAudioInput;
   backgroundMusicMix?: ExportBackgroundMusicMixSettings;
+  voiceGain: number;
   onMuxProgress?: (muxPercent: number) => void;
 }): Promise<Blob> {
   const { muxVideoWithExportAudio } = await import("@/features/export/utils/ffmpeg.utils");
@@ -678,6 +682,7 @@ async function muxExportVideoWithAudioMix(options: {
     voiceoverInput: options.voiceoverInput,
     backgroundMusicInput: options.backgroundMusicInput,
     backgroundMusicMix: options.backgroundMusicMix,
+    voiceGain: options.voiceGain,
     onProgress: options.onMuxProgress,
   });
 }
@@ -731,6 +736,7 @@ async function runVoiceOnlyExportFallback(options: {
   voiceoverInput: ExportAudioInput;
   exportDurationSec: number;
   muxOutputFormat: ExportAudioMuxOutputFormat;
+  voiceGain: number;
   onProgress: (progress: ExportProgress) => void;
   reportMuxProgress: (muxPercent: number, mixingMusic: boolean) => void;
 }): Promise<Blob> {
@@ -749,6 +755,7 @@ async function runVoiceOnlyExportFallback(options: {
     options.voiceoverInput,
     options.exportDurationSec,
     options.muxOutputFormat,
+    options.voiceGain,
     (muxPercent) => options.reportMuxProgress(muxPercent, false),
   );
 }
@@ -826,8 +833,14 @@ export async function exportFootieShort(
     backgroundMusicActive,
   });
   const musicMixSettings = backgroundMusicActive
-    ? resolveExportBackgroundMusicMixSettingsFromMix(audioMix, includeNarration, exportDurationMs)
+    ? resolveExportBackgroundMusicMixSettingsFromMix(
+        exportScript,
+        audioMix,
+        includeNarration,
+        exportDurationMs,
+      )
     : null;
+  const exportVoiceGain = resolveExportVoiceStemGain(exportScript);
   let audioMixed = false;
   let audioMergeResultKind: ExportResultKind = "default";
 
@@ -891,6 +904,7 @@ export async function exportFootieShort(
         voiceoverInput,
         backgroundMusicInput,
         backgroundMusicMix: musicMixSettings ?? undefined,
+        voiceGain: musicMixSettings?.voiceGain ?? exportVoiceGain,
         onMuxProgress: (muxPercent) => reportMuxProgress(muxPercent, attemptedMusic),
       });
 
@@ -920,6 +934,7 @@ export async function exportFootieShort(
               voiceoverInput: voiceoverInput!,
               exportDurationSec,
               muxOutputFormat,
+              voiceGain: exportVoiceGain,
               onProgress,
               reportMuxProgress,
             });
@@ -951,6 +966,7 @@ export async function exportFootieShort(
               voiceoverInput: voiceoverInput!,
               exportDurationSec,
               muxOutputFormat,
+              voiceGain: exportVoiceGain,
               onProgress,
               reportMuxProgress,
             });

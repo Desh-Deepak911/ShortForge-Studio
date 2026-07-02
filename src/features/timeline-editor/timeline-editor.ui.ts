@@ -12,6 +12,10 @@ export const timelineEditorSegmentRow =
 export const timelineEditorFallbackNotice =
   "mb-1.5 flex items-center gap-1.5 rounded-lg bg-surface/30 px-2 py-1 text-[10px] leading-snug text-muted ring-1 ring-border/15";
 
+/** Touch-device hint — scene actions via kebab menu. */
+export const timelineEditorCoarsePointerHint =
+  "mb-1.5 hidden text-[10px] leading-snug text-muted [@media(pointer:coarse)]:block";
+
 export const timelineEditorPlaybackLocked =
   "pointer-events-auto opacity-95 saturate-[0.92]";
 
@@ -49,10 +53,10 @@ export const timelineSceneBlockCaption =
   "truncate px-0.5 text-center text-[9px] font-medium leading-tight text-muted/90";
 
 export const timelineSceneBlockKebab =
-  "absolute right-0.5 top-0.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded-md bg-black/60 text-white/95 opacity-0 ring-1 ring-white/12 backdrop-blur-sm transition hover:bg-black/75 group-hover/scene-block:opacity-100 group-focus-within/scene-block:opacity-100";
+  "absolute right-0.5 top-0.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded-md bg-black/60 text-white/95 opacity-0 ring-1 ring-white/12 backdrop-blur-sm transition hover:bg-black/75 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 group-hover/scene-block:opacity-100 group-focus-within/scene-block:opacity-100 [@media(pointer:coarse)]:opacity-100";
 
 export const timelineSceneBlockDragHandle =
-  "absolute bottom-0.5 left-0.5 z-10 inline-flex h-5 w-5 cursor-grab items-center justify-center rounded-md bg-black/60 text-white/95 opacity-0 ring-1 ring-white/12 backdrop-blur-sm transition hover:bg-black/75 active:cursor-grabbing group-hover/scene-block:opacity-100 group-focus-within/scene-block:opacity-100 disabled:cursor-not-allowed disabled:opacity-25";
+  "absolute bottom-0.5 left-0.5 z-10 inline-flex h-5 w-5 cursor-grab items-center justify-center rounded-md bg-black/60 text-white/95 opacity-0 ring-1 ring-white/12 backdrop-blur-sm transition hover:bg-black/75 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 active:cursor-grabbing group-hover/scene-block:opacity-100 group-focus-within/scene-block:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 [@media(pointer:coarse)]:opacity-100";
 
 export const timelineInsertIndicator =
   "pointer-events-none absolute bottom-0.5 top-0.5 -left-1 z-30 flex w-1 -translate-x-1/2 flex-col items-center justify-between";

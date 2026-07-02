@@ -236,6 +236,42 @@ FFmpeg does not re-time frames to match audio length. If scene total ≠ voiceov
 
 ---
 
+## Audio mix (Mixer v1)
+
+**Audio Mixer v1** applies resolved stem gains in both preview and export. Entry point: `resolveAudioMixerSettings(script)` in `src/features/audio-mixer/`.
+
+### Stem gains
+
+| Bus | Gain | Notes |
+|-----|------|-------|
+| Voice | `voice.volume × master.volume` | Preview: Web Audio `GainNode` when > 100% |
+| Music | `music.volume × master.volume` | Before ducking and fades |
+
+Legacy drafts without `audioMixer` use defaults merged from `backgroundMusic`.
+
+### Preview
+
+- **Voice:** `usePreviewPlayback` → `AudioEngine.syncNarrationPreviewGain()`; peak protection via `DynamicsCompressorNode` when active
+- **Music:** `resolvePreviewBackgroundMusicPlaybackVolume()` — ducking while narration plays, fade in/out envelopes
+- **Parity:** Stem gain math matches export; voice boost uses Web Audio above 100%
+
+### Export
+
+Two mux paths share mix settings from `resolveExportBackgroundMusicMixSettings()`:
+
+| Path | When | Audio processing |
+|------|------|------------------|
+| **Browser mix** | WebM with voice + music | `OfflineAudioContext` + Opus WebM stream-copy mux |
+| **FFmpeg mix** | MP4 or fallback | Filter graph: voice chain + music chain (ducking expression) → `amix` → optional `alimiter` |
+
+**Ducking (v1):** When enabled and voiceover is included, music gain is `musicGain × duckingStrength` for the full voiceover duration, then returns to full `musicGain`.
+
+**Peak protection (v1):** When stem gain > 1.0 or Peak Protection is enabled — preview compressor; export post-mix FFmpeg `alimiter` (~0.98 ceiling).
+
+Detail: [AUDIO_MIXER.md](./AUDIO_MIXER.md)
+
+---
+
 ## Subtitle rendering
 
 Two caption paths depending on `captionMode`. Both suppress captions during active transition overlays.

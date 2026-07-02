@@ -26,6 +26,8 @@ import {
   resolvePreviewDurationSec,
   resolvePreviewPlaybackState,
   resolvePreviewBackgroundMusicPlaybackVolume,
+  resolvePreviewPeakProtectionActive,
+  resolvePreviewVoiceStemGain,
   resolveTimelineItems,
   type PreviewSceneFrame,
 } from "@/features/preview/utils";
@@ -239,6 +241,19 @@ export function usePreviewPlayback({
       voiceoverIsPlaying,
     });
   }, [script, totalDuration]);
+
+  const syncVoiceoverVolume = useCallback(() => {
+    const narrationAudio = narrationAudioRef.current;
+    if (!narrationAudio || !script || playbackModeRef.current !== "narration") {
+      return;
+    }
+
+    audioEngine.syncNarrationPreviewGain(
+      narrationAudio,
+      resolvePreviewVoiceStemGain(script),
+      resolvePreviewPeakProtectionActive(script),
+    );
+  }, [audioEngine, script]);
 
   const resetTimeline = useCallback(() => {
     setCurrentSceneIndex(0);
@@ -459,13 +474,14 @@ export function usePreviewPlayback({
       }
 
       syncBackgroundMusicVolume();
+      syncVoiceoverVolume();
 
       frameId = window.requestAnimationFrame(tick);
     };
 
     frameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frameId);
-  }, [isPlaying, masterTimeline, script, stopVoice, syncBackgroundMusicVolume, syncSceneToTimelineTime]);
+  }, [isPlaying, masterTimeline, script, stopVoice, syncBackgroundMusicVolume, syncVoiceoverVolume, syncSceneToTimelineTime]);
 
   useEffect(() => {
     isSpeakingRef.current = isSpeaking;
@@ -565,6 +581,7 @@ export function usePreviewPlayback({
 
     narrationAudioRef.current = playbackAudio;
     applyVoiceoverPlaybackRate(playbackAudio);
+    syncVoiceoverVolume();
 
     if (
       playbackModeRef.current === "narration" &&
@@ -581,6 +598,7 @@ export function usePreviewPlayback({
         playbackStartedAtMsRef.current = Date.now();
         await startBackgroundMusic(playbackAudio.currentTime);
         syncBackgroundMusicVolume();
+        syncVoiceoverVolume();
       } catch (err) {
         const message = "Could not resume voiceover playback.";
         reportPreviewPlaybackError(message, err);
@@ -616,6 +634,7 @@ export function usePreviewPlayback({
       playbackStartedAtMsRef.current = Date.now();
       await startBackgroundMusic(0);
       syncBackgroundMusicVolume();
+      syncVoiceoverVolume();
     } catch (err) {
       const message = "Could not play voiceover. Check browser audio permissions.";
       reportPreviewPlaybackError(message, err);
@@ -637,6 +656,8 @@ export function usePreviewPlayback({
     }
 
     narrationAudioRef.current = audio;
+    applyVoiceoverPlaybackRate(audio);
+    syncVoiceoverVolume();
 
     const handleTimeUpdate = () => {
       if (!isPlayingRef.current || playbackModeRef.current !== "narration") return;
@@ -663,7 +684,7 @@ export function usePreviewPlayback({
         }
       }
     };
-  }, [audioEngine, script, syncSceneToTimelineTime, voiceoverUrl]);
+  }, [applyVoiceoverPlaybackRate, audioEngine, script, syncSceneToTimelineTime, syncVoiceoverVolume, voiceoverUrl]);
 
   useEffect(() => {
     if (!masterTimeline || !script) {

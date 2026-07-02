@@ -178,6 +178,8 @@ export interface BuildStoryScriptPromptOptions {
   researchAttemptedWithoutData?: boolean;
   /** When true/false, overrides RANKED PLAYER DATA detection for top_5 mode. */
   top5RankedDataAvailable?: boolean;
+  /** Advisory creator template block — omitted when unset. */
+  templatePromptBlock?: string;
 }
 
 function resolveBuildStoryScriptPromptOptions(
@@ -339,6 +341,10 @@ export function buildStoryScriptPrompt(
     ? `\nMode voice (strongly shape the narration):\n- ${modeVoice}\n`
     : "";
 
+  const templateSection = promptOptions.templatePromptBlock?.trim()
+    ? `\n${promptOptions.templatePromptBlock.trim()}\n`
+    : "";
+
   return `Generate a voiceover-ready narration script for a YouTube Short.
 
 You are a football storyteller for FootieBitz. Write one continuous spoken script meant to be read aloud as the full voiceover.
@@ -359,7 +365,7 @@ Story structure narration rules:
 ${storyStructureRules}
 
 ${contextRules}
-
+${templateSection}
 Writing rules:
 - Return JSON only. No markdown. No code fences. No commentary before or after the JSON.
 - Output exactly two fields: \`title\` and \`narration\`. Nothing else.

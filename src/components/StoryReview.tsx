@@ -4,6 +4,7 @@ import { Clock } from "lucide-react";
 import { useMemo } from "react";
 
 import { CopyButton } from "@/components/ui";
+import { StudioStatus } from "@/components/studio-status";
 import {
   exceedsTargetScriptDuration,
   getEstimatedScriptDurationSeconds,
@@ -13,14 +14,13 @@ import type { FootieScript } from "@/features/story/types";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
 import {
   studioBadge,
+  studioFieldLabel,
   studioInput,
-  studioLabel,
   studioSectionDesc,
   studioSectionTitle,
   studioStepLabel,
   studioSubtleText,
   studioTextarea,
-  studioWarningPanel,
 } from "@/lib/utils/studioUi";
 
 interface StoryReviewProps {
@@ -59,10 +59,62 @@ function ScriptDurationSummary({
         </span>
       </div>
       {showLengthWarning ? (
-        <p className={`${studioWarningPanel} text-xs leading-relaxed text-amber-100/90`} role="status">
-          {SCRIPT_LENGTH_OVER_TARGET_WARNING}
-        </p>
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          description={SCRIPT_LENGTH_OVER_TARGET_WARNING}
+          className="text-left"
+        />
       ) : null}
+    </div>
+  );
+}
+
+function StoryReviewStoryboardVariant({
+  story,
+  onStoryChange,
+  targetDurationSeconds,
+}: {
+  story: FootieScript;
+  onStoryChange: (story: FootieScript) => void;
+  targetDurationSeconds: number;
+}) {
+  return (
+    <div className="space-y-3">
+      <ScriptDurationSummary
+        targetDurationSeconds={targetDurationSeconds}
+        narration={story.narration}
+      />
+
+      <div>
+        <label htmlFor="story-title" className={studioFieldLabel}>
+          Title
+        </label>
+        <input
+          id="story-title"
+          type="text"
+          value={story.title}
+          onChange={(e) => onStoryChange({ ...story, title: e.target.value })}
+          className={`${studioInput} mt-1.5`}
+        />
+      </div>
+
+      <div>
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <label htmlFor="story-narration" className={studioFieldLabel}>
+            Narration
+          </label>
+          <CopyButton text={story.narration} label="Copy narration" />
+        </div>
+        <textarea
+          id="story-narration"
+          value={story.narration}
+          onChange={(e) => onStoryChange({ ...story, narration: e.target.value })}
+          rows={6}
+          placeholder="Full spoken narration for your short"
+          className={studioTextarea}
+        />
+      </div>
     </div>
   );
 }
@@ -84,7 +136,7 @@ export default function StoryReview({
         />
 
         <div>
-          <label htmlFor="story-title" className={studioLabel}>
+          <label htmlFor="story-title" className={studioFieldLabel}>
             Title
           </label>
           <input
@@ -92,13 +144,13 @@ export default function StoryReview({
             type="text"
             value={story.title}
             onChange={(e) => onStoryChange({ ...story, title: e.target.value })}
-            className={studioInput}
+            className={`${studioInput} mt-1.5`}
           />
         </div>
 
         <div>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <label htmlFor="story-narration" className={studioLabel}>
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="story-narration" className={studioFieldLabel}>
               Narration
             </label>
             <CopyButton text={story.narration} label="Copy narration" />
@@ -121,58 +173,11 @@ export default function StoryReview({
 
   if (variant === "storyboard") {
     return (
-      <details className="group" open>
-        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className={studioStepLabel}>Story</p>
-              <h2 className={studioSectionTitle}>Title & narration</h2>
-              <p className={studioSectionDesc}>
-                Refine copy before creating narration.
-              </p>
-            </div>
-            <ScriptDurationSummary
-              targetDurationSeconds={resolvedTargetDuration}
-              narration={story.narration}
-            />
-          </div>
-          <p className={`${studioSubtleText} mt-3 group-open:hidden`}>
-            Tap to expand title and narration
-          </p>
-        </summary>
-
-        <div className="mt-5 space-y-5 border-t border-border/40 pt-5 sm:mt-6 sm:space-y-6 sm:pt-6">
-          <div>
-            <label htmlFor="story-title" className={studioLabel}>
-              Title
-            </label>
-            <input
-              id="story-title"
-              type="text"
-              value={story.title}
-              onChange={(e) => onStoryChange({ ...story, title: e.target.value })}
-              className={studioInput}
-            />
-          </div>
-
-          <div>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <label htmlFor="story-narration" className={studioLabel}>
-                Narration
-              </label>
-              <CopyButton text={story.narration} label="Copy narration" />
-            </div>
-            <textarea
-              id="story-narration"
-              value={story.narration}
-              onChange={(e) => onStoryChange({ ...story, narration: e.target.value })}
-              rows={6}
-              placeholder="Full spoken narration for your short"
-              className={studioTextarea}
-            />
-          </div>
-        </div>
-      </details>
+      <StoryReviewStoryboardVariant
+        story={story}
+        onStoryChange={onStoryChange}
+        targetDurationSeconds={resolvedTargetDuration}
+      />
     );
   }
 
@@ -193,7 +198,7 @@ export default function StoryReview({
       </div>
 
       <div>
-        <label htmlFor="story-title" className={studioLabel}>
+        <label htmlFor="story-title" className={studioFieldLabel}>
           Title
         </label>
         <input
@@ -201,13 +206,13 @@ export default function StoryReview({
           type="text"
           value={story.title}
           onChange={(e) => onStoryChange({ ...story, title: e.target.value })}
-          className={studioInput}
+          className={`${studioInput} mt-1.5`}
         />
       </div>
 
       <div>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <label htmlFor="story-narration" className={studioLabel}>
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <label htmlFor="story-narration" className={studioFieldLabel}>
             Narration
           </label>
           <CopyButton text={story.narration} label="Copy narration" />

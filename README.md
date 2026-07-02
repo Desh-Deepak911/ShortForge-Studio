@@ -31,6 +31,7 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 - [Story Creation Pipeline](#story-creation-pipeline)
 - [Intelligence Runtime](#intelligence-runtime)
 - [Timeline Intelligence Runtime](#timeline-intelligence-runtime)
+- [Audio Mixer v1](#audio-mixer-v1)
 - [Studio Intelligence v1](#studio-intelligence-v1)
 - [Blueprint Adapter 3.4](#blueprint-adapter-34)
 - [Technology Stack](#technology-stack)
@@ -64,6 +65,7 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 - **Smart Edit handoff** — External image tool for advanced manual edits
 - **Image positioning** — Pan, zoom, fit/fill, and Ken Burns motion per scene
 - **Background music** — Optional bed with volume control in preview and export
+- **Audio Mixer v1** — Independent voice, music, and master volume with preview/export parity, export ducking, and peak protection
 - **Voiceover controls** — Regenerate narration and adjust playback speed
 - **Subtitle synchronization** — Captions aligned to narration timing with completion guard for final lines
 - **Caption effects** — Fade-up, typewriter, and highlight animations scheduled on the master clock
@@ -75,7 +77,8 @@ Exported videos carry a **FootieBitz** watermark (creator/channel branding). The
 - **WebM export** — In-browser capture via MediaRecorder
 - **MP4 export** — High-quality muxing via FFmpeg.wasm
 - **Audio synchronization** — Voiceover and background music mixed in the final file
-- **Preview/export parity** — WebM and MP4 exports use the same Master Timeline as live preview
+- **Audio Mixer v1** — Shared stem gains in preview and export; ducking under narration; peak protection on boosted levels
+- **Preview/export parity** — WebM and MP4 exports use the same Master Timeline and mixer settings as live preview
 - **Draft persistence** — Save and reload work across sessions (browser localStorage)
 
 ---
@@ -208,6 +211,35 @@ Shipped in **v2.6.0 — Timeline Intelligence Runtime**. Deep dive: [ARCHITECTUR
 
 ---
 
+## Audio Mixer v1
+
+**Audio Mixer v1 is frozen** (Creator Experience **3.9.2**). Creators adjust voice, music, and master levels in **Project Audio Studio**; resolved settings apply consistently in preview and export.
+
+```
+FootieScript (+ optional audioMixer)
+  ↓
+resolveAudioMixerSettings()
+  ↓
+Voice / Music / Master stem gains
+  ↓
+Preview (Web Audio + HTMLMediaElement) · Export (browser mix + FFmpeg)
+```
+
+| Capability | Purpose |
+|------------|---------|
+| **Independent buses** | Voice, music, and master volume (0–200%) |
+| **Preview/export parity** | Same stem gain math: `bus.volume × master.volume` |
+| **Preview voice boost** | Voice > 100% via Web Audio `GainNode` |
+| **Export ducking** | Music attenuates during voiceover (`musicGain × duckingStrength`) |
+| **Peak protection** | Auto when gain > 100% or Peak Protection enabled; preview compressor + FFmpeg `alimiter` |
+| **Legacy drafts** | Unchanged until first mixer adjustment |
+
+**Known future improvements:** normalize voice, limiter UI, preview music boost > 100%, FFmpeg music fade filters, scene-level ducking.
+
+Deep dive: [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md)
+
+---
+
 ## Studio Intelligence v1
 
 **Studio Intelligence v1 is frozen** (planning 3.3–3.6 + adapter 3.4 + opt-in production wiring 3.5). Future planner changes should be bug fixes or explicit feature milestones (starting with **3.8 Asset Search Platform**), not ad-hoc edits.
@@ -322,6 +354,7 @@ footiebitz/
 │   │   ├── timeline-intelligence/  # Master Timeline, schedulers, optimizer
 │   │   ├── studio-intelligence/    # Planning + adapter + materializer; 3.5 opt-in scenes-only wiring
 │   │   ├── preview/            # Device-frame playback
+│   │   ├── audio-mixer/        # Voice/music/master mixer (v1 frozen)
 │   │   ├── export/             # Canvas render, FFmpeg mux, audio mix
 │   │   ├── drafts/             # Draft model and localStorage persistence
 │   │   └── tool/               # SmartEditImageAction external handoff
@@ -352,11 +385,11 @@ ShortForge Studio ships a production-ready creator workflow for football short-f
 - **Research-backed scripts** — Intelligence Runtime feeds Prompt Intelligence before LLM generation
 - **Timeline Intelligence Runtime** — Master Timeline with shared preview/export timing, schedulers, and optimizer (v2.6.0)
 - **Timeline editing** — Scenes, images, captions, transitions, and Ken Burns motion
-- **Voiceover and background music** — TTS with regeneration; optional music bed in preview and export
+- **Voiceover and background music** — TTS with regeneration; optional music bed; **Audio Mixer v1** for independent voice/music/master levels
 - **Draft persistence** — Save, list, open, and delete drafts in the browser
-- **Browser rendering** — MP4 (FFmpeg.wasm) and WebM (MediaRecorder); aligned to Master Timeline render duration
+- **Browser rendering** — MP4 (FFmpeg.wasm) and WebM (MediaRecorder); aligned to Master Timeline render duration and mixer settings
 
-Latest release: **v2.6.0 — Timeline Intelligence Runtime** · **v1.2.0 — Story Evolution & Asset Planning** (pending tag) · [CHANGELOG.md](./CHANGELOG.md) · Planned work: [ROADMAP.md](./ROADMAP.md)
+Latest release: **v2.6.0 — Timeline Intelligence Runtime** · **Audio Mixer v1 frozen (3.9.2)** · **v1.2.0 — Story Evolution & Asset Planning** (pending tag) · [CHANGELOG.md](./CHANGELOG.md) · Planned work: [ROADMAP.md](./ROADMAP.md)
 
 ---
 
@@ -367,6 +400,7 @@ Latest release: **v2.6.0 — Timeline Intelligence Runtime** · **v1.2.0 — Sto
 | [README.md](./README.md) | Product overview, features, and getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, pipelines, and design principles |
 | [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |
+| [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) | Audio Mixer v1 — voice/music/master buses, ducking, peak protection, freeze policy |
 | [ROADMAP.md](./ROADMAP.md) | Completed, in-progress, and planned product work |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history ([Keep a Changelog](https://keepachangelog.com/)) |
 

@@ -3,7 +3,11 @@ import {
   type ExportAudioInput,
 } from "./export-audio-input.utils";
 import {
+  configurePreviewPeakProtectionCompressor,
+} from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
+import {
   resolveExportBackgroundMusicDurationSec,
+  resolveExportDuckedMusicGain,
   type ExportBackgroundMusicMixSettings,
 } from "./export-background-music.utils";
 
@@ -62,18 +66,33 @@ function applyMusicFadeEnvelope(
   durationSec: number,
   settings: ExportBackgroundMusicMixSettings,
 ): void {
-  const volume = Math.min(1, Math.max(0, settings.volume));
+  const fullGain = Math.max(0, settings.musicGain);
+  const duckedGain =
+    settings.applyDucking && settings.duckingEnabled
+      ? resolveExportDuckedMusicGain(fullGain, settings.duckingStrength)
+      : fullGain;
+  const voiceEndSec = Math.min(settings.voiceoverDurationSec, durationSec);
 
   if (settings.fadeIn && settings.fadeInSec > 0) {
     gain.gain.setValueAtTime(0, 0);
-    gain.gain.linearRampToValueAtTime(volume, settings.fadeInSec);
+    const fadeInTarget =
+      settings.applyDucking && voiceEndSec > 0 ? duckedGain : fullGain;
+    gain.gain.linearRampToValueAtTime(fadeInTarget, settings.fadeInSec);
   } else {
-    gain.gain.setValueAtTime(volume, 0);
+    const initialGain =
+      settings.applyDucking && voiceEndSec > 0 ? duckedGain : fullGain;
+    gain.gain.setValueAtTime(initialGain, 0);
+  }
+
+  if (settings.applyDucking && voiceEndSec > 0 && voiceEndSec < durationSec) {
+    const holdUntil = Math.max(settings.fadeInSec, 0);
+    gain.gain.setValueAtTime(duckedGain, Math.max(voiceEndSec - 0.001, holdUntil));
+    gain.gain.setValueAtTime(fullGain, voiceEndSec);
   }
 
   if (settings.fadeOut && settings.fadeOutSec > 0 && durationSec > settings.fadeOutSec) {
     const fadeOutStart = durationSec - settings.fadeOutSec;
-    gain.gain.setValueAtTime(volume, fadeOutStart);
+    gain.gain.setValueAtTime(fullGain, fadeOutStart);
     gain.gain.linearRampToValueAtTime(0, durationSec);
   }
 }
@@ -237,14 +256,25 @@ export async function mixExportVoiceoverAndBackgroundMusic(
     const voiceSource = offlineContext.createBufferSource();
     voiceSource.buffer = voiceBuffer;
     const voiceGain = offlineContext.createGain();
-    voiceGain.gain.value = 1;
-    voiceSource.connect(voiceGain);
-    voiceGain.connect(offlineContext.destination);
-    voiceSource.start(0);
+    voiceGain.gain.value = Math.max(0, options.mixSettings.voiceGain);
 
     const musicGain = offlineContext.createGain();
     applyMusicFadeEnvelope(musicGain, durationSec, options.mixSettings);
-    musicGain.connect(offlineContext.destination);
+
+    const outputNode = options.mixSettings.applyPeakProtection
+      ? (() => {
+          const compressor = offlineContext.createDynamicsCompressor();
+          configurePreviewPeakProtectionCompressor(compressor);
+          compressor.connect(offlineContext.destination);
+          return compressor;
+        })()
+      : offlineContext.destination;
+
+    voiceSource.connect(voiceGain);
+    voiceGain.connect(outputNode);
+    voiceSource.start(0);
+
+    musicGain.connect(outputNode);
     scheduleLoopedBuffer(offlineContext, musicBuffer, musicGain, durationSec);
 
     const renderedBuffer = await offlineContext.startRendering();

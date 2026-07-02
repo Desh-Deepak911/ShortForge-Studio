@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
+
 import type { AssetSearchProviderId } from "@/features/asset-search/orchestrator";
 
 import type { AssetBrowserFilters } from "./asset-browser.types";
@@ -55,9 +57,7 @@ export default function AssetBrowserFiltersPanel({
               </option>
             ))}
           </select>
-          <span className={studioSelectChevron} aria-hidden>
-            ▾
-          </span>
+          <ChevronDown className={studioSelectChevron} aria-hidden />
         </div>
       </label>
 
@@ -82,9 +82,7 @@ export default function AssetBrowserFiltersPanel({
               </option>
             ))}
           </select>
-          <span className={studioSelectChevron} aria-hidden>
-            ▾
-          </span>
+          <ChevronDown className={studioSelectChevron} aria-hidden />
         </div>
       </label>
 
@@ -109,9 +107,7 @@ export default function AssetBrowserFiltersPanel({
               </option>
             ))}
           </select>
-          <span className={studioSelectChevron} aria-hidden>
-            ▾
-          </span>
+          <ChevronDown className={studioSelectChevron} aria-hidden />
         </div>
       </label>
 
@@ -136,9 +132,7 @@ export default function AssetBrowserFiltersPanel({
               </option>
             ))}
           </select>
-          <span className={studioSelectChevron} aria-hidden>
-            ▾
-          </span>
+          <ChevronDown className={studioSelectChevron} aria-hidden />
         </div>
       </label>
     </section>

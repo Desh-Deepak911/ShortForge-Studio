@@ -195,6 +195,7 @@ export default function TimelineSceneBlock({
         aria-label={`Reorder scene ${block.sceneNumber}`}
         aria-disabled={reorderDisabled ? true : undefined}
         disabled={reorderDisabled}
+        title={reorderDisabled ? "Scene reorder is unavailable during playback" : "Drag to reorder scene"}
         className={timelineSceneBlockDragHandle}
         onPointerDown={handleDragHandlePointerDown}
       >

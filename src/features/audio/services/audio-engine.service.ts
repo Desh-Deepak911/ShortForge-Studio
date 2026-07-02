@@ -1,3 +1,6 @@
+import {
+  configurePreviewPeakProtectionCompressor,
+} from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
 import { resolvePreviewBackgroundMusicUrl } from "@/features/preview/utils";
 import {
   applyStoryBackgroundMusic,
@@ -273,6 +276,24 @@ export function resolveAudioEngineSnapshot(
   };
 }
 
+interface NarrationPreviewGainRoute {
+  source: MediaElementAudioSourceNode;
+  gainNode: GainNode;
+  compressor?: DynamicsCompressorNode;
+}
+
+function resolveNarrationElementVolume(stemGain: number): number {
+  return Math.min(1, Math.max(0, stemGain));
+}
+
+function shouldRouteNarrationThroughGainNode(
+  stemGain: number,
+  hasGainRoute: boolean,
+  applyPeakProtection: boolean,
+): boolean {
+  return hasGainRoute || stemGain > 1 || applyPeakProtection;
+}
+
 /**
  * Browser-side audio coordinator — single source of truth for voiceover and
  * background music URLs, blob cache, and preview HTMLAudioElement reuse.
@@ -281,6 +302,8 @@ export class AudioEngine {
   private readonly blobCache = new Map<string, Promise<Blob>>();
   private readonly narrationElements = new Map<string, HTMLAudioElement>();
   private readonly backgroundMusicElements = new Map<string, HTMLAudioElement>();
+  private readonly narrationGainRoutes = new WeakMap<HTMLAudioElement, NarrationPreviewGainRoute>();
+  private previewAudioContext: AudioContext | null = null;
   private readonly managedVoiceoverUrls = new Set<string>();
   /** Stable blob URLs keyed by persisted base64 — avoids preview URL churn on script edits. */
   private readonly voiceoverBase64UrlCache = new Map<string, string>();
@@ -468,6 +491,39 @@ export class AudioEngine {
     return element;
   }
 
+  /**
+   * Applies preview voice stem gain. Uses HTMLMediaElement.volume when gain <= 1.0;
+   * routes through Web Audio GainNode when gain > 1.0 (or after a boost route exists).
+   * Optional dynamics compressor limits peaks when peak protection is active.
+   */
+  syncNarrationPreviewGain(
+    element: HTMLAudioElement,
+    stemGain: number,
+    applyPeakProtection = false,
+  ): void {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const gainRoute = this.narrationGainRoutes.get(element);
+    const useGainRoute = shouldRouteNarrationThroughGainNode(
+      stemGain,
+      Boolean(gainRoute),
+      applyPeakProtection,
+    );
+
+    if (!useGainRoute) {
+      element.volume = resolveNarrationElementVolume(stemGain);
+      return;
+    }
+
+    const route = gainRoute ?? this.createNarrationPreviewGainRoute(element);
+    element.volume = 1;
+    route.gainNode.gain.value = stemGain;
+    this.syncNarrationPeakProtection(route, applyPeakProtection);
+    void this.getPreviewAudioContext().resume().catch(() => undefined);
+  }
+
   /** Preview background music element — reused per music URL. */
   getBackgroundMusicAudioElement(
     script: FootieScript | null | undefined,
@@ -501,6 +557,7 @@ export class AudioEngine {
   detachNarrationPreviewElement(url: string, element: HTMLAudioElement): void {
     element.pause();
     element.currentTime = 0;
+    this.teardownNarrationPreviewGainRoute(element);
     if (this.narrationElements.get(url) === element) {
       this.narrationElements.delete(url);
     }
@@ -512,6 +569,60 @@ export class AudioEngine {
     if (this.backgroundMusicElements.get(url) === element) {
       this.backgroundMusicElements.delete(url);
     }
+  }
+
+  private getPreviewAudioContext(): AudioContext {
+    if (!this.previewAudioContext) {
+      this.previewAudioContext = new AudioContext();
+    }
+
+    return this.previewAudioContext;
+  }
+
+  private createNarrationPreviewGainRoute(
+    element: HTMLAudioElement,
+  ): NarrationPreviewGainRoute {
+    const context = this.getPreviewAudioContext();
+    const source = context.createMediaElementSource(element);
+    const gainNode = context.createGain();
+    source.connect(gainNode);
+
+    const route: NarrationPreviewGainRoute = { source, gainNode };
+    this.narrationGainRoutes.set(element, route);
+    return route;
+  }
+
+  private syncNarrationPeakProtection(
+    route: NarrationPreviewGainRoute,
+    active: boolean,
+  ): void {
+    const context = this.getPreviewAudioContext();
+    route.gainNode.disconnect();
+    route.compressor?.disconnect();
+
+    if (active) {
+      if (!route.compressor) {
+        route.compressor = context.createDynamicsCompressor();
+        configurePreviewPeakProtectionCompressor(route.compressor);
+      }
+      route.gainNode.connect(route.compressor);
+      route.compressor.connect(context.destination);
+      return;
+    }
+
+    route.gainNode.connect(context.destination);
+  }
+
+  private teardownNarrationPreviewGainRoute(element: HTMLAudioElement): void {
+    const route = this.narrationGainRoutes.get(element);
+    if (!route) {
+      return;
+    }
+
+    route.gainNode.disconnect();
+    route.compressor?.disconnect();
+    route.source.disconnect();
+    this.narrationGainRoutes.delete(element);
   }
 
   private async fetchCachedBlob(
@@ -542,7 +653,14 @@ export class AudioEngine {
 
     element.pause();
     element.src = "";
+    this.teardownNarrationPreviewGainRoute(element);
     this.narrationElements.delete(url);
+  }
+
+  /** Test-only teardown of preview Web Audio resources. */
+  disposePreviewAudioContextForTests(): void {
+    void this.previewAudioContext?.close().catch(() => undefined);
+    this.previewAudioContext = null;
   }
 }
 
@@ -557,5 +675,6 @@ export function getAudioEngine(): AudioEngine {
 
 /** Test-only reset. */
 export function resetAudioEngineForTests(): void {
+  audioEngineInstance?.disposePreviewAudioContextForTests();
   audioEngineInstance = null;
 }

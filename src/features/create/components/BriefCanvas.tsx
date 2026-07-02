@@ -4,12 +4,12 @@ import { ChevronDown, Info } from "lucide-react";
 
 import ContentTypeSuggestion from "@/features/create/components/ContentTypeSuggestion";
 import { StudioPanel } from "@/components/studio-shell";
+import { StudioStatus } from "@/components/studio-status";
 import {
   studioChip,
   studioChipActive,
   studioComposerInput,
   studioComposerSelect,
-  studioError,
   studioFieldLabel,
   studioInfoCallout,
   studioSelectChevronCompact,
@@ -195,7 +195,9 @@ export default function BriefCanvas({
           </p>
         </div>
 
-        {error ? <div className={studioError}>{error}</div> : null}
+        {error ? (
+          <StudioStatus variant="error" layout="panel" description={error} />
+        ) : null}
       </form>
     </section>
   );

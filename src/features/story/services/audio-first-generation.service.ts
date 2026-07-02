@@ -40,6 +40,8 @@ export interface GenerateAudioFirstStoryInput {
   /** When research was enabled but returned no passable context. */
   researchAttemptedWithoutData?: boolean;
   top5RankedDataAvailable?: boolean;
+  /** Advisory creator template prompt block for script-only generation. */
+  templatePromptBlock?: string;
   onProgress?: AudioFirstProgressCallback;
 }
 
@@ -129,6 +131,7 @@ export async function generateScriptOnlyStory(
     context: input.context,
     researchAttemptedWithoutData: input.researchAttemptedWithoutData,
     top5RankedDataAvailable: input.top5RankedDataAvailable,
+    templatePromptBlock: input.templatePromptBlock,
   });
 
   if (!scriptResult.success) {

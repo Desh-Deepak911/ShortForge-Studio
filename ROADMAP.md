@@ -18,6 +18,7 @@ Items marked complete ship in the current product. In-progress and planned work 
 - [Studio UX 3.7G Creator Asset Studio](#studio-ux-37g-creator-asset-studio)
 - [Studio UX 3.7H Story Evolution](#studio-ux-37h-story-evolution)
 - [Asset Search Platform 3.8](#asset-search-platform-38)
+- [Creator Experience 3.9.2 — Audio Mixer v1](#creator-experience-392--audio-mixer-v1)
 - [In Progress](#in-progress)
 - [Planned](#planned)
 - [Long Term Vision](#long-term-vision)
@@ -41,6 +42,7 @@ Items marked complete ship in the current product. In-progress and planned work 
 - [x] Timeline editing — Scene order, captions, and transitions on a 9:16 canvas
 - [x] Image positioning — Pan, zoom, and Ken Burns motion per scene
 - [x] Background music — Volume control in preview and export
+- [x] **Audio Mixer v1** — Independent voice/music/master volume, preview/export parity, export ducking, peak protection (3.9.2)
 - [x] Draft persistence — Save, list, and reload drafts in the browser
 
 ### Intelligence Runtime
@@ -193,7 +195,39 @@ No editor behavior changes until **3.8C**.
 
 ---
 
+## Creator Experience 3.9.2 — Audio Mixer v1
+
+**Status: complete and frozen.** Independent voice, music, and master volume in the editor with shared preview/export behavior. **Next:** [Creator Templates 3.10](#in-progress).
+
+- [x] **3.9.2A** — Audio mix engine audit (read-only)
+- [x] **3.9.2B-1** — `audioMixer` data model and `resolveAudioMixerSettings()`
+- [x] **3.9.2B-2** — Apply stem gains in preview and export
+- [x] **3.9.2B-3** — Audio Mixer UI in Project Audio Studio
+- [x] **3.9.2B-5** — Preview voice boost parity (> 100% via Web Audio)
+- [x] **3.9.2B-6** — Export ducking parity (music under voiceover)
+- [x] **3.9.2B-7** — Peak protection v1 (auto + Peak Protection toggle)
+
+**Shipped behavior:**
+
+| Area | v1 scope |
+|------|----------|
+| Volume buses | Voice, music, master (0–200%) |
+| Preview/export | Same stem gain math |
+| Ducking | Full voiceover window; preview + export |
+| Peak protection | Stem gain > 1.0 or manual toggle; preview compressor + FFmpeg `alimiter` |
+| Legacy drafts | Defaults until first mixer edit |
+
+**Post-v1 (not in freeze):** normalize voice, limiter UI, preview music boost > 100%, FFmpeg music fade filters, scene/word-level ducking.
+
+Detail: [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md)
+
+---
+
 ## In Progress
+
+### Creator Templates 3.10
+
+Story templates and creator-facing presets — next milestone after Audio Mixer v1 freeze.
 
 ### Script Validator
 
@@ -238,4 +272,5 @@ Architecture detail: [ARCHITECTURE.md](./ARCHITECTURE.md) · Product overview: [
 | [README.md](./README.md) | Features, workflows, getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and pipelines |
 | [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |
+| [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) | Audio Mixer v1 — buses, ducking, peak protection, freeze policy |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |

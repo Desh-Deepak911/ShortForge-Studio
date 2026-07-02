@@ -255,7 +255,12 @@ test("background music mix settings use preflight exportDurationMs", () => {
 
   const preflight = prepareStoryForExport(scriptWithMusic);
   const mix = buildAudioMixFromStory(preflight.story);
-  const settings = resolveExportBackgroundMusicMixSettingsFromMix(mix, true, preflight.exportDurationMs);
+  const settings = resolveExportBackgroundMusicMixSettingsFromMix(
+    preflight.story,
+    mix,
+    true,
+    preflight.exportDurationMs,
+  );
 
   assert.equal(preflight.exportDurationMs, 30_000 + TIMELINE_END_BUFFER_MS);
   assert.equal(settings?.exportDurationMs, 30_000 + TIMELINE_END_BUFFER_MS);

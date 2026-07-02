@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 
+import { studioInspectorStack } from "@/lib/utils/studioUi";
+
 import { useEditorSelection } from "@/features/editor/selection";
 
 import { useInspectorContext } from "./InspectorContext";
@@ -17,7 +19,7 @@ export default function InspectorResolver() {
   const panelIds = useMemo(() => registry.resolve(selection), [registry, selection]);
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className={studioInspectorStack}>
       {panelIds.map((panelId) => (
         <InspectorPanel key={panelId} panelId={panelId} />
       ))}

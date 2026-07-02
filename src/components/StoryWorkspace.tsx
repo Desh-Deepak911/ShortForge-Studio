@@ -29,6 +29,7 @@ import {
   studioShellEditorPreviewWrap,
 } from "@/lib/utils/studioUi";
 import type { ExportSettings, FootieScript, SceneImage } from "@/features/story/types";
+import type { StoryCreationBrief } from "@/features/drafts/types";
 import type { ScriptMode } from "@/types/footiebitz";
 
 interface StoryWorkspaceProps {
@@ -46,6 +47,7 @@ interface StoryWorkspaceProps {
   exportDisabled?: boolean;
   draftId?: string;
   scriptMode?: ScriptMode;
+  creationBrief?: StoryCreationBrief;
 }
 
 export default function StoryWorkspace(props: StoryWorkspaceProps) {
@@ -75,6 +77,7 @@ function StoryWorkspaceContent({
   exportDisabled = false,
   draftId,
   scriptMode,
+  creationBrief,
 }: StoryWorkspaceProps) {
   const [exportDrawerOpen, setExportDrawerOpen] = useState(false);
   const [exportActive, setExportActive] = useState(false);
@@ -226,6 +229,9 @@ function StoryWorkspaceContent({
           onExportSettingsChange={onExportSettingsChange}
           onScriptChange={onScriptChange}
           onExportActiveChange={setExportActive}
+          draftId={draftId}
+          creationBrief={creationBrief}
+          scriptMode={scriptMode}
         />
       </ExportDrawer>
 

@@ -1,5 +1,6 @@
 import {
   studioShellPanelSurface,
+  studioShellRailScrollHost,
   studioShellRegionPadding,
   studioShellSidebarWidth,
   studioShellSidebarWidthCompact,
@@ -28,7 +29,7 @@ export default function StudioSidebar({
 }: StudioSidebarProps) {
   const widthClass = compactMode ? studioShellSidebarWidthCompact : studioShellSidebarWidth;
   const visibilityClass = visibleBelowLg
-    ? "flex max-h-[42vh] w-full shrink-0 flex-col overflow-hidden border-b border-border/40 bg-surface/15 lg:max-h-none lg:w-[15rem] lg:overflow-y-auto lg:overscroll-contain lg:border-b-0 lg:border-r xl:w-[15rem]"
+    ? "flex max-h-[42vh] w-full shrink-0 flex-col overflow-hidden border-b border-border/40 bg-surface/15 lg:max-h-none lg:w-[15rem] lg:overflow-hidden lg:border-b-0 lg:border-r xl:w-[15rem]"
     : widthClass;
 
   return (
@@ -38,7 +39,7 @@ export default function StudioSidebar({
       className={`${visibilityClass} ${visibleBelowLg ? "" : "flex flex-col border-r border-border/40 bg-surface/15"} ${className}`.trim()}
     >
       <div className={`flex min-h-0 flex-1 flex-col ${studioShellRegionPadding}`}>
-        <div className={`min-h-0 flex-1 ${studioShellPanelSurface}`}>{children}</div>
+        <div className={`${studioShellRailScrollHost} ${studioShellPanelSurface}`}>{children}</div>
       </div>
     </aside>
   );

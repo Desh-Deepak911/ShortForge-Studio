@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { StudioConfirmDialog } from "@/components/studio-overlay";
 import { deleteDraft, getDraft, listDrafts, resolveDraftHref, toDraftSummary } from "@/features/drafts";
 import { clearDraftSession, seedDraftSession } from "@/features/drafts/session";
 import type { DraftWorkflowStatus, StoryDraftSummary } from "@/features/drafts";
@@ -64,19 +65,20 @@ export default function DraftsDashboard() {
   const [drafts, setDrafts] = useState<StoryDraftSummary[]>(() =>
     listDrafts().map(toDraftSummary),
   );
+  const [pendingDelete, setPendingDelete] = useState<StoryDraftSummary | null>(null);
 
   const refreshDrafts = useCallback(() => {
     setDrafts(listDrafts().map(toDraftSummary));
   }, []);
 
-  const handleDelete = (draft: StoryDraftSummary) => {
-    const confirmed = window.confirm(`Delete "${draft.title}"? This cannot be undone.`);
-    if (!confirmed) {
+  const confirmDelete = () => {
+    if (!pendingDelete) {
       return;
     }
 
-    deleteDraft(draft.id);
-    clearDraftSession(draft.id);
+    deleteDraft(pendingDelete.id);
+    clearDraftSession(pendingDelete.id);
+    setPendingDelete(null);
     refreshDrafts();
   };
 
@@ -165,7 +167,7 @@ export default function DraftsDashboard() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(draft)}
+                      onClick={() => setPendingDelete(draft)}
                       aria-label={`Delete ${draft.title}`}
                       className={`${studioSecondaryButton} w-full text-red-300/90 hover:bg-red-950/20 hover:text-red-300 sm:min-w-[6.5rem]`}
                     >
@@ -184,6 +186,24 @@ export default function DraftsDashboard() {
         Drafts are stored in localStorage on this device. Audio and uploaded images may need to be
         re-added after a full page reload.
       </p>
+
+      <StudioConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDelete(null);
+          }
+        }}
+        title="Delete draft?"
+        description={
+          pendingDelete
+            ? `Delete "${pendingDelete.title}"? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDelete}
+      />
     </section>
   );
 }

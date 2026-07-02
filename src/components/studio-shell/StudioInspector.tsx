@@ -1,6 +1,7 @@
 import {
   studioShellInspectorWidth,
   studioShellInspectorWidthCompact,
+  studioShellRailScrollHost,
   studioShellRegionPadding,
 } from "@/lib/utils/studioUi";
 
@@ -30,7 +31,9 @@ export default function StudioInspector({
       aria-label={ariaLabel}
       className={`${widthClass} border-t border-border/40 bg-surface/15 lg:border-l lg:border-t-0 ${className}`.trim()}
     >
-      <div className={`flex min-w-0 flex-col ${studioShellRegionPadding}`}>{children}</div>
+      <div className={`${studioShellRailScrollHost} flex min-w-0 flex-col ${studioShellRegionPadding}`}>
+        {children}
+      </div>
     </aside>
   );
 }

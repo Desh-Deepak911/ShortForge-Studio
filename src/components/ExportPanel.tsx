@@ -1,17 +1,21 @@
 "use client";
 
 import {
-  AlertTriangle,
   CheckCircle2,
   ChevronDown,
   Circle,
   Download,
   Film,
+  Info,
   Loader2,
+  Share2,
 } from "lucide-react";
 import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
 
-import ExportSuccessSummary from "@/components/export/ExportSuccessSummary";
+import ExportSuccessSummary, {
+  ExportDownloadAgainButton,
+} from "@/components/export/ExportSuccessSummary";
+import { StudioStatus } from "@/components/studio-status";
 import { buildExportSuccessDiagnostics } from "@/components/export/build-export-success-diagnostics.utils";
 import { buildAudioMixFromStory, getVoiceoverAvailability } from "@/features/audio";
 import { prepareStoryVoiceoverForExport } from "@/features/drafts";
@@ -47,13 +51,20 @@ import {
   isExportBackgroundMusicActiveFromMix,
 } from "@/features/export/utils/export-background-music.utils";
 import {
+  downloadBlob,
   setExportDownloadCaptureHandler,
 } from "@/features/export/utils/download.utils";
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import {
+  applyExportProfileToSettings,
+  getExportProfile,
+  getExportProfileNotices,
+  getExportProfiles,
+  resolveExportProfileId,
+} from "@/features/export-profiles";
+import {
   studioBadge,
   studioChecklistItem,
-  studioError,
   studioFieldLabel,
   studioGlass,
   studioIconBox,
@@ -61,6 +72,7 @@ import {
   studioOptionRow,
   studioPanel,
   studioPrimaryButton,
+  studioSecondaryButton,
   studioSectionDesc,
   studioSectionTitle,
   studioSelect,
@@ -72,13 +84,15 @@ import {
   studioStepLabel,
   studioStickyMobileFooterAboveBar,
   studioSubtleText,
-  studioWarningPanel,
 } from "@/lib/utils/studioUi";
 import { CREATOR_BRAND } from "@/lib/constants/product-brand";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 import { sceneHasImage } from "@/features/story/utils";
+import type { StoryCreationBrief } from "@/features/drafts/types";
+import PublishingAssistantModal from "@/features/publishing/publishing-assistant/PublishingAssistantModal";
 import type { ExportSettings, FootieScript } from "@/features/story/types";
+import type { ScriptMode } from "@/types/footiebitz";
 
 interface ExportPanelProps {
   script: FootieScript;
@@ -90,6 +104,10 @@ interface ExportPanelProps {
   onScriptChange?: (script: FootieScript) => void;
   /** Optional — notifies parent when export is in progress (presentation gating). */
   onExportActiveChange?: (active: boolean) => void;
+  /** Optional — draft context for post-export publishing assistant. */
+  draftId?: string;
+  creationBrief?: StoryCreationBrief;
+  scriptMode?: ScriptMode;
 }
 
 interface ChecklistItem {
@@ -181,6 +199,9 @@ export default function ExportPanel({
   onExportSettingsChange,
   onScriptChange,
   onExportActiveChange,
+  draftId,
+  creationBrief,
+  scriptMode,
 }: ExportPanelProps) {
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [progress, setProgress] = useState(0);
@@ -192,6 +213,7 @@ export default function ExportPanel({
   const pendingExportContextRef = useRef<PendingExportContext | null>(null);
   const capturedDownloadRef = useRef<{ blob: Blob; filename: string } | null>(null);
   const [includeNarrationPreference, setIncludeNarrationPreference] = useState(true);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
   const baseExportSettings = useMemo(
     (): ExportSettings => resolveExportSettings(script),
     [script],
@@ -218,7 +240,33 @@ export default function ExportPanel({
     setUserExportSettings((current) => {
       const base =
         current?.key === scriptSettingsKey ? current.settings : baseExportSettings;
-      const next = { ...base, ...patch };
+      const next = normalizeExportSettings({ ...base, ...patch }, script.title);
+      onExportSettingsChange?.(next);
+      return { key: scriptSettingsKey, settings: next };
+    });
+  };
+
+  const exportProfiles = useMemo(() => getExportProfiles(), []);
+  const activeExportProfileId = resolveExportProfileId(exportSettings);
+  const activeExportProfile = useMemo(
+    () => getExportProfile(activeExportProfileId),
+    [activeExportProfileId],
+  );
+  const exportProfileNotices = useMemo(
+    () => getExportProfileNotices(activeExportProfile, script),
+    [activeExportProfile, script],
+  );
+
+  const handleExportProfileChange = (profileId: string) => {
+    const profile = getExportProfile(profileId);
+    if (!profile) {
+      return;
+    }
+
+    setUserExportSettings((current) => {
+      const base =
+        current?.key === scriptSettingsKey ? current.settings : baseExportSettings;
+      const next = applyExportProfileToSettings(base, profile, script);
       onExportSettingsChange?.(next);
       return { key: scriptSettingsKey, settings: next };
     });
@@ -244,6 +292,26 @@ export default function ExportPanel({
     onExportActiveChange?.(isExporting);
     return () => onExportActiveChange?.(false);
   }, [isExporting, onExportActiveChange]);
+
+  const sessionExportObjectUrl = useMemo(() => {
+    if (!exportSuccessSnapshot?.downloadBlob) {
+      return undefined;
+    }
+
+    try {
+      return URL.createObjectURL(exportSuccessSnapshot.downloadBlob);
+    } catch {
+      return undefined;
+    }
+  }, [exportSuccessSnapshot]);
+
+  useEffect(() => {
+    return () => {
+      if (sessionExportObjectUrl) {
+        URL.revokeObjectURL(sessionExportObjectUrl);
+      }
+    };
+  }, [sessionExportObjectUrl]);
 
   const voiceoverAvailability = useMemo(
     () => getVoiceoverAvailability(script),
@@ -320,6 +388,14 @@ export default function ExportPanel({
     .split("x")
     .map(Number);
   const isBusy = isExporting || disabled;
+  const isPostExport = exportState === "done" && exportSuccessSnapshot !== null;
+  const exportDisabledReason = isExporting
+    ? "Export in progress"
+    : sceneCount < 1
+      ? "Add at least one scene to export"
+      : resolvedExportPath.blocked
+        ? resolvedExportPath.blockReason ?? "Selected export format is unavailable"
+        : undefined;
   const activeFormat = exportSettings.format;
   const webmAvailable = isWebmExportAvailable();
 
@@ -428,8 +504,67 @@ export default function ExportPanel({
     }
   };
 
+  const handleDownloadAgain = () => {
+    if (!exportSuccessSnapshot?.downloadBlob) {
+      return;
+    }
+
+    downloadBlob(exportSuccessSnapshot.downloadBlob, exportSuccessSnapshot.downloadFileName);
+  };
+
   return (
     <div className={`${compact ? "space-y-5" : "space-y-7"} min-w-0`}>
+      {isPostExport && exportSuccessSnapshot ? (
+        <div className="space-y-4">
+          <ExportSuccessSummary
+            fileName={exportSuccessSnapshot.fileName}
+            durationSec={exportSuccessSnapshot.durationSec}
+            resolution={exportSuccessSnapshot.resolution}
+            voiceoverEnabled={exportSuccessSnapshot.voiceoverEnabled}
+            backgroundMusicEnabled={exportSuccessSnapshot.backgroundMusicEnabled}
+            diagnostics={exportSuccessSnapshot.diagnostics}
+          />
+
+          {!draftId?.trim() ? (
+            <StudioStatus
+              variant="warning"
+              layout="panel"
+              icon={Info}
+              description="Save this draft to enable publishing packages later."
+            />
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setPublishModalOpen(true)}
+            className={`${studioPrimaryButton} w-full`}
+          >
+            <Share2 className="h-4 w-4" />
+            Publish
+          </button>
+
+          <ExportDownloadAgainButton
+            disabled={!exportSuccessSnapshot.downloadBlob}
+            onClick={handleDownloadAgain}
+            className={`${studioSecondaryButton} w-full`}
+          />
+
+          <PublishingAssistantModal
+            key={publishModalOpen ? exportSuccessSnapshot.downloadFileName : "closed"}
+            open={publishModalOpen}
+            onOpenChange={setPublishModalOpen}
+            script={script}
+            exportSettings={exportSettings}
+            exportFileName={exportSuccessSnapshot.downloadFileName}
+            durationSec={exportSuccessSnapshot.durationSec}
+            draftId={draftId}
+            creationBrief={creationBrief}
+            scriptMode={scriptMode}
+            objectUrl={sessionExportObjectUrl}
+          />
+        </div>
+      ) : (
+        <>
       {!compact ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
@@ -509,41 +644,30 @@ export default function ExportPanel({
       </ul>
 
       {!allImagesUploaded && sceneCount > 0 && (
-        <div className={`${studioWarningPanel} flex items-start gap-3`}>
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
-          <div>
-            <p className="text-sm font-medium text-amber-100/90">Missing scene images</p>
-            <p className="mt-1 text-xs leading-relaxed text-amber-200/60">
-              {uploadedCount} of {sceneCount} scenes have images. Missing scenes will use
-              gradient placeholders in the export.
-            </p>
-          </div>
-        </div>
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          title="Missing scene images"
+          description={`${uploadedCount} of ${sceneCount} scenes have images. Missing scenes will use gradient placeholders in the export.`}
+        />
       )}
 
       {narrationUnavailableForExport && (
-        <div className={`${studioWarningPanel} flex items-start gap-3`}>
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
-          <div>
-            <p className="text-sm font-medium text-amber-100/90">Narration needs restoration</p>
-            <p className="mt-1 text-xs leading-relaxed text-amber-200/60">
-              Saved narration was found but is not playable yet. Export will restore it automatically,
-              or regenerate narration if export still fails.
-            </p>
-          </div>
-        </div>
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          title="Narration needs restoration"
+          description="Saved narration was found but is not playable yet. Export will restore it automatically, or regenerate narration if export still fails."
+        />
       )}
 
       {narrationVoiceoverMismatch && hasPersistedVoiceover && (
-        <div className={`${studioWarningPanel} flex items-start gap-3`}>
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500/80" />
-          <div>
-            <p className="text-sm font-medium text-amber-100/90">Script changed after narration</p>
-            <p className="mt-1 text-xs leading-relaxed text-amber-200/60">
-              {EXPORT_NARRATION_VOICEOVER_MISMATCH_WARNING}
-            </p>
-          </div>
-        </div>
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          title="Script changed after narration"
+          description={EXPORT_NARRATION_VOICEOVER_MISMATCH_WARNING}
+        />
       )}
 
       {isExporting && (
@@ -580,6 +704,43 @@ export default function ExportPanel({
 
       <div className={`${studioPanel} min-w-0`}>
         <ExportSettingsSection
+          title="Export for"
+          description="Pick a platform preset — you can still change format and quality below."
+        >
+          <label htmlFor="export-profile" className={studioFieldLabel}>
+            Platform preset
+          </label>
+          <div className="relative mt-1.5">
+            <select
+              id="export-profile"
+              value={activeExportProfileId}
+              onChange={(e) => handleExportProfileChange(e.target.value)}
+              disabled={isBusy}
+              className={studioSelect}
+            >
+              {exportProfiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className={studioSelectChevron} />
+          </div>
+          {activeExportProfile ? (
+            <p className={studioSubtleText}>{activeExportProfile.description}</p>
+          ) : null}
+          {exportProfileNotices.length > 0 ? (
+            <ul className="space-y-1.5 pt-1">
+              {exportProfileNotices.map((notice) => (
+                <li key={notice.id} className="text-xs leading-relaxed text-muted">
+                  {notice.message}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </ExportSettingsSection>
+
+        <ExportSettingsSection
           title="Format"
           description="Choose how the video file is encoded."
         >
@@ -614,9 +775,11 @@ export default function ExportPanel({
           <p className={studioSubtleText}>{FORMAT_HELPERS[activeFormat]}</p>
           <p className={studioSubtleText}>{resolveExportPathFormatNotice(resolvedExportPath.path)}</p>
           {resolvedExportPath.blocked ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              {resolvedExportPath.blockReason}
-            </p>
+            <StudioStatus
+              variant="warning"
+              layout="inline"
+              description={resolvedExportPath.blockReason}
+            />
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -719,7 +882,11 @@ export default function ExportPanel({
           </label>
 
           {webmBackgroundMusicNotice ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">{webmBackgroundMusicNotice}</p>
+            <StudioStatus
+              variant="warning"
+              layout="inline"
+              description={webmBackgroundMusicNotice}
+            />
           ) : null}
 
           {showAudioMergeNote ? (
@@ -781,6 +948,7 @@ export default function ExportPanel({
             type="button"
             onClick={handleExport}
             disabled={isBusy || sceneCount < 1 || resolvedExportPath.blocked}
+            title={exportDisabledReason}
             className={`${studioPrimaryButton} w-full`}
           >
             {isExporting ? (
@@ -802,16 +970,12 @@ export default function ExportPanel({
           </p>
         </ExportSettingsSection>
       </div>
-
-      {exportState === "done" && exportSuccessSnapshot ? (
-        <ExportSuccessSummary {...exportSuccessSnapshot} />
-      ) : null}
-
-      {errorMessage && (
-        <div className={studioError}>
-          <p className="text-sm leading-relaxed">{errorMessage}</p>
-        </div>
+        </>
       )}
+
+      {errorMessage ? (
+        <StudioStatus variant="error" layout="panel" description={errorMessage} />
+      ) : null}
     </div>
   );
 }

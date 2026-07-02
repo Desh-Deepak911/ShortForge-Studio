@@ -2,8 +2,9 @@
 
 import { SearchX, ShieldOff, WifiOff } from "lucide-react";
 
+import { StudioStatus } from "@/components/studio-status";
+
 import type { AssetBrowserEmptyStateKind } from "./asset-browser.types";
-import { studioShellSectionTitle, studioSubtleText } from "@/lib/utils/studioUi";
 
 export interface AssetBrowserEmptyStateProps {
   kind: AssetBrowserEmptyStateKind;
@@ -46,13 +47,15 @@ function resolveCopy(kind: AssetBrowserEmptyStateKind, message?: string) {
 
 export default function AssetBrowserEmptyState({ kind, message }: AssetBrowserEmptyStateProps) {
   const copy = resolveCopy(kind, message);
-  const Icon = copy.icon;
 
   return (
-    <section className="flex flex-col items-center justify-center rounded-2xl bg-surface-elevated/20 px-6 py-12 text-center ring-1 ring-border/15">
-      <Icon className="mb-3 h-8 w-8 text-muted" aria-hidden />
-      <p className={studioShellSectionTitle}>{copy.title}</p>
-      <p className={`${studioSubtleText} mt-2 max-w-md`}>{copy.description}</p>
-    </section>
+    <StudioStatus
+      variant="empty"
+      layout="centered"
+      title={copy.title}
+      description={copy.description}
+      icon={copy.icon}
+      className="max-w-none rounded-2xl bg-surface-elevated/20 py-12 ring-1 ring-border/15"
+    />
   );
 }

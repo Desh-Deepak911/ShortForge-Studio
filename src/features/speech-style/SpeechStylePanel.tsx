@@ -7,11 +7,17 @@ import {
   resolveSpeechStylePreset,
 } from "@/features/speech-style";
 import {
-  studioCard,
-  studioCardActive,
   studioChip,
   studioChipActive,
   studioFieldLabel,
+  studioPickerCard,
+  studioPickerCardActive,
+  studioPickerCardLabel,
+  studioPickerCardLabelLg,
+  studioPickerGrid,
+  studioPickerGridCompact,
+  studioPickerStack,
+  studioPickerStackCompact,
   studioSubtleText,
 } from "@/lib/utils/studioUi";
 
@@ -39,10 +45,10 @@ export default function SpeechStylePanel({
   const presets = getSpeechStylePresets();
 
   return (
-    <div className={`space-y-2 ${compact ? "space-y-1.5" : ""}`}>
+    <div className={compact ? studioPickerStackCompact : studioPickerStack}>
       <div>
         <span className={studioFieldLabel}>Delivery Style</span>
-        <div className={`mt-1.5 grid grid-cols-2 ${compact ? "gap-0.5" : "gap-1"}`}>
+        <div className={`mt-1.5 ${compact ? studioPickerGridCompact : studioPickerGrid}`}>
           {presets.map((preset) => {
             const active = selectedPreset === preset.id;
             return (
@@ -53,11 +59,13 @@ export default function SpeechStylePanel({
                 aria-pressed={active}
                 title={preset.description}
                 onClick={() => onStylePresetChange(preset.id)}
-                className={`${active ? studioCardActive : studioCard} justify-center text-center ${
-                  compact ? "px-1.5 py-1 text-[10px]" : "px-2 py-1.5 text-[11px]"
+                className={`${active ? studioPickerCardActive : studioPickerCard} ${
+                  compact ? "px-1.5 py-1" : "px-2 py-1.5"
                 }`}
               >
-                {preset.label}
+                <span className={compact ? studioPickerCardLabel : studioPickerCardLabelLg}>
+                  {preset.label}
+                </span>
               </button>
             );
           })}
@@ -78,6 +86,13 @@ export default function SpeechStylePanel({
           role="switch"
           aria-checked={isExpressive}
           disabled={disabled || selectedPreset === DEFAULT_SPEECH_STYLE_PRESET}
+          title={
+            selectedPreset === DEFAULT_SPEECH_STYLE_PRESET
+              ? "Select a delivery style preset first"
+              : isExpressive
+                ? "Expressive delivery on"
+                : "Expressive delivery off"
+          }
           onClick={() => onExpressiveDeliveryChange(!isExpressive)}
           className={`${isExpressive ? studioChipActive : studioChip} shrink-0 px-2.5 py-1 ${
             compact ? "text-[10px]" : "text-[11px]"

@@ -289,6 +289,7 @@ test("6. voiceover + background music", () => {
   const { exportTimeline } = assertMasterTimelineDurationAuthority(story, "voiceover+bgm");
   const audioMix = buildAudioMixFromStory(story);
   const bgmSettings = resolveExportBackgroundMusicMixSettingsFromMix(
+    story,
     audioMix,
     true,
     exportTimeline.renderDurationMs,
@@ -363,6 +364,7 @@ test("9. exported MP4 uses MasterTimeline duration in mux path", () => {
   assert.equal(mp4Path.path, "mp4");
 
   const bgmSettings = resolveExportBackgroundMusicMixSettingsFromMix(
+    story,
     buildAudioMixFromStory(story),
     true,
     preflight.exportDurationMs,

@@ -22,8 +22,8 @@ import { getPreviewSceneTiming, resolvePreviewTimelineImageMotion, resolvePrevie
 import { normalizeCaptionMode, sceneHasImage, type SceneImageTransformPatch } from "@/features/story/utils";
 import type { TimelinePlaybackSnapshot } from "@/features/timeline-editor/timeline-playback-port.types";
 import { EMPTY_TIMELINE_PLAYBACK_SNAPSHOT } from "@/features/timeline-editor/timeline-playback-port.types";
+import { StudioStatus } from "@/components/studio-status";
 import {
-  studioError,
   studioPreviewControls,
   studioPreviewPill,
   studioPreviewPillMuted,
@@ -426,6 +426,7 @@ export default function VideoPreview({
           onClick={playWithBrowserVoice}
           disabled={isPlaying}
           className={studioPreviewPill}
+          aria-label="Preview with browser text-to-speech"
           title={
             hasCanonicalVoiceover
               ? "Preview with browser text-to-speech (does not use generated voiceover)"
@@ -440,6 +441,8 @@ export default function VideoPreview({
           onClick={pauseVoice}
           disabled={!isPlaying && !isSpeaking}
           className={studioPreviewPillMuted}
+          aria-label="Pause preview"
+          title="Pause preview"
         >
           <Pause className="h-3 w-3" />
         </button>
@@ -448,6 +451,8 @@ export default function VideoPreview({
           onClick={stopVoice}
           disabled={!isPlaying && !isSpeaking}
           className={studioPreviewPillMuted}
+          aria-label="Stop preview"
+          title="Stop preview"
         >
           <Square className="h-3 w-3" />
         </button>
@@ -466,12 +471,12 @@ export default function VideoPreview({
       ) : null}
 
       {playbackError ? (
-        <div
-          className={`${studioPreviewControls} ${studioError} text-center`}
-          role="alert"
-        >
-          <p className="text-[10px] leading-relaxed">{playbackError}</p>
-        </div>
+        <StudioStatus
+          variant="error"
+          layout="inline"
+          description={playbackError}
+          className={`${studioPreviewControls} text-center`}
+        />
       ) : null}
 
       <div className={`${studioPreviewControls} flex items-center gap-1.5`}>
@@ -480,6 +485,8 @@ export default function VideoPreview({
           onClick={goPrevious}
           disabled={isPlaying || safeIndex === 0}
           className={`${studioPreviewPillMuted} flex-1`}
+          aria-label="Previous scene"
+          title={safeIndex === 0 ? "Already on the first scene" : "Previous scene"}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
@@ -491,6 +498,8 @@ export default function VideoPreview({
           onClick={goNext}
           disabled={isPlaying || safeIndex >= sceneCount - 1}
           className={`${studioPreviewPillMuted} flex-1`}
+          aria-label="Next scene"
+          title={safeIndex >= sceneCount - 1 ? "Already on the last scene" : "Next scene"}
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>

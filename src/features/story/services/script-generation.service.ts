@@ -37,6 +37,8 @@ export interface GenerateStoryScriptOptions {
   researchAttemptedWithoutData?: boolean;
   /** Explicit top_5 ranked-data signal from research resolution. */
   top5RankedDataAvailable?: boolean;
+  /** Advisory creator template prompt block for script-only generation. */
+  templatePromptBlock?: string;
 }
 
 export type StoryScriptGenerationResult =
@@ -75,7 +77,11 @@ function buildPrompt(
   scriptMode: ScriptMode,
   wordBudget: NarrationWordBudget,
   context?: string,
-  promptOptions: { researchAttemptedWithoutData?: boolean; top5RankedDataAvailable?: boolean } = {},
+  promptOptions: {
+    researchAttemptedWithoutData?: boolean;
+    top5RankedDataAvailable?: boolean;
+    templatePromptBlock?: string;
+  } = {},
 ): string {
   return [
     "FootieBitz narration writer. Output JSON only. No markdown or prose.",
@@ -190,7 +196,11 @@ async function generateStoryScriptAttempt(
   scriptMode: ScriptMode,
   wordBudget: NarrationWordBudget,
   context: string | undefined,
-  promptOptions: { researchAttemptedWithoutData?: boolean; top5RankedDataAvailable?: boolean } = {},
+  promptOptions: {
+    researchAttemptedWithoutData?: boolean;
+    top5RankedDataAvailable?: boolean;
+    templatePromptBlock?: string;
+  } = {},
 ): Promise<{ rawText: string; response: unknown }> {
   const fullPrompt = buildPrompt(
     topic,
@@ -328,6 +338,9 @@ export async function generateStoryScript(
   const promptOptions = {
     researchAttemptedWithoutData: options.researchAttemptedWithoutData === true,
     top5RankedDataAvailable: options.top5RankedDataAvailable,
+    ...(options.templatePromptBlock?.trim()
+      ? { templatePromptBlock: options.templatePromptBlock.trim() }
+      : {}),
   };
 
   const { rawText, response } = await generateStoryScriptAttempt(

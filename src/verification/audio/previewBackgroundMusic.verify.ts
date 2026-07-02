@@ -56,6 +56,7 @@ test("computePreviewBackgroundMusicVolume ducks under voiceover when enabled", (
     computePreviewBackgroundMusicVolume({
       baseVolume: 0.2,
       duckingEnabled: true,
+      duckingStrength: PREVIEW_MUSIC_DUCKING_MULTIPLIER,
       voiceoverIsPlaying: true,
       fadeMultiplier: 1,
     }),
@@ -66,6 +67,7 @@ test("computePreviewBackgroundMusicVolume ducks under voiceover when enabled", (
     computePreviewBackgroundMusicVolume({
       baseVolume: 0.2,
       duckingEnabled: true,
+      duckingStrength: PREVIEW_MUSIC_DUCKING_MULTIPLIER,
       voiceoverIsPlaying: false,
       fadeMultiplier: 1,
     }),

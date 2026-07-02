@@ -22,7 +22,14 @@ import StudioLoadingState from "@/components/StudioLoadingState";
 import BriefCanvas from "@/features/create/components/BriefCanvas";
 import CreateBriefInspector from "@/features/create/components/CreateBriefInspector";
 import CreateStudioHeader from "@/features/create/components/CreateStudioHeader";
+import {
+  applyCreatorTemplateToBrief,
+  getCreatorTemplate,
+  mergeCreationBriefWithTemplateSelection,
+  type CreatorTemplateId,
+} from "@/features/creator-templates";
 import { createDraft } from "@/features/drafts";
+import type { StoryCreationBrief } from "@/features/drafts/types";
 import { seedDraftSession } from "@/features/drafts/session";
 import { consumeGenerateScriptStream } from "@/lib/utils/generateScriptStream";
 import { SAMPLE_TOPICS, WORKFLOW_STEPS } from "@/lib/constants/studioConstants";
@@ -52,6 +59,7 @@ export default function CreateStoryFlow() {
   const [duration, setDuration] = useState<number>(30);
   const [qualityMode, setQualityMode] = useState<QualityMode>("cheap");
   const [sceneCount, setSceneCount] = useState<number>(DEFAULT_SCENE_COUNT);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<CreatorTemplateId | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [researchPreview, setResearchPreview] = useState<ResearchPreviewState>(IDLE_RESEARCH_PREVIEW);
@@ -71,6 +79,45 @@ export default function CreateStoryFlow() {
     setEnableResearch(isResearchDefaultEnabledForScriptMode(mode));
     resetResearchPreview();
   }, [resetResearchPreview]);
+
+  const buildCurrentCreationBrief = useCallback((): StoryCreationBrief => {
+    return {
+      topic: topic.trim(),
+      tone,
+      duration,
+      qualityMode,
+      sceneCount,
+      scriptMode,
+      enableResearch,
+      ...(context.trim() ? { context: context.trim() } : {}),
+    };
+  }, [context, duration, enableResearch, qualityMode, sceneCount, scriptMode, tone, topic]);
+
+  const handleTemplateChange = useCallback(
+    (templateId: CreatorTemplateId | "") => {
+      if (!templateId) {
+        setSelectedTemplateId("");
+        return;
+      }
+
+      const template = getCreatorTemplate(templateId);
+      if (!template) {
+        return;
+      }
+
+      setSelectedTemplateId(templateId);
+
+      const nextBrief = applyCreatorTemplateToBrief(buildCurrentCreationBrief(), template);
+      const nextScriptMode = nextBrief.scriptMode ?? DEFAULT_SCRIPT_MODE;
+
+      setScriptMode(nextScriptMode);
+      setEnableResearch(isResearchDefaultEnabledForScriptMode(nextScriptMode));
+      setDuration(nextBrief.duration);
+      setSceneCount(nextBrief.sceneCount);
+      resetResearchPreview();
+    },
+    [buildCurrentCreationBrief, resetResearchPreview],
+  );
 
   const runIntelligenceResearch = useCallback(async () => {
       if (!enableResearch) {
@@ -197,6 +244,11 @@ export default function CreateStoryFlow() {
       const trimmedTopic = topic.trim();
       const manualContext = context.trim() || undefined;
       const researchPreviewPayload = buildGenerateScriptResearchPreview(researchPreview);
+      const selectedTemplate = selectedTemplateId ? getCreatorTemplate(selectedTemplateId) : null;
+      const creationBrief = mergeCreationBriefWithTemplateSelection(
+        buildCurrentCreationBrief(),
+        selectedTemplate,
+      );
 
       const response = await fetch("/api/generate-script", {
         method: "POST",
@@ -213,6 +265,10 @@ export default function CreateStoryFlow() {
           sceneCount,
           mode: "script-only",
           stream: true,
+          ...(creationBrief.templateId ? { templateId: creationBrief.templateId } : {}),
+          ...(creationBrief.templatePromptHints
+            ? { templatePromptHints: creationBrief.templatePromptHints }
+            : {}),
         }),
       });
 
@@ -241,13 +297,7 @@ export default function CreateStoryFlow() {
       const draft = createDraft({
         script: nextScript,
         creationBrief: {
-          topic: topic.trim(),
-          tone,
-          duration,
-          qualityMode,
-          sceneCount,
-          scriptMode,
-          enableResearch,
+          ...creationBrief,
           ...(data.generationContext
             ? { context: data.generationContext }
             : context.trim()
@@ -275,19 +325,7 @@ export default function CreateStoryFlow() {
 
   const trimmedTopic = topic.trim();
   const hasTopic = trimmedTopic.length > 0;
-
-  if (loading) {
-    return (
-      <div className="mx-auto w-full min-w-0 max-w-4xl px-3.5 py-10 sm:px-6 lg:px-8">
-        <StudioLoadingState
-          variant="script-only"
-          topic={topic}
-          tone={tone}
-          duration={duration}
-        />
-      </div>
-    );
-  }
+  const loadingShellClass = loading ? "pointer-events-none select-none opacity-60" : undefined;
 
   return (
     <StudioShell
@@ -303,75 +341,86 @@ export default function CreateStoryFlow() {
         />
       }
       sidebar={
-        <StudioSection title="Your path" description="From idea to export.">
-          <ol className="space-y-2">
-            {WORKFLOW_STEPS.map((item, index) => (
-              <li
-                key={item.title}
-                className={`${studioPanel} ${index === 0 ? "ring-accent/25" : ""}`}
-              >
-                <p className="text-sm font-medium text-foreground/90">{item.title}</p>
-                <p className={`${studioSubtleText} mt-1`}>{item.desc}</p>
-              </li>
-            ))}
-          </ol>
-        </StudioSection>
-      }
-      canvas={
-        <div className="flex w-full min-w-0 flex-col gap-6">
-          <BriefCanvas
-            topic={topic}
-            onTopicChange={(value) => {
-              setTopic(value);
-              resetResearchPreview();
-            }}
-            topicInputRef={topicInputRef}
-            scriptMode={scriptMode}
-            onScriptModeChange={handleScriptModeChange}
-            context={context}
-            tone={tone}
-            onToneChange={setTone}
-            duration={duration}
-            onDurationChange={setDuration}
-            sampleTopics={SAMPLE_TOPICS}
-            loading={loading}
-            error={error}
-            onClearError={() => setError(null)}
-            onSubmit={() => {
-              void generateScript();
-            }}
-          />
-          <BreakLongVideoSection />
+        <div className={loadingShellClass}>
+          <StudioSection title="Your path" description="From idea to export.">
+            <ol className="space-y-2">
+              {WORKFLOW_STEPS.map((item, index) => (
+                <li
+                  key={item.title}
+                  className={`${studioPanel} ${index === 0 ? "ring-accent/25" : ""}`}
+                >
+                  <p className="text-sm font-medium text-foreground/90">{item.title}</p>
+                  <p className={`${studioSubtleText} mt-1`}>{item.desc}</p>
+                </li>
+              ))}
+            </ol>
+          </StudioSection>
         </div>
       }
+      canvas={
+        loading ? (
+          <StudioLoadingState variant="create-story" enableResearch={enableResearch} />
+        ) : (
+          <div className="flex w-full min-w-0 flex-col gap-6">
+            <BriefCanvas
+              topic={topic}
+              onTopicChange={(value) => {
+                setTopic(value);
+                resetResearchPreview();
+              }}
+              topicInputRef={topicInputRef}
+              scriptMode={scriptMode}
+              onScriptModeChange={handleScriptModeChange}
+              context={context}
+              tone={tone}
+              onToneChange={setTone}
+              duration={duration}
+              onDurationChange={setDuration}
+              sampleTopics={SAMPLE_TOPICS}
+              loading={loading}
+              error={error}
+              onClearError={() => setError(null)}
+              onSubmit={() => {
+                void generateScript();
+              }}
+            />
+            <BreakLongVideoSection />
+          </div>
+        )
+      }
       inspector={
-        <CreateBriefInspector
-          context={context}
-          onContextChange={(value) => {
-            setContext(value);
-            resetResearchPreview();
-          }}
-          enableResearch={enableResearch}
-          onEnableResearchChange={(enabled) => {
-            setEnableResearch(enabled);
-            resetResearchPreview();
-          }}
-          qualityMode={qualityMode}
-          onQualityModeChange={setQualityMode}
-          sceneCount={sceneCount}
-          onSceneCountChange={setSceneCount}
-          loading={loading}
-          topic={topic}
-          scriptMode={scriptMode}
-          researchPreview={researchPreview}
-          entityPreview={researchPreview.entityPreview}
-          onPreviewResearch={() => {
-            void previewResearch();
-          }}
-          onRefreshResearchPreview={() => {
-            void refreshResearchPreview();
-          }}
-        />
+        <div className={loadingShellClass}>
+          <CreateBriefInspector
+            context={context}
+            onContextChange={(value) => {
+              setContext(value);
+              resetResearchPreview();
+            }}
+            enableResearch={enableResearch}
+            onEnableResearchChange={(enabled) => {
+              setEnableResearch(enabled);
+              resetResearchPreview();
+            }}
+            qualityMode={qualityMode}
+            onQualityModeChange={setQualityMode}
+            sceneCount={sceneCount}
+            onSceneCountChange={setSceneCount}
+            duration={duration}
+            selectedTemplateId={selectedTemplateId}
+            onTemplateChange={handleTemplateChange}
+            loading={loading}
+            topic={topic}
+            scriptMode={scriptMode}
+            researchPreview={researchPreview}
+            entityPreview={researchPreview.entityPreview}
+            onPreviewResearch={() => {
+              void previewResearch();
+            }}
+            onRefreshResearchPreview={() => {
+              void refreshResearchPreview();
+            }}
+          />
+        </div>
       }
     />
   );

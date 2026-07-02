@@ -8,6 +8,7 @@ import {
   generateScriptOnlyStory,
   normalizeFootieStory,
 } from "@/features/story/services";
+import { resolveCreatorTemplatePromptBlock } from "@/features/creator-templates/creator-template-prompt.utils";
 import { resolveScriptResearchContext } from "@/features/research/utils/script-research-context.server.utils";
 import { resolveQualityMode, resolveScriptModel } from "@/lib/ai";
 import type { AudioFirstGenerationResult, FootieScript } from "@/features/story/types";
@@ -109,6 +110,7 @@ interface GenerationParams {
   narration?: string;
   voiceoverDurationMs?: number;
   useStudioIntelligenceScenes?: boolean;
+  templatePromptBlock?: string;
 }
 
 type GenerationSuccess = {
@@ -158,6 +160,7 @@ async function runGeneration(
       researchAttemptedWithoutData:
         params.enableResearch === true && !resolvedContext.researchApplied,
       top5RankedDataAvailable: resolvedContext.top5RankedDataAvailable,
+      templatePromptBlock: params.templatePromptBlock,
       onProgress: emitProgress,
     });
 
@@ -397,6 +400,10 @@ export async function POST(request: Request) {
       narration: body.narration,
       voiceoverDurationMs: body.voiceoverDurationMs,
       useStudioIntelligenceScenes: body.useStudioIntelligenceScenes === true,
+      templatePromptBlock: resolveCreatorTemplatePromptBlock({
+        templateId: body.templateId,
+        templatePromptHints: body.templatePromptHints,
+      }) || undefined,
     };
 
     if (body.stream) {

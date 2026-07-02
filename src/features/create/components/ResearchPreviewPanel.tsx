@@ -2,6 +2,8 @@
 
 import { AlertTriangle, Loader2, Search } from "lucide-react";
 
+import { StudioStatus } from "@/components/studio-status";
+
 import {
   dedupeFriendlyWarnings,
   formatResearchDetectedLabel,
@@ -426,17 +428,27 @@ export default function ResearchPreviewPanel({
       {preview.status === "error" && preview.errorMessage ? (
         <div className={`${studioPanel} mt-3 space-y-2 px-3.5 py-3 sm:px-4`}>
           <StatusBadge label="Unavailable" tone={researchPreviewDisplayStatusTone("Unavailable")} />
-          <p className="text-sm leading-relaxed text-red-300/90">{preview.errorMessage}</p>
+          <StudioStatus
+            variant="error"
+            layout="inline"
+            description={preview.errorMessage}
+          />
         </div>
       ) : null}
 
       {preview.status === "loading" ? (
-        <div className={`${studioPanel} mt-3 space-y-2 px-3.5 py-3 sm:px-4`}>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge label="Searching" tone={researchPreviewDisplayStatusTone("Searching")} />
-            <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden />
-          </div>
-          <p className={`${studioSubtleText} text-sm`}>Looking up supporting details...</p>
+        <div className={`${studioPanel} mt-3 px-3.5 py-3 sm:px-4`}>
+          <StudioStatus
+            variant="loading"
+            layout="compact"
+            title="Researching..."
+            description="Looking up supporting details..."
+            className="py-0"
+          >
+            <div className="mt-3">
+              <StatusBadge label="Searching" tone={researchPreviewDisplayStatusTone("Searching")} />
+            </div>
+          </StudioStatus>
         </div>
       ) : null}
 

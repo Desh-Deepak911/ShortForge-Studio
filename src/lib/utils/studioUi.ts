@@ -50,6 +50,9 @@ export const studioAccentButton = studioActionButton;
 /** Quiet destructive — clear but not loud. */
 export const studioDestructiveButton = `inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 min-h-[2.25rem] text-[11px] font-medium text-red-300/85 ring-1 ring-transparent hover:bg-red-950/25 hover:text-red-300 hover:ring-red-500/15 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:min-h-0 sm:py-1.5 ${focusRing}`;
 
+/** Destructive confirmation CTA — confirm dialogs and irreversible actions. */
+export const studioDestructiveConfirmButton = `${studioSecondaryButton} text-red-300/90 ring-red-500/20 hover:bg-red-950/25 hover:text-red-300 hover:ring-red-500/30`;
+
 /** Ghost / tertiary chip button. */
 export const studioGhostButton = `inline-flex items-center gap-1.5 rounded-xl bg-surface-elevated/45 px-2.5 py-1.5 text-xs font-medium text-muted ring-1 ring-border/20 hover:bg-surface-elevated/60 hover:text-foreground/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`;
 
@@ -72,7 +75,7 @@ export const studioChipActive =
 export const studioCard = `w-full rounded-lg bg-surface-elevated/35 px-2 py-1.5 text-left ring-1 ring-border/20 transition hover:bg-surface-elevated/50 hover:ring-border/30 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 ${focusRing}`;
 
 export const studioCardActive =
-  "w-full rounded-lg bg-accent-soft/60 px-2 py-1.5 text-left ring-1 ring-accent/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+  `w-full rounded-lg bg-accent-soft/60 px-2 py-1.5 text-left ring-1 ring-accent/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-200 active:scale-[0.99] ${focusRing}`;
 
 /** Compact inline tag for card metadata. */
 export const studioCardTag =
@@ -354,11 +357,29 @@ export const studioLoadingMessage =
 export const studioLoadingSubtext =
   "mt-1.5 text-center text-xs text-muted";
 
+/** Shared spinner host for Studio status loading states. */
+export const studioStatusSpinnerHost =
+  "flex h-10 w-10 items-center justify-center rounded-full bg-surface-elevated/60 ring-1 ring-border/25";
+
+/** Compact icon host for inline/inspector empty states. */
+export const studioStatusIconBox =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-elevated/40 ring-1 ring-border/20";
+
+/** Inline/rail empty icon host — timeline and dense regions. */
+export const studioStatusIconBoxInline =
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface/50 ring-1 ring-border/25";
+
+/** Shared status title — panel and compact layouts. */
+export const studioStatusTitle = "text-sm font-medium tracking-tight text-foreground/90";
+
+/** Shared status description — panel layouts. */
+export const studioStatusDescription = "mt-1 text-xs leading-relaxed text-muted";
+
 /* ── Studio UX 2.0 shell layout (presentation only) ───────────────────────── */
 
 /** Full studio viewport shell — fixed-height editor chrome. */
 export const studioShellRoot =
-  "studio-shell flex min-h-0 min-w-0 flex-col overflow-hidden bg-background";
+  "studio-shell flex min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-background";
 
 /** Centered shell content max width (editor workspace). */
 export const studioShellMaxWidth = "mx-auto w-full min-w-0 max-w-[100rem]";
@@ -369,21 +390,29 @@ export const studioShellPanelGap = "gap-3 lg:gap-4";
 /** Horizontal padding inside shell regions. */
 export const studioShellRegionPadding = "px-3 py-3 sm:px-4 sm:py-4 lg:px-4";
 
-/** Left scene-list rail — default (≥1280px intent). */
+/** Thin vertical scrollbar — inspector, sidebar, drawers. */
+export const studioScrollbarVertical =
+  "[scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/40 [&::-webkit-scrollbar-track]:rounded-full";
+
+/** Left scene-list rail — default (≥1280px intent). Scroll lives on inner panel surface. */
 export const studioShellSidebarWidth =
-  "hidden shrink-0 overflow-y-auto overscroll-contain lg:flex lg:w-[15rem] xl:w-[15rem]";
+  "hidden min-h-0 shrink-0 flex-col lg:flex lg:w-[15rem] xl:w-[15rem]";
 
 /** Left scene-list rail — compact (laptop). */
 export const studioShellSidebarWidthCompact =
-  "hidden shrink-0 overflow-y-auto overscroll-contain lg:flex lg:w-[12.5rem]";
+  "hidden min-h-0 shrink-0 flex-col lg:flex lg:w-[12.5rem]";
 
-/** Right inspector — default width. */
+/** Right inspector — default width. Scroll lives on inner content wrapper. */
 export const studioShellInspectorWidth =
-  "flex min-h-0 w-full shrink-0 flex-col overflow-y-auto overscroll-contain lg:w-[20rem] xl:w-[20rem]";
+  "flex min-h-0 w-full shrink-0 flex-col lg:w-[20rem] xl:w-[20rem]";
 
 /** Right inspector — compact width. */
 export const studioShellInspectorWidthCompact =
-  "flex min-h-0 w-full shrink-0 flex-col overflow-y-auto overscroll-contain lg:w-[16.25rem]";
+  "flex min-h-0 w-full shrink-0 flex-col lg:w-[16.25rem]";
+
+/** Primary scroll host inside shell rails — single owner per column. */
+export const studioShellRailScrollHost =
+  `min-h-0 flex-1 overflow-y-auto overscroll-contain ${studioScrollbarVertical}`;
 
 /** Primary canvas column — centers preview content. */
 export const studioShellCanvasRegion =
@@ -419,7 +448,7 @@ export const studioShellTimelineHeightCompact =
 
 /** Row containing canvas + inspector. */
 export const studioShellBodyRow =
-  "flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row";
+  "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row";
 
 /** Column containing body row + timeline. */
 export const studioShellMainColumn = "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
@@ -460,7 +489,29 @@ export const studioExportDrawerHeader =
 
 /** Scrollable export drawer body. */
 export const studioExportDrawerBody =
-  "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5";
+  `min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5 ${studioScrollbarVertical}`;
+
+/** Shared overlay header — drawers and modals. */
+export const studioOverlayHeader = studioExportDrawerHeader;
+
+/** Shared overlay scroll body. */
+export const studioOverlayBody = studioExportDrawerBody;
+
+/** Shared overlay footer actions row. */
+export const studioOverlayFooter =
+  "flex shrink-0 flex-col gap-2 border-t border-border/20 px-4 py-4 sm:flex-row sm:px-5";
+
+/** Unified overlay close control. */
+export const studioOverlayCloseButton =
+  `${studioSubtleText} inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-border/25 hover:bg-surface-elevated/50 hover:text-foreground/90`;
+
+/** Centered modal shell — flex host above backdrop. */
+export const studioOverlayModalShell =
+  "fixed inset-0 z-[80] flex items-end justify-center p-0 transition-opacity duration-200 ease-out sm:items-center sm:p-4";
+
+/** Centered modal panel — publishing, confirmations, asset details. */
+export const studioOverlayModalPanel =
+  "flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-surface shadow-2xl ring-1 ring-border/30 transition-all duration-200 ease-out sm:rounded-2xl";
 
 /* ── Timeline rail (Studio UX 2.0) ─────────────────────────────────────────── */
 
@@ -503,7 +554,7 @@ export const studioInspectorSectionContentInner = "overflow-hidden min-h-0";
 
 /** Inspector section summary row. */
 export const studioInspectorSectionSummary =
-  "flex cursor-pointer list-none items-start justify-between gap-2 px-3 py-2.5 sm:px-3.5 [&::-webkit-details-marker]:hidden";
+  "flex min-h-[2.5rem] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 sm:px-3.5 [&::-webkit-details-marker]:hidden";
 
 /** Inspector section title. */
 export const studioInspectorSectionTitle =
@@ -511,7 +562,50 @@ export const studioInspectorSectionTitle =
 
 /** Inspector section body padding. */
 export const studioInspectorSectionBody =
-  "space-y-3 border-t border-border/15 px-3 py-3 sm:px-3.5 sm:py-3.5";
+  "space-y-2.5 border-t border-border/15 px-3 py-2.5 sm:px-3.5 sm:py-3";
+
+/** Vertical stack spacing between inspector sections. */
+export const studioInspectorStack = "flex min-w-0 flex-col gap-2";
+
+/** Nested accordion inside an inspector section — lighter surface. */
+export const studioInspectorNestedSection =
+  "group/details w-full min-w-0 rounded-lg bg-surface/20 ring-1 ring-border/15";
+
+/** Nested accordion summary — matches main section header height. */
+export const studioInspectorNestedSummary =
+  "flex min-h-[2.25rem] cursor-pointer list-none items-center justify-between gap-2 px-3 py-1.5 [&::-webkit-details-marker]:hidden";
+
+/** Nested accordion title. */
+export const studioInspectorNestedTitle =
+  "text-[11px] font-semibold tracking-tight text-foreground/85 sm:text-xs";
+
+/* ── Shared picker layout (voice, speech style, captions) ─────────────────── */
+
+/** Picker section vertical rhythm. */
+export const studioPickerStack = "space-y-2";
+export const studioPickerStackCompact = "space-y-1.5";
+
+/** Picker option grid — two columns in inspector. */
+export const studioPickerGrid = "grid grid-cols-2 gap-1";
+export const studioPickerGridCompact = "grid grid-cols-2 gap-0.5";
+
+/** Picker card shell — extends studioCard with consistent flex layout. */
+export const studioPickerCard =
+  `${studioCard} flex min-h-[2.75rem] w-full flex-col items-start justify-center gap-1 text-left`;
+
+/** Picker card — selected state. */
+export const studioPickerCardActive =
+  `${studioCardActive} flex min-h-[2.75rem] w-full flex-col items-start justify-center gap-1 text-left`;
+
+/** Picker card title — compact inspector. */
+export const studioPickerCardLabel = "font-medium text-foreground/95 text-xs";
+
+/** Picker card title — default density. */
+export const studioPickerCardLabelLg = "font-medium text-foreground/95 text-sm";
+
+/** Picker card helper line. */
+export const studioPickerCardDescription = `${studioSubtleText} line-clamp-1 text-[11px]`;
+export const studioPickerCardDescriptionCompact = `${studioSubtleText} line-clamp-1 text-[10px]`;
 
 /** Scene summary strip at top of inspector. */
 export const studioInspectorSummaryStrip =

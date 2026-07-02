@@ -3,13 +3,16 @@
 import { Loader2, Volume2 } from "lucide-react";
 
 import { useVoicePreview } from "@/features/voice-preview";
+import { StudioStatus } from "@/components/studio-status";
 import { voiceRequiresGpt4oMiniTts } from "@/lib/utils/tts-voice-compat.utils";
 import {
-  studioCard,
-  studioCardActive,
   studioCardTag,
   studioCompactButton,
-  studioSubtleText,
+  studioPickerCard,
+  studioPickerCardActive,
+  studioPickerCardDescription,
+  studioPickerCardLabel,
+  studioPickerCardLabelLg,
 } from "@/lib/utils/studioUi";
 
 import type { VoiceCardProps } from "./voice-library.types";
@@ -35,7 +38,7 @@ export default function VoiceCard({
   const showExpressiveBadge = voiceRequiresGpt4oMiniTts(voice.id);
 
   return (
-    <div className={`${selected ? studioCardActive : studioCard} flex w-full flex-col gap-1`}>
+    <div className={`${selected ? studioPickerCardActive : studioPickerCard} gap-1`}>
       <div className="flex items-start gap-1.5">
         <button
           type="button"
@@ -46,7 +49,7 @@ export default function VoiceCard({
           className="min-w-0 flex-1 text-left"
         >
           <div className="flex flex-wrap items-center gap-1">
-            <span className={`font-medium text-foreground/95 ${compact ? "text-xs" : "text-sm"}`}>
+            <span className={compact ? studioPickerCardLabel : studioPickerCardLabelLg}>
               {voice.displayName}
             </span>
             {showExpressiveBadge ? (
@@ -57,11 +60,7 @@ export default function VoiceCard({
           </div>
 
           {!compact ? (
-            <span
-              className={`${studioSubtleText} mt-0.5 line-clamp-1 ${compact ? "text-[10px]" : "text-[11px]"}`}
-            >
-              {voice.description}
-            </span>
+            <span className={studioPickerCardDescription}>{voice.description}</span>
           ) : null}
 
           <span className="mt-1 flex flex-wrap gap-0.5">
@@ -93,9 +92,7 @@ export default function VoiceCard({
       </div>
 
       {error ? (
-        <span className={`${studioSubtleText} line-clamp-1 text-[10px] text-rose-300`} role="alert">
-          {error}
-        </span>
+        <StudioStatus variant="error" layout="inline" description={error} className="line-clamp-1" />
       ) : null}
     </div>
   );

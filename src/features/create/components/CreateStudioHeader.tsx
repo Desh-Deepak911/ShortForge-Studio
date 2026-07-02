@@ -62,7 +62,7 @@ export default function CreateStudioHeader({
             className={studioNavPrimaryButton}
           >
             <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
-            <span className="hidden sm:inline">{loading ? "Writing story…" : "Write Story"}</span>
+            <span className="hidden sm:inline">{loading ? "Creating story…" : "Write Story"}</span>
             <span className="sm:hidden">{loading ? "…" : "Write"}</span>
           </button>
         ) : (

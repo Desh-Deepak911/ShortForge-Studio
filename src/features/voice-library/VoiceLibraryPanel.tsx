@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 
-import { studioChip, studioChipActive, studioFieldLabel, studioSubtleText } from "@/lib/utils/studioUi";
-
 import VoiceCard from "./VoiceCard";
 import { VOICE_CATEGORY_LABELS, VOICE_LIBRARY_CATEGORY_ORDER } from "./voice-library.registry";
 import type { VoiceLibraryFilter, VoiceLibraryPanelProps } from "./voice-library.types";
@@ -12,6 +10,16 @@ import {
   resolveVoiceLibraryDisplayName,
   resolveVoiceLibrarySelection,
 } from "./voice-library.utils";
+import {
+  studioChip,
+  studioChipActive,
+  studioFieldLabel,
+  studioPickerGrid,
+  studioPickerGridCompact,
+  studioPickerStack,
+  studioPickerStackCompact,
+  studioSubtleText,
+} from "@/lib/utils/studioUi";
 
 const FILTER_OPTIONS: Array<{ id: VoiceLibraryFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -40,7 +48,7 @@ export default function VoiceLibraryPanel({
 
   return (
     <div
-      className={`space-y-2 ${compact ? "space-y-1.5" : ""}`}
+      className={compact ? studioPickerStackCompact : studioPickerStack}
       role="listbox"
       aria-labelledby={labelledBy}
       aria-label={labelledBy ? undefined : "Voice library"}
@@ -79,11 +87,7 @@ export default function VoiceLibraryPanel({
         })}
       </div>
 
-      <div
-        className={`grid max-h-[min(24rem,50vh)] grid-cols-2 overflow-y-auto overscroll-contain pr-0.5 ${
-          compact ? "gap-1" : "gap-1.5"
-        }`}
-      >
+      <div className={compact ? studioPickerGridCompact : studioPickerGrid}>
         {visibleVoices.map((voice) => (
           <div key={voice.id} id={`voice-option-${voice.id}`}>
             <VoiceCard

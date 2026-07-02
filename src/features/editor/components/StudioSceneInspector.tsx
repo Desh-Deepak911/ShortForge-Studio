@@ -4,6 +4,7 @@ import { ImagePlus, Timer, Trash2, ChevronDown } from "lucide-react";
 
 import InspectorEmptyState from "@/components/studio-shell/InspectorEmptyState";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
+import StudioAccordion from "@/components/studio-shell/StudioAccordion";
 import CaptionModeControl from "@/features/editor/components/CaptionModeControl";
 import CreatorAssetStudio from "@/features/editor/components/creator-asset-studio/CreatorAssetStudio";
 import SceneImageInspector from "@/features/editor/components/SceneImageInspector";
@@ -39,6 +40,7 @@ import {
   studioDestructiveButton,
   studioFieldLabel,
   studioInputCompact,
+  studioInspectorStack,
   studioInspectorSummaryStrip,
   studioSelectChevronCompact,
   studioSelectCompact,
@@ -194,7 +196,7 @@ export default function StudioSceneInspector({
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 pb-1">
+    <div className={`${studioInspectorStack} pb-1`}>
       <div className={studioInspectorSummaryStrip}>
         <div className="flex items-start gap-2.5">
           <span className={studioStoryboardScenePill} aria-label={`Scene ${safeIndex + 1}`}>
@@ -372,19 +374,14 @@ export default function StudioSceneInspector({
                 updateScene(scene.id, buildSceneCaptionPresetPatch(presetId))
               }
             />
-            <details className="rounded-xl bg-surface-elevated/25 ring-1 ring-border/20">
-              <summary className={`cursor-pointer list-none px-3 py-2 ${studioFieldLabel}`}>
-                Advanced subtitle effect
-              </summary>
-              <div className="space-y-2 border-t border-border/15 px-3 py-2">
-                <SubtitleEffectControl
-                  value={scene.subtitleEffect}
-                  onChange={(effect) =>
-                    updateScene(scene.id, buildSceneSubtitleEffectPatch(effect))
-                  }
-                />
-              </div>
-            </details>
+            <StudioAccordion variant="nested" title="Advanced subtitle effect">
+              <SubtitleEffectControl
+                value={scene.subtitleEffect}
+                onChange={(effect) =>
+                  updateScene(scene.id, buildSceneSubtitleEffectPatch(effect))
+                }
+              />
+            </StudioAccordion>
             <div>
               <label htmlFor={`inspector-subtitle-text-${scene.id}`} className={studioFieldLabel}>
                 Subtitle text

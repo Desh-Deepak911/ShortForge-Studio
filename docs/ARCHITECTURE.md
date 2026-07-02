@@ -414,7 +414,19 @@ Story-level `FootieScript.voiceSettings`:
 - Voice — OpenAI TTS voice id
 - Speed — 0.75x to 1.4x presets
 
-UI: **`ProjectAudioStudio`** in `EditorProjectInspector` (`ProjectAudioVoiceoverSection`, `ProjectAudioBackgroundMusicSection`, export mix summary). Review flow: **`VoiceSettingsCard`** → `/api/generate-voiceover`.
+UI: **`ProjectAudioStudio`** in `EditorProjectInspector` (`ProjectAudioVoiceoverSection`, `ProjectAudioBackgroundMusicSection`, **Audio Mixer**, export mix summary). Review flow: **`VoiceSettingsCard`** → `/api/generate-voiceover`.
+
+### Audio Mixer v1
+
+Story-level mixer overrides live on optional `FootieScript.audioMixer`. **`resolveAudioMixerSettings(script)`** merges overrides with legacy `backgroundMusic` fields.
+
+| Bus | Stem gain | Preview | Export |
+|-----|-----------|---------|--------|
+| Voice | `voice.volume × master.volume` | HTMLMediaElement ≤ 100%; Web Audio boost + compressor when needed | FFmpeg/browser mix |
+| Music | `music.volume × master.volume` | Ducking + fades via `preview-background-music.utils` | Ducking for voiceover duration; browser mix fades |
+| Master | Applies to both stems | Peak protection when gain > 1.0 or toggle on | Post-mix `alimiter` when active |
+
+Module: `src/features/audio-mixer/`. Detail: [AUDIO_MIXER.md](./AUDIO_MIXER.md).
 
 ### Scene duration editing
 

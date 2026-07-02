@@ -3,6 +3,10 @@ const FFMPEG_CORE_BASE_URL = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG
 
 import type { ExportBackgroundMusicMixSettings } from "./export-background-music.utils";
 import {
+  buildExportFfmpegPeakLimiterFilterChain,
+  PEAK_PROTECTION_GAIN_THRESHOLD,
+} from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
+import {
   buildExportBackgroundMusicFilterChain,
   EXPORT_FFMPEG_AUDIO_FORMAT_FILTERS,
   resolveExportBackgroundMusicDurationSec,
@@ -211,12 +215,16 @@ export interface MuxVideoWithAudioOptions {
   onProgress?: (progress: number) => void;
   /** Defaults to webm (stream-copy video). */
   outputFormat?: ExportAudioMuxOutputFormat;
+  /** Voice stem gain when muxing narration — defaults to 1. */
+  voiceGain?: number;
 }
 
 export interface MuxVideoWithExportAudioOptions extends MuxVideoWithAudioOptions {
   voiceoverInput?: ExportAudioInput;
   backgroundMusicInput?: ExportAudioInput;
   backgroundMusicMix?: ExportBackgroundMusicMixSettings;
+  /** Voice stem gain when muxing narration — defaults to mix settings or 1. */
+  voiceGain?: number;
   /**
    * WebM mux stream-copies canvas video (fast path).
    * MP4 mux encodes H.264 + AAC in the same pass — avoids a second transcode exec.
@@ -228,15 +236,40 @@ function formatFfmpegDuration(seconds: number): string {
   return Math.max(0.001, seconds).toFixed(3);
 }
 
-function buildVoiceFilterChain(inputIndex: number, durationSec: number, outputLabel: string): string {
+function buildVoiceFilterChain(
+  inputIndex: number,
+  durationSec: number,
+  outputLabel: string,
+  voiceGain = 1,
+): string {
   const duration = formatFfmpegDuration(durationSec);
   const filters = [
     ...EXPORT_FFMPEG_AUDIO_FORMAT_FILTERS,
     `atrim=0:${duration}`,
     `apad=whole_dur=${duration}`,
-    "volume=1",
+    `volume=${voiceGain.toFixed(4)}`,
   ];
   return `[${inputIndex}:a]${filters.join(",")}[${outputLabel}]`;
+}
+
+function resolveExportPeakProtectionActive(
+  mixSettings: ExportBackgroundMusicMixSettings | null | undefined,
+  voiceGain: number,
+): boolean {
+  return mixSettings?.applyPeakProtection ?? voiceGain > PEAK_PROTECTION_GAIN_THRESHOLD;
+}
+
+function buildVoiceOnlyFilterChain(
+  inputIndex: number,
+  durationSec: number,
+  voiceGain = 1,
+): string {
+  const duration = formatFfmpegDuration(durationSec);
+  const filters = [`atrim=0:${duration}`, `apad=whole_dur=${duration}`];
+  if (voiceGain !== 1) {
+    filters.push(`volume=${voiceGain.toFixed(4)}`);
+  }
+  return `[${inputIndex}:a]${filters.join(",")}[aout]`;
 }
 
 /**
@@ -299,26 +332,53 @@ export async function muxVideoWithExportAudio(
     nextInputIndex += 1;
   }
 
+  const voiceGain = options.voiceGain ?? options.backgroundMusicMix?.voiceGain ?? 1;
+  const applyPeakProtection = resolveExportPeakProtectionActive(
+    options.backgroundMusicMix,
+    voiceGain,
+  );
+
   let filterComplex = "";
   if (hasVoiceover && hasMusic && voiceInputIndex != null && musicInputIndex != null) {
+    const mixBase =
+      "[voice][music]amix=inputs=2:duration=first:dropout_transition=0,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo";
     filterComplex = [
       buildExportBackgroundMusicFilterChain(
         musicInputIndex,
         options.backgroundMusicMix!,
         "music",
       ),
-      buildVoiceFilterChain(voiceInputIndex, durationSec, "voice"),
-      "[voice][music]amix=inputs=2:duration=first:dropout_transition=0,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[aout]",
+      buildVoiceFilterChain(voiceInputIndex, durationSec, "voice", voiceGain),
+      applyPeakProtection
+        ? `${mixBase}[premix];${buildExportFfmpegPeakLimiterFilterChain("premix", "aout")}`
+        : `${mixBase}[aout]`,
     ].join(";");
   } else if (hasMusic && musicInputIndex != null && options.backgroundMusicMix) {
-    filterComplex = buildExportBackgroundMusicFilterChain(
-      musicInputIndex,
-      options.backgroundMusicMix,
-      "aout",
-    );
+    if (options.backgroundMusicMix.applyPeakProtection) {
+      filterComplex = [
+        buildExportBackgroundMusicFilterChain(
+          musicInputIndex,
+          options.backgroundMusicMix,
+          "music",
+        ),
+        buildExportFfmpegPeakLimiterFilterChain("music", "aout"),
+      ].join(";");
+    } else {
+      filterComplex = buildExportBackgroundMusicFilterChain(
+        musicInputIndex,
+        options.backgroundMusicMix,
+        "aout",
+      );
+    }
   } else if (hasVoiceover && voiceInputIndex != null) {
-    // atrim preserves voiceover playback rate; apad appends silence to match video length.
-    filterComplex = `[${voiceInputIndex}:a]atrim=0:${duration},apad=whole_dur=${duration}[aout]`;
+    if (applyPeakProtection) {
+      filterComplex = [
+        buildVoiceFilterChain(voiceInputIndex, durationSec, "voice", voiceGain),
+        buildExportFfmpegPeakLimiterFilterChain("voice", "aout"),
+      ].join(";");
+    } else {
+      filterComplex = buildVoiceOnlyFilterChain(voiceInputIndex, durationSec, voiceGain);
+    }
   }
 
   const handleProgress = ({ progress }: { progress: number; time?: number }) => {

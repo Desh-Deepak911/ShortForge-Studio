@@ -7,11 +7,30 @@ export type ExportFormat = "mp4" | "webm";
 export type ExportQualityTier = "standard" | "high";
 export type ExportResolution = "1080x1920" | "720x1280";
 
+export type ExportProfileId =
+  | "generic_mp4"
+  | "youtube_shorts"
+  | "instagram_reels"
+  | "x_video";
+
+const EXPORT_PROFILE_IDS: ExportProfileId[] = [
+  "generic_mp4",
+  "youtube_shorts",
+  "instagram_reels",
+  "x_video",
+];
+
+export function isExportProfileId(value: string): value is ExportProfileId {
+  return EXPORT_PROFILE_IDS.includes(value as ExportProfileId);
+}
+
 export interface ExportSettings {
   fileName: string;
   format: ExportFormat;
   quality: ExportQualityTier;
   resolution: ExportResolution;
+  /** Optional platform preset — omitted on legacy exports. */
+  exportProfileId?: ExportProfileId;
 }
 
 export const DEFAULT_EXPORT_FORMAT: ExportFormat = "webm";
@@ -119,7 +138,7 @@ export function normalizeExportSettings(
       ? partial.format
       : DEFAULT_EXPORT_FORMAT;
 
-  return {
+  const settings: ExportSettings = {
     fileName,
     format,
     quality:
@@ -129,6 +148,12 @@ export function normalizeExportSettings(
         ? "720x1280"
         : DEFAULT_EXPORT_RESOLUTION,
   };
+
+  if (partial?.exportProfileId && isExportProfileId(partial.exportProfileId)) {
+    settings.exportProfileId = partial.exportProfileId;
+  }
+
+  return settings;
 }
 
 export function resolveExportSettings(

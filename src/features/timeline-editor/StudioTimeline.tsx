@@ -17,6 +17,7 @@ import TimelinePlaybackHead from "./TimelinePlaybackHead";
 import { useTimelinePlayback } from "./TimelinePlaybackPort";
 import { clampTimelinePlaybackProgress } from "./timeline-playback-port.types";
 import {
+  timelineEditorCoarsePointerHint,
   timelineEditorFallbackNotice,
   timelineEditorPlaybackLocked,
   timelineEditorRailScroll,
@@ -367,6 +368,10 @@ export default function StudioTimeline({
             {layout.devWarning}
           </p>
         ) : null}
+
+        <p className={timelineEditorCoarsePointerHint}>
+          Tap the ⋮ menu on any scene for insert, duplicate, and delete actions.
+        </p>
 
         <div
           ref={scrollContainerRef}

@@ -1,8 +1,11 @@
 "use client";
 
 import {
-  studioLoadingMessage,
-  studioLoadingSubtext,
+  StudioStatus,
+  StudioStatusSpinner,
+  StudioStatusStepList,
+} from "@/components/studio-status";
+import {
   studioSkeleton,
   studioWorkspaceAside,
   studioWorkspaceGrid,
@@ -15,13 +18,27 @@ import {
 } from "@/types/footiebitz";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
 
+const CREATE_STORY_LOADING_STEPS = [
+  "Understanding your topic",
+  "Researching information",
+  "Writing narration",
+  "Building storyboard",
+  "Preparing editor",
+] as const;
+
 interface StudioLoadingStateProps {
   topic?: string;
   tone?: string;
   duration?: number;
   loadingStep?: GenerationLoadingStep;
   /** Script-only create flow — no editor skeleton or multi-step checklist. */
-  variant?: "full" | "script-only";
+  variant?: "full" | "script-only" | "create-story" | "compact";
+  /** When true, create-story loading highlights the research step. */
+  enableResearch?: boolean;
+  /** Compact variant title override. */
+  title?: string;
+  /** Compact variant subtitle override. */
+  subtitle?: string;
 }
 
 function ScriptOnlyLoadingState({
@@ -35,26 +52,25 @@ function ScriptOnlyLoadingState({
       : undefined;
 
   return (
-    <section
-      aria-busy="true"
-      aria-live="polite"
+    <StudioStatus
+      variant="loading"
+      layout="centered"
+      title="Writing your story..."
+      description={
+        detail ? (
+          <>
+            {detail}
+            <span className="mt-3 block max-w-xs">
+              You&apos;ll review and edit the script on the next screen.
+            </span>
+          </>
+        ) : (
+          "You'll review and edit the script on the next screen."
+        )
+      }
       aria-label="Writing your story"
-      className="flex min-w-0 w-full justify-center py-8 sm:py-12"
-    >
-      <div className="flex max-w-md flex-col items-center text-center">
-        <span
-          aria-hidden
-          className="mb-5 flex h-10 w-10 items-center justify-center rounded-full bg-surface-elevated/60 ring-1 ring-border/25"
-        >
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-accent/25 border-t-accent" />
-        </span>
-        <p className={studioLoadingMessage}>Writing your story...</p>
-        {detail ? <p className={`${studioLoadingSubtext} mt-2`}>{detail}</p> : null}
-        <p className={`${studioLoadingSubtext} mt-3 max-w-xs`}>
-          You&apos;ll review and edit the script on the next screen.
-        </p>
-      </div>
-    </section>
+      className="py-8 sm:py-12"
+    />
   );
 }
 
@@ -100,50 +116,48 @@ function SkeletonAsidePanel({ lines = 2 }: { lines?: number }) {
   );
 }
 
-function StepIndicator({
-  state,
-}: {
-  state: "done" | "active" | "pending";
-}) {
-  if (state === "done") {
-    return (
-      <span
-        aria-hidden
-        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[10px] text-accent"
-      >
-        ✓
-      </span>
-    );
-  }
-
-  if (state === "active") {
-    return (
-      <span
-        aria-hidden
-        className="flex h-4 w-4 shrink-0 items-center justify-center"
-      >
-        <span className="h-3 w-3 animate-spin rounded-full border border-accent/30 border-t-accent" />
-      </span>
-    );
-  }
-
-  return (
-    <span
-      aria-hidden
-      className="h-4 w-4 shrink-0 rounded-full ring-1 ring-border/30"
-    />
-  );
-}
-
 export default function StudioLoadingState({
   topic,
   tone,
   duration,
   loadingStep = 1,
   variant = "full",
+  enableResearch = true,
+  title,
+  subtitle,
 }: StudioLoadingStateProps) {
   if (variant === "script-only") {
     return <ScriptOnlyLoadingState topic={topic} tone={tone} duration={duration} />;
+  }
+
+  if (variant === "create-story") {
+    const activeStep = enableResearch ? 2 : 3;
+
+    return (
+      <StudioStatus
+        variant="loading"
+        layout="centered"
+        title="Creating your story..."
+        description="Researching your topic, building the narrative, and preparing your storyboard."
+        steps={CREATE_STORY_LOADING_STEPS}
+        activeStep={activeStep}
+        aria-label="Creating your story"
+      />
+    );
+  }
+
+  if (variant === "compact") {
+    return (
+      <StudioStatus
+        variant="loading"
+        layout="compact"
+        title={title ?? "Building storyboard..."}
+        description={subtitle ?? "Preparing scenes and arranging your storyboard."}
+        steps={GENERATION_LOADING_STEPS}
+        activeStep={loadingStep}
+        aria-label={title ?? "Building storyboard"}
+      />
+    );
   }
 
   const detail =
@@ -156,33 +170,15 @@ export default function StudioLoadingState({
   return (
     <section aria-busy="true" aria-live="polite" aria-label="Building storyboard" className="min-w-0 w-full overflow-hidden">
       <div className="mb-4 sm:mb-6">
-        <p className={studioLoadingMessage}>{activeLabel}</p>
-        {detail ? <p className={studioLoadingSubtext}>{detail}</p> : null}
-        <ol className="mx-auto mt-4 max-w-sm space-y-2">
-          {GENERATION_LOADING_STEPS.map((label, index) => {
-            const step = (index + 1) as GenerationLoadingStep;
-            const isActive = loadingStep === step;
-            const isDone = loadingStep > step;
-            const state = isDone ? "done" : isActive ? "active" : "pending";
-
-            return (
-              <li
-                key={label}
-                aria-current={isActive ? "step" : undefined}
-                className={`flex items-center gap-2.5 text-xs ${
-                  isActive
-                    ? "font-medium text-foreground/90"
-                    : isDone
-                      ? "text-muted"
-                      : "text-muted/45"
-                }`}
-              >
-                <StepIndicator state={state} />
-                <span>{label}</span>
-              </li>
-            );
-          })}
-        </ol>
+        <p className="text-center text-sm font-medium tracking-tight text-foreground/90 sm:text-[15px]">
+          {activeLabel}
+        </p>
+        {detail ? <p className="mt-1.5 text-center text-xs text-muted">{detail}</p> : null}
+        <StudioStatusStepList
+          steps={GENERATION_LOADING_STEPS}
+          activeStep={loadingStep}
+          className="mx-auto mt-4 max-w-sm"
+        />
       </div>
 
       <div className={`${studioWorkspaceGrid} pointer-events-none min-w-0 select-none opacity-90`}>
@@ -215,3 +211,32 @@ export default function StudioLoadingState({
     </section>
   );
 }
+
+/** Draft / project open loading — spinner, copy, and compact skeleton. */
+export function StudioProjectLoadingState({
+  title = "Opening your project...",
+  description = "Restoring your story, timeline, and editor workspace.",
+}: {
+  title?: string;
+  description?: string;
+}) {
+  return (
+    <StudioStatus variant="loading" layout="centered" title={title} description={description} aria-label={title}>
+      <div
+        aria-hidden
+        className="pointer-events-none mt-8 w-full max-w-sm space-y-3 select-none"
+      >
+        <div className={`${studioSkeleton} h-3 w-full`} />
+        <div className={`${studioSkeleton} mx-auto h-3 w-[80%]`} />
+        <div className={`${studioSkeleton} mt-4 h-24 w-full rounded-2xl`} />
+        <div className="grid grid-cols-3 gap-2">
+          <div className={`${studioSkeleton} h-10 rounded-xl`} />
+          <div className={`${studioSkeleton} h-10 rounded-xl`} />
+          <div className={`${studioSkeleton} h-10 rounded-xl`} />
+        </div>
+      </div>
+    </StudioStatus>
+  );
+}
+
+export { StudioStatusSpinner, StudioStatusStepList };

@@ -4,14 +4,12 @@ import {
   ArrowLeftRight,
   Clapperboard,
   Clock,
-  Copy,
   Film,
   Flag,
   ImageIcon,
   Info,
   Layers,
   Mic,
-  PlusCircle,
   Sparkles,
 } from "lucide-react";
 
@@ -25,8 +23,8 @@ import {
 } from "@/lib/utils/formatDisplayDuration.utils";
 import {
   studioBadge,
-  studioCompactButton,
   studioFieldLabel,
+  studioInfoCallout,
   studioShellSectionDesc,
   studioShellSectionTitle,
   studioSidebarSceneItem,
@@ -133,7 +131,7 @@ export default function EditorProjectSidebar({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="min-w-0 space-y-2">
         <p className={studioShellSectionTitle}>{projectTitle}</p>
         <p className={studioShellSectionDesc}>Project navigation</p>
@@ -154,27 +152,18 @@ export default function EditorProjectSidebar({
         <p className={`${studioSubtleText} text-[11px]`}>{voiceoverStatus.label}</p>
       </header>
 
-      <section aria-label="Quick actions">
-        <p className={studioFieldLabel}>Quick actions</p>
-        <div className="mt-2 flex flex-col gap-1.5">
-          <button
-            type="button"
-            disabled
-            title="Coming soon"
-            className={`${studioCompactButton} w-full justify-start opacity-45`}
-          >
-            <PlusCircle className="h-3.5 w-3.5" />
-            Add scene
-          </button>
-          <button
-            type="button"
-            disabled
-            title="Coming soon"
-            className={`${studioCompactButton} w-full justify-start opacity-45`}
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Duplicate scene
-          </button>
+      <section aria-label="Scene editing">
+        <div className={studioInfoCallout}>
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+          <div className="min-w-0 space-y-1">
+            <p className="text-sm font-medium text-foreground/90">Scene editing</p>
+            <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>
+              Insert, duplicate, reorder, and delete scenes directly from the timeline.
+            </p>
+            <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>
+              Tip: Use the ⋮ menu on any timeline scene (or right-click on desktop) for editing actions.
+            </p>
+          </div>
         </div>
       </section>
 

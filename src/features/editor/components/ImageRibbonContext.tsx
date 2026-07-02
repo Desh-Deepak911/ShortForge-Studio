@@ -1,5 +1,7 @@
 "use client";
 
+import { Image as ImageIcon } from "lucide-react";
+
 import RibbonAction, { RibbonMetric } from "@/components/studio-shell/RibbonAction";
 import RibbonSection from "@/components/studio-shell/RibbonSection";
 import {
@@ -37,7 +39,10 @@ export default function ImageRibbonContext({
   const smartEditContext = useSmartEditImageContext();
 
   return (
-    <RibbonSection title="Image" icon={<span aria-hidden>🖼</span>}>
+    <RibbonSection
+      title="Image"
+      icon={<ImageIcon className="h-3.5 w-3.5" strokeWidth={1.75} />}
+    >
       <RibbonAction
         label="Smart Edit"
         onClick={() => openSmartEditImageToolFromContext(smartEditContext)}

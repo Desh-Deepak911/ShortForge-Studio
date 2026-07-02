@@ -12,6 +12,7 @@ export { default as RibbonAction, RibbonMetric } from "./RibbonAction";
 export type { RibbonContextId, RibbonContextRenderers, StudioContextRibbonProps } from "./ribbonContext.types";
 export { default as ExportDrawer } from "./ExportDrawer";
 export { default as InspectorSection } from "./InspectorSection";
+export { default as StudioAccordion } from "./StudioAccordion";
 export { default as InspectorEmptyState } from "./InspectorEmptyState";
 
 export type {
@@ -28,4 +29,5 @@ export type { StudioInspectorProps } from "./StudioInspector";
 export type { StudioTimelineShellProps } from "./StudioTimelineShell";
 export type { ExportDrawerProps } from "./ExportDrawer";
 export type { InspectorSectionProps } from "./InspectorSection";
+export type { StudioAccordionProps } from "./StudioAccordion";
 export type { InspectorEmptyStateProps } from "./InspectorEmptyState";

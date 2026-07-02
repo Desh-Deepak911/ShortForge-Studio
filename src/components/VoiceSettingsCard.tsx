@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { getCanonicalVoiceover } from "@/features/audio";
+import { StudioStatus } from "@/components/studio-status";
 import { VoiceLibraryPanel } from "@/features/voice-library";
 import { SpeechStylePanel } from "@/features/speech-style";
 import { getStoryVoiceSettings } from "@/features/story/utils";
@@ -12,7 +13,6 @@ import { applyStoryVoiceSettings } from "@/lib/utils/voiceover";
 import {
   studioChip,
   studioChipActive,
-  studioError,
   studioFieldLabel,
   studioPanel,
   studioPrimaryButton,
@@ -139,7 +139,7 @@ export default function VoiceSettingsCard({
       />
 
       <div>
-        <span className={studioFieldLabel}>Voice Speed</span>
+        <span className={studioFieldLabel}>Voice speed</span>
         <div className="mt-1.5 grid grid-cols-3 gap-1.5">
           {VOICEOVER_SPEED_OPTIONS.map((option) => {
             const active = selectedSpeed === option;
@@ -200,10 +200,7 @@ export default function VoiceSettingsCard({
       )}
 
       {error ? (
-        <div className={studioError} role="alert">
-          <p className="text-xs font-medium leading-relaxed">Couldn&apos;t update narration</p>
-          <p className="mt-1 text-xs leading-relaxed">{error}</p>
-        </div>
+        <StudioStatus variant="error" layout="panel" title="Couldn't update narration" description={error} />
       ) : null}
     </div>
   );

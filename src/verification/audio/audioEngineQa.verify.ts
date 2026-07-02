@@ -145,7 +145,7 @@ test("4–6. background music preview and export mix", () => {
 
   assert.equal(isExportBackgroundMusicActiveFromMix(mix), true);
   assert.ok(mix.background?.src);
-  assert.ok(resolveExportBackgroundMusicMixSettingsFromMix(mix, true, 10_000));
+  assert.ok(resolveExportBackgroundMusicMixSettingsFromMix(script, mix, true, 10_000));
   assert.equal(resolveExportAudioSource(mix), "voiceover+background");
 
   const preview = readSrc("src/features/preview/hooks/usePreviewPlayback.ts");
