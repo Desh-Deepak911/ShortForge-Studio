@@ -25,7 +25,10 @@ import {
   studioMobileActionBar,
   studioMobileActionButton,
   studioMobileActionButtonPrimary,
+  studioShellEditorCanvasColumn,
+  studioShellEditorCanvasInset,
   studioShellEditorCanvasMaxWidth,
+  studioShellEditorPreviewStage,
   studioShellEditorPreviewWrap,
 } from "@/lib/utils/studioUi";
 import type { ExportSettings, FootieScript, SceneImage } from "@/features/story/types";
@@ -178,7 +181,7 @@ function StoryWorkspaceContent({
         canvas={
           <div
             id="studio-preview"
-            className={`${studioShellEditorCanvasMaxWidth} mx-auto flex min-h-0 w-full max-h-full flex-col items-center justify-center gap-2 scroll-mt-24`}
+            className={`${studioShellEditorCanvasMaxWidth} ${studioShellEditorCanvasColumn} ${studioShellEditorCanvasInset} scroll-mt-24`}
           >
             <StudioContextRibbon
               renderers={{
@@ -193,15 +196,17 @@ function StoryWorkspaceContent({
                 ) : null,
               }}
             />
-            <div className={studioShellEditorPreviewWrap}>
-              <VideoPreview
-                script={script}
-                enableCanvasEdit
-                canvasEditBlocked={exportActive}
-                onSceneImageTransformChange={handleSceneImageTransformChange}
-                onSceneImageReset={handleSceneImageReset}
-                onClockUpdate={publishTimelinePlayback}
-              />
+            <div className={studioShellEditorPreviewStage}>
+              <div className={studioShellEditorPreviewWrap}>
+                <VideoPreview
+                  script={script}
+                  enableCanvasEdit
+                  canvasEditBlocked={exportActive}
+                  onSceneImageTransformChange={handleSceneImageTransformChange}
+                  onSceneImageReset={handleSceneImageReset}
+                  onClockUpdate={publishTimelinePlayback}
+                />
+              </div>
             </div>
             <TimelineDeveloperView script={script} />
           </div>

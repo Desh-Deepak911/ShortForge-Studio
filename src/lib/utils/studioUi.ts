@@ -422,9 +422,23 @@ export const studioShellCanvasRegion =
 export const studioShellCanvasRegionForm =
   "flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start overflow-y-auto overscroll-contain";
 
-/** Editor preview canvas — fixed height, no empty scroll below centered preview. */
+/** Editor preview canvas — fills body below header; top-aligned, no viewport centering. */
 export const studioShellCanvasRegionEditor =
-  "flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden overscroll-contain";
+  "flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start overflow-hidden overscroll-contain";
+
+/** Editor canvas column — stretches to available canvas height. */
+export const studioShellEditorCanvasHost = "flex h-full min-h-0 w-full flex-col";
+
+/** Editor preview stack — top-aligned under header inset. */
+export const studioShellEditorCanvasColumn =
+  "mx-auto flex h-full min-h-0 w-full flex-col items-center";
+
+/** Breathing room below the sticky header (~24–32px). */
+export const studioShellEditorCanvasInset = "pt-6 lg:pt-8";
+
+/** Centers the phone within remaining canvas height (ribbon above, timeline below). */
+export const studioShellEditorPreviewStage =
+  "flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-2 pb-2";
 
 /** Preview frame sizing inside canvas (9:16 device). */
 export const studioShellCanvasMaxWidth =
@@ -434,9 +448,9 @@ export const studioShellCanvasMaxWidth =
 export const studioShellEditorCanvasMaxWidth =
   "w-full max-w-[min(100%,22rem)] sm:max-w-[min(100%,26rem)] lg:max-w-[min(100%,32rem)] xl:max-w-[min(100%,36rem)]";
 
-/** Scales relocated preview within the editor canvas — kept modest to avoid overflow scroll. */
+/** Scales preview within the editor stage — origin top avoids clipping the notch area. */
 export const studioShellEditorPreviewWrap =
-  "flex w-full max-h-full min-h-0 flex-col items-center justify-center origin-center scale-[1.02] sm:scale-[1.05] lg:scale-[1.08] xl:scale-[1.1]";
+  "flex w-full max-h-full min-h-0 flex-col items-center justify-center origin-top scale-[1.0] sm:scale-[1.02] lg:scale-[1.04] xl:scale-[1.06]";
 
 /** Bottom timeline rail — default height. */
 export const studioShellTimelineHeight =

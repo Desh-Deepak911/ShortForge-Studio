@@ -3,6 +3,7 @@ import {
   studioShellCanvasRegion,
   studioShellCanvasRegionEditor,
   studioShellCanvasRegionForm,
+  studioShellEditorCanvasHost,
   studioShellRegionPadding,
 } from "@/lib/utils/studioUi";
 
@@ -46,6 +47,7 @@ export default function StudioCanvas({
 }: StudioCanvasProps) {
   const regionClass = resolveCanvasRegionClass(centerContent, layout);
   const useCenteredChildWrap = centerContent && layout !== "editor" && layout !== "form";
+  const useEditorHost = layout === "editor";
 
   return (
     <main
@@ -53,7 +55,9 @@ export default function StudioCanvas({
       aria-label={ariaLabel}
       className={`${regionClass} ${studioShellRegionPadding} ${className}`.trim()}
     >
-      {useCenteredChildWrap ? (
+      {useEditorHost ? (
+        <div className={studioShellEditorCanvasHost}>{children}</div>
+      ) : useCenteredChildWrap ? (
         <div className={`${studioShellCanvasMaxWidth} min-h-0 min-w-0 flex-1`}>{children}</div>
       ) : (
         children
