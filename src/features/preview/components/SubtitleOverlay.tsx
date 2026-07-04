@@ -31,7 +31,7 @@ export default function SubtitleOverlay({
   className = "",
 }: SubtitleOverlayProps) {
   const previewChunkState =
-    activeSubtitleChunk != null
+    activeSubtitleChunk?.trim()
       ? {
           activeChunk: activeSubtitleChunk,
           chunkProgress: chunkProgress ?? 0,

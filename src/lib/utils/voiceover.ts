@@ -251,8 +251,9 @@ function narrationNeedsRefresh(prev: FootieScript, next: FootieScript): boolean 
 }
 
 /**
- * Applies a story update, revoking and clearing any stale narration blob URL
- * when the narration text has changed.
+ * Editor sync boundary: normalizes `next` against `prev` once, then revokes
+ * stale narration blob URLs when narration text changed.
+ * Patch helpers (`applySceneUpdate`, etc.) intentionally do not sync.
  */
 export function applyStoryUpdate(prev: FootieScript, next: FootieScript): FootieScript {
   const synced = syncFootieScript(next, prev);
@@ -272,8 +273,10 @@ export function applyStoryUpdate(prev: FootieScript, next: FootieScript): Footie
 }
 
 /**
- * Patches a scene in the story and keeps the timeline in sync.
+ * Patches a scene in the story (scene timings only).
  * Does not modify narration text or trigger AI generation.
+ * Callers that commit into the editor must pass the result through
+ * `applyStoryUpdate` / the editor sync boundary so timelineItems stay consistent.
  */
 export function applySceneUpdate(
   script: FootieScript,
@@ -286,49 +289,44 @@ export function applySceneUpdate(
     : updates;
   const resolvedUpdates = mergeManualDurationUpdates(mergedUpdates);
 
-  return syncFootieScript(
-    {
-      ...script,
-      scenes: recalculateSceneTimings(
-        updateSceneInScenes(script.scenes, sceneId, resolvedUpdates),
-      ),
-    },
-    script,
-  );
+  return {
+    ...script,
+    scenes: recalculateSceneTimings(
+      updateSceneInScenes(script.scenes, sceneId, resolvedUpdates),
+    ),
+  };
 }
 
 /**
  * Patches scene image transform metadata (pan/zoom/rotation/fit).
  * Does not change the image URL or trigger AI generation.
+ * Editor commits must run through `applyStoryUpdate` / the editor sync boundary.
  */
 export function applySceneImageSettings(
   script: FootieScript,
   sceneId: string,
   updates: SceneImageTransformPatch | SceneImage,
 ): FootieScript {
-  return syncFootieScript(
-    {
-      ...script,
-      scenes: recalculateSceneTimings(
-        updateSceneImageSettings(script.scenes, sceneId, updates),
-      ),
-    },
-    script,
-  );
+  return {
+    ...script,
+    scenes: recalculateSceneTimings(
+      updateSceneImageSettings(script.scenes, sceneId, updates),
+    ),
+  };
 }
 
-/** Resets pan, zoom, and rotation for one scene image by id. */
+/**
+ * Resets pan, zoom, and rotation for one scene image by id.
+ * Editor commits must run through `applyStoryUpdate` / the editor sync boundary.
+ */
 export function applyResetSceneImageSettings(
   script: FootieScript,
   sceneId: string,
 ): FootieScript {
-  return syncFootieScript(
-    {
-      ...script,
-      scenes: recalculateSceneTimings(resetSceneImageSettings(script.scenes, sceneId)),
-    },
-    script,
-  );
+  return {
+    ...script,
+    scenes: recalculateSceneTimings(resetSceneImageSettings(script.scenes, sceneId)),
+  };
 }
 
 /**
@@ -344,22 +342,22 @@ export function applySceneImageTransform(
 }
 
 /**
- * Replaces the full scene list and rebuilds timeline items.
+ * Replaces the full scene list (scene timings only).
  * Does not modify narration text or trigger AI generation.
+ * Editor commits must run through `applyStoryUpdate` / the editor sync boundary
+ * so timelineItems are rebuilt.
  */
 export function applyScenesUpdate(script: FootieScript, scenes: FootieScene[]): FootieScript {
-  return syncFootieScript(
-    {
-      ...script,
-      scenes: recalculateSceneTimings(scenes),
-    },
-    script,
-  );
+  return {
+    ...script,
+    scenes: recalculateSceneTimings(scenes),
+  };
 }
 
 /**
  * Patches a transition item in the timeline. Does not modify scenes, narration,
  * captions, or voiceover — and never triggers AI generation.
+ * Editor commits must run through `applyStoryUpdate` / the editor sync boundary.
  */
 export function applyTransitionUpdate(
   script: FootieScript,
@@ -372,7 +370,7 @@ export function applyTransitionUpdate(
     updates,
   );
 
-  return syncFootieScript({ ...script, timelineItems }, script);
+  return { ...script, timelineItems };
 }
 
 /**

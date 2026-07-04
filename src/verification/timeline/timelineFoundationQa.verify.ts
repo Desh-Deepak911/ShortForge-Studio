@@ -482,8 +482,14 @@ test("preview playback uses MasterTimeline authority", () => {
   const preflight = readSrc("src/features/export/utils/export-preflight.utils.ts");
   const devView = readSrc("src/features/timeline-intelligence/TimelineDeveloperView.tsx");
 
+  assert.match(previewPlayback, /usePreviewMasterTimelineContext/);
   assert.match(previewPlayback, /buildPreviewMasterTimeline/);
   assert.match(previewPlayback, /resolvePreviewPlaybackState/);
+  assert.match(readSrc("src/components/StoryWorkspace.tsx"), /PreviewMasterTimelineProvider/);
+  assert.match(
+    readSrc("src/features/timeline-editor/StudioTimeline.tsx"),
+    /usePreviewMasterTimelineContext/,
+  );
   assert.match(previewMasterTimeline, /resolveTimelineSceneFrame/);
   assert.match(previewMasterTimeline, /buildOptimizedMasterTimeline/);
   assert.match(previewMasterTimeline, /useVoiceoverRefit:\s*true/);

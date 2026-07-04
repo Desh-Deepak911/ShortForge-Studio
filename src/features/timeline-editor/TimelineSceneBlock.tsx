@@ -10,7 +10,7 @@ import {
   MoreVertical,
   Sparkles,
 } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { getSceneImageUrl, sceneHasImage } from "@/features/story/utils";
 import type { FootieScene, SceneType } from "@/features/story/types";
@@ -28,6 +28,10 @@ import {
   timelineSceneBlockKebab,
   timelineSceneBlockDragHandle,
   timelineSceneBlockNumberBadge,
+  timelineSceneBlockResizeHandle,
+  timelineSceneBlockResizeHandleActive,
+  timelineSceneBlockResizeHandleBar,
+  timelineSceneBlockResizeHandleBarActive,
   timelineSceneBlockSceneLabel,
   timelineSceneBlockSelected,
   timelineSceneBlockSelectedAccent,
@@ -36,20 +40,32 @@ import {
   timelineSceneBlockThumbOverlay,
 } from "./timeline-editor.ui";
 import type { TimelineSceneBlockVM } from "./timeline-editor.types";
+import {
+  resolveDurationNudgeDeltaSec,
+  TIMELINE_RESIZE_MAX_DURATION_SEC,
+  TIMELINE_RESIZE_MIN_DURATION_SEC,
+} from "./timeline-resize.utils";
 
 export interface TimelineSceneBlockProps {
   block: TimelineSceneBlockVM;
   scene: FootieScene;
   isSelected: boolean;
   isDragging?: boolean;
+  isResizing?: boolean;
   reorderDisabled?: boolean;
+  resizeDisabled?: boolean;
   showInsertBefore?: boolean;
   onSelect: () => void;
   onMenuOpen: (position: { x: number; y: number }) => void;
   onDragHandlePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onResizeHandlePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  /** Keyboard nudge — commits through the same duration path as pointer resize. */
+  onDurationNudge?: (deltaSec: number) => void;
   blockRef?: (element: HTMLButtonElement | null) => void;
   wrapperRef?: (element: HTMLDivElement | null) => void;
 }
+
+const KEYBOARD_HIGHLIGHT_MS = 220;
 
 const SCENE_TYPE_ICONS: Record<SceneType, typeof Sparkles> = {
   intro: Sparkles,
@@ -74,19 +90,38 @@ export default function TimelineSceneBlock({
   scene,
   isSelected,
   isDragging = false,
+  isResizing = false,
   reorderDisabled = false,
+  resizeDisabled = false,
   showInsertBefore = false,
   onSelect,
   onMenuOpen,
   onDragHandlePointerDown,
+  onResizeHandlePointerDown,
+  onDurationNudge,
   blockRef,
   wrapperRef,
 }: TimelineSceneBlockProps) {
   const kebabRef = useRef<HTMLButtonElement>(null);
+  const keyboardHighlightTimeoutRef = useRef<number | null>(null);
+  const [keyboardHighlight, setKeyboardHighlight] = useState(false);
   const imageUrl = getSceneImageUrl(scene);
   const hasImage = sceneHasImage(scene);
   const sceneCaption = formatSceneTimelineCaption(scene);
+  const durationSec = Math.max(
+    TIMELINE_RESIZE_MIN_DURATION_SEC,
+    Math.round(block.durationLabelSec),
+  );
   const durationLabel = formatTimelineDurationLabel(block.durationLabelSec);
+  const showResizeActive = isResizing || keyboardHighlight;
+
+  useEffect(() => {
+    return () => {
+      if (keyboardHighlightTimeoutRef.current != null) {
+        window.clearTimeout(keyboardHighlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const openMenuAt = (x: number, y: number) => {
     onSelect();
@@ -118,15 +153,49 @@ export default function TimelineSceneBlock({
     onDragHandlePointerDown?.(event);
   };
 
+  const handleResizeHandlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onResizeHandlePointerDown?.(event);
+  };
+
+  const flashKeyboardHighlight = () => {
+    setKeyboardHighlight(true);
+    if (keyboardHighlightTimeoutRef.current != null) {
+      window.clearTimeout(keyboardHighlightTimeoutRef.current);
+    }
+    keyboardHighlightTimeoutRef.current = window.setTimeout(() => {
+      setKeyboardHighlight(false);
+      keyboardHighlightTimeoutRef.current = null;
+    }, KEYBOARD_HIGHLIGHT_MS);
+  };
+
+  const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (resizeDisabled) {
+      return;
+    }
+
+    const deltaSec = resolveDurationNudgeDeltaSec(event.key, event.shiftKey);
+    if (deltaSec === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    onDurationNudge?.(deltaSec);
+    flashKeyboardHighlight();
+  };
+
   return (
     <div
       ref={wrapperRef}
-      className="relative shrink-0"
+      className="group/scene-block relative shrink-0"
       style={{ flexGrow: block.widthPercent, flexShrink: 0, flexBasis: 0, minWidth: "3.5rem" }}
       onContextMenu={handleContextMenu}
       data-scene-id={block.sceneId}
       data-scene-selected={isSelected ? "true" : "false"}
       data-scene-dragging={isDragging ? "true" : "false"}
+      data-scene-resizing={showResizeActive ? "true" : "false"}
     >
       {showInsertBefore ? (
         <span aria-hidden className={timelineInsertIndicator}>
@@ -170,7 +239,11 @@ export default function TimelineSceneBlock({
           <span aria-hidden className={timelineSceneBlockThumbOverlay} />
           <span className={timelineSceneBlockNumberBadge}>{block.sceneNumber}</span>
           {scene.sceneType ? <SceneTypeBadge sceneType={scene.sceneType} /> : null}
-          <span className={timelineSceneBlockDurationBadge}>{durationLabel}</span>
+          <span
+            className={`${timelineSceneBlockDurationBadge} ${showResizeActive ? "ring-accent/40" : ""}`}
+          >
+            {durationLabel}
+          </span>
         </div>
 
         <span className={timelineSceneBlockSceneLabel}>Scene {block.sceneNumber}</span>
@@ -200,6 +273,33 @@ export default function TimelineSceneBlock({
         onPointerDown={handleDragHandlePointerDown}
       >
         <GripVertical className="h-3 w-3" aria-hidden />
+      </button>
+
+      <button
+        type="button"
+        role="slider"
+        tabIndex={resizeDisabled ? -1 : 0}
+        aria-label="Resize scene duration"
+        aria-valuemin={TIMELINE_RESIZE_MIN_DURATION_SEC}
+        aria-valuemax={TIMELINE_RESIZE_MAX_DURATION_SEC}
+        aria-valuenow={durationSec}
+        aria-valuetext={`${durationSec} ${durationSec === 1 ? "second" : "seconds"}`}
+        aria-disabled={resizeDisabled ? true : undefined}
+        disabled={resizeDisabled}
+        title={
+          resizeDisabled
+            ? "Pause playback to resize scene duration"
+            : "Drag or use arrow keys to resize scene duration"
+        }
+        className={`${timelineSceneBlockResizeHandle} ${showResizeActive ? timelineSceneBlockResizeHandleActive : ""}`}
+        onPointerDown={handleResizeHandlePointerDown}
+        onKeyDown={handleResizeKeyDown}
+        data-timeline-resize-handle={block.sceneId}
+      >
+        <span
+          aria-hidden
+          className={`${timelineSceneBlockResizeHandleBar} ${showResizeActive ? timelineSceneBlockResizeHandleBarActive : ""}`}
+        />
       </button>
     </div>
   );

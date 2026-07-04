@@ -47,13 +47,19 @@ export function logPreviewMasterTimelineDiagnostics(
     currentTimeMs?: number;
     narrationEnded?: boolean;
     script?: Parameters<typeof buildTimelineDevDiagnostics>[0];
+    /** Prefer the shared preview timeline so diagnostics do not rebuild it. */
+    previewTimeline?: MasterTimeline | null;
   } = {},
 ): void {
   if (!isTimelineDevDiagnosticsEnabled) {
     return;
   }
 
-  const snapshot = options.script ? buildTimelineDevDiagnostics(options.script) : undefined;
+  const snapshot = options.script
+    ? buildTimelineDevDiagnostics(options.script, {
+        previewTimeline: options.previewTimeline ?? masterTimeline,
+      })
+    : undefined;
 
   console.info(
     "[PreviewTimeline]",

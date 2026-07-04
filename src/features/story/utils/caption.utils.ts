@@ -408,6 +408,65 @@ export function mergeSubtitleTextOnSubtitlesModeSwitch(
   return { ...updates, subtitleText: scene.narration?.trim() ?? "" };
 }
 
+function normalizeSpokenText(value: string | undefined): string {
+  return value?.trim() ?? "";
+}
+
+/**
+ * Builds a caption-mode switch patch, seeding subtitleText from the narration excerpt
+ * when entering subtitles mode without existing narrated copy.
+ */
+export function buildCaptionModeSwitchPatch(
+  scene: FootieScene,
+  mode: CaptionMode,
+): Partial<FootieScene> {
+  return mergeSubtitleTextOnSubtitlesModeSwitch(scene, { captionMode: mode });
+}
+
+/**
+ * True when `subtitleText` changed because the user edited spoken copy,
+ * not because caption mode switched or sync seeded from `scene.narration`.
+ */
+export function isUserAuthoredSpokenTextChange(
+  prev: FootieScene,
+  next: FootieScene,
+): boolean {
+  if (prev.subtitleText === next.subtitleText) {
+    return false;
+  }
+
+  const prevMode = normalizeCaptionMode(prev.captionMode);
+  const nextMode = normalizeCaptionMode(next.captionMode);
+  const prevText = normalizeSpokenText(prev.subtitleText);
+  const nextText = normalizeSpokenText(next.subtitleText);
+  const narrationText = normalizeSpokenText(prev.narration);
+
+  if (prevMode !== nextMode) {
+    if (prevMode === "subtitles" && nextMode !== "subtitles") {
+      return false;
+    }
+
+    if (prevMode !== "subtitles" && nextMode === "subtitles" && !prevText && nextText === narrationText) {
+      return false;
+    }
+
+    if (prevText === nextText) {
+      return false;
+    }
+  }
+
+  if (
+    prevMode !== "subtitles" &&
+    nextMode === "subtitles" &&
+    !prevText &&
+    nextText === narrationText
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * After narration excerpts sync, fills `subtitleText` for scenes that just switched
  * to subtitles mode when the initial seed was still empty.

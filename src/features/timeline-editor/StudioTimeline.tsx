@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditorSelection } from "@/features/editor/selection";
 import { SelectionPhase } from "@/features/editor/selection/selection.types";
 import { buildPreviewMasterTimeline } from "@/features/preview/utils/preview-master-timeline.utils";
+import { usePreviewMasterTimelineContext } from "@/features/timeline-intelligence/master-timeline";
 import type { FootieScript } from "@/features/story/types";
+import { applySceneUpdate } from "@/lib/utils/voiceover";
 
 import { deriveTimelineLayout } from "./derive-timeline-layout.utils";
 import TimelineContextMenu, {
@@ -18,8 +20,10 @@ import { useTimelinePlayback } from "./TimelinePlaybackPort";
 import { clampTimelinePlaybackProgress } from "./timeline-playback-port.types";
 import {
   timelineEditorCoarsePointerHint,
+  timelineEditorDurationHint,
   timelineEditorFallbackNotice,
   timelineEditorPlaybackLocked,
+  timelineEditorRailResizing,
   timelineEditorRailScroll,
   timelineEditorSegmentRow,
   timelineEditorTrackSurface,
@@ -33,8 +37,13 @@ import {
   insertTimelineSceneBefore,
   reorderTimelineScene,
 } from "./timeline-editor.commands";
-import type { TimelineDragState } from "./timeline-editor.types";
+import type { TimelineDragState, TimelineResizeState } from "./timeline-editor.types";
 import { computeDragPreview } from "./timeline-reorder.utils";
+import {
+  applyResizePreviewToLayout,
+  nudgeDurationSec,
+  resolveResizedDurationSec,
+} from "./timeline-resize.utils";
 
 export interface StudioTimelineProps {
   script: FootieScript;
@@ -74,11 +83,14 @@ export default function StudioTimeline({
   const selection = useEditorSelection();
   const playback = useTimelinePlayback();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const segmentRowRef = useRef<HTMLDivElement>(null);
   const blockRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
   const wrapperRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const [menu, setMenu] = useState<TimelineContextMenuState | null>(null);
   const [dragState, setDragState] = useState<TimelineDragState | null>(null);
+  const [resizeState, setResizeState] = useState<TimelineResizeState | null>(null);
   const dragStateRef = useRef<TimelineDragState | null>(null);
+  const resizeStateRef = useRef<TimelineResizeState | null>(null);
   const scriptRef = useRef(script);
   const lastPlayheadScrollAtRef = useRef(0);
 
@@ -86,7 +98,9 @@ export default function StudioTimeline({
     scriptRef.current = script;
   }, [script]);
 
-  const reorderDisabled = selection.phase === SelectionPhase.PlaybackLocked;
+  const playbackLocked = selection.phase === SelectionPhase.PlaybackLocked;
+  const reorderDisabled = playbackLocked || resizeState != null;
+  const resizeDisabled = playbackLocked || dragState != null;
 
   const layoutScript = useMemo(() => {
     if (!dragState) {
@@ -96,10 +110,30 @@ export default function StudioTimeline({
     return buildScriptFromSceneOrder(script, dragState.previewSceneIds);
   }, [dragState, script]);
 
-  const masterTimeline = useMemo(() => buildPreviewMasterTimeline(layoutScript), [layoutScript]);
-  const layout = useMemo(
+  const sharedPreviewTimeline = usePreviewMasterTimelineContext();
+  const fallbackMasterTimeline = useMemo(() => {
+    if (sharedPreviewTimeline || dragState) {
+      return null;
+    }
+    return buildPreviewMasterTimeline(script);
+  }, [dragState, script, sharedPreviewTimeline]);
+  // Drag preview may reorder scenes before commit — build a temporary layout timeline only then.
+  const dragMasterTimeline = useMemo(() => {
+    if (!dragState) {
+      return null;
+    }
+    return buildPreviewMasterTimeline(layoutScript);
+  }, [dragState, layoutScript]);
+  const masterTimeline = dragState
+    ? dragMasterTimeline
+    : (sharedPreviewTimeline?.previewMasterTimeline ?? fallbackMasterTimeline);
+  const baseLayout = useMemo(
     () => deriveTimelineLayout(layoutScript, masterTimeline),
     [layoutScript, masterTimeline],
+  );
+  const layout = useMemo(
+    () => (resizeState ? applyResizePreviewToLayout(baseLayout, resizeState) : baseLayout),
+    [baseLayout, resizeState],
   );
 
   const sceneById = useMemo(() => {
@@ -173,7 +207,7 @@ export default function StudioTimeline({
 
   const handleDragHandlePointerDown = useCallback(
     (sceneId: string, event: React.PointerEvent<HTMLButtonElement>) => {
-      if (reorderDisabled) {
+      if (playbackLocked || resizeStateRef.current) {
         return;
       }
 
@@ -195,7 +229,79 @@ export default function StudioTimeline({
       dragStateRef.current = nextDragState;
       setDragState(nextDragState);
     },
-    [reorderDisabled, script.scenes],
+    [playbackLocked, script.scenes],
+  );
+
+  const handleDurationNudge = useCallback(
+    (sceneId: string, deltaSec: number) => {
+      if (playbackLocked || dragStateRef.current || resizeStateRef.current) {
+        return;
+      }
+
+      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      if (!scene) {
+        return;
+      }
+
+      const currentDurationSec = Math.max(
+        1,
+        Math.round(scene.durationMs != null && scene.durationMs > 0
+          ? scene.durationMs / 1000
+          : scene.duration),
+      );
+      const nextDurationSec = nudgeDurationSec(currentDurationSec, deltaSec);
+      if (nextDurationSec === currentDurationSec) {
+        return;
+      }
+
+      onScriptChange(
+        applySceneUpdate(scriptRef.current, sceneId, {
+          duration: nextDurationSec,
+        }),
+      );
+    },
+    [onScriptChange, playbackLocked],
+  );
+
+  const handleResizeHandlePointerDown = useCallback(
+    (sceneId: string, event: React.PointerEvent<HTMLButtonElement>) => {
+      if (playbackLocked || dragStateRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setMenu(null);
+      selection.selectScene(sceneId);
+
+      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      if (!scene) {
+        return;
+      }
+
+      const startDurationMs = Math.max(
+        1000,
+        Math.round((scene.durationMs ?? scene.duration * 1000) || 1000),
+      );
+      const railWidthPx = Math.max(
+        1,
+        segmentRowRef.current?.clientWidth ?? scrollContainerRef.current?.clientWidth ?? 1,
+      );
+      const totalDurationMs = Math.max(1, baseLayout.totalDurationMs);
+      const previewDurationSec = Math.max(1, Math.round(startDurationMs / 1000));
+
+      const nextResizeState: TimelineResizeState = {
+        sceneId,
+        startDurationMs,
+        startClientX: event.clientX,
+        railWidthPx,
+        totalDurationMs,
+        previewDurationSec,
+      };
+      resizeStateRef.current = nextResizeState;
+      setResizeState(nextResizeState);
+    },
+    [baseLayout.totalDurationMs, playbackLocked, selection],
   );
 
   useEffect(() => {
@@ -267,6 +373,87 @@ export default function StudioTimeline({
     };
   }, [draggedSceneId, onScriptChange, readBlockBounds, selection]);
 
+  const resizingSceneId = resizeState?.sceneId ?? null;
+
+  useEffect(() => {
+    if (!resizingSceneId) {
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const current = resizeStateRef.current;
+      if (!current) {
+        return;
+      }
+
+      // Prevent page/rail scroll while resizing on touch devices.
+      event.preventDefault();
+
+      const previewDurationSec = resolveResizedDurationSec({
+        startDurationMs: current.startDurationMs,
+        pointerDeltaX: event.clientX - current.startClientX,
+        railWidthPx: current.railWidthPx,
+        totalDurationMs: current.totalDurationMs,
+      });
+
+      if (previewDurationSec === current.previewDurationSec) {
+        return;
+      }
+
+      const nextResizeState: TimelineResizeState = {
+        ...current,
+        previewDurationSec,
+      };
+      resizeStateRef.current = nextResizeState;
+      setResizeState(nextResizeState);
+    };
+
+    const commitResize = () => {
+      const current = resizeStateRef.current;
+      if (!current) {
+        return;
+      }
+
+      // Live preview duration is already snapped/clamped during move.
+      const durationSec = current.previewDurationSec;
+      const startDurationSec = Math.round(current.startDurationMs / 1000);
+
+      if (durationSec !== startDurationSec) {
+        onScriptChange(
+          applySceneUpdate(scriptRef.current, current.sceneId, {
+            duration: durationSec,
+          }),
+        );
+      }
+
+      resizeStateRef.current = null;
+      setResizeState(null);
+    };
+
+    const handlePointerUp = () => {
+      commitResize();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        resizeStateRef.current = null;
+        setResizeState(null);
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onScriptChange, resizingSceneId]);
+
   useEffect(() => {
     if (process.env.NODE_ENV === "development" && layout.devWarning) {
       console.warn(`[StudioTimeline] ${layout.devWarning}`);
@@ -274,7 +461,7 @@ export default function StudioTimeline({
   }, [layout.devWarning]);
 
   useEffect(() => {
-    if (dragState || playback.isPlaying) {
+    if (dragState || resizeState || playback.isPlaying) {
       return;
     }
 
@@ -288,7 +475,7 @@ export default function StudioTimeline({
       block: "nearest",
       inline: "center",
     });
-  }, [dragState, playback.isPlaying, selection.selectedSceneId]);
+  }, [dragState, playback.isPlaying, resizeState, selection.selectedSceneId]);
 
   useEffect(() => {
     if (!playback.isPlaying || !showPlaybackHead) {
@@ -360,8 +547,9 @@ export default function StudioTimeline({
         className={`flex min-h-0 flex-1 flex-col ${className}`.trim()}
         data-timeline-layout={layout.layoutSource}
         data-timeline-dragging={dragState ? "true" : "false"}
+        data-timeline-resizing={resizeState ? "true" : "false"}
         data-timeline-playback={playback.isPlaying ? "active" : "idle"}
-        data-timeline-playback-locked={reorderDisabled ? "true" : "false"}
+        data-timeline-playback-locked={playbackLocked ? "true" : "false"}
       >
         {layout.layoutSource === "equal-fallback" && layout.devWarning ? (
           <p className={timelineEditorFallbackNotice} role="status">
@@ -373,12 +561,16 @@ export default function StudioTimeline({
           Tap the ⋮ menu on any scene for insert, duplicate, and delete actions.
         </p>
 
+        <p className={timelineEditorDurationHint} data-timeline-duration-hint>
+          Drag a scene edge to adjust duration.
+        </p>
+
         <div
           ref={scrollContainerRef}
-          className={`${timelineEditorRailScroll} ${reorderDisabled ? `cursor-not-allowed ${timelineEditorPlaybackLocked}` : ""}`.trim()}
+          className={`${timelineEditorRailScroll} ${playbackLocked ? `cursor-not-allowed ${timelineEditorPlaybackLocked}` : ""} ${resizeState ? timelineEditorRailResizing : ""}`.trim()}
         >
           <div className={timelineEditorTrackSurface}>
-            <div className={timelineEditorSegmentRow}>
+            <div ref={segmentRowRef} className={timelineEditorSegmentRow}>
             {layout.segments.map((segment) => {
               if (segment.type === "transition") {
                 return <TimelineTransitionMarker key={segment.marker.id} marker={segment.marker} />;
@@ -392,6 +584,7 @@ export default function StudioTimeline({
               const sceneIndex = sceneIndexById.get(segment.block.sceneId) ?? segment.block.sceneIndex;
               const isSelected = selection.selectedSceneId === segment.block.sceneId;
               const isDragging = dragState?.draggedSceneId === segment.block.sceneId;
+              const isResizing = resizeState?.sceneId === segment.block.sceneId;
               const showInsertBefore =
                 dragState != null && dragState.hoverTargetIndex === sceneIndex;
 
@@ -406,7 +599,9 @@ export default function StudioTimeline({
                   scene={scene}
                   isSelected={isSelected}
                   isDragging={isDragging}
+                  isResizing={isResizing}
                   reorderDisabled={reorderDisabled}
+                  resizeDisabled={resizeDisabled}
                   showInsertBefore={showInsertBefore}
                   onSelect={() => selection.selectScene(segment.block.sceneId)}
                   onMenuOpen={({ x, y }) =>
@@ -419,6 +614,12 @@ export default function StudioTimeline({
                   }
                   onDragHandlePointerDown={(event) =>
                     handleDragHandlePointerDown(segment.block.sceneId, event)
+                  }
+                  onResizeHandlePointerDown={(event) =>
+                    handleResizeHandlePointerDown(segment.block.sceneId, event)
+                  }
+                  onDurationNudge={(deltaSec) =>
+                    handleDurationNudge(segment.block.sceneId, deltaSec)
                   }
                   blockRef={(element) => {
                     blockRefs.current.set(segment.block.sceneId, element);

@@ -1,8 +1,12 @@
-import { getCanonicalVoiceover } from "@/features/audio/utils/canonical-voiceover.utils";
 import { applyMasterTimelineSceneTiming } from "@/features/timeline-intelligence/apply-master-timeline-scenes.utils";
 import { buildOptimizedMasterTimeline } from "@/features/timeline-intelligence/build-optimized-master-timeline.utils";
+import {
+  shouldPreferEditorSceneTimingAuthority,
+  STORY_DURATION_NARRATION_MISMATCH_WARNING,
+} from "@/features/timeline-intelligence/editor-scene-timing-authority.utils";
 import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 import type { FootieScript } from "@/features/story/types";
+import { getCanonicalVoiceover } from "@/features/audio/utils/canonical-voiceover.utils";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import { resolveNarrationVoiceoverMismatchWarning } from "./export-narration-voiceover.utils";
@@ -29,13 +33,26 @@ export function prepareStoryForExport(story: FootieScript): PrepareStoryForExpor
   });
 
   const warnings = [...masterTimeline.warnings];
+  const canonicalVoiceover = getCanonicalVoiceover(synced);
+  const voiceoverDurationMs =
+    canonicalVoiceover?.durationMs != null && canonicalVoiceover.durationMs > 0
+      ? Math.round(canonicalVoiceover.durationMs)
+      : 0;
+
+  if (
+    voiceoverDurationMs > 0 &&
+    shouldPreferEditorSceneTimingAuthority(synced.scenes, voiceoverDurationMs) &&
+    !warnings.includes(STORY_DURATION_NARRATION_MISMATCH_WARNING)
+  ) {
+    warnings.push(STORY_DURATION_NARRATION_MISMATCH_WARNING);
+  }
+
   const narrationMismatchWarning = resolveNarrationVoiceoverMismatchWarning(synced);
   if (narrationMismatchWarning) {
     warnings.push(narrationMismatchWarning);
   }
 
   const refittedScenes = applyMasterTimelineSceneTiming(synced.scenes, masterTimeline);
-  const canonicalVoiceover = getCanonicalVoiceover(synced);
 
   const normalizedStory = syncFootieScript({
     ...synced,

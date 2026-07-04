@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import type { ImageMotionPreset } from "@/features/timeline-intelligence/image-motion-presets.utils";
 import {
@@ -35,8 +35,9 @@ export interface MotionPanelProps {
 /**
  * Card-based Motion inspector — Static / Animated type, grouped presets, speed, preview.
  * Presentation only; preset IDs and intensity values map to existing runtime fields.
+ * Opening Animated is local UI state only — no script update until a preset is chosen.
  */
-export default function MotionPanel({ controlId, imageMotion, onMotionChange }: MotionPanelProps) {
+function MotionPanel({ controlId, imageMotion, onMotionChange }: MotionPanelProps) {
   const [animatedPreview, setAnimatedPreview] = useState(false);
 
   const motion = normalizeSceneImageMotion(imageMotion);
@@ -103,3 +104,5 @@ export default function MotionPanel({ controlId, imageMotion, onMotionChange }: 
     </div>
   );
 }
+
+export default memo(MotionPanel);

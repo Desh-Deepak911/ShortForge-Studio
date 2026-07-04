@@ -1,6 +1,7 @@
 import { readPlanningCache, updatePlanningCacheStaleness } from "@/features/editor/creator-asset-planning/creator-asset-planning.cache";
 import type { FootieScript } from "@/features/story/types";
 
+import { isStoryEvolutionDebugEnabled } from "./story-evolution.debug";
 import { detectStoryChanges } from "./story-change-detector";
 import { computePlanningStaleness } from "./story-staleness.utils";
 import type { PlanningStaleness, StoryChangeEvent } from "./story-evolution.types";
@@ -10,7 +11,7 @@ function logStoryEvolutionDev(input: {
   events: StoryChangeEvent[];
   staleness?: PlanningStaleness;
 }): void {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" || !isStoryEvolutionDebugEnabled) {
     return;
   }
 

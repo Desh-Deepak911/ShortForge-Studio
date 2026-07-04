@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import type { FootieScript } from "@/features/story/types";
 import { studioGhostButton, studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
 
+import { usePreviewMasterTimelineContext } from "./master-timeline";
 import {
   buildTimelineDevDiagnostics,
   formatTimelineDevDiagnosticsForDev,
@@ -107,7 +108,14 @@ function DevWarningSection({
 
 /** Development-only canonical timeline diagnostics — editor workspace. */
 export default function TimelineDeveloperView({ script }: TimelineDeveloperViewProps) {
-  const snapshot = useMemo(() => buildTimelineDevDiagnostics(script), [script]);
+  const sharedPreviewTimeline = usePreviewMasterTimelineContext();
+  const snapshot = useMemo(
+    () =>
+      buildTimelineDevDiagnostics(script, {
+        previewTimeline: sharedPreviewTimeline?.previewMasterTimeline,
+      }),
+    [script, sharedPreviewTimeline?.previewMasterTimeline],
+  );
 
   if (!isTimelineDevDiagnosticsEnabled || script.scenes.length === 0) {
     return null;

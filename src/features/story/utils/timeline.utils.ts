@@ -7,11 +7,11 @@ import type {
   TransitionTimelineItem,
 } from "@/features/story/types";
 
-import { normalizeCaptionMode } from "./caption.utils";
-import { cloneSceneImage, getSceneImage, normalizeSceneSettings, resolveSceneDurationMsForTiming, sceneImagesEqual } from "./scene.utils";
+import { cloneSceneImage, getSceneImage, normalizeSceneSettings, resolveSceneDurationMsForTiming } from "./scene.utils";
 
 const DEFAULT_SCENE_DURATION = 3;
-const DEFAULT_SCENE_SUBTITLE = "Add subtitle...";
+/** Default placeholder copy for newly inserted scenes. */
+export const DEFAULT_SCENE_SUBTITLE = "Add subtitle...";
 
 /**
  * Recomputes cumulative start/end timing for every scene from each scene's durationMs.
@@ -354,6 +354,7 @@ export type SceneTimelineUpdates = Partial<
     | "image"
     | "uploadedImage"
     | "captionMode"
+    | "captionPreset"
     | "subtitleEffect"
     | "narration"
     | "subtitleText"
@@ -564,7 +565,11 @@ export function updateSceneInScenes(
   );
 }
 
-/** Returns true when scene content/order is unchanged (transition-only edits). */
+/**
+ * Returns true when scene order/timing/type is unchanged.
+ * Caption, media, and motion content edits are intentionally excluded so they
+ * use lightweight timeline scene-ref sync instead of a full structural rebuild.
+ */
 export function scenesStructurallyEqual(a: FootieScene[], b: FootieScene[]): boolean {
   if (a.length !== b.length) {
     return false;
@@ -580,11 +585,10 @@ export function scenesStructurallyEqual(a: FootieScene[], b: FootieScene[]): boo
       scene.start === other.start &&
       scene.end === other.end &&
       scene.duration === other.duration &&
-      scene.subtitle === other.subtitle &&
-      scene.sceneType === other.sceneType &&
-      sceneImagesEqual(scene, other) &&
-      scene.narration === other.narration &&
-      normalizeCaptionMode(scene.captionMode) === normalizeCaptionMode(other.captionMode)
+      scene.startMs === other.startMs &&
+      scene.endMs === other.endMs &&
+      scene.durationMs === other.durationMs &&
+      scene.sceneType === other.sceneType
     );
   });
 }

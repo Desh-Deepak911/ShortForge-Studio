@@ -1,19 +1,19 @@
 import { getCanonicalVoiceover } from "@/features/audio/utils/canonical-voiceover.utils";
+import {
+  buildSubtitleTimingMap,
+  mapSubtitleTimingChunksToEvents,
+  resolveSubtitleTimingStrategy,
+  toSubtitleTimingSceneEvents,
+} from "@/features/subtitle-timing";
+import type { SubtitleTimingStrategyId } from "@/features/subtitle-timing";
 import { getStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
 import {
-  normalizeCaptionMode,
   normalizeSubtitleEffect,
 } from "@/features/story/utils/caption.utils";
 import {
   getSceneTimingMap,
   getStoryTotalDuration,
 } from "@/features/story/utils/scene.utils";
-import {
-  getSubtitleChunkDurationMs,
-  getSubtitleDisplayChunks,
-  SUBTITLE_ESTIMATED_CHARS_PER_LINE,
-  SUBTITLE_MAX_VISIBLE_LINES,
-} from "@/features/story/utils/subtitle.utils";
 import {
   attachEvenVoiceoverTiming,
   attachVoiceoverTimingMs,
@@ -25,6 +25,10 @@ import { resolveVoiceoverSpeed } from "@/lib/utils/voiceoverOptions";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 import { estimateTypewriterRevealDurationMs } from "@/features/story/utils/subtitle-effect.utils";
 
+import {
+  shouldPreferEditorSceneTimingAuthority,
+  STORY_DURATION_NARRATION_MISMATCH_WARNING,
+} from "./editor-scene-timing-authority.utils";
 import { authoritiesMayDiverge, resolveTimelineAuthority } from "./timeline-authority";
 import { buildCaptionAnimationTrack } from "./build-caption-animation-track";
 import { buildImageMotionTrackFromScenes } from "./build-image-motion-track";
@@ -64,6 +68,11 @@ export interface BuildMasterTimelineOptions {
   /** When true (or mode is export with voiceover), scenes are refitted to voiceover length. */
   useVoiceoverRefit?: boolean;
   endBufferMs?: number;
+  /**
+   * When true, skip defensive `syncFootieScript` and trust the caller.
+   * Editor runtime passes already-synced scripts from DraftEditorFlow.
+   */
+  assumeSynced?: boolean;
 }
 
 interface ResolvedVoiceover {
@@ -125,13 +134,18 @@ function resolveSceneTimelineDurationMs(scenes: FootieScene[]): number {
 function shouldApplyVoiceoverRefit(
   options: BuildMasterTimelineOptions,
   voiceover: ResolvedVoiceover,
+  editorScenes: FootieScene[],
 ): boolean {
   if (!voiceover.hasValidVoiceover) {
     return false;
   }
 
+  if (shouldPreferEditorSceneTimingAuthority(editorScenes, voiceover.durationMs)) {
+    return false;
+  }
+
   if (options.mode === "export") {
-    return true;
+    return options.useVoiceoverRefit !== false;
   }
 
   return options.useVoiceoverRefit === true;
@@ -163,96 +177,50 @@ function buildSceneEvents(
   );
 }
 
-function resolveSceneChunks(scene: FootieScene): string[] {
-  const persisted = (scene as FootieScene & { subtitleChunks?: string[] }).subtitleChunks;
-  if (persisted && persisted.length > 0) {
-    return persisted;
-  }
-
-  return getSubtitleDisplayChunks(scene);
-}
-
 function buildSubtitleEvents(
+  script: FootieScript,
   scenes: FootieScene[],
   sceneEvents: SceneTimelineEvent[],
 ): {
   subtitleEvents: SubtitleTimelineEvent[];
   lineCapOverflowRisk: boolean;
   subtitleExtendsBeyondScene: boolean;
+  subtitleTimingStrategy: SubtitleTimingStrategyId;
 } {
-  const subtitleEvents: SubtitleTimelineEvent[] = [];
-  let lineCapOverflowRisk = false;
-  let subtitleExtendsBeyondScene = false;
+  const subtitleTimingStrategy = resolveSubtitleTimingStrategy(script);
+  const timingSceneEvents = toSubtitleTimingSceneEvents(scenes, sceneEvents);
+  const timingMap = buildSubtitleTimingMap(
+    {
+      scenes,
+      sceneEvents: timingSceneEvents,
+      totalDurationMs: sceneEvents.at(-1)?.endMs ?? 0,
+    },
+    { strategy: subtitleTimingStrategy },
+  );
 
-  const sceneById = new Map(sceneEvents.map((event) => [event.metadata.sceneId, event]));
+  const sceneEndMsById = new Map(sceneEvents.map((event) => [event.metadata.sceneId, event.endMs]));
+  const { events, diagnostics } = mapSubtitleTimingChunksToEvents(
+    timingMap.chunks,
+    sceneEndMsById,
+  );
 
-  for (const [index, scene] of scenes.entries()) {
-    if (normalizeCaptionMode(scene.captionMode) !== "subtitles") {
-      continue;
-    }
-
-    const sceneEvent = sceneById.get(scene.id);
-    if (!sceneEvent) {
-      continue;
-    }
-
-    const chunks = resolveSceneChunks(scene);
-    if (chunks.length === 0) {
-      continue;
-    }
-
-    const chunkCount = chunks.length;
-    const chunkDurationMs = getSubtitleChunkDurationMs(sceneEvent.durationMs, chunkCount);
-
-    for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
-      const chunkStartMs = sceneEvent.startMs + chunkIndex * chunkDurationMs;
-      const chunkEndMs =
-        chunkIndex === chunkCount - 1
-          ? sceneEvent.endMs
-          : sceneEvent.startMs + (chunkIndex + 1) * chunkDurationMs;
-      const text = chunks[chunkIndex] ?? "";
-
-      if (text.trim()) {
-        const estimatedLines = Math.max(
-          1,
-          Math.ceil(text.trim().length / SUBTITLE_ESTIMATED_CHARS_PER_LINE),
-        );
-        if (estimatedLines > SUBTITLE_MAX_VISIBLE_LINES) {
-          lineCapOverflowRisk = true;
-        }
-      }
-
-      if (chunkEndMs > sceneEvent.endMs) {
-        subtitleExtendsBeyondScene = true;
-      }
-
-      const subtitleId = `subtitle-${scene.id}-${chunkIndex}`;
-
-      subtitleEvents.push(
-        normalizeTimelineEvent({
-          id: subtitleId,
-          type: "subtitle",
-          startMs: chunkStartMs,
-          endMs: chunkEndMs,
-          durationMs: computeTimelineDurationMs(chunkStartMs, chunkEndMs),
-          source: "derived-subtitle",
-          metadata: {
-            sceneId: scene.id,
-            sceneIndex: index,
-            chunkIndex,
-            chunkCount,
-            text,
-            captionMode: "subtitles",
-          },
-        }),
-      );
-    }
-  }
+  const subtitleEvents = events.map((event) =>
+    normalizeTimelineEvent({
+      id: event.id,
+      type: "subtitle",
+      startMs: event.startMs,
+      endMs: event.endMs,
+      durationMs: computeTimelineDurationMs(event.startMs, event.endMs),
+      source: "derived-subtitle",
+      metadata: event.metadata,
+    }),
+  );
 
   return {
     subtitleEvents,
-    lineCapOverflowRisk,
-    subtitleExtendsBeyondScene,
+    lineCapOverflowRisk: diagnostics.lineCapOverflowRisk,
+    subtitleExtendsBeyondScene: diagnostics.subtitleExtendsBeyondScene,
+    subtitleTimingStrategy,
   };
 }
 
@@ -429,8 +397,13 @@ function buildTimelineWarnings(input: {
   renderEndBeforeBufferMs: number;
   editorSceneDurationMs: number;
   sceneTimingDeltaMs: number;
+  editorTimingAuthorityPreferred?: boolean;
 }): string[] {
   const warnings: string[] = [];
+
+  if (input.editorTimingAuthorityPreferred) {
+    warnings.push(STORY_DURATION_NARRATION_MISMATCH_WARNING);
+  }
 
   if (input.missingTimings.length > 0) {
     warnings.push(`Missing timings: ${input.missingTimings.join("; ")}.`);
@@ -532,12 +505,14 @@ export function buildMasterTimeline(
   options: BuildMasterTimelineOptions,
 ): MasterTimeline {
   const endBufferMs = options.endBufferMs ?? TIMELINE_END_BUFFER_MS;
-  const synced = syncFootieScript(script);
+  const synced = options.assumeSynced ? script : syncFootieScript(script);
   const voiceover = resolveVoiceover(synced);
-  const refitApplied = shouldApplyVoiceoverRefit(options, voiceover);
-
   const editorScenes = recalculateSceneTimings(synced.scenes);
   const editorSceneDurationMs = resolveSceneTimelineDurationMs(editorScenes);
+  const editorTimingAuthorityPreferred =
+    voiceover.hasValidVoiceover &&
+    shouldPreferEditorSceneTimingAuthority(editorScenes, voiceover.durationMs);
+  const refitApplied = shouldApplyVoiceoverRefit(options, voiceover, editorScenes);
 
   const activeScenes = refitApplied
     ? refitScenesForTimelineBuild(synced.scenes, voiceover.durationMs)
@@ -558,10 +533,12 @@ export function buildMasterTimeline(
 
   const sceneSource = sceneEventSource(refitApplied);
   const sceneEvents = buildSceneEvents(activeScenes, sceneSource);
-  const { subtitleEvents, lineCapOverflowRisk, subtitleExtendsBeyondScene } = buildSubtitleEvents(
-    activeScenes,
-    sceneEvents,
-  );
+  const {
+    subtitleEvents,
+    lineCapOverflowRisk,
+    subtitleExtendsBeyondScene,
+    subtitleTimingStrategy,
+  } = buildSubtitleEvents(synced, activeScenes, sceneEvents);
 
   const finalSubtitleExtendsBeyondScene =
     extendFinalSubtitleForCompletion(subtitleEvents, activeScenes, sceneEvents) ||
@@ -708,6 +685,7 @@ export function buildMasterTimeline(
     contentEndMs,
     renderEndBeforeBufferMs,
     finalSubtitleEndGapMs,
+    subtitleTimingStrategy,
   };
 
   const warnings = buildTimelineWarnings({
@@ -732,6 +710,7 @@ export function buildMasterTimeline(
     renderEndBeforeBufferMs,
     editorSceneDurationMs,
     sceneTimingDeltaMs,
+    editorTimingAuthorityPreferred,
   });
 
   return {

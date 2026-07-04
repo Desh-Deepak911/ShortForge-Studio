@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 
 import StudioAccordion from "@/components/studio-shell/StudioAccordion";
 import { StudioStatus } from "@/components/studio-status";
@@ -18,6 +18,8 @@ export interface ExportSuccessSummaryProps {
   voiceoverEnabled: boolean;
   backgroundMusicEnabled: boolean;
   diagnostics: string[];
+  /** Overrides the default success description (e.g. when the story changed after export). */
+  description?: string;
 }
 
 function EnabledLabel({ enabled }: { enabled: boolean }) {
@@ -36,6 +38,7 @@ export default function ExportSuccessSummary({
   voiceoverEnabled,
   backgroundMusicEnabled,
   diagnostics,
+  description = "Your video is ready. Publish to platforms or download again below.",
 }: ExportSuccessSummaryProps) {
   return (
     <div className={`${studioPanel} space-y-3`}>
@@ -43,7 +46,7 @@ export default function ExportSuccessSummary({
         variant="success"
         layout="panel"
         title="Export completed"
-        description="Your video is ready. Publish to platforms or download again below."
+        description={description}
       />
 
       <dl className="space-y-2 border-y border-border/15 py-3 text-sm">
@@ -107,6 +110,30 @@ export function ExportDownloadAgainButton({
     >
       <Download className="h-4 w-4" strokeWidth={1.75} />
       Download again
+    </button>
+  );
+}
+
+export function ExportAgainButton({
+  disabled,
+  onClick,
+  label = "Export again",
+  className = "",
+}: {
+  disabled: boolean;
+  onClick: () => void;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={className}
+    >
+      <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+      {label}
     </button>
   );
 }

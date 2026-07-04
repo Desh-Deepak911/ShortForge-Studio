@@ -16,6 +16,7 @@ import {
 import { useStoryDocument } from "@/features/drafts/store";
 import { getStoryVoiceSettings } from "@/features/story/utils";
 import type { FootieScript } from "@/features/story/types";
+import { useOptionalStorySync } from "@/features/story-sync";
 import { useStoryVoiceoverApply } from "@/hooks/useStoryVoiceoverApply";
 import { useStoryVoiceoverUpload } from "@/hooks/useStoryVoiceoverUpload";
 import { applyStoryVoiceSettings } from "@/lib/utils/voiceover";
@@ -72,9 +73,12 @@ export default function ProjectAudioVoiceoverSection({
   script,
   onScriptChange,
 }: ProjectAudioVoiceoverSectionProps) {
+  // Anchor for story-sync "Generate voice" guidance (scroll/focus target only).
   const uploadInputId = useId();
   const voiceSelectId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const storySync = useOptionalStorySync();
+  const voiceOutOfSync = storySync?.state.voiceDirty === true;
   const { draftId } = useStoryDocument();
   const persistStatus = useSyncExternalStore(
     subscribeDraftSessionStore,
@@ -133,7 +137,7 @@ export default function ProjectAudioVoiceoverSection({
   };
 
   return (
-    <div className="space-y-3">
+    <div id="studio-project-voiceover" className="space-y-3 scroll-mt-24">
       <div className="flex items-center justify-between gap-3">
         <p className={studioFieldLabel}>Status</p>
         <span
@@ -232,6 +236,16 @@ export default function ProjectAudioVoiceoverSection({
         <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>{status.detail}</p>
       ) : null}
 
+      {voiceOutOfSync ? (
+        <p
+          role="status"
+          data-story-sync-voice-guidance
+          className={`${studioSubtleText} text-[11px] leading-relaxed text-amber-100/90`}
+        >
+          Your narration changed. Regenerate voiceover to sync preview and export.
+        </p>
+      ) : null}
+
       {status.hasPlayableAudio ? (
         <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>
           Use the canvas Play button to preview voiceover with video.
@@ -240,11 +254,12 @@ export default function ProjectAudioVoiceoverSection({
 
       <div className="flex flex-col gap-1.5 border-t border-border/15 pt-3">
         <button
+          id="studio-project-voiceover-regenerate"
           type="button"
           onClick={() => void applyVoiceoverChanges()}
           disabled={isBusy || !hasNarration}
           title={voiceoverDisabledReason}
-          className={`${usePrimaryStyle ? studioPrimaryButton : studioCompactButton} w-full justify-center`}
+          className={`${usePrimaryStyle || voiceOutOfSync ? studioPrimaryButton : studioCompactButton} w-full justify-center`}
         >
           {regenerateLoading ? (
             <>

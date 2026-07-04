@@ -24,6 +24,7 @@ export default function StudioShell({
   sidebar,
   canvas,
   inspector,
+  inspectorBanner,
   timeline,
   footer,
   focusMode = false,
@@ -66,8 +67,11 @@ export default function StudioShell({
                   {canvas}
                 </StudioCanvas>
               ) : null}
-              {inspector ? (
-                <StudioInspector compactMode={compactMode}>{inspector}</StudioInspector>
+              {inspector || inspectorBanner ? (
+                <StudioInspector compactMode={compactMode}>
+                  {inspectorBanner}
+                  {inspector}
+                </StudioInspector>
               ) : null}
             </div>
 

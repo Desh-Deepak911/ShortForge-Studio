@@ -6,6 +6,7 @@ import type {
   SubtitleEffect,
   TransitionEffect,
 } from "@/features/story/types";
+import type { SubtitleTimingStrategyId } from "@/features/subtitle-timing";
 
 import type {
   ImageMotionBaseTransform,
@@ -226,6 +227,8 @@ export interface MasterTimelineDiagnostics {
   renderEndBeforeBufferMs?: number;
   /** Gap between final subtitle end and render end before buffer (milliseconds). */
   finalSubtitleEndGapMs?: number;
+  /** Narrated subtitle timing strategy used for this build. */
+  subtitleTimingStrategy?: SubtitleTimingStrategyId;
   /** Phase 3D — timeline optimizer v1 audit trail. */
   optimizer?: TimelineOptimizerDiagnosticsSummary;
 }

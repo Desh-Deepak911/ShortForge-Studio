@@ -208,14 +208,22 @@ function collectWarningsByTopic(
   };
 }
 
+export interface BuildTimelineDevDiagnosticsOptions {
+  /** Reuse the shared preview MasterTimeline when available (avoids a duplicate build). */
+  previewTimeline?: MasterTimeline | null;
+}
+
 /** Builds preview + export canonical timelines for development diagnostics only. */
 export function buildTimelineDevDiagnostics(
   script: FootieScript,
+  options: BuildTimelineDevDiagnosticsOptions = {},
 ): TimelineDevDiagnosticsSnapshot {
-  const previewTimeline = buildOptimizedMasterTimeline(script, {
-    mode: "preview",
-    useVoiceoverRefit: true,
-  });
+  const previewTimeline =
+    options.previewTimeline ??
+    buildOptimizedMasterTimeline(script, {
+      mode: "preview",
+      useVoiceoverRefit: true,
+    });
   const exportTimeline = buildOptimizedMasterTimeline(script, {
     mode: "export",
     useVoiceoverRefit: true,

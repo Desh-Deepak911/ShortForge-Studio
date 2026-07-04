@@ -395,7 +395,10 @@ test("10. preview vs export timing comparison", () => {
 test("structural: preview/export MasterTimeline duration authority", () => {
   const previewHook = readSrc("src/features/preview/hooks/usePreviewPlayback.ts");
   const preflight = readSrc("src/features/export/utils/export-preflight.utils.ts");
+  const workspace = readSrc("src/components/StoryWorkspace.tsx");
 
+  assert.match(workspace, /PreviewMasterTimelineProvider/);
+  assert.match(previewHook, /usePreviewMasterTimelineContext/);
   assert.match(previewHook, /buildPreviewMasterTimeline/);
   assert.match(previewHook, /resolvePreviewDurationSec/);
   assert.match(previewHook, /masterTimeline\.renderDurationMs/);

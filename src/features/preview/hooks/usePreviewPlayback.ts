@@ -31,7 +31,9 @@ import {
   resolveTimelineItems,
   type PreviewSceneFrame,
 } from "@/features/preview/utils";
+import { usePreviewMasterTimelineContext } from "@/features/timeline-intelligence/master-timeline";
 import { logPreviewMasterTimelineDiagnostics } from "@/features/timeline-intelligence/preview-timeline-diagnostics.dev.utils";
+import { isTimelineDevDiagnosticsEnabled } from "@/features/timeline-intelligence/timeline-diagnostics.dev.types";
 import type { FootieScript } from "@/features/story/types";
 import { getStoryVoiceoverDurationSec } from "@/lib/utils/voiceover";
 
@@ -99,7 +101,15 @@ export function usePreviewPlayback({
   const hasPlayableVoiceover = voiceoverAvailability.hasPlayableVoiceover;
   const canPlayNarration = hasPlayableVoiceover && Boolean(voiceoverUrl);
   const voiceoverDiagnostics = playableVoiceover;
-  const masterTimeline = useMemo(() => buildPreviewMasterTimeline(script), [script]);
+  const sharedPreviewTimeline = usePreviewMasterTimelineContext();
+  const fallbackMasterTimeline = useMemo(() => {
+    if (sharedPreviewTimeline) {
+      return null;
+    }
+    return buildPreviewMasterTimeline(script);
+  }, [script, sharedPreviewTimeline]);
+  const masterTimeline =
+    sharedPreviewTimeline?.previewMasterTimeline ?? fallbackMasterTimeline;
   const sceneCount = scenes.length;
   const totalDuration = masterTimeline
     ? resolvePreviewDurationSec(masterTimeline)
@@ -111,7 +121,7 @@ export function usePreviewPlayback({
 
   useEffect(() => {
     logAudioEngineState(script, "preview");
-    if (process.env.NODE_ENV === "development" && script) {
+    if (isTimelineDevDiagnosticsEnabled && script) {
       console.info("[FootieBitz preview playback] voiceover diagnostics", voiceoverDiagnostics);
     }
   }, [script, audioMix.masterDurationMs, voiceoverUrl, backgroundMusicUrl, voiceoverDiagnostics]);
@@ -452,6 +462,7 @@ export function usePreviewPlayback({
                 tailHoldLoggedRef.current = true;
                 logPreviewMasterTimelineDiagnostics(masterTimeline, {
                   script,
+                  previewTimeline: masterTimeline,
                   currentTimeMs: timelineClockMsRef.current,
                   narrationEnded: true,
                 });
@@ -691,7 +702,10 @@ export function usePreviewPlayback({
       return;
     }
 
-    logPreviewMasterTimelineDiagnostics(masterTimeline, { script });
+    logPreviewMasterTimelineDiagnostics(masterTimeline, {
+      script,
+      previewTimeline: masterTimeline,
+    });
   }, [masterTimeline, script]);
 
   useEffect(() => {

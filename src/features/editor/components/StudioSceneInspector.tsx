@@ -1,6 +1,13 @@
 "use client";
 
 import { ImagePlus, Timer, Trash2, ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import {
+  clearPendingSceneCaptionDraft,
+  registerPendingSceneCaptionDraft,
+  registerSceneCaptionDraftCancel,
+} from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
 
 import InspectorEmptyState from "@/components/studio-shell/InspectorEmptyState";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
@@ -24,6 +31,8 @@ import { useInspectorContext } from "@/features/editor/inspector/InspectorContex
 import { useEditorSelection } from "@/features/editor/selection";
 import { resolveSafeSceneIndex } from "@/features/editor/selection/selection.utils";
 import {
+  buildCaptionModeSwitchPatch,
+  DEFAULT_SCENE_SUBTITLE,
   ensureTimelineItems,
   getSceneImage,
   isTransitionTimelineItem,
@@ -82,6 +91,148 @@ const SCENE_TYPE_LABELS: Record<SceneType, string> = {
   ending: "Ending",
 };
 
+const CAPTION_FIELD_DEBOUNCE_MS = 300;
+
+function resolvePlaceholderCaptionInput(storedValue: string, inputValue: string): string {
+  if (storedValue.trim() !== DEFAULT_SCENE_SUBTITLE) {
+    return inputValue;
+  }
+
+  if (inputValue === DEFAULT_SCENE_SUBTITLE) {
+    return inputValue;
+  }
+
+  if (inputValue.startsWith(DEFAULT_SCENE_SUBTITLE)) {
+    const withoutPlaceholder = inputValue.slice(DEFAULT_SCENE_SUBTITLE.length);
+    return withoutPlaceholder.length > 0 ? withoutPlaceholder : inputValue;
+  }
+
+  return inputValue;
+}
+
+function useDebouncedSceneFieldCommit(
+  sceneId: string,
+  onCommit: (targetSceneId: string, patch: Partial<FootieScript["scenes"][number]>) => void,
+) {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<{
+    sceneId: string;
+    patch: Partial<FootieScript["scenes"][number]>;
+  } | null>(null);
+
+  const cancelPending = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    pendingRef.current = null;
+  }, []);
+
+  const flush = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    const pending = pendingRef.current;
+    if (!pending) {
+      return;
+    }
+
+    onCommit(pending.sceneId, pending.patch);
+    clearPendingSceneCaptionDraft(pending.sceneId);
+    pendingRef.current = null;
+  }, [onCommit]);
+
+  const schedule = useCallback(
+    (targetSceneId: string, patch: Partial<FootieScript["scenes"][number]>) => {
+      pendingRef.current = { sceneId: targetSceneId, patch };
+      registerPendingSceneCaptionDraft(targetSceneId, patch);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      debounceRef.current = setTimeout(() => {
+        flush();
+      }, CAPTION_FIELD_DEBOUNCE_MS);
+    },
+    [flush],
+  );
+
+  useEffect(() => {
+    return registerSceneCaptionDraftCancel(cancelPending);
+  }, [cancelPending]);
+
+  useEffect(() => {
+    return () => {
+      flush();
+    };
+  }, [sceneId, flush]);
+
+  return { schedule, flush };
+}
+
+interface SceneCaptionTextFieldsProps {
+  scene: FootieScript["scenes"][number];
+  isSubtitlesMode: boolean;
+  onCommit: (targetSceneId: string, patch: Partial<FootieScript["scenes"][number]>) => void;
+}
+
+function SceneCaptionTextFields({ scene, isSubtitlesMode, onCommit }: SceneCaptionTextFieldsProps) {
+  const { schedule, flush } = useDebouncedSceneFieldCommit(scene.id, onCommit);
+  const [generatedCaptionDraft, setGeneratedCaptionDraft] = useState(scene.subtitle ?? "");
+  const [subtitleTextDraft, setSubtitleTextDraft] = useState(
+    scene.subtitleText || scene.narration || "",
+  );
+
+  if (isSubtitlesMode) {
+    return (
+      <div>
+        <label htmlFor={`inspector-subtitle-text-${scene.id}`} className={studioFieldLabel}>
+          Subtitle text
+        </label>
+        <textarea
+          id={`inspector-subtitle-text-${scene.id}`}
+          value={subtitleTextDraft}
+          onChange={(event) => {
+            const next = resolvePlaceholderCaptionInput(
+              scene.subtitleText || scene.narration || "",
+              event.target.value,
+            );
+            setSubtitleTextDraft(next);
+            schedule(scene.id, { subtitleText: next });
+          }}
+          onBlur={flush}
+          rows={3}
+          placeholder="On-screen subtitle for this scene"
+          className={`${studioTextarea} mt-1.5 min-h-[4.5rem]`}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label htmlFor={`inspector-caption-${scene.id}`} className={studioFieldLabel}>
+        Caption
+      </label>
+      <textarea
+        id={`inspector-caption-${scene.id}`}
+        value={generatedCaptionDraft}
+        onChange={(event) => {
+          const next = resolvePlaceholderCaptionInput(scene.subtitle, event.target.value);
+          setGeneratedCaptionDraft(next);
+          schedule(scene.id, { subtitle: next });
+        }}
+        onBlur={flush}
+        rows={3}
+        placeholder="On-screen text for this scene"
+        className={`${studioTextarea} mt-1.5 min-h-[4.5rem]`}
+      />
+    </div>
+  );
+}
+
 export interface StudioSceneInspectorProps {
   script: FootieScript;
   onScriptChange: (script: FootieScript) => void;
@@ -134,41 +285,96 @@ export default function StudioSceneInspector({
   const safeIndex = resolveSafeSceneIndex(scenes, selectedSceneIndex);
   const scene = safeIndex >= 0 ? scenes[safeIndex] : null;
 
-  const updateScene = (sceneId: string, patch: Partial<FootieScript["scenes"][number]>) => {
-    onScriptChange(applySceneUpdate(script, sceneId, patch));
-  };
+  const commitScenePatch = useCallback(
+    (targetSceneId: string, patch: Partial<FootieScript["scenes"][number]>) => {
+      onScriptChange(applySceneUpdate(script, targetSceneId, patch));
+    },
+    [onScriptChange, script],
+  );
 
-  const handleImageSettingsChange = (
-    sceneId: string,
-    updates: SceneImageTransformPatch | SceneImage,
-  ) => {
-    onScriptChange(applySceneImageSettings(script, sceneId, updates));
-  };
+  const updateScene = useCallback(
+    (targetSceneId: string, patch: Partial<FootieScript["scenes"][number]>) => {
+      onScriptChange(applySceneUpdate(script, targetSceneId, patch));
+    },
+    [onScriptChange, script],
+  );
 
-  const handleImageReset = (sceneId: string) => {
-    onScriptChange(applyResetSceneImageSettings(script, sceneId));
-  };
+  const handleImageSettingsChange = useCallback(
+    (sceneId: string, updates: SceneImageTransformPatch | SceneImage) => {
+      onScriptChange(applySceneImageSettings(script, sceneId, updates));
+    },
+    [onScriptChange, script],
+  );
 
-  const updateTransition = (
-    transitionId: string,
-    patch: { effect?: TransitionTimelineItem["effect"]; durationMs?: number },
-  ) => {
-    onScriptChange(applyTransitionUpdate(script, transitionId, patch));
-  };
+  const handleImageReset = useCallback(
+    (sceneId: string) => {
+      onScriptChange(applyResetSceneImageSettings(script, sceneId));
+    },
+    [onScriptChange, script],
+  );
 
-  const handleImageUpload = (sceneId: string, file: File | null) => {
+  const updateTransition = useCallback(
+    (transitionId: string, patch: { effect?: TransitionTimelineItem["effect"]; durationMs?: number }) => {
+      onScriptChange(applyTransitionUpdate(script, transitionId, patch));
+    },
+    [onScriptChange, script],
+  );
+
+  const sceneId = scene?.id;
+
+  const handleImageTransformChange = useCallback(
+    (patch: SceneImageTransformPatch) => {
+      if (!sceneId) {
+        return;
+      }
+      handleImageSettingsChange(sceneId, patch);
+    },
+    [handleImageSettingsChange, sceneId],
+  );
+
+  const handleFitModeChange = useCallback(
+    (fitMode: NonNullable<SceneImage["fitMode"]>) => {
+      if (!sceneId) {
+        return;
+      }
+      handleImageSettingsChange(sceneId, { fitMode });
+    },
+    [handleImageSettingsChange, sceneId],
+  );
+
+  const handleImageMotionChange = useCallback(
+    (patch: Partial<NonNullable<SceneImage["imageMotion"]>>) => {
+      if (!sceneId) {
+        return;
+      }
+      handleImageSettingsChange(sceneId, { imageMotion: patch });
+    },
+    [handleImageSettingsChange, sceneId],
+  );
+
+  const handleCaptionModeChange = useCallback(
+    (mode: CaptionMode) => {
+      if (!sceneId || !scene) {
+        return;
+      }
+      updateScene(sceneId, buildCaptionModeSwitchPatch(scene, mode));
+    },
+    [scene, sceneId, updateScene],
+  );
+
+  const handleImageUpload = (uploadSceneId: string, file: File | null) => {
     if (!file) {
       return;
     }
 
-    replaceSceneImage(sceneId, file);
+    replaceSceneImage(uploadSceneId, file);
   };
 
-  const removeImage = (sceneId: string) => {
-    removeSceneImage(sceneId);
+  const removeImage = (removeSceneId: string) => {
+    removeSceneImage(removeSceneId);
   };
 
-  if (!scene || safeIndex < 0) {
+  if (!scene || safeIndex < 0 || !sceneId) {
     return <InspectorEmptyState />;
   }
 
@@ -176,24 +382,7 @@ export default function StudioSceneInspector({
   const hasImage = sceneHasImage(scene);
   const captionMode = normalizeCaptionMode(scene.captionMode);
   const isSubtitlesMode = captionMode === "subtitles";
-  const subtitleEditorValue = scene.subtitleText || scene.narration || "";
-  const transitionAfterScene = getTransitionAfterScene(timelineItems, scene.id);
-
-  const handleImageTransformChange = (patch: SceneImageTransformPatch) => {
-    handleImageSettingsChange(scene.id, patch);
-  };
-
-  const handleFitModeChange = (fitMode: NonNullable<SceneImage["fitMode"]>) => {
-    handleImageSettingsChange(scene.id, { fitMode });
-  };
-
-  const handleImageMotionChange = (patch: Partial<NonNullable<SceneImage["imageMotion"]>>) => {
-    handleImageSettingsChange(scene.id, { imageMotion: patch });
-  };
-
-  const handleCaptionModeChange = (mode: CaptionMode) => {
-    updateScene(scene.id, { captionMode: mode });
-  };
+  const transitionAfterScene = getTransitionAfterScene(timelineItems, sceneId);
 
   return (
     <div className={`${studioInspectorStack} pb-1`}>
@@ -213,27 +402,32 @@ export default function StudioSceneInspector({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/15 pt-3">
-          <Timer className="h-3.5 w-3.5 text-muted" aria-hidden />
-          <label htmlFor={`inspector-duration-${scene.id}`} className="sr-only">
-            Duration in seconds
-          </label>
-          <input
-            id={`inspector-duration-${scene.id}`}
-            type="number"
-            min={1}
-            max={20}
-            value={scene.duration}
-            onChange={(event) => {
-              const raw = Number(event.target.value);
-              const clamped = Math.min(20, Math.max(1, Math.round(raw)));
-              updateScene(scene.id, {
-                duration: Number.isFinite(raw) && raw > 0 ? clamped : scene.duration,
-              });
-            }}
-            className={`${studioInputCompact} w-14 min-h-[2rem]`}
-          />
-          <span className="text-[11px] text-muted">sec</span>
+        <div className="mt-3 space-y-1.5 border-t border-border/15 pt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Timer className="h-3.5 w-3.5 text-muted" aria-hidden />
+            <label htmlFor={`inspector-duration-${scene.id}`} className={studioFieldLabel}>
+              Duration
+            </label>
+            <input
+              id={`inspector-duration-${scene.id}`}
+              type="number"
+              min={1}
+              max={20}
+              value={scene.duration}
+              onChange={(event) => {
+                const raw = Number(event.target.value);
+                const clamped = Math.min(20, Math.max(1, Math.round(raw)));
+                updateScene(scene.id, {
+                  duration: Number.isFinite(raw) && raw > 0 ? clamped : scene.duration,
+                });
+              }}
+              className={`${studioInputCompact} w-14 min-h-[2rem]`}
+            />
+            <span className="text-[11px] text-muted">sec</span>
+          </div>
+          <p className={`${studioSubtleText} text-[11px] leading-snug`}>
+            Drag scene edges on the timeline for faster timing edits.
+          </p>
         </div>
 
         <div className="mt-3">
@@ -382,34 +576,20 @@ export default function StudioSceneInspector({
                 }
               />
             </StudioAccordion>
-            <div>
-              <label htmlFor={`inspector-subtitle-text-${scene.id}`} className={studioFieldLabel}>
-                Subtitle text
-              </label>
-              <textarea
-                id={`inspector-subtitle-text-${scene.id}`}
-                value={subtitleEditorValue}
-                onChange={(event) => updateScene(scene.id, { subtitleText: event.target.value })}
-                rows={3}
-                placeholder="On-screen subtitle for this scene"
-                className={`${studioTextarea} mt-1.5 min-h-[4.5rem]`}
-              />
-            </div>
+            <SceneCaptionTextFields
+              key={scene.id}
+              scene={scene}
+              isSubtitlesMode={isSubtitlesMode}
+              onCommit={commitScenePatch}
+            />
           </>
         ) : (
-          <div>
-            <label htmlFor={`inspector-caption-${scene.id}`} className={studioFieldLabel}>
-              Caption
-            </label>
-            <textarea
-              id={`inspector-caption-${scene.id}`}
-              value={scene.subtitle}
-              onChange={(event) => updateScene(scene.id, { subtitle: event.target.value })}
-              rows={3}
-              placeholder="On-screen text for this scene"
-              className={`${studioTextarea} mt-1.5 min-h-[4.5rem]`}
-            />
-          </div>
+          <SceneCaptionTextFields
+            key={scene.id}
+            scene={scene}
+            isSubtitlesMode={false}
+            onCommit={commitScenePatch}
+          />
         )}
       </InspectorSection>
 

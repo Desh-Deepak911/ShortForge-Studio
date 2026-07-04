@@ -44,6 +44,8 @@ interface VideoPreviewProps {
   onSceneImageReset?: (sceneId: string) => void;
   /** Publishes preview clock snapshots for timeline playhead — does not affect playback. */
   onClockUpdate?: (snapshot: TimelinePlaybackSnapshot) => void;
+  /** Optional — notifies parent when voiceover preview playback starts (sync wiring only). */
+  onPreviewStart?: () => void;
 }
 
 export default function VideoPreview({
@@ -53,6 +55,7 @@ export default function VideoPreview({
   onSceneImageTransformChange,
   onSceneImageReset,
   onClockUpdate,
+  onPreviewStart,
 }: VideoPreviewProps) {
   const selection = useEditorSelection();
   const canvasEditActive = enableCanvasEdit;
@@ -412,7 +415,10 @@ export default function VideoPreview({
       <div className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1.5`}>
         <button
           type="button"
-          onClick={() => void playPreview()}
+          onClick={() => {
+            onPreviewStart?.();
+            void playPreview();
+          }}
           disabled={isPlaying || !hasPlayableVoiceover}
           className={studioPreviewPillPrimary}
           aria-label="Play preview with voiceover"

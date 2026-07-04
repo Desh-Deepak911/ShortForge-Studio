@@ -9,6 +9,8 @@ export interface StudioShellProps {
   canvas?: ReactNode;
   /** Right contextual properties panel. */
   inspector?: ReactNode;
+  /** Optional banner rendered above inspector content (e.g. story sync health). */
+  inspectorBanner?: ReactNode;
   /** Bottom temporal navigation rail. */
   timeline?: ReactNode;
   /** Optional footer — omitted in focus mode when `hideFooterInFocusMode` is true. */

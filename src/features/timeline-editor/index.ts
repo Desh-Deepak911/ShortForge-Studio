@@ -15,6 +15,17 @@ export {
 export type { TimelineSceneCommandResult } from "./timeline-editor.commands";
 export { computeDragPreview } from "./timeline-reorder.utils";
 export {
+  applyResizePreviewToLayout,
+  nudgeDurationSec,
+  resolveDurationNudgeDeltaSec,
+  resolveResizedDurationSec,
+  TIMELINE_RESIZE_MAX_DURATION_SEC,
+  TIMELINE_RESIZE_MIN_DURATION_SEC,
+  TIMELINE_RESIZE_NUDGE_STEP_LARGE_SEC,
+  TIMELINE_RESIZE_NUDGE_STEP_SEC,
+} from "./timeline-resize.utils";
+export type { TimelineDragState, TimelineResizeState } from "./timeline-editor.types";
+export {
   TimelinePlaybackPortProvider,
   useTimelinePlayback,
   useTimelinePlaybackPublisher,

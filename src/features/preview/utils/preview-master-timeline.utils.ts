@@ -26,8 +26,19 @@ export interface PreviewPlaybackState {
   currentTimeMs: number;
 }
 
+export interface BuildPreviewMasterTimelineOptions {
+  /**
+   * When true, skip defensive script sync inside `buildMasterTimeline`.
+   * Use for editor runtime scripts already synced at DraftEditorFlow.
+   */
+  assumeSynced?: boolean;
+}
+
 /** Builds the canonical preview timeline (refitted to voiceover when present). */
-export function buildPreviewMasterTimeline(script: FootieScript | null | undefined): MasterTimeline | null {
+export function buildPreviewMasterTimeline(
+  script: FootieScript | null | undefined,
+  options: BuildPreviewMasterTimelineOptions = {},
+): MasterTimeline | null {
   if (!script || script.scenes.length === 0) {
     return null;
   }
@@ -35,6 +46,7 @@ export function buildPreviewMasterTimeline(script: FootieScript | null | undefin
   return buildOptimizedMasterTimeline(script, {
     mode: "preview",
     useVoiceoverRefit: true,
+    assumeSynced: options.assumeSynced,
   });
 }
 

@@ -13,12 +13,19 @@ import {
 import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
 
 import ExportSuccessSummary, {
+  ExportAgainButton,
   ExportDownloadAgainButton,
 } from "@/components/export/ExportSuccessSummary";
+import { buildExportFingerprint } from "@/components/export/build-export-fingerprint.utils";
 import { StudioStatus } from "@/components/studio-status";
 import { buildExportSuccessDiagnostics } from "@/components/export/build-export-success-diagnostics.utils";
 import { buildAudioMixFromStory, getVoiceoverAvailability } from "@/features/audio";
 import { prepareStoryVoiceoverForExport } from "@/features/drafts";
+import {
+  isStorySyncExportBlocked,
+  STORY_SYNC_EXPORT_BLOCKED_MESSAGE,
+  useOptionalStorySync,
+} from "@/features/story-sync";
 import {
   applyStoryBackgroundMusic,
 } from "@/features/story/utils";
@@ -108,6 +115,10 @@ interface ExportPanelProps {
   draftId?: string;
   creationBrief?: StoryCreationBrief;
   scriptMode?: ScriptMode;
+  /** When true, tracks export fingerprint for stale post-export detection. */
+  trackExportFingerprint?: boolean;
+  /** Optional — notifies parent when export completes successfully (sync wiring only). */
+  onExportSuccess?: () => void;
 }
 
 interface ChecklistItem {
@@ -127,6 +138,7 @@ interface ExportSuccessSnapshot {
   diagnostics: string[];
   downloadBlob: Blob | null;
   downloadFileName: string;
+  exportedFingerprint: string;
 }
 
 interface PendingExportContext {
@@ -202,7 +214,13 @@ export default function ExportPanel({
   draftId,
   creationBrief,
   scriptMode,
+  trackExportFingerprint = false,
+  onExportSuccess,
 }: ExportPanelProps) {
+  const storySync = useOptionalStorySync();
+  const syncBlocksExport = storySync
+    ? isStorySyncExportBlocked(storySync.state)
+    : false;
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [progress, setProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
@@ -389,13 +407,41 @@ export default function ExportPanel({
     .map(Number);
   const isBusy = isExporting || disabled;
   const isPostExport = exportState === "done" && exportSuccessSnapshot !== null;
+  const shouldTrackExportFingerprint = trackExportFingerprint || isPostExport;
+  const currentExportFingerprint = useMemo(() => {
+    if (!shouldTrackExportFingerprint) {
+      return null;
+    }
+
+    // Editor script is already synced at DraftEditorFlow; fingerprint is presentation-only.
+    return buildExportFingerprint({
+      script,
+      exportSettings,
+      includeNarration,
+      includeBackgroundMusic,
+    });
+  }, [
+    shouldTrackExportFingerprint,
+    script,
+    exportSettings,
+    includeNarration,
+    includeBackgroundMusic,
+  ]);
+  const isExportStale =
+    isPostExport &&
+    exportSuccessSnapshot?.exportedFingerprint != null &&
+    currentExportFingerprint != null &&
+    exportSuccessSnapshot.exportedFingerprint !== currentExportFingerprint;
   const exportDisabledReason = isExporting
     ? "Export in progress"
-    : sceneCount < 1
-      ? "Add at least one scene to export"
-      : resolvedExportPath.blocked
-        ? resolvedExportPath.blockReason ?? "Selected export format is unavailable"
-        : undefined;
+    : syncBlocksExport
+      ? STORY_SYNC_EXPORT_BLOCKED_MESSAGE
+      : sceneCount < 1
+        ? "Add at least one scene to export"
+        : resolvedExportPath.blocked
+          ? resolvedExportPath.blockReason ?? "Selected export format is unavailable"
+          : undefined;
+  const exportAgainDisabled = isBusy || Boolean(exportDisabledReason);
   const activeFormat = exportSettings.format;
   const webmAvailable = isWebmExportAvailable();
 
@@ -412,6 +458,13 @@ export default function ExportPanel({
     setExportMessage(null);
     setExportSuccessSnapshot(null);
     setProgress(0);
+
+    if (syncBlocksExport) {
+      setExportState("error");
+      setErrorMessage(STORY_SYNC_EXPORT_BLOCKED_MESSAGE);
+      return;
+    }
+
     setExportState("preparing");
     pendingExportContextRef.current = null;
     capturedDownloadRef.current = null;
@@ -486,7 +539,14 @@ export default function ExportPanel({
               }),
               downloadBlob: capturedDownloadRef.current?.blob ?? null,
               downloadFileName: capturedDownloadRef.current?.filename ?? completedFileName,
+              exportedFingerprint: buildExportFingerprint({
+                script: exportScript,
+                exportSettings: settings,
+                includeNarration: context?.requestedVoiceover ?? includeNarration,
+                includeBackgroundMusic: context?.requestedMusic ?? includeBackgroundMusic,
+              }),
             });
+            onExportSuccess?.();
           }
         },
         {
@@ -523,7 +583,21 @@ export default function ExportPanel({
             voiceoverEnabled={exportSuccessSnapshot.voiceoverEnabled}
             backgroundMusicEnabled={exportSuccessSnapshot.backgroundMusicEnabled}
             diagnostics={exportSuccessSnapshot.diagnostics}
+            description={
+              isExportStale
+                ? "Your story changed after this export. Export again to update the video, or publish/download the previous version."
+                : undefined
+            }
           />
+
+          {isExportStale ? (
+            <StudioStatus
+              variant="warning"
+              layout="panel"
+              icon={Info}
+              description="Timeline, captions, images, audio, or export settings changed since the last render."
+            />
+          ) : null}
 
           {!draftId?.trim() ? (
             <StudioStatus
@@ -534,20 +608,52 @@ export default function ExportPanel({
             />
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => setPublishModalOpen(true)}
-            className={`${studioPrimaryButton} w-full`}
-          >
-            <Share2 className="h-4 w-4" />
-            Publish
-          </button>
+          {isExportStale ? (
+            <ExportAgainButton
+              disabled={exportAgainDisabled}
+              onClick={handleExport}
+              label="Export updated video"
+              className={`${studioPrimaryButton} w-full`}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPublishModalOpen(true)}
+              className={`${studioPrimaryButton} w-full`}
+            >
+              <Share2 className="h-4 w-4" />
+              Publish
+            </button>
+          )}
+
+          {isExportStale ? (
+            <button
+              type="button"
+              onClick={() => setPublishModalOpen(true)}
+              className={`${studioSecondaryButton} w-full`}
+            >
+              <Share2 className="h-4 w-4" />
+              Publish previous export
+            </button>
+          ) : null}
 
           <ExportDownloadAgainButton
             disabled={!exportSuccessSnapshot.downloadBlob}
             onClick={handleDownloadAgain}
             className={`${studioSecondaryButton} w-full`}
           />
+
+          {!isExportStale ? (
+            <ExportAgainButton
+              disabled={exportAgainDisabled}
+              onClick={handleExport}
+              className={`${studioSecondaryButton} w-full`}
+            />
+          ) : null}
+
+          {exportAgainDisabled && exportDisabledReason ? (
+            <p className={`${studioSubtleText} text-center text-xs`}>{exportDisabledReason}</p>
+          ) : null}
 
           <PublishingAssistantModal
             key={publishModalOpen ? exportSuccessSnapshot.downloadFileName : "closed"}
@@ -667,6 +773,15 @@ export default function ExportPanel({
           layout="panel"
           title="Script changed after narration"
           description={EXPORT_NARRATION_VOICEOVER_MISMATCH_WARNING}
+        />
+      )}
+
+      {syncBlocksExport && (
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          title="Narration or voiceover is out of sync"
+          description={STORY_SYNC_EXPORT_BLOCKED_MESSAGE}
         />
       )}
 
@@ -947,7 +1062,7 @@ export default function ExportPanel({
           <button
             type="button"
             onClick={handleExport}
-            disabled={isBusy || sceneCount < 1 || resolvedExportPath.blocked}
+            disabled={isBusy || sceneCount < 1 || resolvedExportPath.blocked || syncBlocksExport}
             title={exportDisabledReason}
             className={`${studioPrimaryButton} w-full`}
           >

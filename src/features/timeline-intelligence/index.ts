@@ -8,6 +8,12 @@ export {
   TIMELINE_SUBTITLE_FINAL_READABLE_HOLD_MS,
   TIMELINE_VOICEOVER_SYNC_TOLERANCE_MS,
 } from "./build-master-timeline";
+export {
+  hasManualSceneDuration,
+  resolveEditorSceneDurationMs,
+  shouldPreferEditorSceneTimingAuthority,
+  STORY_DURATION_NARRATION_MISMATCH_WARNING,
+} from "./editor-scene-timing-authority.utils";
 export type { BuildMasterTimelineOptions } from "./build-master-timeline";
 export {
   buildOptimizedMasterTimeline,
@@ -130,6 +136,15 @@ export {
   resolvePreviewMasterTimelineDevDiagnostics,
 } from "./preview-timeline-diagnostics.dev.utils";
 export type { PreviewMasterTimelineDevDiagnostics } from "./preview-timeline-diagnostics.dev.utils";
+export {
+  PreviewMasterTimelineProvider,
+  resolvePreviewMasterTimelineState,
+  usePreviewMasterTimelineContext,
+} from "./master-timeline";
+export type {
+  PreviewDurationSource,
+  PreviewMasterTimelineContextValue,
+} from "./master-timeline";
 export {
   optimizeMasterTimeline,
   TIMELINE_OPTIMIZER_DENSE_SUBTITLE_CHUNK_MS,

@@ -16,8 +16,17 @@ import { InspectorContextProvider, InspectorResolver } from "@/features/editor/i
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import { EditorSelectionProvider, useEditorSelection } from "@/features/editor/selection";
 import { StudioTimeline, TimelinePlaybackPortProvider, useTimelinePlaybackPublisher } from "@/features/timeline-editor";
+import { PreviewMasterTimelineProvider } from "@/features/timeline-intelligence/master-timeline";
 import TimelineDeveloperView from "@/features/timeline-intelligence/TimelineDeveloperView";
 import { VideoPreview } from "@/features/preview/components";
+import { applyPendingSceneCaptionDrafts } from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
+import {
+  NO_USABLE_NARRATION_WARNING,
+  rebuildNarrationFromScenes,
+  StorySynchronizationBanner,
+  SynchronizationStatusCard,
+  useOptionalStorySync,
+} from "@/features/story-sync";
 import type { SceneImageTransformPatch } from "@/features/story/utils";
 import { getSceneImage } from "@/features/story/utils";
 import { applySceneImageSettings, applyResetSceneImageSettings } from "@/lib/utils/voiceover";
@@ -37,6 +46,8 @@ import type { ScriptMode } from "@/types/footiebitz";
 
 interface StoryWorkspaceProps {
   script: FootieScript;
+  /** Bumped by DraftEditorFlow when preview master timeline must rebuild. */
+  timelineEpoch?: number;
   onScriptChange: (script: FootieScript) => void;
   selectedSceneIndex: number;
   onSelectedSceneChange: (index: number) => void;
@@ -61,7 +72,12 @@ export default function StoryWorkspace(props: StoryWorkspaceProps) {
       onSelectedSceneChange={props.onSelectedSceneChange}
     >
       <TimelinePlaybackPortProvider>
-        <StoryWorkspaceContent {...props} />
+        <PreviewMasterTimelineProvider
+          script={props.script}
+          timelineEpoch={props.timelineEpoch}
+        >
+          <StoryWorkspaceContent {...props} />
+        </PreviewMasterTimelineProvider>
       </TimelinePlaybackPortProvider>
     </EditorSelectionProvider>
   );
@@ -84,6 +100,7 @@ function StoryWorkspaceContent({
 }: StoryWorkspaceProps) {
   const [exportDrawerOpen, setExportDrawerOpen] = useState(false);
   const [exportActive, setExportActive] = useState(false);
+  const [narrationRebuildWarning, setNarrationRebuildWarning] = useState<string | null>(null);
   const publishTimelinePlayback = useTimelinePlaybackPublisher();
   const creatorAssetStudioVisible = useCreatorAssetStudioVisible();
   const assetPlanning = useCreatorAssetPlanningCache(draftId, script, scriptMode);
@@ -91,9 +108,49 @@ function StoryWorkspaceContent({
     selectedSceneId,
   } = useEditorSelection();
 
+  const storySync = useOptionalStorySync();
+
   const openExportDrawer = useCallback(() => {
     setExportDrawerOpen(true);
   }, []);
+
+  const focusVoiceoverSection = useCallback(() => {
+    document.getElementById("studio-project-voiceover")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    window.setTimeout(() => {
+      document.getElementById("studio-project-voiceover-regenerate")?.focus();
+    }, 200);
+  }, []);
+
+  const handleUpdateNarration = useCallback(() => {
+    const scriptWithDrafts = applyPendingSceneCaptionDrafts(script);
+    const result = rebuildNarrationFromScenes(scriptWithDrafts);
+    if (!result.ok) {
+      setNarrationRebuildWarning(NO_USABLE_NARRATION_WARNING);
+      return;
+    }
+
+    setNarrationRebuildWarning(null);
+    onScriptChange(result.script);
+    // Explicit user repair — clear stuck narration dirty when rebuilt text is unchanged.
+    storySync?.applySyncEdit("narration");
+  }, [onScriptChange, script, storySync]);
+
+  const handlePreviewStart = useCallback(() => {
+    if (!storySync) {
+      return;
+    }
+    const { state, applySyncEdit } = storySync;
+    if (state.previewDirty && !state.voiceDirty) {
+      applySyncEdit("preview_refreshed");
+    }
+  }, [storySync]);
+
+  const handleExportSuccess = useCallback(() => {
+    storySync?.applySyncEdit("export_success");
+  }, [storySync]);
 
   const handleSceneImageTransformChange = useCallback(
     (sceneId: string, patch: SceneImageTransformPatch) => {
@@ -205,11 +262,19 @@ function StoryWorkspaceContent({
                   onSceneImageTransformChange={handleSceneImageTransformChange}
                   onSceneImageReset={handleSceneImageReset}
                   onClockUpdate={publishTimelinePlayback}
+                  onPreviewStart={handlePreviewStart}
                 />
               </div>
             </div>
             <TimelineDeveloperView script={script} />
           </div>
+        }
+        inspectorBanner={
+          <StorySynchronizationBanner
+            onUpdateNarration={handleUpdateNarration}
+            onGenerateVoice={focusVoiceoverSection}
+            onExportUpdated={openExportDrawer}
+          />
         }
         inspector={
           <InspectorContextProvider
@@ -219,6 +284,13 @@ function StoryWorkspaceContent({
             assetPlanning={assetPlanning}
             creatorAssetStudioVisible={creatorAssetStudioVisible}
           >
+            <div className="mb-3 shrink-0">
+              <SynchronizationStatusCard
+                onUpdateNarration={handleUpdateNarration}
+                onRegenerateVoice={focusVoiceoverSection}
+                warning={narrationRebuildWarning}
+              />
+            </div>
             <InspectorResolver />
           </InspectorContextProvider>
         }
@@ -231,9 +303,11 @@ function StoryWorkspaceContent({
         <ExportPanel
           script={script}
           compact
+          trackExportFingerprint={exportDrawerOpen}
           onExportSettingsChange={onExportSettingsChange}
           onScriptChange={onScriptChange}
           onExportActiveChange={setExportActive}
+          onExportSuccess={handleExportSuccess}
           draftId={draftId}
           creationBrief={creationBrief}
           scriptMode={scriptMode}

@@ -45,3 +45,14 @@ export interface TimelineDragState {
   hoverTargetIndex: number;
   previewSceneIds: string[];
 }
+
+/** Local-only right-edge duration resize state — never persisted. */
+export interface TimelineResizeState {
+  sceneId: string;
+  startDurationMs: number;
+  startClientX: number;
+  railWidthPx: number;
+  totalDurationMs: number;
+  /** Live preview duration in whole seconds (snapped/clamped). */
+  previewDurationSec: number;
+}

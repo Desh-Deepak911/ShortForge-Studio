@@ -16,6 +16,10 @@ export const timelineEditorFallbackNotice =
 export const timelineEditorCoarsePointerHint =
   "mb-1.5 hidden text-[10px] leading-snug text-muted [@media(pointer:coarse)]:block";
 
+/** Subtle duration-resize hint — always visible, non-modal. */
+export const timelineEditorDurationHint =
+  "mb-1.5 text-[10px] leading-snug text-muted/80";
+
 export const timelineEditorPlaybackLocked =
   "pointer-events-auto opacity-95 saturate-[0.92]";
 
@@ -57,6 +61,23 @@ export const timelineSceneBlockKebab =
 
 export const timelineSceneBlockDragHandle =
   "absolute bottom-0.5 left-0.5 z-10 inline-flex h-5 w-5 cursor-grab items-center justify-center rounded-md bg-black/60 text-white/95 opacity-0 ring-1 ring-white/12 backdrop-blur-sm transition hover:bg-black/75 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 active:cursor-grabbing group-hover/scene-block:opacity-100 group-focus-within/scene-block:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 [@media(pointer:coarse)]:opacity-100";
+
+/** Right-edge duration resize handle — separate from reorder grip. */
+export const timelineSceneBlockResizeHandle =
+  "absolute inset-y-0 -right-0.5 z-20 w-3 cursor-ew-resize touch-none opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 group-hover/scene-block:opacity-100 group-focus-within/scene-block:opacity-100 disabled:cursor-not-allowed disabled:opacity-25 [@media(pointer:coarse)]:right-0 [@media(pointer:coarse)]:w-5 [@media(pointer:coarse)]:opacity-100";
+
+export const timelineSceneBlockResizeHandleActive =
+  "opacity-100";
+
+export const timelineSceneBlockResizeHandleBar =
+  "pointer-events-none absolute inset-y-2 right-1 w-0.5 rounded-full bg-accent/80 shadow-[0_0_8px_rgba(91,140,255,0.55)] [@media(pointer:coarse)]:right-1.5 [@media(pointer:coarse)]:w-1";
+
+export const timelineSceneBlockResizeHandleBarActive =
+  "bg-accent shadow-[0_0_12px_rgba(91,140,255,0.75)]";
+
+/** Applied to the timeline rail while a pointer resize is active — blocks page scroll. */
+export const timelineEditorRailResizing =
+  "touch-none overscroll-x-none select-none";
 
 export const timelineInsertIndicator =
   "pointer-events-none absolute bottom-0.5 top-0.5 -left-1 z-30 flex w-1 -translate-x-1/2 flex-col items-center justify-between";

@@ -79,9 +79,7 @@ export function setCurrentDraft(draft: Draft): void {
   });
 }
 
-/** Replace runtime script; keeps draft metadata in sync when a draft is open. */
-export function setCurrentScript(script: FootieScript): void {
-  const nextScript = syncFootieScript(script);
+function applyScriptToDocument(nextScript: FootieScript): void {
   const currentDraft = documentState.currentDraft;
 
   applyState({
@@ -92,7 +90,19 @@ export function setCurrentScript(script: FootieScript): void {
   });
 }
 
-/** Update the open script in memory; throws if no script is loaded. */
+/**
+ * Replace runtime script; keeps draft metadata in sync when a draft is open.
+ * Defensively syncs — used by external/untrusted callers.
+ */
+export function setCurrentScript(script: FootieScript): void {
+  applyScriptToDocument(syncFootieScript(script));
+}
+
+/**
+ * Update the open script in memory; throws if no script is loaded.
+ * Direct FootieScript values are trusted as already synced (editor boundary).
+ * Function updaters may return patches and are synced once here.
+ */
 export function updateCurrentScript(
   updater: FootieScript | ((current: FootieScript) => FootieScript),
 ): void {
@@ -103,10 +113,10 @@ export function updateCurrentScript(
 
   const nextScript =
     typeof updater === "function"
-      ? syncFootieScript(updater(currentScript))
-      : syncFootieScript(updater);
+      ? syncFootieScript(updater(currentScript), currentScript)
+      : updater;
 
-  setCurrentScript(nextScript);
+  applyScriptToDocument(nextScript);
 }
 
 /** Clear in-memory document state. */
