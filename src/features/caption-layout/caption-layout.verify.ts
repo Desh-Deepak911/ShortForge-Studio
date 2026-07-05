@@ -230,8 +230,8 @@ test("caption layout inspector exposes grouped controls", () => {
 test("preview overlays call caption layout engine adapters", () => {
   const subtitleOverlay = readSrc("src/features/preview/components/SubtitleOverlay.tsx");
   const captionOverlay = readSrc("src/features/preview/components/CaptionOverlay.tsx");
-  assert.match(subtitleOverlay, /resolvePreviewCaptionLayout/);
-  assert.match(captionOverlay, /resolvePreviewCaptionLayout/);
+  assert.match(subtitleOverlay, /resolvePreviewCaptionLayoutForScene/);
+  assert.match(captionOverlay, /resolvePreviewCaptionLayoutForScene/);
   assert.match(subtitleOverlay, /resolvePreviewCaptionOverlayStyle/);
 });
 

@@ -15,6 +15,8 @@ export type StoryPatchClass =
   | "spoken_text"
   | "caption"
   | "caption_layout"
+  | "caption_style"
+  | "caption_animation"
   | "media"
   | "motion"
   | "transition"
@@ -37,6 +39,8 @@ const PRIMARY_PRIORITY: StoryPatchClass[] = [
   "motion",
   "caption",
   "caption_layout",
+  "caption_style",
+  "caption_animation",
 ];
 
 const IMMEDIATE_TIMELINE_CLASSES: ReadonlySet<StoryPatchClass> = new Set([
@@ -62,6 +66,8 @@ const IMMEDIATE_EVOLUTION_CLASSES: ReadonlySet<StoryPatchClass> = new Set([
 const DEFERRED_EVOLUTION_CLASSES: ReadonlySet<StoryPatchClass> = new Set([
   "caption",
   "caption_layout",
+  "caption_style",
+  "caption_animation",
   "motion",
   "media",
   "transition",
@@ -254,6 +260,30 @@ function scriptCaptionLayoutChanged(prev: FootieScript, next: FootieScript): boo
   );
 }
 
+function sceneCaptionStyleChanged(prev: FootieScene, next: FootieScene): boolean {
+  return JSON.stringify(prev.captionStyle ?? null) !== JSON.stringify(next.captionStyle ?? null);
+}
+
+function scriptCaptionStyleChanged(prev: FootieScript, next: FootieScript): boolean {
+  return (
+    JSON.stringify(prev.defaultCaptionStyle ?? null) !==
+    JSON.stringify(next.defaultCaptionStyle ?? null)
+  );
+}
+
+function sceneCaptionAnimationChanged(prev: FootieScene, next: FootieScene): boolean {
+  return (
+    JSON.stringify(prev.captionAnimation ?? null) !== JSON.stringify(next.captionAnimation ?? null)
+  );
+}
+
+function scriptCaptionAnimationChanged(prev: FootieScript, next: FootieScript): boolean {
+  return (
+    JSON.stringify(prev.defaultCaptionAnimation ?? null) !==
+    JSON.stringify(next.defaultCaptionAnimation ?? null)
+  );
+}
+
 function sceneVisualCaptionChanged(prev: FootieScene, next: FootieScene): boolean {
   return (
     prev.subtitle !== next.subtitle ||
@@ -366,6 +396,14 @@ export function classifyStoryPatch(
     classes.add("caption_layout");
   }
 
+  if (scriptCaptionStyleChanged(prev, next)) {
+    classes.add("caption_style");
+  }
+
+  if (scriptCaptionAnimationChanged(prev, next)) {
+    classes.add("caption_animation");
+  }
+
   if (transitionItemsSignature(prev.timelineItems) !== transitionItemsSignature(next.timelineItems)) {
     classes.add("transition");
   }
@@ -405,6 +443,14 @@ export function classifyStoryPatch(
 
     if (sceneCaptionLayoutChanged(prevScene, nextScene)) {
       classes.add("caption_layout");
+    }
+
+    if (sceneCaptionStyleChanged(prevScene, nextScene)) {
+      classes.add("caption_style");
+    }
+
+    if (sceneCaptionAnimationChanged(prevScene, nextScene)) {
+      classes.add("caption_animation");
     }
 
     if (sceneMediaChanged(prevScene, nextScene)) {

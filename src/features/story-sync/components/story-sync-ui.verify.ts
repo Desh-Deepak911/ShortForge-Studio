@@ -240,7 +240,9 @@ test("image edit does not dirty narration", () => {
   assert.equal(kind, "image");
   const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
   assert.equal(state.narrationDirty, false);
-  assert.equal(resolveStorySyncBanner(state), null);
+  assert.equal(state.voiceDirty, false);
+  assert.equal(state.exportDirty, true);
+  assert.equal(resolveStorySyncBanner(state, prev)?.kind, "export");
 });
 
 test("generate narration replaces banner with voice banner", () => {
@@ -327,16 +329,18 @@ test("transition edit dirties preview and export only", () => {
 });
 
 test("status card steps reflect dirty flags", () => {
+  const script = buildStory([makeScene("s1", 3), makeScene("s2", 4)]);
   let state = applyStorySyncEdit(createInitialStorySynchronizationState(), "structural");
-  let steps = resolveStorySyncSteps(state);
+  let steps = resolveStorySyncSteps(state, script);
   assert.equal(steps.find((step) => step.id === "narration")?.tone, "warning");
   assert.equal(steps.find((step) => step.id === "voice")?.tone, "warning");
 
   state = applyStorySyncEdit(state, "narration");
-  steps = resolveStorySyncSteps(state);
+  steps = resolveStorySyncSteps(state, script);
   assert.equal(steps.find((step) => step.id === "story")?.tone, "success");
   assert.equal(steps.find((step) => step.id === "narration")?.tone, "success");
   assert.equal(steps.find((step) => step.id === "voice")?.tone, "warning");
+  assert.equal(steps.find((step) => step.id === "media")?.tone, "success");
 });
 
 test("structural: editor wires banner, card, and lifecycle hooks", () => {
@@ -364,8 +368,12 @@ test("structural: editor wires banner, card, and lifecycle hooks", () => {
   assert.match(workspace, /handleUpdateNarration/);
   assert.match(workspace, /applyPendingSceneCaptionDrafts/);
   assert.match(workspace, /intent: "narration_rebuild"/);
-  assert.match(exportPanel, /isStorySyncExportBlocked/);
-  assert.match(exportPanel, /STORY_SYNC_EXPORT_BLOCKED_MESSAGE/);
+  assert.match(draftEditorFlow, /resolveMediaSyncEditKind/);
+  assert.match(draftEditorFlow, /applyMediaStoryUpdate/);
+  assert.match(exportPanel, /resolveExportReadiness/);
+  assert.match(exportPanel, /exportBlocked/);
+  assert.match(card, /resolveStorySyncSteps\(storySync\.state, script\)/);
+  assert.match(workspace, /SynchronizationStatusCard[\s\S]*script=\{script\}/);
   assert.match(studioSceneInspector, /applyPresentationSceneUpdate/);
   assert.match(studioSceneInspector, /intent: "presentation"/);
   assert.match(draftEditorFlow, /applyPresentationStoryUpdate/);
@@ -467,11 +475,11 @@ test("update narration noop clears narration dirty via explicit sync edit", () =
   assert.equal(state.voiceDirty, true);
 });
 
-test("motion edit does not change sync banner", () => {
+test("motion edit does not dirty narration or voice", () => {
   let state = applyStorySyncEdit(createInitialStorySynchronizationState(), "structural");
-  const before = resolveStorySyncBanner(state);
-
   const prev = buildStory([makeScene("s1", 3)]);
+  assert.equal(resolveStorySyncBanner(state, prev)?.kind, "narration");
+
   const { kind } = commit(
     prev,
     applySceneImageSettings(prev, "s1", {
@@ -480,7 +488,10 @@ test("motion edit does not change sync banner", () => {
   );
   assert.equal(kind, "motion");
   state = applyStorySyncEdit(state, kind!);
-  assert.deepEqual(resolveStorySyncBanner(state), before);
+  assert.equal(state.narrationDirty, true);
+  assert.equal(state.voiceDirty, true);
+  assert.equal(state.exportDirty, true);
+  assert.equal(resolveStorySyncBanner(state, prev)?.kind, "narration");
 });
 
 console.log(`\nstory-sync-ui: ${passed} passed`);

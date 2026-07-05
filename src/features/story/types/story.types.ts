@@ -1,5 +1,7 @@
 import type { AssetAttachMetadata } from "@/features/asset-attach/asset-attach.types";
 import type { CaptionLayout, CaptionAnchor } from "@/features/caption-layout";
+import type { CaptionStyle } from "@/features/caption-style";
+import type { CaptionAnimation } from "@/features/caption-animation";
 import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.types";
 import type { PlatformExportPresetId } from "@/features/export-profiles/export-profile.types";
 import type { SpeechStylePreset } from "@/features/speech-style";
@@ -16,6 +18,8 @@ export type SubtitleEffect = "fade-up" | "typewriter" | "highlight";
 export type CaptionLayoutPosition = "bottom" | "center" | "top" | "top_left" | "custom";
 
 export type { CaptionAnchor, CaptionLayout };
+export type { CaptionStyle };
+export type { CaptionAnimation };
 
 /** How a scene image fills its frame. */
 export type SceneImageFitMode = "fill" | "fit";
@@ -112,6 +116,10 @@ export interface FootieScene {
   assetAttachment?: AssetAttachMetadata;
   /** Per-scene caption placement override. Falls back to `FootieScript.defaultCaptionLayout`. */
   captionLayout?: CaptionLayout;
+  /** Per-scene caption visual style override. Falls back to `FootieScript.defaultCaptionStyle`. */
+  captionStyle?: CaptionStyle;
+  /** Per-scene caption animation override. Falls back to `FootieScript.defaultCaptionAnimation`. */
+  captionAnimation?: CaptionAnimation;
 }
 
 export type TransitionEffect =
@@ -216,4 +224,8 @@ export interface FootieScript {
   exportSettings?: ExportSettings;
   /** Project-wide default caption placement. Scenes may override via `captionLayout`. */
   defaultCaptionLayout?: CaptionLayout;
+  /** Project-wide default caption visual style. Scenes may override via `captionStyle`. */
+  defaultCaptionStyle?: CaptionStyle;
+  /** Project-wide default caption animation preset. */
+  defaultCaptionAnimation?: CaptionAnimation;
 }

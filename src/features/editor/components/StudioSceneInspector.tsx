@@ -19,9 +19,12 @@ import SceneImageMotionControl from "@/features/editor/components/SceneImageMoti
 import {
   buildSceneCaptionPresetPatch,
   buildSceneSubtitleEffectPatch,
+  CaptionAnimationControl,
   CaptionLayoutControl,
   CaptionPresetPanel,
+  CaptionStyleControl,
 } from "@/features/caption-engine";
+import { CaptionAnimationWorkflow } from "@/features/caption-animation-workflow";
 import { CaptionLayoutWorkflow } from "@/features/caption-layout-workflow";
 import SubtitleEffectControl from "@/features/editor/components/SubtitleEffectControl";
 import TransitionCard from "@/features/editor/components/TransitionCard";
@@ -322,14 +325,14 @@ export default function StudioSceneInspector({
 
   const handleImageSettingsChange = useCallback(
     (sceneId: string, updates: SceneImageTransformPatch | SceneImage) => {
-      onScriptChange(applySceneImageSettings(script, sceneId, updates));
+      onScriptChange(applySceneImageSettings(script, sceneId, updates), { intent: "media" });
     },
     [onScriptChange, script],
   );
 
   const handleImageReset = useCallback(
     (sceneId: string) => {
-      onScriptChange(applyResetSceneImageSettings(script, sceneId));
+      onScriptChange(applyResetSceneImageSettings(script, sceneId), { intent: "media" });
     },
     [onScriptChange, script],
   );
@@ -589,6 +592,36 @@ export default function StudioSceneInspector({
           script={script}
           sceneIndex={safeIndex}
           onSceneLayoutChange={(patch) => commitPresentationPatch(scene.id, patch)}
+          onScriptPresentationChange={commitPresentationScript}
+        />
+      </InspectorSection>
+
+      <InspectorSection
+        title="Caption Style"
+        description="Container background, spacing, and text box limits."
+        open={inspectorImageEditing ? false : undefined}
+      >
+        <CaptionStyleControl
+          scene={scene}
+          script={script}
+          onSceneStyleChange={(patch) => commitPresentationPatch(scene.id, patch)}
+        />
+      </InspectorSection>
+
+      <InspectorSection
+        title="Caption Animation"
+        description="Preset, timing, easing, and animation intensity."
+        open={inspectorImageEditing ? false : undefined}
+      >
+        <CaptionAnimationControl
+          scene={scene}
+          script={script}
+          onSceneAnimationChange={(patch) => commitPresentationPatch(scene.id, patch)}
+        />
+        <CaptionAnimationWorkflow
+          scene={scene}
+          script={script}
+          onSceneAnimationChange={(patch) => commitPresentationPatch(scene.id, patch)}
           onScriptPresentationChange={commitPresentationScript}
         />
       </InspectorSection>

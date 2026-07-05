@@ -4,3 +4,4 @@ export * from "./previewTransitionOverlay";
 export * from "./preview-background-music.utils";
 export * from "./preview-voice-gain.utils";
 export * from "./preview-master-timeline.utils";
+export * from "./preview-interaction.utils";

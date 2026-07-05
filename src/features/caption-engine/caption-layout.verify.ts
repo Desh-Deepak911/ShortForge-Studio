@@ -25,6 +25,8 @@ import {
   resolveExportCaptionPlacement,
   resolveCaptionLayout,
   resolvePreviewCaptionLayout,
+  resolvePreviewCaptionLayoutForScene,
+  resolvePreviewCaptionLayoutScene,
   DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
 } from "./caption-layout.utils";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -232,11 +234,38 @@ test("existing stories without layout preserve legacy appearance", () => {
   assert.equal(resolved.usesLegacyBottomCenter, true);
 });
 
+test("preview resolves layout from live script scene during playback", () => {
+  const liveScene = {
+    ...makeScene("s1", 4),
+    captionLayout: { anchor: "center" as const, version: 2 },
+  };
+  const script = buildStory([liveScene]);
+  const staleScene = { ...liveScene, captionLayout: undefined };
+
+  const resolved = resolvePreviewCaptionLayoutForScene(staleScene, script, 0);
+  assert.equal(resolved.anchor, "center");
+  assert.equal(resolved.usesLegacyBottomCenter, false);
+  assert.equal(resolvePreviewCaptionLayoutScene(script, staleScene, 0).captionLayout?.anchor, "center");
+});
+
+test("project default layout applies when preview scene snapshot is stale", () => {
+  const scene = makeScene("s1", 4);
+  const script = buildStory([scene], {
+    defaultCaptionLayout: { anchor: "top_center", version: 2 },
+  });
+  const resolved = resolvePreviewCaptionLayoutForScene(scene, script, 0);
+  assert.equal(resolved.anchor, "top_center");
+  assert.equal(resolved.usesLegacyBottomCenter, false);
+});
+
 test("export and preview wiring expose layout-aware draw APIs", () => {
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const subtitleOverlay = readSrc("src/features/preview/components/SubtitleOverlay.tsx");
+  const videoPreview = readSrc("src/features/preview/components/VideoPreview.tsx");
   assert.match(canvasUtils, /resolveExportCaptionPlacement\(scene, script/);
-  assert.match(subtitleOverlay, /resolvePreviewCaptionLayout/);
+  assert.match(subtitleOverlay, /resolvePreviewCaptionLayoutForScene/);
+  assert.match(subtitleOverlay, /resolvePreviewCaptionLayoutScene/);
+  assert.match(videoPreview, /sceneIndex=\{subtitleSceneIndex\}/);
 });
 
 console.log(`\ncaption-engine layout adapter: ${passed} passed`);

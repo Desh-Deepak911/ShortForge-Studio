@@ -1,6 +1,7 @@
 export type {
   BackgroundMusicSource,
   CaptionAnchor,
+  CaptionAnimation,
   CaptionLayout,
   CaptionLayoutPosition,
   CaptionMode,

@@ -2,11 +2,14 @@
 
 import { studioSubtleText } from "@/lib/utils/studioUi";
 
+import type { FootieScript } from "@/features/story/types";
+
 import { useOptionalStorySync } from "../StorySyncContext";
 import { resolveStorySyncSteps } from "../story-sync.utils";
 import SynchronizationStep from "./SynchronizationStep";
 
 export interface SynchronizationStatusCardProps {
+  script: FootieScript;
   onUpdateNarration?: () => void;
   onRegenerateVoice?: () => void;
   warning?: string | null;
@@ -16,6 +19,7 @@ export interface SynchronizationStatusCardProps {
  * Project inspector health card — guided repair actions for narration/voice when dirty.
  */
 export default function SynchronizationStatusCard({
+  script,
   onUpdateNarration,
   onRegenerateVoice,
   warning,
@@ -24,8 +28,6 @@ export default function SynchronizationStatusCard({
   if (!storySync) {
     return null;
   }
-
-  const steps = resolveStorySyncSteps(storySync.state);
 
   return (
     <section
@@ -38,11 +40,11 @@ export default function SynchronizationStatusCard({
           Synchronization
         </p>
         <p className={`${studioSubtleText} mt-0.5 text-[11px] leading-snug`}>
-          Story health across narration, voice, preview, and export.
+          Story, voice, media, and export readiness are tracked separately.
         </p>
       </header>
       <div className="space-y-0.5" role="list">
-        {steps.map((step) => {
+        {resolveStorySyncSteps(storySync.state, script).map((step) => {
           const actionLabel =
             step.id === "narration" && storySync.state.narrationDirty
               ? "Update"

@@ -267,7 +267,7 @@ export default function AssetBrowser({
     });
 
     if (result.success && result.script) {
-      attachContext.onScriptChange(result.script);
+      attachContext.onScriptChange(result.script, { intent: "media" });
       setAttachState("success");
       window.setTimeout(() => {
         setDetailsOpen(false);

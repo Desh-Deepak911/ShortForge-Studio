@@ -31,6 +31,7 @@ export {
   resolveStorySyncBanner,
   resolveStorySyncEditKind,
   resolvePresentationSyncEditKind,
+  resolveMediaSyncEditKind,
   resolveStorySyncSteps,
   STORY_SYNC_EXPORT_BLOCKED_MESSAGE,
 } from "./story-sync.utils";
@@ -40,6 +41,24 @@ export type {
   StorySyncStepModel,
   StorySyncStepTone,
 } from "./story-sync.utils";
+
+export {
+  resolveMediaCompleteness,
+  formatMissingSceneNumbers,
+  formatMissingSceneNumbersLabel,
+} from "./media-completeness.utils";
+export type { MediaCompletenessState } from "./media-completeness.utils";
+
+export {
+  resolveExportReadiness,
+  isExportReadinessBlocked,
+  resolveExportBlockedMessage,
+  EXPORT_BLOCKED_NO_SCENES_MESSAGE,
+  EXPORT_BLOCKED_NARRATION_MESSAGE,
+  EXPORT_BLOCKED_VOICE_MESSAGE,
+  resolveMissingMediaBlockedMessage,
+} from "./export-readiness.utils";
+export type { ExportReadinessState } from "./export-readiness.utils";
 
 export {
   StorySyncProvider,

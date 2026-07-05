@@ -161,14 +161,14 @@ function StoryWorkspaceContent({
 
   const handleSceneImageTransformChange = useCallback(
     (sceneId: string, patch: SceneImageTransformPatch) => {
-      onScriptChange(applySceneImageSettings(script, sceneId, patch));
+      onScriptChange(applySceneImageSettings(script, sceneId, patch), { intent: "media" });
     },
     [onScriptChange, script],
   );
 
   const handleSceneImageReset = useCallback(
     (sceneId: string) => {
-      onScriptChange(applyResetSceneImageSettings(script, sceneId));
+      onScriptChange(applyResetSceneImageSettings(script, sceneId), { intent: "media" });
     },
     [onScriptChange, script],
   );
@@ -308,6 +308,7 @@ function StoryWorkspaceContent({
         }
         inspectorBanner={
           <StorySynchronizationBanner
+            script={script}
             onUpdateNarration={handleUpdateNarration}
             onGenerateVoice={focusVoiceoverSection}
             onExportUpdated={openExportDrawer}
@@ -323,6 +324,7 @@ function StoryWorkspaceContent({
           >
             <div className="mb-3 shrink-0">
               <SynchronizationStatusCard
+                script={script}
                 onUpdateNarration={handleUpdateNarration}
                 onRegenerateVoice={focusVoiceoverSection}
                 warning={narrationRebuildWarning}

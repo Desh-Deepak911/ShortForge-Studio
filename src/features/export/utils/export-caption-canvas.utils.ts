@@ -1,12 +1,18 @@
 import { resolveExportCaptionPlacement, resolveExportCaptionTextX } from "@/features/caption-engine/caption-layout.utils";
-import type { ExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
-import type { FootieScene, FootieScript } from "@/features/story/types";
 import {
   applyExportCaptionTextDrawState,
+  drawExportCaptionStyledLine,
+  formatExportCaptionLineText,
+  isDefaultCaptionStyleStorage,
+  LEGACY_EXPORT_CAPTION_BOX_BORDER,
   resetExportCaptionTextDrawState,
+  resolveExportCaptionBackgroundFill,
   resolveExportCaptionStyleForDisplay,
+  resolveExportCaptionStyleFromSceneDisplay,
+  resolveExportCaptionStyleMetrics,
+  resolveCaptionStyleMaxLines,
   type ExportCaptionStyleMetadata,
-} from "@/features/caption-engine/resolve-export-caption-style.utils";
+} from "@/features/caption-style";
 import {
   resolveTikTokMotionOverlay,
   resolveTikTokMotionVisualState,
@@ -23,9 +29,12 @@ import {
   SPORTS_MOTION_STYLE_TOKENS,
   type SportsMotionVisualState,
 } from "@/features/caption-engine/sports-motion-caption-style.utils";
+import type { ExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
+import type { FootieScene, FootieScript } from "@/features/story/types";
 import {
   resolveCaptionAnimationTranslateYPx,
-} from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
+  resolveExportCaptionHighlightFrame,
+} from "@/features/caption-animation";
 import {
   resolveSubtitleDisplayLayout,
   SUBTITLE_MIN_FONT_SCALE,
@@ -33,7 +42,6 @@ import {
 } from "@/features/story/utils/subtitle-layout.utils";
 import { SUBTITLE_MAX_VISIBLE_LINES, SUBTITLE_MAX_WIDTH_RATIO } from "@/features/story/utils";
 import {
-  getExportHighlightSubtitleFrame,
   getTypewriterRevealedText,
 } from "@/features/story/utils/subtitle-effect.utils";
 
@@ -43,16 +51,9 @@ export interface DrawExportSubtitlesCaptionOptions {
   height: number;
   scale: number;
   display: ExportSubtitleDisplay;
-  scene: Pick<FootieScene, "captionLayout">;
-  script?: Pick<FootieScript, "defaultCaptionLayout">;
+  scene: Pick<FootieScene, "captionLayout" | "captionStyle">;
+  script?: Pick<FootieScript, "defaultCaptionLayout" | "defaultCaptionStyle">;
 }
-
-const SUBTITLE_FONT_SIZE = 64;
-const SUBTITLE_LINE_HEIGHT_RATIO = 1.3;
-const SUBTITLE_BOX_PAD_X = 18;
-const SUBTITLE_BOX_PAD_Y = 10;
-const SUBTITLE_BOX_RADIUS = 12;
-const SUBTITLE_BOX_BORDER = "rgba(255, 255, 255, 0.1)";
 
 export interface ExportSubtitleLayoutMetrics {
   fontSize: number;
@@ -63,15 +64,19 @@ export interface ExportSubtitleLayoutMetrics {
   padY: number;
 }
 
-export function getExportSubtitleLayoutMetrics(scale: number): ExportSubtitleLayoutMetrics {
-  const fontSize = SUBTITLE_FONT_SIZE * scale;
+export function getExportSubtitleLayoutMetrics(
+  scale: number,
+  exportStyle: ExportCaptionStyleMetadata = resolveExportCaptionStyleForDisplay(undefined),
+  fontScale = 1,
+): ExportSubtitleLayoutMetrics {
+  const styleMetrics = resolveExportCaptionStyleMetrics(exportStyle, scale, fontScale);
   return {
-    fontSize,
-    lineHeight: fontSize * SUBTITLE_LINE_HEIGHT_RATIO,
+    fontSize: styleMetrics.fontSize,
+    lineHeight: styleMetrics.lineHeight,
     maxBoxWidth: 0,
     maxTextWidth: 0,
-    padX: SUBTITLE_BOX_PAD_X * scale,
-    padY: SUBTITLE_BOX_PAD_Y * scale,
+    padX: styleMetrics.padX,
+    padY: styleMetrics.padY,
   };
 }
 
@@ -124,12 +129,20 @@ function drawSubtitleBox(
   boxHeight: number,
   scale: number,
   opacity: number,
-  backgroundAlpha = 0.45,
+  exportStyle: ExportCaptionStyleMetadata,
+  backgroundAlpha?: number,
 ): void {
+  const styleMetrics = resolveExportCaptionStyleMetrics(exportStyle, scale);
+  if (!styleMetrics.backgroundEnabled) {
+    return;
+  }
+
+  const alpha = backgroundAlpha ?? styleMetrics.backgroundAlpha;
+
   ctx.save();
   ctx.globalAlpha = opacity;
-  ctx.fillStyle = `rgba(0, 0, 0, ${backgroundAlpha})`;
-  ctx.strokeStyle = SUBTITLE_BOX_BORDER;
+  ctx.fillStyle = resolveExportCaptionBackgroundFill(styleMetrics, alpha);
+  ctx.strokeStyle = styleMetrics.boxBorderColor || LEGACY_EXPORT_CAPTION_BOX_BORDER;
   ctx.lineWidth = Math.max(1, scale);
   roundRectPath(
     ctx,
@@ -137,7 +150,7 @@ function drawSubtitleBox(
     topY,
     boxWidth,
     boxHeight,
-    SUBTITLE_BOX_RADIUS * scale,
+    styleMetrics.cornerRadius,
   );
   ctx.fill();
   ctx.stroke();
@@ -206,15 +219,13 @@ function resolveLayoutMetrics(
   fontScale = 1,
   exportStyle: ExportCaptionStyleMetadata = resolveExportCaptionStyleForDisplay(undefined),
 ): ExportSubtitleLayoutMetrics {
-  const base = getExportSubtitleLayoutMetrics(scale);
-  const fontSize = base.fontSize * fontScale;
+  const base = getExportSubtitleLayoutMetrics(scale, exportStyle, fontScale);
   const maxBoxWidth = width * SUBTITLE_MAX_WIDTH_RATIO;
   const maxTextWidth = Math.max(1, maxBoxWidth - base.padX * 2);
-  applyExportCaptionTextDrawState(ctx, fontSize, exportStyle, scale);
+  applyExportCaptionTextDrawState(ctx, base.fontSize, exportStyle, scale);
   return {
     ...base,
-    fontSize,
-    lineHeight: fontSize * exportStyle.lineHeightRatio,
+    lineHeight: base.fontSize * exportStyle.lineHeightRatio,
     maxBoxWidth,
     maxTextWidth,
   };
@@ -225,6 +236,7 @@ function resolveDisplayLines(
   display: ExportSubtitleDisplay,
   maxTextWidth: number,
   fontScale: number,
+  maxLines = SUBTITLE_MAX_VISIBLE_LINES,
 ): string[] {
   const sourceText =
     display.animationState && display.effect === "typewriter"
@@ -241,9 +253,7 @@ function resolveDisplayLines(
     return display.lines;
   }
 
-  const layout = resolveSubtitleDisplayLayout(sourceText, {
-    maxLines: SUBTITLE_MAX_VISIBLE_LINES,
-  });
+  const layout = resolveSubtitleDisplayLayout(sourceText, { maxLines });
   const effectiveScale = Math.min(fontScale, layout.fontScale);
 
   return wrapSubtitleTextToLines(
@@ -272,7 +282,7 @@ function drawHighlightLine(
   const padY = fontSize * 0.14;
   const pillRadius = 8 * scale;
   const overlayRadius = Math.min(pillRadius, fontSize * 0.35);
-  const highlight = getExportHighlightSubtitleFrame(chunkElapsedMs, activeChunkDurationMs);
+  const highlight = resolveExportCaptionHighlightFrame(chunkElapsedMs, activeChunkDurationMs);
   const bounceScale = sportsMotion?.usesSportsGlow ? sportsMotion.bounceScale : 1;
   const slideOffsetPx = newsMotion?.usesNewsLowerThird ? newsMotion.slideOffsetPx * scale : 0;
   const lineCenterY = baselineY - fontSize * 0.41;
@@ -355,8 +365,8 @@ function drawWrappedSubtitleBlock(
   scale: number,
   opacity: number,
   yOffset: number,
-  scene: Pick<FootieScene, "captionLayout">,
-  script: Pick<FootieScript, "defaultCaptionLayout"> | undefined,
+  scene: Pick<FootieScene, "captionLayout" | "captionStyle">,
+  script: Pick<FootieScript, "defaultCaptionLayout" | "defaultCaptionStyle"> | undefined,
   display?: ExportSubtitleDisplay,
   fontScale = 1,
 ): void {
@@ -364,7 +374,7 @@ function drawWrappedSubtitleBlock(
     return;
   }
 
-  const exportStyle = resolveExportCaptionStyleForDisplay(display);
+  const exportStyle = resolveExportCaptionStyleFromSceneDisplay(scene, script, display);
   const tiktokOverlay = display
     ? resolveTikTokMotionOverlay({
         captionPreset: display.captionPreset,
@@ -432,7 +442,7 @@ function drawWrappedSubtitleBlock(
   const useHighlightLines = display?.effect === "highlight";
 
   if (!useHighlightLines) {
-    drawSubtitleBox(ctx, boxLeft, boxTop, boxWidth, boxHeight, scale, opacity, placement.backgroundAlpha);
+    drawSubtitleBox(ctx, boxLeft, boxTop, boxWidth, boxHeight, scale, opacity, exportStyle, placement.backgroundAlpha);
   }
 
   ctx.save();
@@ -445,7 +455,7 @@ function drawWrappedSubtitleBlock(
   }
 
   for (let index = 0; index < lines.length; index++) {
-    const line = lines[index]!;
+    const line = formatExportCaptionLineText(lines[index]!, exportStyle);
     const lineY = textTopY + (index + 1) * metrics.lineHeight;
 
     if (display?.effect === "highlight") {
@@ -465,11 +475,21 @@ function drawWrappedSubtitleBlock(
         newsMotion,
       );
     } else {
-      applyExportCaptionTextDrawState(ctx, metrics.fontSize, exportStyle, scale);
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = placement.textAlign;
-      ctx.fillText(line, textX, lineY);
-      resetExportCaptionTextDrawState(ctx);
+      const usesStoredCaptionStyle = !isDefaultCaptionStyleStorage(
+        scene.captionStyle,
+        script?.defaultCaptionStyle,
+      );
+      drawExportCaptionStyledLine(
+        ctx,
+        line,
+        textX,
+        lineY,
+        exportStyle,
+        metrics.fontSize,
+        scale,
+        placement.textAlign,
+        usesStoredCaptionStyle,
+      );
     }
   }
 
@@ -484,13 +504,14 @@ function drawActiveChunkLines(
   scale: number,
   captionOpacity: number,
   captionYOffset: number,
-  scene: Pick<FootieScene, "captionLayout">,
-  script: Pick<FootieScript, "defaultCaptionLayout"> | undefined,
+  scene: Pick<FootieScene, "captionLayout" | "captionStyle">,
+  script: Pick<FootieScript, "defaultCaptionLayout" | "defaultCaptionStyle"> | undefined,
 ): void {
   const fontScale = display.fontScale ?? 1;
-  const exportStyle = resolveExportCaptionStyleForDisplay(display);
+  const exportStyle = resolveExportCaptionStyleFromSceneDisplay(scene, script, display);
+  const maxLines = resolveCaptionStyleMaxLines(scene, script);
   const metrics = resolveLayoutMetrics(ctx, width, scale, fontScale, exportStyle);
-  const lines = resolveDisplayLines(ctx, display, metrics.maxTextWidth, fontScale);
+  const lines = resolveDisplayLines(ctx, display, metrics.maxTextWidth, fontScale, maxLines);
   drawWrappedSubtitleBlock(
     ctx,
     lines,
@@ -550,12 +571,14 @@ export function drawExportGeneratedCaption(
   width: number,
   height: number,
   scale: number,
-  scene: Pick<FootieScene, "captionLayout">,
-  script?: Pick<FootieScript, "defaultCaptionLayout">,
+  scene: Pick<FootieScene, "captionLayout" | "captionStyle">,
+  script?: Pick<FootieScript, "defaultCaptionLayout" | "defaultCaptionStyle">,
 ): void {
   prepareExportSubtitleLayer(ctx);
 
-  const metrics = resolveLayoutMetrics(ctx, width, scale);
+  const exportStyle = resolveExportCaptionStyleFromSceneDisplay(scene, script);
+  const maxLines = resolveCaptionStyleMaxLines(scene, script);
+  const metrics = resolveLayoutMetrics(ctx, width, scale, 1, exportStyle);
   const sourceText = lines
     .map((line) => line.trim())
     .filter(Boolean)
@@ -566,7 +589,7 @@ export function drawExportGeneratedCaption(
   }
 
   const textLayout = resolveSubtitleDisplayLayout(sourceText, {
-    maxLines: SUBTITLE_MAX_VISIBLE_LINES,
+    maxLines,
   });
   const wrappedLines = wrapSubtitleTextToLines(
     sourceText,

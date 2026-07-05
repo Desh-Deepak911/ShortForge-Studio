@@ -117,18 +117,22 @@ test("narrated subtitle edit marks narration voice preview and export dirty", ()
   assert.equal(next.exportDirty, true);
 });
 
-test("image edit does not mark dirty", () => {
+test("image edit marks export stale only", () => {
   const initial = createInitialStorySynchronizationState();
   const next = applyStorySyncEdit(initial, "image");
 
-  assert.deepEqual(next, initial);
+  assert.equal(next.narrationDirty, false);
+  assert.equal(next.voiceDirty, false);
+  assert.equal(next.exportDirty, true);
 });
 
-test("motion edit does not mark dirty", () => {
+test("motion edit marks export stale only", () => {
   const initial = createInitialStorySynchronizationState();
   const next = applyStorySyncEdit(initial, "motion");
 
-  assert.deepEqual(next, initial);
+  assert.equal(next.narrationDirty, false);
+  assert.equal(next.voiceDirty, false);
+  assert.equal(next.exportDirty, true);
 });
 
 test("transition timing marks preview and export dirty only", () => {
@@ -587,23 +591,32 @@ test("deleting narrated subtitle dirties narration", () => {
   assert.equal(state.narrationDirty, true);
 });
 
-test("export blocked when narration or voice dirty", () => {
+test("export blocked when narration, voice, or media incomplete", () => {
+  const scriptWithMedia = buildStory([makeScene("s1", 3, { subtitleText: "Line." })]);
+  const scriptWithoutMedia = buildStory([
+    { ...makeScene("s1", 3, { subtitleText: "Line." }), image: undefined, uploadedImage: undefined },
+  ]);
+
   const clean = createInitialStorySynchronizationState();
   assert.equal(isStorySyncExportBlocked(clean), false);
+  assert.equal(isStorySyncExportBlocked(clean, scriptWithMedia), false);
+  assert.equal(isStorySyncExportBlocked(clean, scriptWithoutMedia), true);
 
   const narrationDirty = applyStorySyncEdit(clean, "spoken_text");
-  assert.equal(isStorySyncExportBlocked(narrationDirty), true);
+  assert.equal(isStorySyncExportBlocked(narrationDirty, scriptWithMedia), true);
 
   const voiceDirty = applyStorySyncEdit(
     markNarrationSynchronized(createInitialStorySynchronizationState(), FIXED_AT),
     "narration",
   );
-  assert.equal(isStorySyncExportBlocked(voiceDirty), true);
+  assert.equal(isStorySyncExportBlocked(voiceDirty, scriptWithMedia), true);
 
   let exportOnly = applyStorySyncEdit(createInitialStorySynchronizationState(), "structural");
   exportOnly = applyStorySyncEdit(exportOnly, "narration");
   exportOnly = applyStorySyncEdit(exportOnly, "voice_generated");
   assert.equal(isStorySyncExportBlocked(exportOnly), false);
+  assert.equal(isStorySyncExportBlocked(exportOnly, scriptWithMedia), false);
+  assert.equal(isStorySyncExportBlocked(exportOnly, scriptWithoutMedia), true);
   assert.equal(exportOnly.exportDirty, true);
   assert.match(STORY_SYNC_EXPORT_BLOCKED_MESSAGE, /Update narration and regenerate voiceover/);
 });
@@ -613,9 +626,9 @@ test("export panel blocks when sync is dirty", () => {
     join(process.cwd(), "src/components/ExportPanel.tsx"),
     "utf8",
   );
-  assert.match(exportPanel, /isStorySyncExportBlocked/);
-  assert.match(exportPanel, /STORY_SYNC_EXPORT_BLOCKED_MESSAGE/);
-  assert.match(exportPanel, /syncBlocksExport/);
+  assert.match(exportPanel, /resolveExportReadiness/);
+  assert.match(exportPanel, /exportBlocked/);
+  assert.match(exportPanel, /exportBlocked/);
   assert.doesNotMatch(
     exportPanel.slice(exportPanel.indexOf("const handleExport"), exportPanel.indexOf("await exportFootieShort")),
     /await exportFootieShort/,

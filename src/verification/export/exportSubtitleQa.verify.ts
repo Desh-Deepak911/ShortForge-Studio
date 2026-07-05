@@ -127,22 +127,21 @@ test("export renderer uses timed subtitle display and effect canvas helpers", ()
   assert.match(videoRender, /requestCanvasCaptureFrame/);
   assert.match(exportSubtitle, /getActiveSubtitleChunkFromList/);
   assert.match(exportSubtitle, /resolveExportSubtitleDisplay/);
-  assert.match(exportSubtitle, /resolveCaptionAnimationState/);
+  assert.match(exportSubtitle, /resolveExportCaptionAnimation/);
   assert.match(canvasUtils, /prepareExportSubtitleLayer/);
   assert.match(canvasUtils, /resetExportCanvasDrawState/);
   assert.doesNotMatch(canvasUtils, /repaintSubtitleRegionOverlay/);
   assert.doesNotMatch(canvasUtils, /getExportSubtitleRegionBounds/);
   assert.match(canvasUtils, /resolveExportSubtitleTextBlockSize/);
   assert.match(canvasUtils, /measureSubtitleLineWidths/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_PAD_X = 18/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_PAD_Y = 10/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_RADIUS = 12/);
+  assert.match(canvasUtils, /resolveExportCaptionStyleMetrics/);
+  assert.match(canvasUtils, /from "@\/features\/caption-style"/);
   assert.match(canvasUtils, /backgroundAlpha/);
   assert.match(canvasUtils, /drawExportSubtitlesCaption/);
   assert.match(canvasUtils, /drawExportGeneratedCaption/);
   assert.match(canvasUtils, /resolveExportCaptionStyleForDisplay/);
   assert.match(canvasUtils, /applyExportCaptionTextDrawState/);
-  assert.match(canvasUtils, /getExportHighlightSubtitleFrame/);
+  assert.match(canvasUtils, /resolveExportCaptionHighlightFrame/);
   assert.match(canvasUtils, /display\.animationState/);
   assert.match(canvasUtils, /resolveCaptionAnimationTranslateYPx/);
   assert.match(canvasUtils, /drawHighlightLine/);
@@ -375,9 +374,8 @@ test("no overlapping subtitles: one content-sized pill per frame", () => {
   assert.match(canvasUtils, /prepareExportSubtitleLayer/);
   assert.match(canvasUtils, /resolveExportSubtitleTextBlockSize/);
   assert.match(canvasUtils, /measureSubtitleLineWidths/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_PAD_X = 18/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_PAD_Y = 10/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_RADIUS = 12/);
+  assert.match(canvasUtils, /resolveExportCaptionStyleMetrics/);
+  assert.match(canvasUtils, /from "@\/features\/caption-style"/);
   assert.match(canvasUtils, /wrapTextToLines/);
   assert.match(canvasUtils, /lines\.length \* metrics\.lineHeight/);
   assert.doesNotMatch(canvasUtils, /drawSubtitleBox[\s\S]*maxBoxWidth, boxHeight/);
@@ -483,8 +481,8 @@ test("export highlight draws full pill with progressive overlay (preview parity)
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const effectPreview = readSrc("src/features/editor/components/subtitleEffectPreview.tsx");
 
-  assert.match(canvasUtils, /getExportHighlightSubtitleFrame/);
-  assert.match(effectPreview, /getExportHighlightSubtitleFrame/);
+  assert.match(canvasUtils, /resolveExportCaptionHighlightFrame/);
+  assert.match(effectPreview, /resolveExportCaptionHighlightFrame/);
   assert.match(canvasUtils, /overlayWidth = pillFullWidth \* highlight\.highlightWidthProgress/);
   assert.match(canvasUtils, /roundRectPath\(ctx, pillLeft, pillTop, pillFullWidth, pillHeight/);
   assert.match(canvasUtils, /ctx\.clip\(\)/);
@@ -514,7 +512,7 @@ test("fade-up and typewriter export paths remain separate from highlight overlay
   assert.match(canvasUtils, /display\?\.effect === "highlight"/);
   assert.match(canvasUtils, /drawSubtitleBox\(ctx, boxLeft, boxTop, boxWidth, boxHeight/);
   assert.match(canvasUtils, /display\.animationState && display\.effect === "typewriter"/);
-  assert.match(canvasUtils, /ctx\.fillText\(line, textX, lineY\)/);
+  assert.match(canvasUtils, /drawExportCaptionStyledLine\(/);
 });
 
 test("export subtitle styling: no full-width bottom band, content-sized pill at ~45% opacity", () => {
@@ -522,10 +520,11 @@ test("export subtitle styling: no full-width bottom band, content-sized pill at 
 
   assert.doesNotMatch(canvasUtils, /getExportSubtitleRegionBounds/);
   assert.doesNotMatch(canvasUtils, /repaintSubtitleRegionOverlay/);
-  assert.match(canvasUtils, /fillStyle = `rgba\(0, 0, 0, \$\{backgroundAlpha\}\)`/);
+  assert.match(canvasUtils, /resolveExportCaptionBackgroundFill/);
   assert.match(canvasUtils, /roundRectPath/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_RADIUS = 12/);
-  assert.match(canvasUtils, /ctx\.fillStyle = "#ffffff"/);
+  const styleDefaults = readSrc("src/features/caption-style/caption-style.defaults.ts");
+  assert.match(styleDefaults, /LEGACY_EXPORT_CAPTION_BOX_RADIUS = 12/);
+  assert.match(canvasUtils, /drawExportCaptionStyledLine/);
   assert.match(canvasUtils, /widestLineWidth \+ metrics\.padX \* 2/);
 });
 
@@ -574,10 +573,13 @@ test("preview and export subtitle layout stays visually consistent", () => {
   assert.match(globalsCss, /\.preview-narration-subtitle-text[\s\S]*color:\s*#fff/);
   assert.match(subtitleUtils, /SUBTITLE_MAX_WIDTH_RATIO = 0\.9/);
   assert.match(canvasUtils, /SUBTITLE_MAX_WIDTH_RATIO/);
-  assert.match(canvasUtils, /SUBTITLE_LINE_HEIGHT_RATIO = 1\.3/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_PAD_X = 18/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_PAD_Y = 10/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_RADIUS = 12/);
+  assert.match(canvasUtils, /exportStyle\.lineHeightRatio/);
+  assert.match(canvasUtils, /resolveExportCaptionStyleMetrics/);
+  assert.match(canvasUtils, /from "@\/features\/caption-style"/);
+  const styleDefaults = readSrc("src/features/caption-style/caption-style.defaults.ts");
+  assert.match(styleDefaults, /LEGACY_EXPORT_CAPTION_BOX_PAD_X = 18/);
+  assert.match(styleDefaults, /LEGACY_EXPORT_CAPTION_BOX_PAD_Y = 10/);
+  assert.match(styleDefaults, /LEGACY_EXPORT_CAPTION_BOX_RADIUS = 12/);
   assert.doesNotMatch(globalsCss, /\.preview-narration-subtitle-overlay[\s\S]*inset:\s*0/);
 });
 

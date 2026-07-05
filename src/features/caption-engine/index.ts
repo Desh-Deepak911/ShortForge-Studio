@@ -40,6 +40,8 @@ export {
   resolveCaptionLayout,
   resolveExportCaptionBackgroundOpacity,
   resolvePreviewCaptionLayout,
+  resolvePreviewCaptionLayoutForScene,
+  resolvePreviewCaptionLayoutScene,
   resolveEngineCaptionLayout,
   resolveExportCaptionPlacement,
   resolvePreviewCaptionOverlayStyle,
@@ -49,6 +51,10 @@ export type { ExportCaptionPlacement, ResolvedCaptionLayout } from "./caption-la
 
 export { default as CaptionLayoutControl } from "./CaptionLayoutControl";
 export type { CaptionLayoutControlProps } from "./CaptionLayoutControl";
+export { default as CaptionStyleControl } from "./CaptionStyleControl";
+export type { CaptionStyleControlProps } from "./CaptionStyleControl";
+export { default as CaptionAnimationControl } from "./CaptionAnimationControl";
+export type { CaptionAnimationControlProps } from "./CaptionAnimationControl";
 
 export { default as CaptionPresetPanel } from "./CaptionPresetPanel";
 export type { CaptionPresetPanelProps } from "./CaptionPresetPanel";

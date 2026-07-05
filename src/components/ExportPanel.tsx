@@ -22,8 +22,10 @@ import { buildExportSuccessDiagnostics } from "@/components/export/build-export-
 import { buildAudioMixFromStory, getVoiceoverAvailability } from "@/features/audio";
 import { prepareStoryVoiceoverForExport } from "@/features/drafts";
 import {
-  isStorySyncExportBlocked,
-  STORY_SYNC_EXPORT_BLOCKED_MESSAGE,
+  createInitialStorySynchronizationState,
+  formatMissingSceneNumbersLabel,
+  resolveExportBlockedMessage,
+  resolveExportReadiness,
   useOptionalStorySync,
 } from "@/features/story-sync";
 import {
@@ -95,7 +97,6 @@ import {
 import { CREATOR_BRAND } from "@/lib/constants/product-brand";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
 import { syncFootieScript } from "@/lib/utils/voiceover";
-import { sceneHasImage } from "@/features/story/utils";
 import type { StoryCreationBrief } from "@/features/drafts/types";
 import PublishingAssistantModal from "@/features/publishing/publishing-assistant/PublishingAssistantModal";
 import type { ExportSettings, FootieScript } from "@/features/story/types";
@@ -218,9 +219,13 @@ export default function ExportPanel({
   onExportSuccess,
 }: ExportPanelProps) {
   const storySync = useOptionalStorySync();
-  const syncBlocksExport = storySync
-    ? isStorySyncExportBlocked(storySync.state)
-    : false;
+  const syncState = storySync?.state ?? createInitialStorySynchronizationState();
+  const exportReadiness = useMemo(
+    () => resolveExportReadiness(script, syncState),
+    [script, syncState],
+  );
+  const exportBlocked = !exportReadiness.canExport;
+  const exportBlockedMessage = resolveExportBlockedMessage(script, syncState);
   const [exportState, setExportState] = useState<ExportState>("idle");
   const [progress, setProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
@@ -296,8 +301,12 @@ export default function ExportPanel({
   );
 
   const sceneCount = script.scenes.length;
-  const uploadedCount = script.scenes.filter((scene) => sceneHasImage(scene)).length;
-  const allImagesUploaded = sceneCount > 0 && uploadedCount === sceneCount;
+  const uploadedCount = exportReadiness.media.scenesWithMedia;
+  const allImagesUploaded = exportReadiness.mediaComplete;
+  const missingSceneLabel = formatMissingSceneNumbersLabel(
+    script,
+    exportReadiness.media.scenesMissingMedia,
+  );
   const totalDuration = script.totalDuration;
   const isExporting =
     exportState === "preparing" ||
@@ -354,36 +363,68 @@ export default function ExportPanel({
   const checklist = useMemo<ChecklistItem[]>(
     () => [
       {
-        label: "Story ready",
-        done: Boolean(script.title && script.narration),
-        detail: script.title,
+        label: "Story has scenes",
+        done: exportReadiness.media.hasScenes,
+        detail:
+          sceneCount > 0
+            ? `${sceneCount} scenes · ${formatDisplayDurationSec(totalDuration)} total`
+            : "Add at least one scene",
       },
       {
-        label: "Timeline complete",
-        done: sceneCount > 0,
-        detail: `${sceneCount} scenes · ${formatDisplayDurationSec(totalDuration)} total`,
+        label: "Narration and voice synced",
+        done: exportReadiness.storySynced && exportReadiness.voiceSynced,
+        detail:
+          exportReadiness.storySynced && exportReadiness.voiceSynced
+            ? hasPersistedVoiceover
+              ? hasPlayableVoiceover
+                ? "Ready for preview and download"
+                : "Persisted narration found — will restore before export"
+              : "No narration yet — create it from your script."
+            : exportReadiness.blockedReasons.find(
+                (reason) => reason.includes("narration") || reason.includes("voice"),
+              ) ?? "Update narration and regenerate voiceover",
       },
       {
-        label: "Images uploaded",
-        done: allImagesUploaded,
-        detail: `${uploadedCount} of ${sceneCount} scenes`,
+        label: "Media complete",
+        done: exportReadiness.mediaComplete,
+        detail: allImagesUploaded
+          ? `All ${sceneCount} scenes have images`
+          : `${uploadedCount} of ${sceneCount} scenes ready${missingSceneLabel ? ` · missing: ${missingSceneLabel}` : ""}`,
       },
       {
-        label: hasPersistedVoiceover ? "Narration ready" : "Narration",
-        done: hasPersistedVoiceover,
-        detail: hasPersistedVoiceover
-          ? hasPlayableVoiceover
-            ? "Ready for preview and download"
-            : "Persisted narration found — will restore before export"
-          : "No narration yet — create it from your script.",
+        label: "Export settings ready",
+        done: !resolvedExportPath.blocked,
+        detail: resolvedExportPath.blocked
+          ? resolvedExportPath.blockReason ?? "Selected export format is unavailable"
+          : `${exportSettings.resolution} · ${exportSettings.format.toUpperCase()}`,
       },
       {
         label: "Ready to export",
-        done: sceneCount > 0,
-        detail: allImagesUploaded ? "All scenes have images" : "Placeholders used for missing images",
+        done: exportReadiness.isReady,
+        detail: exportReadiness.isReady
+          ? "All requirements met"
+          : exportBlocked
+            ? exportReadiness.blockedReasons[0] ?? "Export blocked"
+            : exportReadiness.exportFresh
+              ? "Ready to export"
+              : "Export update available — story changed since last export",
       },
     ],
-    [script.title, script.narration, hasPersistedVoiceover, hasPlayableVoiceover, sceneCount, totalDuration, uploadedCount, allImagesUploaded],
+    [
+      exportReadiness,
+      sceneCount,
+      totalDuration,
+      hasPersistedVoiceover,
+      hasPlayableVoiceover,
+      allImagesUploaded,
+      uploadedCount,
+      missingSceneLabel,
+      resolvedExportPath.blocked,
+      resolvedExportPath.blockReason,
+      exportSettings.resolution,
+      exportSettings.format,
+      exportBlocked,
+    ],
   );
 
   const readyCount = checklist.filter((item) => item.done).length;
@@ -434,13 +475,11 @@ export default function ExportPanel({
     exportSuccessSnapshot.exportedFingerprint !== currentExportFingerprint;
   const exportDisabledReason = isExporting
     ? "Export in progress"
-    : syncBlocksExport
-      ? STORY_SYNC_EXPORT_BLOCKED_MESSAGE
-      : sceneCount < 1
-        ? "Add at least one scene to export"
-        : resolvedExportPath.blocked
-          ? resolvedExportPath.blockReason ?? "Selected export format is unavailable"
-          : undefined;
+    : exportBlocked
+      ? exportBlockedMessage
+      : resolvedExportPath.blocked
+        ? resolvedExportPath.blockReason ?? "Selected export format is unavailable"
+        : undefined;
   const exportAgainDisabled = isBusy || Boolean(exportDisabledReason);
   const activeFormat = exportSettings.format;
   const webmAvailable = isWebmExportAvailable();
@@ -459,9 +498,9 @@ export default function ExportPanel({
     setExportSuccessSnapshot(null);
     setProgress(0);
 
-    if (syncBlocksExport) {
+    if (exportBlocked) {
       setExportState("error");
-      setErrorMessage(STORY_SYNC_EXPORT_BLOCKED_MESSAGE);
+      setErrorMessage(exportBlockedMessage ?? "Export is blocked.");
       return;
     }
 
@@ -753,8 +792,36 @@ export default function ExportPanel({
         <StudioStatus
           variant="warning"
           layout="panel"
-          title="Missing scene images"
-          description={`${uploadedCount} of ${sceneCount} scenes have images. Missing scenes will use gradient placeholders in the export.`}
+          title="Media incomplete"
+          description={`${uploadedCount} of ${sceneCount} scenes have images.${missingSceneLabel ? ` Attach images to ${missingSceneLabel} before exporting.` : " Attach images to all scenes before exporting."}`}
+        />
+      )}
+
+      {exportBlocked &&
+        exportReadiness.blockedReasons.some(
+          (reason) => reason.includes("narration") || reason.includes("voice"),
+        ) && (
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          title="Story sync required"
+          description={
+            exportReadiness.blockedReasons.find(
+              (reason) => reason.includes("narration") || reason.includes("voice"),
+            ) ?? "Update narration and regenerate voiceover before exporting."
+          }
+        />
+      )}
+
+      {exportReadiness.warnings.includes(
+        "Export is based on an older version of this story.",
+      ) &&
+        exportReadiness.canExport && (
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          title="Export update available"
+          description="Your story changed since the last export. You can export an updated video."
         />
       )}
 
@@ -773,15 +840,6 @@ export default function ExportPanel({
           layout="panel"
           title="Script changed after narration"
           description={EXPORT_NARRATION_VOICEOVER_MISMATCH_WARNING}
-        />
-      )}
-
-      {syncBlocksExport && (
-        <StudioStatus
-          variant="warning"
-          layout="panel"
-          title="Narration or voiceover is out of sync"
-          description={STORY_SYNC_EXPORT_BLOCKED_MESSAGE}
         />
       )}
 
@@ -1062,7 +1120,7 @@ export default function ExportPanel({
           <button
             type="button"
             onClick={handleExport}
-            disabled={isBusy || sceneCount < 1 || resolvedExportPath.blocked || syncBlocksExport}
+            disabled={isBusy || resolvedExportPath.blocked || exportBlocked}
             title={exportDisabledReason}
             className={`${studioPrimaryButton} w-full`}
           >

@@ -6,7 +6,7 @@ import {
   createSceneImageFromUrl,
   getSceneImageUrl,
 } from "@/features/story/utils";
-import { applySceneUpdate } from "@/lib/utils/voiceover";
+import { applySceneUpdate, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 import type { FootieScript } from "@/features/story/types";
 
 function isBlobUrl(url: string) {
@@ -15,7 +15,7 @@ function isBlobUrl(url: string) {
 
 interface UseSceneImageUploadOptions {
   script: FootieScript;
-  onScriptChange: (script: FootieScript) => void;
+  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
 }
 
 /**
@@ -44,6 +44,7 @@ export function useSceneImageUpload({ script, onScriptChange }: UseSceneImageUpl
             image: createSceneImageFromUrl(objectUrl),
             uploadedImage: undefined,
           }),
+          { intent: "media" },
         );
       } catch {
         const reader = new FileReader();
@@ -54,6 +55,7 @@ export function useSceneImageUpload({ script, onScriptChange }: UseSceneImageUpl
               image: createSceneImageFromUrl(url),
               uploadedImage: undefined,
             }),
+            { intent: "media" },
           );
         };
         reader.readAsDataURL(file);
@@ -68,6 +70,7 @@ export function useSceneImageUpload({ script, onScriptChange }: UseSceneImageUpl
       revokeBlobUrl(existing);
       onScriptChange(
         applySceneUpdate(script, sceneId, { image: undefined, uploadedImage: undefined }),
+        { intent: "media" },
       );
     },
     [onScriptChange, revokeBlobUrl, script],

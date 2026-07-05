@@ -13,13 +13,18 @@ import {
 } from "lucide-react";
 
 import EditorCanvasEditLayer from "@/features/editor/components/EditorCanvasEditLayer";
-import { isCaptionDragEnabled } from "@/features/caption-layout-drag";
 import { useEditorSelection } from "@/features/editor/selection";
 import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
 import PreviewFrame, { DynamicIsland, PreviewDeviceFrame } from "@/features/preview/components/PreviewFrame";
 import SubtitleOverlay from "@/features/preview/components/SubtitleOverlay";
 import { usePreviewPlayback } from "@/features/preview/hooks/usePreviewPlayback";
-import { getPreviewSceneTiming, resolvePreviewTimelineImageMotion, resolvePreviewTransitionOverlay } from "@/features/preview/utils";
+import {
+  getPreviewSceneTiming,
+  resolvePreviewCaptionOverlayClassName,
+  resolvePreviewInteractionState,
+  resolvePreviewTimelineImageMotion,
+  resolvePreviewTransitionOverlay,
+} from "@/features/preview/utils";
 import { normalizeCaptionMode, sceneHasImage, type SceneImageTransformPatch } from "@/features/story/utils";
 import type { TimelinePlaybackSnapshot } from "@/features/timeline-editor/timeline-playback-port.types";
 import { EMPTY_TIMELINE_PLAYBACK_SNAPSHOT } from "@/features/timeline-editor/timeline-playback-port.types";
@@ -130,6 +135,7 @@ export default function VideoPreview({
           previewClockMs,
           masterTimeline,
           currentTimeMs,
+          defaultCaptionAnimation: script.defaultCaptionAnimation,
         })
       : null;
   const transitionOverlay =
@@ -317,6 +323,10 @@ export default function VideoPreview({
         )
       : null;
   const hideCaptionsDuringTransition = transitionOverlay != null;
+  const subtitleSceneIndex =
+    playbackMode === "narration" && previewSceneTiming.activeSceneIndex != null
+      ? previewSceneTiming.activeSceneIndex
+      : previewFrame.sceneIndex;
   const subtitleScene =
     playbackMode === "narration" && previewSceneTiming.activeSceneIndex != null
       ? (scenes[previewSceneTiming.activeSceneIndex] ?? displayScene)
@@ -324,13 +334,14 @@ export default function VideoPreview({
   const showSubtitles = isNarrationSubtitles && !hideCaptionsDuringTransition;
   const showGeneratedCaption = !isNarrationSubtitles && !hideCaptionsDuringTransition;
 
-  const captionDragEnabled = isCaptionDragEnabled({
-    enabled: canvasEditActive,
+  const previewInteraction = resolvePreviewInteractionState({
+    canvasEditEnabled: canvasEditActive,
     sceneId: displayScene.id,
     selectedSceneId: selection.selectedSceneId,
     playbackActive,
-    frameEditActive: isFrameEditing,
+    imageEditActive: isFrameEditing,
   });
+  const captionOverlayClassName = resolvePreviewCaptionOverlayClassName(previewInteraction);
 
   const editLayer =
     canvasEditAvailable && onSceneImageTransformChange && displayScene ? (
@@ -366,6 +377,7 @@ export default function VideoPreview({
               <SubtitleOverlay
                 scene={subtitleScene}
                 script={script}
+                sceneIndex={subtitleSceneIndex}
                 sceneElapsedMs={sceneElapsedMs}
                 sceneDurationMs={sceneDurationMs}
                 activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
@@ -373,24 +385,21 @@ export default function VideoPreview({
                 captionAnimationState={previewSceneTiming.captionAnimationState}
                 subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
                 captionTooShortForEffect={previewSceneTiming.captionTooShortForEffect}
-                draggable={captionDragEnabled}
+                draggable={previewInteraction.captionDragEnabled}
                 onOffsetCommit={handleCaptionOffsetCommit}
                 onResetLayout={handleCaptionLayoutReset}
-                className={
-                  isFrameEditing ? "pointer-events-none opacity-55 transition-opacity duration-150" : ""
-                }
+                className={captionOverlayClassName}
               />
             ) : null}
             {showGeneratedCaption ? (
               <CaptionOverlay
                 scene={displayScene}
                 script={script}
-                draggable={captionDragEnabled}
+                sceneIndex={previewFrame.sceneIndex}
+                draggable={previewInteraction.captionDragEnabled}
                 onOffsetCommit={handleCaptionOffsetCommit}
                 onResetLayout={handleCaptionLayoutReset}
-                className={
-                  isFrameEditing ? "pointer-events-none opacity-55 transition-opacity duration-150" : ""
-                }
+                className={captionOverlayClassName}
               />
             ) : null}
           </>

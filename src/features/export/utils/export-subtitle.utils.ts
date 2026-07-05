@@ -2,11 +2,15 @@ import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.t
 import { inferCaptionTooShortForTypewriter } from "@/features/caption-engine/tiktok-motion-caption-style.utils";
 import { resolveSceneCaptionPreset } from "@/features/caption-engine/caption-engine.utils";
 import type { ActiveTimelineEvent } from "@/features/timeline-intelligence/timeline-playback.utils";
-import { resolveCaptionAnimationState } from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
-import type { CaptionAnimationState } from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
+import {
+  buildCaptionAnimationResolveInput,
+  resolveExportCaptionAnimation,
+  resolveExportCaptionAnimationFromChunk,
+} from "@/features/caption-animation";
+import type { CaptionAnimationState } from "@/features/caption-animation";
 import type { CaptionAnimationTimelineEvent, SubtitleTimelineEvent } from "@/features/timeline-intelligence/timeline.types";
 import type { ExportScene } from "@/features/export/services/export-payload.service";
-import type { SubtitleEffect } from "@/features/story/types";
+import type { FootieScript, SubtitleEffect } from "@/features/story/types";
 import {
   getActiveSubtitleChunkFromList,
   getSubtitleDisplayChunks,
@@ -23,7 +27,6 @@ import {
 } from "@/features/story/utils/subtitle-layout.utils";
 import {
   getExportSubtitleEffectProgress,
-  getTypewriterRevealedText,
 } from "@/features/story/utils/subtitle-effect.utils";
 
 /** @deprecated Use SUBTITLE_MAX_VISIBLE_LINES */
@@ -35,11 +38,16 @@ type ExportSubtitleScene = Pick<
   | "captionMode"
   | "captionPreset"
   | "subtitleEffect"
+  | "captionAnimation"
   | "subtitleChunks"
   | "subtitleText"
   | "narration"
   | "subtitle"
 >;
+
+export interface ResolveExportSubtitleDisplayOptions {
+  defaultCaptionAnimation?: FootieScript["defaultCaptionAnimation"];
+}
 
 export interface ExportSubtitleChunkState {
   chunk: string;
@@ -175,7 +183,13 @@ export function resolveExportSubtitleDisplay(
       : false;
 
   if (effect === "typewriter") {
-    const revealed = getTypewriterRevealedText(activeChunk, state.effectProgress).trim();
+    const animationState = resolveExportCaptionAnimationFromChunk(scene, undefined, {
+      text: activeChunk,
+      chunkElapsedMs: state.chunkElapsedMs,
+      chunkDurationMs: state.activeChunkDurationMs,
+      captionTooShortForEffect,
+    });
+    const revealed = animationState.visibleText.trim();
     if (!revealed) {
       return null;
     }
@@ -221,6 +235,7 @@ export function resolveExportSubtitleDisplayFromTimeline(
   subtitle: ActiveTimelineEvent<SubtitleTimelineEvent> | null,
   captionAnimation: ActiveTimelineEvent<CaptionAnimationTimelineEvent> | null,
   currentTimeMs: number,
+  options: ResolveExportSubtitleDisplayOptions = {},
 ): ExportSubtitleDisplay | null {
   if (normalizeCaptionMode(scene.captionMode) !== "subtitles") {
     return null;
@@ -236,7 +251,13 @@ export function resolveExportSubtitleDisplayFromTimeline(
   }
 
   const animationState = captionAnimation
-    ? resolveCaptionAnimationState(captionAnimation.event, currentTimeMs)
+    ? resolveExportCaptionAnimation(
+        captionAnimation.event,
+        currentTimeMs,
+        buildCaptionAnimationResolveInput(scene, {
+          defaultCaptionAnimation: options.defaultCaptionAnimation,
+        }),
+      )
     : null;
   const effect =
     captionAnimation?.event.metadata.effectType ??

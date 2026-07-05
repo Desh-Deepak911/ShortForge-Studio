@@ -24,7 +24,7 @@ import {
   resolveSubtitleDisplayLayout,
   type DisplayCaptionScene,
 } from "@/features/story/utils";
-import { getExportHighlightSubtitleFrame } from "@/features/story/utils/subtitle-effect.utils";
+import { resolveExportCaptionHighlightFrame } from "@/features/caption-animation";
 import type { SubtitleEffect } from "@/features/story/types";
 
 function usePrefersReducedMotion(): boolean {
@@ -140,7 +140,7 @@ function TimelineHighlightSubtitleCaption({
   motionTransform?: string;
   textGlowClassName?: string;
 }) {
-  const highlight = getExportHighlightSubtitleFrame(
+  const highlight = resolveExportCaptionHighlightFrame(
     animationState.localElapsedMs,
     Math.max(1, subtitleAvailableDurationMs),
   );

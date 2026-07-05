@@ -8,6 +8,7 @@ import type { AssetProviderId } from "@/features/asset-intelligence/providers/as
 import type { AssetProviderResult } from "@/features/asset-intelligence/providers/asset-provider.types";
 import type { SceneRecommendation } from "@/features/asset-intelligence/recommendation-engine/recommendation-engine.types";
 import type { FootieScript } from "@/features/story/types";
+import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
 export type AssetBrowserSort = "relevance" | "newest" | "score";
 
@@ -73,7 +74,7 @@ export type AssetBrowserAttachState = "idle" | "loading" | "success" | "error";
 export interface AssetBrowserAttachContext {
   enabled: boolean;
   script: FootieScript;
-  onScriptChange: (script: FootieScript) => void;
+  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
   searchContext: AssetBrowserSearchContext;
   recommendationQuery: string;
   planningScriptHash?: string;

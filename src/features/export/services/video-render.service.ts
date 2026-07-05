@@ -187,6 +187,7 @@ export function resolveExportFrameFromMasterTimeline(
   scenes: ExportScene[],
   sceneById: Map<string, ExportScene>,
   currentTimeMs: number,
+  defaultCaptionAnimation?: FootieScript["defaultCaptionAnimation"],
 ): ExportFrameFromTimeline {
   const visualTimeMs = resolveTimelineVisualTimeMs(masterTimeline, currentTimeMs);
   const frame = resolveTimelineSceneFrame(masterTimeline, scenes, currentTimeMs);
@@ -214,6 +215,7 @@ export function resolveExportFrameFromMasterTimeline(
     frame.subtitle,
     frame.captionAnimation,
     visualTimeMs,
+    { defaultCaptionAnimation },
   );
 
   return {
@@ -229,12 +231,14 @@ function resolveExportFrameTiming(
   scenes: ExportScene[],
   sceneById: Map<string, ExportScene>,
   currentTimeMs: number,
+  defaultCaptionAnimation?: FootieScript["defaultCaptionAnimation"],
 ): ExportFrameFromTimeline {
   return resolveExportFrameFromMasterTimeline(
     masterTimeline,
     scenes,
     sceneById,
     currentTimeMs,
+    defaultCaptionAnimation,
   );
 }
 
@@ -512,6 +516,7 @@ export async function exportSilentVideoBlob(
       scenes,
       sceneById,
       currentTimeMs,
+      script.defaultCaptionAnimation,
     );
 
     const image = imageCache.get(scene.id) ?? null;

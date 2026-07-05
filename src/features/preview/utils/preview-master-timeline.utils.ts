@@ -2,9 +2,10 @@ import {
   buildOptimizedMasterTimeline,
 } from "@/features/timeline-intelligence/build-optimized-master-timeline.utils";
 import {
-  resolveCaptionAnimationState,
-} from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
-import type { CaptionAnimationState } from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
+  buildCaptionAnimationResolveInput,
+  resolvePreviewCaptionAnimation,
+} from "@/features/caption-animation";
+import type { CaptionAnimationState } from "@/features/caption-animation";
 import {
   resolveTimelineSceneFrame,
   resolveTimelineSubtitleChunkAtTime,
@@ -50,11 +51,16 @@ export function buildPreviewMasterTimeline(
   });
 }
 
+export interface ResolvePreviewPlaybackStateOptions {
+  defaultCaptionAnimation?: FootieScript["defaultCaptionAnimation"];
+}
+
 /** Resolves active scene + subtitle state from shared MasterTimeline helpers. */
 export function resolvePreviewPlaybackState(
   masterTimeline: MasterTimeline,
   scenes: FootieScene[],
   currentTimeMs: number,
+  options: ResolvePreviewPlaybackStateOptions = {},
 ): PreviewPlaybackState | null {
   const frame = resolveTimelineSceneFrame(masterTimeline, scenes, currentTimeMs);
   if (!frame) {
@@ -68,7 +74,13 @@ export function resolvePreviewPlaybackState(
     frame.captionAnimation,
   );
   const captionAnimationState = frame.captionAnimation
-    ? resolveCaptionAnimationState(frame.captionAnimation.event, visualTimeMs)
+    ? resolvePreviewCaptionAnimation(
+        frame.captionAnimation.event,
+        visualTimeMs,
+        buildCaptionAnimationResolveInput(frame.scene, {
+          defaultCaptionAnimation: options.defaultCaptionAnimation,
+        }),
+      )
     : null;
   const subtitleAvailableDurationMs =
     frame.captionAnimation?.event.metadata.availableDurationMs ??

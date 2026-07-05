@@ -55,7 +55,7 @@ export interface VoiceoverAttachment {
 }
 
 /** Editor commit intent — presentation edits skip story-data sync side effects. */
-export type StoryScriptChangeIntent = "story" | "presentation" | "narration_rebuild";
+export type StoryScriptChangeIntent = "story" | "presentation" | "narration_rebuild" | "media";
 
 export interface StoryScriptChangeOptions {
   intent?: StoryScriptChangeIntent;
@@ -63,10 +63,20 @@ export interface StoryScriptChangeOptions {
 
 /** Scene fields that affect caption display only — never spoken story data. */
 export type ScenePresentationPatch = Partial<
-  Pick<FootieScene, "captionMode" | "captionPreset" | "subtitleEffect" | "captionLayout">
+  Pick<
+    FootieScene,
+    | "captionMode"
+    | "captionPreset"
+    | "subtitleEffect"
+    | "captionLayout"
+    | "captionStyle"
+    | "captionAnimation"
+  >
 >;
 
-export type StoryPresentationPatch = Partial<Pick<FootieScript, "defaultCaptionLayout">>;
+export type StoryPresentationPatch = Partial<
+  Pick<FootieScript, "defaultCaptionLayout" | "defaultCaptionStyle" | "defaultCaptionAnimation">
+>;
 
 /** Creates an object URL from a base64-encoded audio payload. */
 export function createAudioBlobUrl(
@@ -380,6 +390,17 @@ export function applyNarrationRebuildStoryUpdate(
   );
 
   return { ...coerced, scenes, totalDuration, timelineItems };
+}
+
+/**
+ * Editor sync boundary for media-only commits.
+ * Skips narration excerpt sync, subtitleText seeding, and timing recompute side effects.
+ */
+export function applyMediaStoryUpdate(
+  prev: FootieScript,
+  next: FootieScript,
+): FootieScript {
+  return applyPresentationStoryUpdate(prev, next);
 }
 
 /**

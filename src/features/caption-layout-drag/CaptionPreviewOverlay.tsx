@@ -14,10 +14,13 @@ import {
 } from "react";
 
 import {
-  resolvePreviewCaptionLayout,
+  hasCaptionLayoutOverride,
+  resolvePreviewCaptionLayoutForScene,
+  resolvePreviewCaptionLayoutScene,
   resolvePreviewCaptionOverlayStyle,
   resolvePreviewCaptionPillStyle,
 } from "@/features/caption-engine/caption-layout.utils";
+import { resolvePreviewCaptionPillCombinedStyle } from "@/features/caption-style";
 import { mergeCaptionLayoutSettings } from "@/features/caption-layout";
 import type { FootieScene, FootieScript } from "@/features/story/types";
 import { useFrameSize } from "@/hooks/useFrameSize";
@@ -34,8 +37,9 @@ import {
 } from "./caption-layout-drag.utils";
 
 export interface CaptionPreviewOverlayProps {
-  scene: Pick<FootieScene, "captionLayout"> & { id?: string };
-  script?: Pick<FootieScript, "defaultCaptionLayout">;
+  scene: Pick<FootieScene, "captionLayout" | "captionStyle"> & { id?: string };
+  script?: Pick<FootieScript, "defaultCaptionLayout" | "defaultCaptionStyle" | "scenes">;
+  sceneIndex?: number;
   children: ReactNode;
   overlayClassName?: string;
   pillClassName: string;
@@ -55,6 +59,7 @@ interface DragSession {
 export default function CaptionPreviewOverlay({
   scene,
   script,
+  sceneIndex,
   children,
   overlayClassName = "",
   pillClassName,
@@ -62,6 +67,7 @@ export default function CaptionPreviewOverlay({
   onOffsetCommit,
   onResetLayout,
 }: CaptionPreviewOverlayProps) {
+  const layoutScene = resolvePreviewCaptionLayoutScene(script, scene, sceneIndex);
   const { ref: frameRef, width: frameWidth, height: frameHeight } = useFrameSize<HTMLDivElement>();
   const pillRef = useRef<HTMLDivElement>(null);
   const [pillSize, setPillSize] = useState({ width: 0, height: 0 });
@@ -75,8 +81,8 @@ export default function CaptionPreviewOverlay({
   const [boundingBoxStyle, setBoundingBoxStyle] = useState<CSSProperties>();
 
   const storedOffsets = useMemo(
-    () => resolveStoredCaptionOffsets(scene, script),
-    [scene, script],
+    () => resolveStoredCaptionOffsets(layoutScene, script),
+    [layoutScene, script],
   );
 
   const effectiveOffsets = draftOffsets ?? storedOffsets;
@@ -105,26 +111,42 @@ export default function CaptionPreviewOverlay({
     frameHeight,
   );
 
-  const mergedSettings = mergeCaptionLayoutSettings(scene.captionLayout, script?.defaultCaptionLayout);
-  const usesEnginePlacement = isDragging || draftOffsets != null || Boolean(scene.captionLayout);
+  const mergedSettings = mergeCaptionLayoutSettings(
+    layoutScene.captionLayout,
+    script?.defaultCaptionLayout,
+  );
+  const usesEnginePlacement =
+    isDragging || draftOffsets != null || hasCaptionLayoutOverride(layoutScene, script);
 
   const resolvedLayout = usesEnginePlacement
     ? resolvePreviewCaptionLayoutForDrag(
-        scene,
+        layoutScene,
         script,
         effectiveOffsets.offsetX,
         effectiveOffsets.offsetY,
         contentBox.width,
         contentBox.height,
       )
-    : resolvePreviewCaptionLayout(scene, script, contentBox.width, contentBox.height);
+    : resolvePreviewCaptionLayoutForScene(
+        layoutScene,
+        script,
+        sceneIndex,
+        contentBox.width,
+        contentBox.height,
+      );
 
-  const usesLegacyBottomCenter = !usesEnginePlacement && resolvedLayout.usesLegacyBottomCenter;
+  const usesLegacyBottomCenter = resolvedLayout.usesLegacyBottomCenter;
 
   const overlayStyle = usesLegacyBottomCenter
     ? undefined
     : resolvePreviewCaptionOverlayStyle(resolvedLayout);
-  const pillStyle = usesLegacyBottomCenter ? undefined : resolvePreviewCaptionPillStyle(resolvedLayout);
+  const pillStyle = usesLegacyBottomCenter
+    ? resolvePreviewCaptionPillCombinedStyle(layoutScene, script, {})
+    : resolvePreviewCaptionPillCombinedStyle(
+        layoutScene,
+        script,
+        resolvePreviewCaptionPillStyle(resolvedLayout),
+      );
 
   const boxCenterY = resolvedLayout.boxTopY + (resolvedLayout.boxBottomY - resolvedLayout.boxTopY) / 2;
   const showBoundingBox = draggable;
@@ -163,10 +185,10 @@ export default function CaptionPreviewOverlay({
         return;
       }
 
-      const patch = buildCaptionLayoutOffsetCommitPatch(scene, script, offsetX, offsetY);
+      const patch = buildCaptionLayoutOffsetCommitPatch(layoutScene, script, offsetX, offsetY);
       onOffsetCommit(patch.captionLayout.offsetX ?? 0, patch.captionLayout.offsetY ?? 0);
     },
-    [onOffsetCommit, scene, script],
+    [layoutScene, onOffsetCommit, script],
   );
 
   const applyPointerDelta = useCallback(
@@ -277,10 +299,10 @@ export default function CaptionPreviewOverlay({
         offsetX: storedOffsets.offsetX + step.deltaX,
         offsetY: storedOffsets.offsetY + step.deltaY,
       };
-      const patch = buildCaptionLayoutOffsetCommitPatch(scene, script, next.offsetX, next.offsetY);
+      const patch = buildCaptionLayoutOffsetCommitPatch(layoutScene, script, next.offsetX, next.offsetY);
       commitOffsets(patch.captionLayout.offsetX ?? 0, patch.captionLayout.offsetY ?? 0);
     },
-    [commitOffsets, draggable, scene, script, storedOffsets.offsetX, storedOffsets.offsetY],
+    [commitOffsets, draggable, layoutScene, script, storedOffsets.offsetX, storedOffsets.offsetY],
   );
 
   const handleDoubleClick = useCallback(
@@ -307,7 +329,7 @@ export default function CaptionPreviewOverlay({
   const showChrome = draggable && (isDragging || isFocused);
 
   return (
-    <div ref={frameRef} className="absolute inset-0 z-[15]">
+    <div ref={frameRef} className="pointer-events-none absolute inset-0 z-[15]">
       <CaptionLayoutGuides
         visible={isDragging}
         safeAreaEnabled={mergedSettings.safeAreaEnabled !== false}

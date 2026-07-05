@@ -4,7 +4,7 @@ import type { TimelineImageMotionInput } from "@/features/timeline-intelligence/
 import { getImageMotionEventForScene } from "@/features/timeline-intelligence/timeline-playback.utils";
 import { getSceneTimingMap } from "@/features/story/utils";
 import { resolvePreviewPlaybackState } from "@/features/preview/utils/preview-master-timeline.utils";
-import type { FootieScene } from "@/features/story/types";
+import type { FootieScene, FootieScript } from "@/features/story/types";
 
 export interface PreviewSceneTimingInput {
   scenes: FootieScene[];
@@ -16,6 +16,7 @@ export interface PreviewSceneTimingInput {
   previewClockMs: number;
   masterTimeline?: MasterTimeline | null;
   currentTimeMs?: number;
+  defaultCaptionAnimation?: FootieScript["defaultCaptionAnimation"];
 }
 
 export interface PreviewSceneTiming {
@@ -79,7 +80,9 @@ export function getPreviewSceneTiming(input: PreviewSceneTimingInput): PreviewSc
 
   if (playbackMode === "narration" && masterTimeline) {
     const timeMs = input.currentTimeMs ?? Math.floor(input.elapsedSec * 1000);
-    const state = resolvePreviewPlaybackState(masterTimeline, scenes, timeMs);
+    const state = resolvePreviewPlaybackState(masterTimeline, scenes, timeMs, {
+      defaultCaptionAnimation: input.defaultCaptionAnimation,
+    });
     if (state) {
       const sceneTimelineImageMotion = resolvePreviewTimelineImageMotion(
         masterTimeline,

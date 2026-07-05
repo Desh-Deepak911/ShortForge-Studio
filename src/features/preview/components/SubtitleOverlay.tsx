@@ -1,10 +1,16 @@
 "use client";
 
 import {
-  resolvePreviewCaptionLayout,
+  resolvePreviewCaptionLayoutForScene,
+  resolvePreviewCaptionLayoutScene,
   resolvePreviewCaptionOverlayStyle,
   resolvePreviewCaptionPillStyle,
 } from "@/features/caption-engine/caption-layout.utils";
+import {
+  resolveCaptionStyleMaxLines,
+  resolvePreviewCaptionPillCombinedStyle,
+  resolvePreviewCaptionTypographyStyleForScene,
+} from "@/features/caption-style";
 import { CaptionPreviewOverlay } from "@/features/caption-layout-drag";
 import type { CaptionAnimationState } from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
 import { isTransitionVideoContent, resolveActiveSubtitleForScene } from "@/features/story/utils";
@@ -15,7 +21,8 @@ import { renderSceneCaptionContent } from "@/features/editor/components/subtitle
 
 interface SubtitleOverlayProps {
   scene: DisplayCaptionScene & { id?: string };
-  script?: Pick<FootieScript, "defaultCaptionLayout">;
+  script?: Pick<FootieScript, "defaultCaptionLayout" | "defaultCaptionStyle" | "scenes">;
+  sceneIndex?: number;
   sceneElapsedMs: number;
   sceneDurationMs: number;
   activeSubtitleChunk?: string;
@@ -33,6 +40,7 @@ interface SubtitleOverlayProps {
 export default function SubtitleOverlay({
   scene,
   script,
+  sceneIndex,
   sceneElapsedMs,
   sceneDurationMs,
   activeSubtitleChunk,
@@ -45,6 +53,8 @@ export default function SubtitleOverlay({
   onOffsetCommit,
   onResetLayout,
 }: SubtitleOverlayProps) {
+  const layoutScene = resolvePreviewCaptionLayoutScene(script, scene, sceneIndex);
+
   const previewChunkState =
     activeSubtitleChunk?.trim()
       ? {
@@ -59,12 +69,15 @@ export default function SubtitleOverlay({
     ? ""
     : previewChunkState.activeChunk;
 
+  const maxLines = resolveCaptionStyleMaxLines(layoutScene, script);
+  const typographyStyle = resolvePreviewCaptionTypographyStyleForScene(layoutScene, script);
+
   const caption = renderSceneCaptionContent(
     scene,
     "preview-narration-subtitle-text",
     `${scene.id ?? "preview"}-${visibleCaption}`,
     {
-      maxLines: 3,
+      maxLines,
       activeSubtitleChunk: visibleCaption,
       captionAnimationState: captionAnimationState ?? undefined,
       subtitleAvailableDurationMs,
@@ -76,31 +89,50 @@ export default function SubtitleOverlay({
     return null;
   }
 
+  const styledCaption = typographyStyle ? (
+    <div style={typographyStyle}>{caption}</div>
+  ) : (
+    caption
+  );
+
   if (draggable) {
     return (
       <CaptionPreviewOverlay
-        scene={scene}
+        scene={layoutScene}
         script={script}
+        sceneIndex={sceneIndex}
         draggable
         overlayClassName={className}
         pillClassName="preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
         onOffsetCommit={onOffsetCommit}
         onResetLayout={onResetLayout}
       >
-        {caption}
+        {styledCaption}
       </CaptionPreviewOverlay>
     );
   }
 
-  const resolvedLayout = resolvePreviewCaptionLayout(scene, script);
+  const resolvedLayout = resolvePreviewCaptionLayoutForScene(
+    layoutScene,
+    script,
+    sceneIndex,
+  );
   const overlayStyle = resolvePreviewCaptionOverlayStyle(resolvedLayout);
-  const pillStyle = resolvePreviewCaptionPillStyle(resolvedLayout);
+  const pillStyle = resolvePreviewCaptionPillCombinedStyle(
+    layoutScene,
+    script,
+    resolvePreviewCaptionPillStyle(resolvedLayout),
+  );
   const useLegacyClass = resolvedLayout.usesLegacyBottomCenter;
 
   return (
     <div
       className={`${useLegacyClass ? "preview-narration-subtitle-overlay" : ""} ${className}`.trim()}
-      style={useLegacyClass ? undefined : overlayStyle}
+      style={
+        useLegacyClass
+          ? { pointerEvents: "none" }
+          : { ...overlayStyle, pointerEvents: "none" }
+      }
       aria-hidden
     >
       <div
@@ -111,7 +143,7 @@ export default function SubtitleOverlay({
         }
         style={pillStyle}
       >
-        {caption}
+        {styledCaption}
       </div>
     </div>
   );

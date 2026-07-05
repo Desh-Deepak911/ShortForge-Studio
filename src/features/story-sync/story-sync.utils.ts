@@ -1,6 +1,11 @@
 import { isCaptionModeSwitchStoryPatch, isMsBackfillOnlyStoryPatch } from "@/features/editor/story-patches/story-patch-classifier";
 import type { FootieScript } from "@/features/story/types";
 
+import {
+  resolveExportReadiness,
+  resolveMissingMediaBlockedMessage,
+} from "./export-readiness.utils";
+import { resolveMediaCompleteness } from "./media-completeness.utils";
 import { createInitialStorySynchronizationState } from "./story-sync.state";
 import type {
   StorySyncEditKind,
@@ -121,7 +126,8 @@ export function advanceExportVersion(state: StorySynchronizationState): StorySyn
  * Pure — does not regenerate narration, voice, preview, or export.
  *
  * Dirty rules:
- * - visual caption / motion / image → no dirty flags
+ * - visual caption → no dirty flags
+ * - image / motion → export stale only (never narration or voice)
  * - narrated subtitle (subtitleText) → narration, voice, preview, export dirty
  * - transition timing → preview + export dirty
  * - duration / structural → story, narration, voice, preview, export dirty (+ story version)
@@ -137,11 +143,15 @@ export function applyStorySyncEdit(
 ): StorySynchronizationState {
   switch (kind) {
     case "caption":
-    case "motion":
-    case "image":
       return state;
 
+    case "motion":
+    case "image":
+      return markExportDirty(state);
+
     case "caption_layout":
+    case "caption_style":
+    case "caption_animation":
       return markExportDirty(state);
 
     case "spoken_text": {
@@ -267,6 +277,8 @@ export function resolveStorySyncEditKind(
       | "spoken_text"
       | "caption"
       | "caption_layout"
+      | "caption_style"
+      | "caption_animation"
       | "media"
       | "motion"
       | "transition"
@@ -308,6 +320,80 @@ export function resolveStorySyncEditKind(
     return "caption_layout";
   }
 
+  if (classification.classes.includes("caption_style")) {
+    return "caption_style";
+  }
+
+  if (classification.classes.includes("caption_animation")) {
+    return "caption_animation";
+  }
+
+  if (classification.classes.includes("transition")) {
+    return "transition";
+  }
+
+  if (classification.classes.includes("caption")) {
+    return "caption";
+  }
+
+  if (classification.classes.includes("motion")) {
+    return "motion";
+  }
+
+  if (classification.classes.includes("media")) {
+    return "image";
+  }
+
+  return null;
+}
+
+type StoryPatchClassificationInput = {
+  classes: Array<
+    | "structural"
+    | "timing"
+    | "spoken_text"
+    | "caption"
+    | "caption_layout"
+    | "caption_style"
+    | "caption_animation"
+    | "media"
+    | "motion"
+    | "transition"
+    | "audio"
+    | "metadata"
+  >;
+};
+
+function resolveMediaOrMotionSyncEditKind(
+  prev: FootieScript,
+  next: FootieScript,
+  classification: StoryPatchClassificationInput,
+): StorySyncEditKind | null {
+  const voiceAttached =
+    Boolean(next.voiceoverUrl) &&
+    (prev.voiceoverUrl !== next.voiceoverUrl ||
+      prev.voiceoverDurationMs !== next.voiceoverDurationMs);
+
+  if (voiceAttached) {
+    return "voice_generated";
+  }
+
+  if (isCaptionModeSwitchStoryPatch(prev, next)) {
+    return "caption";
+  }
+
+  if (classification.classes.includes("structural")) {
+    return "structural";
+  }
+
+  if (classification.classes.includes("timing") && !isMsBackfillOnlyStoryPatch(prev, next)) {
+    return "duration";
+  }
+
+  if (classification.classes.includes("spoken_text")) {
+    return "spoken_text";
+  }
+
   if (classification.classes.includes("transition")) {
     return "transition";
   }
@@ -328,6 +414,17 @@ export function resolveStorySyncEditKind(
 }
 
 /**
+ * Maps a media-only edit to sync policy without global narration diff heuristics.
+ */
+export function resolveMediaSyncEditKind(
+  prev: FootieScript,
+  next: FootieScript,
+  classification: StoryPatchClassificationInput,
+): StorySyncEditKind | null {
+  return resolveMediaOrMotionSyncEditKind(prev, next, classification);
+}
+
+/**
  * Maps a presentation-only edit to sync policy without diff heuristics.
  * Presentation commits must never dirty narration or voice.
  */
@@ -339,6 +436,8 @@ export function resolvePresentationSyncEditKind(
       | "spoken_text"
       | "caption"
       | "caption_layout"
+      | "caption_style"
+      | "caption_animation"
       | "media"
       | "motion"
       | "transition"
@@ -349,6 +448,14 @@ export function resolvePresentationSyncEditKind(
 ): StorySyncEditKind | null {
   if (classification.classes.includes("caption_layout")) {
     return "caption_layout";
+  }
+
+  if (classification.classes.includes("caption_style")) {
+    return "caption_style";
+  }
+
+  if (classification.classes.includes("caption_animation")) {
+    return "caption_animation";
   }
 
   if (
@@ -366,8 +473,21 @@ export type StorySyncBannerKind = "narration" | "voice" | "export";
 export const STORY_SYNC_EXPORT_BLOCKED_MESSAGE =
   "Narration or voiceover is out of sync. Update narration and regenerate voiceover before exporting.";
 
-export function isStorySyncExportBlocked(state: StorySynchronizationState): boolean {
-  return state.narrationDirty || state.voiceDirty;
+/** @deprecated Prefer `isExportReadinessBlocked(script, state)` for full export gating. */
+export function isStorySyncExportBlocked(
+  state: StorySynchronizationState,
+  script?: FootieScript | null,
+): boolean {
+  if (state.narrationDirty || state.voiceDirty) {
+    return true;
+  }
+
+  if (script) {
+    const media = resolveMediaCompleteness(script);
+    return !media.hasScenes || !media.isComplete;
+  }
+
+  return false;
 }
 
 export interface StorySyncBannerModel {
@@ -382,6 +502,7 @@ export interface StorySyncBannerModel {
 /** Highest-priority banner for the current sync state (one banner only). */
 export function resolveStorySyncBanner(
   state: StorySynchronizationState,
+  script?: FootieScript | null,
 ): StorySyncBannerModel | null {
   if (state.narrationDirty) {
     if (state.storyDirty) {
@@ -416,6 +537,20 @@ export function resolveStorySyncBanner(
     };
   }
 
+  if (script) {
+    const media = resolveMediaCompleteness(script);
+    if (media.hasScenes && !media.isComplete) {
+      return {
+        kind: "export",
+        title: "Some scenes are missing images.",
+        description: resolveMissingMediaBlockedMessage(script, media),
+        primaryLabel: "Review scenes",
+        secondaryLabel: "Dismiss",
+        tone: "warning",
+      };
+    }
+  }
+
   if (state.exportDirty) {
     return {
       kind: "export",
@@ -432,16 +567,47 @@ export function resolveStorySyncBanner(
 export type StorySyncStepTone = "success" | "warning" | "neutral";
 
 export interface StorySyncStepModel {
-  id: "story" | "narration" | "voice" | "preview" | "export";
+  id: "story" | "narration" | "voice" | "media" | "preview" | "export";
   label: string;
   statusLabel: string;
   tone: StorySyncStepTone;
 }
 
+function resolveExportStepModel(
+  state: StorySynchronizationState,
+  script: FootieScript,
+): Pick<StorySyncStepModel, "statusLabel" | "tone"> {
+  const readiness = resolveExportReadiness(script, state);
+
+  if (!readiness.canExport) {
+    const reason = (readiness.blockedReasons[0] ?? "Export blocked").replace(/\.$/, "");
+    return {
+      statusLabel: `Blocked — ${reason}`,
+      tone: "warning",
+    };
+  }
+
+  if (state.exportDirty) {
+    return {
+      statusLabel: "Needs export",
+      tone: "warning",
+    };
+  }
+
+  return {
+    statusLabel: "Ready to export",
+    tone: "success",
+  };
+}
+
 /** Informational rows for the synchronization status card. */
 export function resolveStorySyncSteps(
   state: StorySynchronizationState,
+  script: FootieScript,
 ): StorySyncStepModel[] {
+  const media = resolveMediaCompleteness(script);
+  const exportStep = resolveExportStepModel(state, script);
+
   return [
     {
       id: "story",
@@ -462,6 +628,16 @@ export function resolveStorySyncSteps(
       tone: state.voiceDirty ? "warning" : "success",
     },
     {
+      id: "media",
+      label: "Media",
+      statusLabel: media.isComplete
+        ? "Ready"
+        : media.hasScenes
+          ? `${media.scenesWithMedia} / ${media.totalScenes} scenes ready`
+          : "No scenes",
+      tone: media.isComplete ? "success" : "warning",
+    },
+    {
       id: "preview",
       label: "Preview",
       statusLabel: state.previewDirty ? "Needs refresh" : "Ready",
@@ -470,8 +646,8 @@ export function resolveStorySyncSteps(
     {
       id: "export",
       label: "Export",
-      statusLabel: state.exportDirty ? "Needs export" : "Synced",
-      tone: state.exportDirty ? "warning" : "success",
+      statusLabel: exportStep.statusLabel,
+      tone: exportStep.tone,
     },
   ];
 }

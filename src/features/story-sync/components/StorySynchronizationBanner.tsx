@@ -6,10 +6,13 @@ import {
   studioSubtleText,
 } from "@/lib/utils/studioUi";
 
+import type { FootieScript } from "@/features/story/types";
+
 import { useOptionalStorySync } from "../StorySyncContext";
 import { resolveStorySyncBanner } from "../story-sync.utils";
 
 export interface StorySynchronizationBannerProps {
+  script: FootieScript;
   onUpdateNarration?: () => void;
   onGenerateVoice?: () => void;
   onExportUpdated?: () => void;
@@ -20,6 +23,7 @@ export interface StorySynchronizationBannerProps {
  * Never blocks editing; dismissible without interrupting typing.
  */
 export default function StorySynchronizationBanner({
+  script,
   onUpdateNarration,
   onGenerateVoice,
   onExportUpdated,
@@ -29,7 +33,7 @@ export default function StorySynchronizationBanner({
     return null;
   }
 
-  const banner = resolveStorySyncBanner(storySync.state);
+  const banner = resolveStorySyncBanner(storySync.state, script);
   if (!banner) {
     return null;
   }

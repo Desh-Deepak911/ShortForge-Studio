@@ -307,3 +307,51 @@ export function resolvePreviewCaptionLayout(
     contentBoxHeight,
   );
 }
+
+/** Returns the latest scene from script by id/index — avoids stale playback snapshots. */
+export function resolvePreviewCaptionLayoutScene<
+  TScene extends Pick<FootieScene, "captionLayout"> & { id?: string },
+>(
+  script: Pick<FootieScript, "scenes" | "defaultCaptionLayout"> | undefined,
+  scene: TScene,
+  sceneIndex?: number,
+): TScene {
+  if (!script?.scenes?.length) {
+    return scene;
+  }
+
+  if (sceneIndex != null) {
+    const indexedScene = script.scenes[sceneIndex];
+    if (indexedScene && (!scene.id || indexedScene.id === scene.id)) {
+      return indexedScene as unknown as TScene;
+    }
+  }
+
+  if (scene.id) {
+    const matchedScene = script.scenes.find((entry) => entry.id === scene.id);
+    if (matchedScene) {
+      return matchedScene as unknown as TScene;
+    }
+  }
+
+  return scene;
+}
+
+/** Preview layout resolver — always reads the live scene + script pair. */
+export function resolvePreviewCaptionLayoutForScene<
+  TScene extends Pick<FootieScene, "captionLayout"> & { id?: string },
+>(
+  scene: TScene,
+  script?: Pick<FootieScript, "scenes" | "defaultCaptionLayout">,
+  sceneIndex?: number,
+  contentBoxWidth?: number,
+  contentBoxHeight?: number,
+): CaptionResolvedLayout {
+  const layoutScene = resolvePreviewCaptionLayoutScene(script, scene, sceneIndex);
+  return resolvePreviewCaptionLayout(
+    layoutScene,
+    script,
+    contentBoxWidth,
+    contentBoxHeight,
+  );
+}

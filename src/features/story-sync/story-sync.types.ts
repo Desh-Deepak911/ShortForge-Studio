@@ -30,6 +30,8 @@ export interface StorySynchronizationState {
 export type StorySyncEditKind =
   | "caption"
   | "caption_layout"
+  | "caption_style"
+  | "caption_animation"
   | "spoken_text"
   | "motion"
   | "image"

@@ -35,33 +35,37 @@ export default function SynchronizationStep({
 }: SynchronizationStepProps) {
   return (
     <div
-      className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5"
+      className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 rounded-lg px-2 py-1.5"
       data-sync-step={step.id}
       data-sync-tone={step.tone}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex items-center gap-2">
         <span
           className={`inline-flex h-1.5 w-1.5 shrink-0 rounded-full ${TONE_DOT[step.tone]}`}
           aria-hidden
         />
-        <span className="text-xs font-medium text-foreground/90">{step.label}</span>
+        <span className="whitespace-nowrap text-xs font-medium text-foreground/90">
+          {step.label}
+        </span>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex min-w-0 items-start justify-end gap-2">
         {actionLabel && onAction ? (
           <button
             type="button"
             onClick={onAction}
             data-sync-step-action={step.id}
-            className="rounded-md px-1.5 py-0.5 text-[11px] font-medium text-accent/90 ring-1 ring-accent/25 transition-colors hover:bg-accent/10 hover:text-accent"
+            className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-accent/90 ring-1 ring-accent/25 transition-colors hover:bg-accent/10 hover:text-accent"
           >
             {actionLabel}
           </button>
         ) : null}
         <span
-          className={`inline-flex items-center gap-1 text-[11px] font-medium ${TONE_TEXT[step.tone]}`}
+          className={`inline-flex min-w-0 items-start gap-1 text-right text-[11px] font-medium leading-snug ${TONE_TEXT[step.tone]}`}
         >
-          <span aria-hidden>{TONE_MARK[step.tone]}</span>
-          {step.statusLabel}
+          <span aria-hidden className="mt-px shrink-0 leading-none">
+            {TONE_MARK[step.tone]}
+          </span>
+          <span className="min-w-0 break-words">{step.statusLabel}</span>
         </span>
       </div>
     </div>
