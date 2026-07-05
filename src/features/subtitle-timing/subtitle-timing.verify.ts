@@ -14,7 +14,9 @@ import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import {
   allocateWordWeightedChunkWindows,
+  applyWordWeightedTimingFeel,
   buildSubtitleTimingMap,
+  capWeightedChunkDurations,
   countTimingWords,
   equalSubtitleTimingStrategy,
   getSubtitleTimingStrategy,
@@ -23,9 +25,14 @@ import {
   normalizeWeightedDurations,
   resolveDefaultSceneSubtitleChunks,
   resolveSubtitleTimingStrategy,
+  SUBTITLE_TIMING_LEAD_IN_MS,
+  SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS,
   SUBTITLE_TIMING_MIN_CHUNK_MS,
+  splitSubtitleChunks,
+  splitSubtitleChunksForWordWeightedTiming,
   wordWeightedSubtitleTimingStrategy,
 } from "./index";
+import { splitSubtitleChunks as legacySplitSubtitleChunks } from "@/features/story/utils/subtitle.utils";
 
 let passed = 0;
 
@@ -82,6 +89,104 @@ function buildStory(
 
 const LONG_TEXT =
   "The palace was alive. Music echoing through marble halls as guests gathered for the annual ball.";
+
+const LONG_RUN_ON =
+  "The Jabulani was controversial because it moved unpredictably in the air during the World Cup and players struggled to control it.";
+
+test("word-weighted long sentence splits into more readable chunks than legacy split", () => {
+  const legacyChunks = legacySplitSubtitleChunks(LONG_RUN_ON);
+  const timingChunks = splitSubtitleChunksForWordWeightedTiming(LONG_RUN_ON);
+
+  assert.ok(timingChunks.length >= legacyChunks.length);
+  assert.ok(timingChunks.every((chunk) => chunk.split(/\s+/).length <= 4));
+  assert.ok(timingChunks.every((chunk) => chunk.length <= 28 || chunk.split(/\s+/).length === 1));
+});
+
+test("word-weighted lead-in does not create negative timestamps", () => {
+  const scene = makeScene("s1", 8, { subtitleText: LONG_RUN_ON });
+  const map = buildSubtitleTimingMap(
+    {
+      scenes: [scene],
+      sceneEvents: [
+        { sceneId: "s1", sceneIndex: 0, startMs: 500, endMs: 8500, durationMs: 8000 },
+      ],
+      totalDurationMs: 8500,
+    },
+    { strategy: "word_weighted" },
+  );
+
+  for (const chunk of map.chunks) {
+    assert.ok(chunk.startMs >= 0);
+    assert.ok(chunk.startMs >= 500);
+    assert.ok(chunk.endMs <= 8500);
+    assert.ok(chunk.endMs >= chunk.startMs);
+  }
+
+  for (let index = 1; index < map.chunks.length; index++) {
+    const previous = map.chunks[index - 1]!;
+    const current = map.chunks[index]!;
+    assert.ok(current.startMs <= previous.endMs);
+    assert.ok(previous.endMs - current.startMs <= SUBTITLE_TIMING_LEAD_IN_MS + 48);
+  }
+});
+
+test("word-weighted chunks remain within scene window after timing feel", () => {
+  const scenes = recalculateSceneTimings([
+    makeScene("s1", 4, { subtitleText: "Scene one short copy." }),
+    makeScene("s2", 6, { subtitleText: LONG_RUN_ON }),
+  ]);
+
+  const map = buildSubtitleTimingMap(
+    {
+      scenes,
+      sceneEvents: [
+        { sceneId: "s1", sceneIndex: 0, startMs: 0, endMs: 4000, durationMs: 4000 },
+        { sceneId: "s2", sceneIndex: 1, startMs: 4000, endMs: 10000, durationMs: 6000 },
+      ],
+      totalDurationMs: 10000,
+    },
+    { strategy: "word_weighted" },
+  );
+
+  const sceneBounds = new Map([
+    ["s1", { startMs: 0, endMs: 4000 }],
+    ["s2", { startMs: 4000, endMs: 10000 }],
+  ]);
+
+  for (const chunk of map.chunks) {
+    const bounds = sceneBounds.get(chunk.sceneId);
+    assert.ok(bounds);
+    assert.ok(chunk.startMs >= bounds!.startMs);
+    assert.ok(chunk.endMs <= bounds!.endMs);
+  }
+
+  const sceneTwoChunks = map.chunks.filter((chunk) => chunk.sceneId === "s2");
+  assert.equal(sceneTwoChunks[0]?.startMs, 4000);
+  assert.equal(sceneTwoChunks.at(-1)?.endMs, 10000);
+});
+
+test("word-weighted caps long chunk durations before feel adjustments", () => {
+  const durations = capWeightedChunkDurations([4200, 1800], 6000, SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS);
+  assert.ok(
+    durations.slice(0, -1).every((duration) => duration <= SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS + 0.01),
+  );
+  assert.equal(durations.reduce((sum, duration) => sum + duration, 0), 6000);
+});
+
+test("applyWordWeightedTimingFeel pins first and last chunk to scene bounds", () => {
+  const felt = applyWordWeightedTimingFeel(
+    [
+      { startMs: 1000, endMs: 3000 },
+      { startMs: 3000, endMs: 5200 },
+      { startMs: 5200, endMs: 7000 },
+    ],
+    1000,
+    7000,
+  );
+
+  assert.equal(felt[0]?.startMs, 1000);
+  assert.equal(felt.at(-1)?.endMs, 7000);
+});
 
 test("equal strategy produces same number of chunks as existing split", () => {
   const scene = makeScene("s1", 9, { subtitleText: LONG_TEXT });

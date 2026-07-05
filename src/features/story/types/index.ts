@@ -1,5 +1,7 @@
 export type {
   BackgroundMusicSource,
+  CaptionLayout,
+  CaptionLayoutPosition,
   CaptionMode,
   ExportFormat,
   ExportQualityTier,

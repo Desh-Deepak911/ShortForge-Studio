@@ -30,6 +30,24 @@ export {
   resolveSceneCaptionPreset,
 } from "./caption-engine.utils";
 
+export {
+  buildSceneCaptionLayoutPatch,
+  clampCaptionLayoutPercent,
+  DEFAULT_CAPTION_LAYOUT_BOTTOM_Y_PERCENT,
+  DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
+  DEFAULT_PREVIEW_CAPTION_BACKGROUND_OPACITY,
+  normalizeCaptionLayoutPosition,
+  resolveCaptionLayout,
+  resolveExportCaptionBackgroundOpacity,
+  resolveExportCaptionPlacement,
+  resolvePreviewCaptionOverlayStyle,
+  resolvePreviewCaptionPillStyle,
+} from "./caption-layout.utils";
+export type { ExportCaptionPlacement, ResolvedCaptionLayout } from "./caption-layout.utils";
+
+export { default as CaptionLayoutControl } from "./CaptionLayoutControl";
+export type { CaptionLayoutControlProps } from "./CaptionLayoutControl";
+
 export { default as CaptionPresetPanel } from "./CaptionPresetPanel";
 export type { CaptionPresetPanelProps } from "./CaptionPresetPanel";
 

@@ -123,6 +123,7 @@ export type DisplayCaptionScene = Pick<
   | "subtitleText"
   | "subtitleEffect"
   | "captionPreset"
+  | "captionLayout"
 > & {
   /** Generated on-screen caption (alias for `subtitle` when present). */
   caption?: string;
@@ -413,6 +414,69 @@ function normalizeSpokenText(value: string | undefined): string {
 }
 
 /**
+ * True when subtitleText was auto-seeded from scene narration during a switch
+ * into subtitles mode — not user-authored spoken copy.
+ */
+export function isAutoSeededSubtitleTextOnModeSwitch(
+  prev: FootieScene,
+  next: FootieScene,
+): boolean {
+  const prevMode = normalizeCaptionMode(prev.captionMode);
+  const nextMode = normalizeCaptionMode(next.captionMode);
+
+  if (prevMode === "subtitles" || nextMode !== "subtitles") {
+    return false;
+  }
+
+  const prevText = normalizeSpokenText(prev.subtitleText);
+  if (prevText) {
+    return false;
+  }
+
+  const nextText = normalizeSpokenText(next.subtitleText);
+  const narrationText = normalizeSpokenText(prev.narration);
+  return nextText === narrationText;
+}
+
+/**
+ * True when the only scene-level edits are caption display mode (and optional
+ * auto-seeded subtitleText or narration excerpt sync when entering subtitles).
+ */
+export function isCaptionModeSwitchOnly(prev: FootieScene, next: FootieScene): boolean {
+  const prevMode = normalizeCaptionMode(prev.captionMode);
+  const nextMode = normalizeCaptionMode(next.captionMode);
+
+  if (prevMode === nextMode) {
+    return false;
+  }
+
+  if (
+    prev.subtitle !== next.subtitle ||
+    prev.captionPreset !== next.captionPreset ||
+    prev.subtitleEffect !== next.subtitleEffect ||
+    prev.sceneType !== next.sceneType
+  ) {
+    return false;
+  }
+
+  if (
+    prev.subtitleText !== next.subtitleText &&
+    !isAutoSeededSubtitleTextOnModeSwitch(prev, next)
+  ) {
+    return false;
+  }
+
+  if (prev.narration !== next.narration) {
+    const enteringSubtitles = prevMode !== "subtitles" && nextMode === "subtitles";
+    if (!enteringSubtitles) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Builds a caption-mode switch patch, seeding subtitleText from the narration excerpt
  * when entering subtitles mode without existing narrated copy.
  */
@@ -439,14 +503,13 @@ export function isUserAuthoredSpokenTextChange(
   const nextMode = normalizeCaptionMode(next.captionMode);
   const prevText = normalizeSpokenText(prev.subtitleText);
   const nextText = normalizeSpokenText(next.subtitleText);
-  const narrationText = normalizeSpokenText(prev.narration);
 
   if (prevMode !== nextMode) {
     if (prevMode === "subtitles" && nextMode !== "subtitles") {
       return false;
     }
 
-    if (prevMode !== "subtitles" && nextMode === "subtitles" && !prevText && nextText === narrationText) {
+    if (isAutoSeededSubtitleTextOnModeSwitch(prev, next)) {
       return false;
     }
 
@@ -455,12 +518,7 @@ export function isUserAuthoredSpokenTextChange(
     }
   }
 
-  if (
-    prevMode !== "subtitles" &&
-    nextMode === "subtitles" &&
-    !prevText &&
-    nextText === narrationText
-  ) {
+  if (isAutoSeededSubtitleTextOnModeSwitch(prev, next)) {
     return false;
   }
 

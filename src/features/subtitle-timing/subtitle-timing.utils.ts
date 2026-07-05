@@ -133,6 +133,18 @@ export function isNarratedSubtitlesScene(scene: FootieScene): boolean {
 
 export const SUBTITLE_TIMING_MIN_CHUNK_MS = 500;
 
+/** Pull subtitle windows slightly earlier for snappier narrated-subtitle feel. */
+export const SUBTITLE_TIMING_LEAD_IN_MS = 100;
+
+/** Small trailing hold before the next chunk replaces the current one. */
+export const SUBTITLE_TIMING_END_PAD_MS = 80;
+
+/** Maximum on-screen duration for a single narrated chunk before redistribution. */
+export const SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS = 2600;
+
+/** Allowed overlap when lead-in pulls the next chunk earlier. */
+export const SUBTITLE_TIMING_MAX_CHUNK_OVERLAP_MS = 48;
+
 /** Counts spoken words in subtitle chunk text for timing weight. */
 export function countTimingWords(text: string): number {
   const trimmed = text.trim();
@@ -221,12 +233,109 @@ export function allocateWordWeightedChunkWindows(
   }
 
   const durations = normalizeWeightedDurations(weights, sceneDurationMs, minChunkDurationMs);
+  const cappedDurations = capWeightedChunkDurations(
+    durations,
+    sceneDurationMs,
+    SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS,
+  );
+
+  const rawWindows = buildChunkWindowsFromDurations(sceneStartMs, sceneEndMs, cappedDurations);
+  const windows = applyWordWeightedTimingFeel(rawWindows, sceneStartMs, sceneEndMs);
 
   return {
-    windows: buildChunkWindowsFromDurations(sceneStartMs, sceneEndMs, durations),
-    durations,
+    windows,
+    durations: cappedDurations,
     usedEqualFallback: false,
   };
+}
+
+/** Caps interior chunk durations; the final chunk may absorb remainder to fill the scene. */
+export function capWeightedChunkDurations(
+  durations: number[],
+  sceneDurationMs: number,
+  maxChunkDurationMs: number = SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS,
+): number[] {
+  if (durations.length === 0) {
+    return durations;
+  }
+
+  if (durations.length === 1) {
+    return [sceneDurationMs];
+  }
+
+  const next = [...durations];
+  let overflow = 0;
+
+  for (let index = 0; index < next.length - 1; index++) {
+    const duration = next[index] ?? 0;
+    if (duration > maxChunkDurationMs) {
+      overflow += duration - maxChunkDurationMs;
+      next[index] = maxChunkDurationMs;
+    }
+  }
+
+  if (overflow > 0) {
+    for (let index = next.length - 2; index >= 0 && overflow > 0; index--) {
+      const headroom = maxChunkDurationMs - (next[index] ?? 0);
+      if (headroom <= 0) {
+        continue;
+      }
+
+      const added = Math.min(headroom, overflow);
+      next[index] = (next[index] ?? 0) + added;
+      overflow -= added;
+    }
+
+    next[next.length - 1] = (next[next.length - 1] ?? 0) + overflow;
+  }
+
+  const sum = next.reduce((total, duration) => total + duration, 0);
+  next[next.length - 1] = (next[next.length - 1] ?? 0) + (sceneDurationMs - sum);
+
+  return next;
+}
+
+/** Applies lead-in, end padding, and scene boundary pinning for word-weighted windows. */
+export function applyWordWeightedTimingFeel(
+  windows: Array<{ startMs: number; endMs: number }>,
+  sceneStartMs: number,
+  sceneEndMs: number,
+): Array<{ startMs: number; endMs: number }> {
+  if (windows.length === 0) {
+    return windows;
+  }
+
+  const felt = windows.map((window) => ({ ...window }));
+
+  for (let index = 1; index < felt.length; index++) {
+    const previous = felt[index - 1]!;
+    const current = felt[index]!;
+    const withLeadIn = current.startMs - SUBTITLE_TIMING_LEAD_IN_MS;
+    current.startMs = Math.max(
+      sceneStartMs,
+      withLeadIn,
+      previous.endMs - SUBTITLE_TIMING_MAX_CHUNK_OVERLAP_MS,
+    );
+  }
+
+  for (let index = 0; index < felt.length - 1; index++) {
+    const current = felt[index]!;
+    const next = felt[index + 1]!;
+    current.endMs = Math.min(next.startMs, current.endMs + SUBTITLE_TIMING_END_PAD_MS);
+    current.endMs = Math.max(current.endMs, current.startMs);
+  }
+
+  felt[0]!.startMs = sceneStartMs;
+  felt[felt.length - 1]!.endMs = sceneEndMs;
+
+  for (const window of felt) {
+    window.startMs = Math.max(sceneStartMs, window.startMs);
+    window.endMs = Math.min(sceneEndMs, Math.max(window.startMs, window.endMs));
+  }
+
+  felt[felt.length - 1]!.endMs = sceneEndMs;
+
+  return felt;
 }
 
 function buildChunkWindowsFromDurations(

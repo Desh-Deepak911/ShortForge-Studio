@@ -23,6 +23,7 @@ import {
   getStorySyncDirtySignature,
   resolveStorySyncBanner,
   resolveStorySyncEditKind,
+  resolvePresentationSyncEditKind,
   StorySyncProvider,
   type StorySyncContextValue,
   type StorySynchronizationState,
@@ -36,7 +37,7 @@ import {
   studioSectionTitle,
 } from "@/lib/utils/studioUi";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
-import { applyStoryUpdate } from "@/lib/utils/voiceover";
+import { applyStoryUpdate, applyPresentationStoryUpdate, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
 const SAVE_CONFIRMATION_MS = 3000;
 
@@ -197,15 +198,18 @@ function DraftEditorFlowBody({
       : 0;
 
   const handleStoryChange = useCallback(
-    (next: FootieScript) => {
+    (next: FootieScript, options?: StoryScriptChangeOptions) => {
       const prev = draftEditsRef.current;
       const baseScript = prev?.draftId === draftId ? prev.script : documentScript;
       if (!baseScript) {
         return;
       }
 
+      const isPresentation = options?.intent === "presentation";
       // Single editor sync boundary — patch helpers do not sync.
-      const synced = applyStoryUpdate(baseScript, next);
+      const synced = isPresentation
+        ? applyPresentationStoryUpdate(baseScript, next)
+        : applyStoryUpdate(baseScript, next);
       const classification = classifyStoryPatch(baseScript, synced);
       const timelinePolicy = resolveTimelineRebuildPolicy(baseScript, synced, classification);
       const evolutionDebounceMs = resolveStoryEvolutionDebounceMs(classification);
@@ -231,7 +235,9 @@ function DraftEditorFlowBody({
         scheduleContentTimelineRebuild();
       }
 
-      const syncKind = resolveStorySyncEditKind(baseScript, synced, classification);
+      const syncKind = isPresentation
+        ? resolvePresentationSyncEditKind(classification)
+        : resolveStorySyncEditKind(baseScript, synced, classification);
       if (syncKind) {
         setStorySyncState((current) => applyStorySyncEdit(current, syncKind));
       }

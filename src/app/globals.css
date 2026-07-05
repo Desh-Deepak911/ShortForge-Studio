@@ -163,6 +163,11 @@ html {
   backdrop-filter: blur(12px);
 }
 
+.preview-narration-subtitle-pill--placed {
+  width: auto;
+  max-width: 90%;
+}
+
 .preview-narration-subtitle-text {
   display: -webkit-box;
   -webkit-line-clamp: 3;

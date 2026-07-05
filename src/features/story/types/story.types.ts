@@ -11,6 +11,20 @@ export type CaptionMode = "generated" | "subtitles";
 /** Visual treatment when displaying captions (subtitles mode or generated text). */
 export type SubtitleEffect = "fade-up" | "typewriter" | "highlight";
 
+/** On-frame caption placement preset. */
+export type CaptionLayoutPosition = "bottom" | "center" | "top" | "top_left" | "custom";
+
+/** Optional caption placement — scene override or project default on `FootieScript`. */
+export interface CaptionLayout {
+  position: CaptionLayoutPosition;
+  /** Used when `position` is `custom`. Clamped to 0–100. */
+  xPercent?: number;
+  /** Used when `position` is `custom`. Clamped to 0–100. */
+  yPercent?: number;
+  /** Caption pill background opacity (0–100). */
+  backgroundOpacity?: number;
+}
+
 /** How a scene image fills its frame. */
 export type SceneImageFitMode = "fill" | "fit";
 
@@ -104,6 +118,8 @@ export interface FootieScene {
   durationSource?: SceneDurationSource;
   /** Provenance for assets attached from search, smart edit, or remote sources. */
   assetAttachment?: AssetAttachMetadata;
+  /** Per-scene caption placement override. Falls back to `FootieScript.defaultCaptionLayout`. */
+  captionLayout?: CaptionLayout;
 }
 
 export type TransitionEffect =
@@ -206,4 +222,6 @@ export interface FootieScript {
   audioMixer?: ProjectAudioMixerSettings;
   /** Download filename, format, quality tier, and resolution. Optional for legacy stories. */
   exportSettings?: ExportSettings;
+  /** Project-wide default caption placement. Scenes may override via `captionLayout`. */
+  defaultCaptionLayout?: CaptionLayout;
 }

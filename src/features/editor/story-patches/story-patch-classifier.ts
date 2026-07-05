@@ -1,5 +1,8 @@
 import type { FootieScene, FootieScript, TimelineItem } from "@/features/story/types";
-import { isUserAuthoredSpokenTextChange } from "@/features/story/utils/caption.utils";
+import {
+  isCaptionModeSwitchOnly,
+  isUserAuthoredSpokenTextChange,
+} from "@/features/story/utils/caption.utils";
 import {
   getSceneImage,
   normalizeSceneImageMotion,
@@ -11,6 +14,7 @@ export type StoryPatchClass =
   | "timing"
   | "spoken_text"
   | "caption"
+  | "caption_layout"
   | "media"
   | "motion"
   | "transition"
@@ -32,6 +36,7 @@ const PRIMARY_PRIORITY: StoryPatchClass[] = [
   "media",
   "motion",
   "caption",
+  "caption_layout",
 ];
 
 const IMMEDIATE_TIMELINE_CLASSES: ReadonlySet<StoryPatchClass> = new Set([
@@ -56,6 +61,7 @@ const IMMEDIATE_EVOLUTION_CLASSES: ReadonlySet<StoryPatchClass> = new Set([
 /** Content edits that should not force expensive planning/evolution work. */
 const DEFERRED_EVOLUTION_CLASSES: ReadonlySet<StoryPatchClass> = new Set([
   "caption",
+  "caption_layout",
   "motion",
   "media",
   "transition",
@@ -149,6 +155,78 @@ export function isMsBackfillOnlyStoryPatch(prev: FootieScript, next: FootieScrip
   return sawMsBackfill;
 }
 
+function sceneUnchangedExceptMsBackfill(prev: FootieScene, next: FootieScene): boolean {
+  if (isSceneMsBackfillOnly(prev, next)) {
+    return true;
+  }
+
+  return (
+    prev.captionMode === next.captionMode &&
+    prev.subtitle === next.subtitle &&
+    prev.subtitleText === next.subtitleText &&
+    prev.narration === next.narration &&
+    prev.captionPreset === next.captionPreset &&
+    prev.subtitleEffect === next.subtitleEffect &&
+    prev.sceneType === next.sceneType &&
+    prev.start === next.start &&
+    prev.end === next.end &&
+    prev.duration === next.duration &&
+    prev.startMs === next.startMs &&
+    prev.endMs === next.endMs &&
+    prev.durationMs === next.durationMs &&
+    prev.durationSource === next.durationSource &&
+    !sceneMediaChanged(prev, next) &&
+    !sceneMotionChanged(prev, next)
+  );
+}
+
+/** True when the story diff is a single caption display mode switch (plus ms backfill). */
+export function isCaptionModeSwitchStoryPatch(prev: FootieScript, next: FootieScript): boolean {
+  if (sceneOrderChanged(prev.scenes, next.scenes)) {
+    return false;
+  }
+
+  if (prev.title !== next.title || prev.narration !== next.narration) {
+    return false;
+  }
+
+  if (
+    prev.voiceoverUrl !== next.voiceoverUrl ||
+    prev.voiceoverDurationMs !== next.voiceoverDurationMs
+  ) {
+    return false;
+  }
+
+  const prevById = new Map(prev.scenes.map((scene) => [scene.id, scene]));
+  let switchCount = 0;
+
+  for (const nextScene of next.scenes) {
+    const prevScene = prevById.get(nextScene.id);
+    if (!prevScene) {
+      return false;
+    }
+
+    if (isCaptionModeSwitchOnly(prevScene, nextScene)) {
+      if (sceneTimingChanged(prevScene, nextScene) && !isSceneMsBackfillOnly(prevScene, nextScene)) {
+        return false;
+      }
+
+      if (sceneMediaChanged(prevScene, nextScene) || sceneMotionChanged(prevScene, nextScene)) {
+        return false;
+      }
+
+      switchCount += 1;
+      continue;
+    }
+
+    if (!sceneUnchangedExceptMsBackfill(prevScene, nextScene)) {
+      return false;
+    }
+  }
+
+  return switchCount === 1;
+}
+
 function sceneTimingChanged(prev: FootieScene, next: FootieScene): boolean {
   if (isSceneMsBackfillOnly(prev, next)) {
     return false;
@@ -162,6 +240,17 @@ function sceneTimingChanged(prev: FootieScene, next: FootieScene): boolean {
     prev.endMs !== next.endMs ||
     prev.durationMs !== next.durationMs ||
     prev.durationSource !== next.durationSource
+  );
+}
+
+function sceneCaptionLayoutChanged(prev: FootieScene, next: FootieScene): boolean {
+  return JSON.stringify(prev.captionLayout ?? null) !== JSON.stringify(next.captionLayout ?? null);
+}
+
+function scriptCaptionLayoutChanged(prev: FootieScript, next: FootieScript): boolean {
+  return (
+    JSON.stringify(prev.defaultCaptionLayout ?? null) !==
+    JSON.stringify(next.defaultCaptionLayout ?? null)
   );
 }
 
@@ -263,10 +352,18 @@ export function classifyStoryPatch(
   prev: FootieScript,
   next: FootieScript,
 ): StoryPatchClassification {
+  if (isCaptionModeSwitchStoryPatch(prev, next)) {
+    return { classes: ["caption"], primary: "caption" };
+  }
+
   const classes = new Set<StoryPatchClass>();
 
   if (sceneOrderChanged(prev.scenes, next.scenes)) {
     classes.add("structural");
+  }
+
+  if (scriptCaptionLayoutChanged(prev, next)) {
+    classes.add("caption_layout");
   }
 
   if (transitionItemsSignature(prev.timelineItems) !== transitionItemsSignature(next.timelineItems)) {
@@ -304,6 +401,10 @@ export function classifyStoryPatch(
 
     if (sceneSpokenTextChanged(prevScene, nextScene)) {
       classes.add("spoken_text");
+    }
+
+    if (sceneCaptionLayoutChanged(prevScene, nextScene)) {
+      classes.add("caption_layout");
     }
 
     if (sceneMediaChanged(prevScene, nextScene)) {

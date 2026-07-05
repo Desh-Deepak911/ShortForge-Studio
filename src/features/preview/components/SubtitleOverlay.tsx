@@ -1,13 +1,20 @@
 "use client";
 
+import {
+  resolveCaptionLayout,
+  resolvePreviewCaptionOverlayStyle,
+  resolvePreviewCaptionPillStyle,
+} from "@/features/caption-engine/caption-layout.utils";
 import type { CaptionAnimationState } from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
 import { isTransitionVideoContent, resolveActiveSubtitleForScene } from "@/features/story/utils";
 import { type DisplayCaptionScene } from "@/features/story/utils";
+import type { FootieScript } from "@/features/story/types";
 
 import { renderSceneCaptionContent } from "@/features/editor/components/subtitleEffectPreview";
 
 interface SubtitleOverlayProps {
   scene: DisplayCaptionScene & { id?: string };
+  script?: Pick<FootieScript, "defaultCaptionLayout">;
   sceneElapsedMs: number;
   sceneDurationMs: number;
   activeSubtitleChunk?: string;
@@ -21,6 +28,7 @@ interface SubtitleOverlayProps {
 /** Timed narration subtitles inside the phone preview frame. */
 export default function SubtitleOverlay({
   scene,
+  script,
   sceneElapsedMs,
   sceneDurationMs,
   activeSubtitleChunk,
@@ -61,9 +69,23 @@ export default function SubtitleOverlay({
     return null;
   }
 
+  const layout = resolveCaptionLayout(scene, script);
+  const overlayStyle = resolvePreviewCaptionOverlayStyle(layout);
+  const pillStyle = resolvePreviewCaptionPillStyle(layout);
+  const useLegacyClass = layout.usesLegacyBottomPlacement;
+
   return (
-    <div className={`preview-narration-subtitle-overlay ${className}`.trim()} aria-hidden>
-      <div className="preview-narration-subtitle-pill">{caption}</div>
+    <div
+      className={`${useLegacyClass ? "preview-narration-subtitle-overlay" : ""} ${className}`.trim()}
+      style={useLegacyClass ? undefined : overlayStyle}
+      aria-hidden
+    >
+      <div
+        className={useLegacyClass ? "preview-narration-subtitle-pill" : "preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"}
+        style={pillStyle}
+      >
+        {caption}
+      </div>
     </div>
   );
 }

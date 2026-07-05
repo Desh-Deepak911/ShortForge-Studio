@@ -7,6 +7,20 @@ import {
   allocateWordWeightedChunkWindows,
   isNarratedSubtitlesScene,
 } from "./subtitle-timing.utils";
+import { splitSubtitleChunksForWordWeightedTiming } from "./subtitle-timing.word-weighted-chunks";
+
+function resolveWordWeightedSceneChunks(
+  scene: SubtitleTimingBuildInput["scenes"][number],
+  input: SubtitleTimingBuildInput,
+): string[] {
+  const persisted = (scene as typeof scene & { subtitleChunks?: string[] }).subtitleChunks;
+  if (persisted && persisted.length > 0) {
+    return persisted;
+  }
+
+  const sourceText = input.resolveSubtitleText(scene);
+  return splitSubtitleChunksForWordWeightedTiming(sourceText);
+}
 
 function resolveTotalDurationMs(input: SubtitleTimingBuildInput): number {
   if (input.totalDurationMs > 0) {
@@ -35,7 +49,9 @@ export const wordWeightedSubtitleTimingStrategy: SubtitleTimingStrategy = {
         continue;
       }
 
-      const textChunks = input.resolveSceneChunks(scene).filter((text) => text.trim().length > 0);
+      const textChunks = resolveWordWeightedSceneChunks(scene, input).filter(
+        (text) => text.trim().length > 0,
+      );
       if (textChunks.length === 0) {
         continue;
       }

@@ -29,7 +29,7 @@ import {
 } from "@/features/story-sync";
 import type { SceneImageTransformPatch } from "@/features/story/utils";
 import { getSceneImage } from "@/features/story/utils";
-import { applySceneImageSettings, applyResetSceneImageSettings } from "@/lib/utils/voiceover";
+import { applySceneImageSettings, applyResetSceneImageSettings, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 import {
   studioMobileActionBar,
   studioMobileActionButton,
@@ -48,7 +48,7 @@ interface StoryWorkspaceProps {
   script: FootieScript;
   /** Bumped by DraftEditorFlow when preview master timeline must rebuild. */
   timelineEpoch?: number;
-  onScriptChange: (script: FootieScript) => void;
+  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
   selectedSceneIndex: number;
   onSelectedSceneChange: (index: number) => void;
   onExportSettingsChange?: (settings: ExportSettings) => void;

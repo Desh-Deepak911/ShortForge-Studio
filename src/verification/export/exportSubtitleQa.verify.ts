@@ -137,7 +137,7 @@ test("export renderer uses timed subtitle display and effect canvas helpers", ()
   assert.match(canvasUtils, /SUBTITLE_BOX_PAD_X = 18/);
   assert.match(canvasUtils, /SUBTITLE_BOX_PAD_Y = 10/);
   assert.match(canvasUtils, /SUBTITLE_BOX_RADIUS = 12/);
-  assert.match(canvasUtils, /rgba\(0, 0, 0, 0\.45\)/);
+  assert.match(canvasUtils, /backgroundAlpha/);
   assert.match(canvasUtils, /drawExportSubtitlesCaption/);
   assert.match(canvasUtils, /drawExportGeneratedCaption/);
   assert.match(canvasUtils, /resolveExportCaptionStyleForDisplay/);
@@ -310,12 +310,16 @@ test("generated caption export path is unchanged", () => {
 
 test("export subtitles stay bottom-centered on canvas", () => {
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
+  const layoutUtils = readSrc("src/features/caption-engine/caption-layout.utils.ts");
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
 
-  assert.match(videoRender, /subtitleY = height - 320 \* scale/);
-  assert.match(canvasUtils, /width \/ 2/);
+  assert.match(videoRender, /resolveCaptionLayout\(scene, script\)/);
+  assert.match(canvasUtils, /resolveExportCaptionPlacement\(layout, width, height, scale, boxWidth, boxHeight\)/);
+  assert.match(canvasUtils, /placement\.centerX/);
+  assert.match(canvasUtils, /placement\.boxBottomY - boxHeight/);
+  assert.match(layoutUtils, /width \/ 2/);
+  assert.match(layoutUtils, /height - 320 \* scale/);
   assert.match(canvasUtils, /textAlign = "center"/);
-  assert.match(canvasUtils, /subtitleY - boxHeight/);
   assert.match(canvasUtils, /centerX - blockWidth \/ 2/);
 });
 
@@ -519,7 +523,7 @@ test("export subtitle styling: no full-width bottom band, content-sized pill at 
 
   assert.doesNotMatch(canvasUtils, /getExportSubtitleRegionBounds/);
   assert.doesNotMatch(canvasUtils, /repaintSubtitleRegionOverlay/);
-  assert.match(canvasUtils, /SUBTITLE_BOX_BACKGROUND = "rgba\(0, 0, 0, 0\.45\)"/);
+  assert.match(canvasUtils, /fillStyle = `rgba\(0, 0, 0, \$\{backgroundAlpha\}\)`/);
   assert.match(canvasUtils, /roundRectPath/);
   assert.match(canvasUtils, /SUBTITLE_BOX_RADIUS = 12/);
   assert.match(canvasUtils, /ctx\.fillStyle = "#ffffff"/);

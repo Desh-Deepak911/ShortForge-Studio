@@ -329,26 +329,36 @@ export default function VideoPreview({
         frameEditActive={isFrameEditing}
         onExitFrameEdit={exitFrameEdit}
         overlay={
-          showSubtitles ? (
-            <SubtitleOverlay
-              scene={subtitleScene}
-              sceneElapsedMs={sceneElapsedMs}
-              sceneDurationMs={sceneDurationMs}
-              activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
-              chunkProgress={previewSceneTiming.chunkProgress}
-              captionAnimationState={previewSceneTiming.captionAnimationState}
-              subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
-              captionTooShortForEffect={previewSceneTiming.captionTooShortForEffect}
-              className={
-                isFrameEditing ? "pointer-events-none opacity-55 transition-opacity duration-150" : ""
-              }
-            />
-          ) : null
+          <>
+            {showSubtitles ? (
+              <SubtitleOverlay
+                scene={subtitleScene}
+                script={script}
+                sceneElapsedMs={sceneElapsedMs}
+                sceneDurationMs={sceneDurationMs}
+                activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
+                chunkProgress={previewSceneTiming.chunkProgress}
+                captionAnimationState={previewSceneTiming.captionAnimationState}
+                subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
+                captionTooShortForEffect={previewSceneTiming.captionTooShortForEffect}
+                className={
+                  isFrameEditing ? "pointer-events-none opacity-55 transition-opacity duration-150" : ""
+                }
+              />
+            ) : null}
+            {showGeneratedCaption ? (
+              <CaptionOverlay
+                scene={displayScene}
+                script={script}
+                className={
+                  isFrameEditing ? "pointer-events-none opacity-55 transition-opacity duration-150" : ""
+                }
+              />
+            ) : null}
+          </>
         }
         footer={
           <>
-            {showGeneratedCaption ? <CaptionOverlay scene={displayScene} /> : null}
-
             <div className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] text-white/50">
               {displayScene.sceneType && displayScene.sceneType !== "transition" ? (
                 <span className="capitalize">{displayScene.sceneType}</span>

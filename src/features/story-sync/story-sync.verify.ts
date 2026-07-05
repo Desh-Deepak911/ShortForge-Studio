@@ -21,6 +21,7 @@ import {
   rebuildNarrationFromScenes,
   resolveSceneNarrationSourceText,
   resolveStorySyncEditKind,
+  resolvePresentationSyncEditKind,
   resolveStorySyncBanner,
   isStorySyncExportBlocked,
   STORY_SYNC_EXPORT_BLOCKED_MESSAGE,
@@ -32,9 +33,20 @@ import {
 } from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
 import { classifyStoryPatch } from "@/features/editor/story-patches";
 import type { FootieScene, FootieScript } from "@/features/story/types";
-import { buildCaptionModeSwitchPatch } from "@/features/story/utils/caption.utils";
 import { recalculateSceneTimings } from "@/features/story/utils";
-import { applySceneUpdate, applyStoryUpdate, syncFootieScript } from "@/lib/utils/voiceover";
+import {
+  applyCaptionModeSwitchUpdate,
+  applyPresentationSceneUpdate,
+  applyPresentationStoryUpdate,
+  applySceneUpdate,
+  applyStoryUpdate,
+  syncFootieScript,
+} from "@/lib/utils/voiceover";
+import { getSubtitlesCaptionSource } from "@/features/story/utils/subtitle.utils";
+import {
+  buildSceneCaptionPresetPatch,
+  buildSceneSubtitleEffectPatch,
+} from "@/features/caption-engine/caption-engine.utils";
 
 let passed = 0;
 
@@ -45,6 +57,13 @@ function test(name: string, fn: () => void) {
 }
 
 const FIXED_AT = "2026-07-04T00:00:00.000Z";
+
+function commitPresentation(prev: FootieScript, next: FootieScript) {
+  const synced = applyPresentationStoryUpdate(prev, next);
+  const classification = classifyStoryPatch(prev, synced);
+  const kind = resolvePresentationSyncEditKind(classification);
+  return { synced, classification, kind };
+}
 
 test("insert scene (structural) marks narration dirty", () => {
   const initial = createInitialStorySynchronizationState();
@@ -566,9 +585,7 @@ test("caption mode switch to narrated subtitles does not dirty narration", () =>
       subtitleText: undefined,
     },
   ]);
-  const next = applyStoryUpdate(prev, applySceneUpdate(prev, "s1", { captionMode: "subtitles" }));
-  const classification = classifyStoryPatch(prev, next);
-  const kind = resolveStorySyncEditKind(prev, next, classification);
+  const { kind } = commitPresentation(prev, applyCaptionModeSwitchUpdate(prev, "s1", "subtitles"));
   assert.equal(kind, "caption");
   const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
   assert.equal(state.narrationDirty, false);
@@ -593,16 +610,89 @@ test("caption mode switch on legacy scene without ms fields does not dirty narra
     voiceoverUrl: "blob:voice",
     voiceoverDurationMs: 3000,
   });
-  const patch = buildCaptionModeSwitchPatch(prev.scenes[0]!, "subtitles");
-  const next = applyStoryUpdate(prev, applySceneUpdate(prev, "s1", patch));
+  const next = applyPresentationStoryUpdate(prev, applyCaptionModeSwitchUpdate(prev, "s1", "subtitles"));
+  assert.equal(next.scenes[0]?.startMs, prev.scenes[0]?.startMs);
+  assert.equal(next.scenes[0]?.endMs, prev.scenes[0]?.endMs);
+  assert.equal(next.scenes[0]?.durationMs, prev.scenes[0]?.durationMs);
+  assert.equal(next.scenes[0]?.subtitleText, prev.scenes[0]?.subtitleText);
+  assert.equal(next.scenes[0]?.narration, prev.scenes[0]?.narration);
   const classification = classifyStoryPatch(prev, next);
-  assert.doesNotMatch(classification.classes.join(","), /timing/);
-  const kind = resolveStorySyncEditKind(prev, next, classification);
+  assert.equal(classification.primary, "caption");
+  assert.doesNotMatch(classification.classes.join(","), /timing|spoken_text|structural/);
+  const kind = resolvePresentationSyncEditKind(classification);
   assert.equal(kind, "caption");
   const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
   assert.equal(state.narrationDirty, false);
   assert.equal(state.voiceDirty, false);
+  assert.equal(state.previewDirty, false);
+  assert.equal(state.exportDirty, false);
   assert.equal(isStorySyncExportBlocked(state), false);
+});
+
+test("fresh generated story with written and narrated copy switches without dirty sync", () => {
+  const synced = markExportSynchronized(
+    markPreviewSynchronized(
+      markVoiceSynchronized(markNarrationSynchronized(createInitialStorySynchronizationState(), FIXED_AT), FIXED_AT),
+      FIXED_AT,
+    ),
+    FIXED_AT,
+  );
+  const prev = buildStory([
+    {
+      ...makeScene("s1", 3, {
+        narration: "Opening spoken line.",
+        subtitle: "Opening visual heading",
+        subtitleText: "Opening spoken line.",
+      }),
+      captionMode: "generated",
+    },
+    {
+      ...makeScene("s2", 4, {
+        narration: "Second spoken line.",
+        subtitle: "Second visual heading",
+        subtitleText: "Second spoken line.",
+      }),
+      captionMode: "generated",
+    },
+  ]);
+
+  let state = synced;
+  const toNarrated = applyPresentationStoryUpdate(prev, applyCaptionModeSwitchUpdate(prev, "s1", "subtitles"));
+  const toNarratedKind = resolvePresentationSyncEditKind(classifyStoryPatch(prev, toNarrated));
+  assert.equal(toNarratedKind, "caption");
+  state = applyStorySyncEdit(state, toNarratedKind!);
+  assert.equal(state.narrationDirty, false);
+  assert.equal(state.voiceDirty, false);
+  assert.equal(state.previewDirty, false);
+  assert.equal(state.exportDirty, false);
+  assert.equal(isStorySyncExportBlocked(state), false);
+
+  const toWritten = applyPresentationStoryUpdate(toNarrated, applyCaptionModeSwitchUpdate(toNarrated, "s1", "generated"));
+  const toWrittenKind = resolvePresentationSyncEditKind(classifyStoryPatch(toNarrated, toWritten));
+  assert.equal(toWrittenKind, "caption");
+  state = applyStorySyncEdit(state, toWrittenKind!);
+  assert.equal(state.narrationDirty, false);
+  assert.equal(state.voiceDirty, false);
+  assert.equal(isStorySyncExportBlocked(state), false);
+});
+
+test("caption mode switch does not persist subtitleText seed", () => {
+  const prev = buildStory([
+    {
+      ...makeScene("s1", 3, { narration: "Seed from narration excerpt.", subtitle: "Visual heading" }),
+      captionMode: "generated",
+      subtitleText: undefined,
+    },
+  ]);
+  const { synced, kind } = commitPresentation(
+    prev,
+    applyCaptionModeSwitchUpdate(prev, "s1", "subtitles"),
+  );
+  assert.equal(synced.scenes[0]?.subtitleText, undefined);
+  assert.equal(getSubtitlesCaptionSource(synced.scenes[0]!), "Seed from narration excerpt.");
+  assert.equal(kind, "caption");
+  const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
+  assert.deepEqual(state, createInitialStorySynchronizationState());
 });
 
 test("caption mode switch back to written caption does not dirty narration", () => {
@@ -612,12 +702,39 @@ test("caption mode switch back to written caption does not dirty narration", () 
       captionMode: "subtitles",
     },
   ]);
-  const next = applyStoryUpdate(prev, applySceneUpdate(prev, "s1", { captionMode: "generated" }));
-  const kind = resolveStorySyncEditKind(prev, next, classifyStoryPatch(prev, next));
+  const { kind } = commitPresentation(prev, applyCaptionModeSwitchUpdate(prev, "s1", "generated"));
   assert.equal(kind, "caption");
   const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
   assert.equal(state.narrationDirty, false);
   assert.equal(isStorySyncExportBlocked(state), false);
+});
+
+test("user subtitleText edit after full sync dirties narration again", () => {
+  let state = markExportSynchronized(
+    markPreviewSynchronized(
+      markVoiceSynchronized(markNarrationSynchronized(createInitialStorySynchronizationState(), FIXED_AT), FIXED_AT),
+      FIXED_AT,
+    ),
+    FIXED_AT,
+  );
+  const prev = buildStory([
+    {
+      ...makeScene("s1", 3, { subtitleText: "Synced spoken text.", narration: "Synced spoken text." }),
+      captionMode: "subtitles",
+    },
+  ]);
+  const next = applyStoryUpdate(
+    prev,
+    applySceneUpdate(prev, "s1", { subtitleText: "Edited again after sync." }),
+  );
+  const kind = resolveStorySyncEditKind(prev, next, classifyStoryPatch(prev, next));
+  assert.equal(kind, "spoken_text");
+  state = applyStorySyncEdit(state, kind!);
+  assert.equal(state.narrationDirty, true);
+  assert.equal(state.voiceDirty, true);
+  assert.equal(state.previewDirty, true);
+  assert.equal(state.exportDirty, true);
+  assert.equal(isStorySyncExportBlocked(state), true);
 });
 
 test("update narration noop clears narrationDirty when rebuilt text is unchanged", () => {
@@ -656,8 +773,8 @@ test("user subtitleText edit after mode switch dirties narration", () => {
       subtitleText: undefined,
     },
   ]);
-  const switched = applyStoryUpdate(base, applySceneUpdate(base, "s1", { captionMode: "subtitles" }));
-  const switchKind = resolveStorySyncEditKind(base, switched, classifyStoryPatch(base, switched));
+  const switched = applyPresentationStoryUpdate(base, applyCaptionModeSwitchUpdate(base, "s1", "subtitles"));
+  const switchKind = resolvePresentationSyncEditKind(classifyStoryPatch(base, switched));
   state = applyStorySyncEdit(state, switchKind!);
   assert.equal(state.narrationDirty, false);
 
@@ -693,6 +810,53 @@ test("getSynchronizationSummary prioritizes outstanding work", () => {
     exportDirty: true,
   };
   assert.equal(getSynchronizationSummary(exportOnly).status, "Needs export");
+});
+
+test("presentation caption mode switch does not write timing ms fields", () => {
+  const prev = buildStory([
+    {
+      ...makeScene("s1", 3, { narration: "Spoken excerpt.", subtitle: "Heading" }),
+      captionMode: "generated",
+    },
+  ]);
+  const { synced } = commitPresentation(prev, applyCaptionModeSwitchUpdate(prev, "s1", "subtitles"));
+  assert.equal(synced.scenes[0]?.startMs, prev.scenes[0]?.startMs);
+  assert.equal(synced.scenes[0]?.endMs, prev.scenes[0]?.endMs);
+  assert.equal(synced.scenes[0]?.durationMs, prev.scenes[0]?.durationMs);
+});
+
+test("presentation caption preset change does not dirty narration or voice", () => {
+  const prev = buildStory([
+    {
+      ...makeScene("s1", 3, { subtitleText: "Narrated copy.", narration: "Narrated copy." }),
+      captionMode: "subtitles",
+    },
+  ]);
+  const { kind } = commitPresentation(
+    prev,
+    applyPresentationSceneUpdate(prev, "s1", buildSceneCaptionPresetPatch("tiktok")),
+  );
+  assert.equal(kind, "caption");
+  const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
+  assert.equal(state.narrationDirty, false);
+  assert.equal(state.voiceDirty, false);
+});
+
+test("presentation subtitle effect change does not dirty narration or voice", () => {
+  const prev = buildStory([
+    {
+      ...makeScene("s1", 3, { subtitleText: "Narrated copy.", narration: "Narrated copy." }),
+      captionMode: "subtitles",
+    },
+  ]);
+  const { kind } = commitPresentation(
+    prev,
+    applyPresentationSceneUpdate(prev, "s1", buildSceneSubtitleEffectPatch("typewriter")),
+  );
+  assert.equal(kind, "caption");
+  const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
+  assert.equal(state.narrationDirty, false);
+  assert.equal(state.voiceDirty, false);
 });
 
 console.log(`\nstory-sync: ${passed} passed`);

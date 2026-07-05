@@ -1,4 +1,4 @@
-import { isMsBackfillOnlyStoryPatch } from "@/features/editor/story-patches/story-patch-classifier";
+import { isCaptionModeSwitchStoryPatch, isMsBackfillOnlyStoryPatch } from "@/features/editor/story-patches/story-patch-classifier";
 import type { FootieScript } from "@/features/story/types";
 
 import { createInitialStorySynchronizationState } from "./story-sync.state";
@@ -141,6 +141,9 @@ export function applyStorySyncEdit(
     case "image":
       return state;
 
+    case "caption_layout":
+      return markExportDirty(state);
+
     case "spoken_text": {
       let next = markNarrationDirty(state);
       next = markVoiceDirty(next);
@@ -263,6 +266,7 @@ export function resolveStorySyncEditKind(
       | "timing"
       | "spoken_text"
       | "caption"
+      | "caption_layout"
       | "media"
       | "motion"
       | "transition"
@@ -280,6 +284,10 @@ export function resolveStorySyncEditKind(
     return "voice_generated";
   }
 
+  if (isCaptionModeSwitchStoryPatch(prev, next)) {
+    return "caption";
+  }
+
   if (classification.classes.includes("structural")) {
     return "structural";
   }
@@ -294,6 +302,10 @@ export function resolveStorySyncEditKind(
 
   if (classification.classes.includes("spoken_text")) {
     return "spoken_text";
+  }
+
+  if (classification.classes.includes("caption_layout")) {
+    return "caption_layout";
   }
 
   if (classification.classes.includes("transition")) {
@@ -313,6 +325,40 @@ export function resolveStorySyncEditKind(
   }
 
   return null;
+}
+
+/**
+ * Maps a presentation-only edit to sync policy without diff heuristics.
+ * Presentation commits must never dirty narration or voice.
+ */
+export function resolvePresentationSyncEditKind(
+  classification: {
+    classes: Array<
+      | "structural"
+      | "timing"
+      | "spoken_text"
+      | "caption"
+      | "caption_layout"
+      | "media"
+      | "motion"
+      | "transition"
+      | "audio"
+      | "metadata"
+    >;
+  },
+): StorySyncEditKind | null {
+  if (classification.classes.includes("caption_layout")) {
+    return "caption_layout";
+  }
+
+  if (
+    classification.classes.includes("caption") ||
+    classification.classes.includes("motion")
+  ) {
+    return "caption";
+  }
+
+  return "caption";
 }
 
 export type StorySyncBannerKind = "narration" | "voice" | "export";

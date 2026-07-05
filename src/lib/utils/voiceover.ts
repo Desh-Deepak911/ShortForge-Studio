@@ -11,6 +11,7 @@ import {
 import {
   finalizeSubtitleTextAfterModeSwitch,
   mergeSubtitleTextOnSubtitlesModeSwitch,
+  normalizeSceneCaptionSettings,
   scenesNeedNarrationExcerptSync,
   syncScenesSubtitlesNarration,
 } from "@/features/story/utils";
@@ -34,7 +35,13 @@ import {
   type TransitionTimelineUpdates,
 } from "@/features/story/utils";
 import { getStoryTotalDuration } from "@/features/story/utils";
-import type { FootieScene, FootieScript, SceneImage, StoryVoiceSettings } from "@/features/story/types";
+import type {
+  CaptionMode,
+  FootieScene,
+  FootieScript,
+  SceneImage,
+  StoryVoiceSettings,
+} from "@/features/story/types";
 import {
   resolveVoiceoverSpeed,
   resolveVoiceoverVoice,
@@ -46,6 +53,20 @@ export interface VoiceoverAttachment {
   voiceoverDurationMs?: number;
   voiceSettings?: Partial<StoryVoiceSettings>;
 }
+
+/** Editor commit intent — presentation edits skip story-data sync side effects. */
+export type StoryScriptChangeIntent = "story" | "presentation";
+
+export interface StoryScriptChangeOptions {
+  intent?: StoryScriptChangeIntent;
+}
+
+/** Scene fields that affect caption display only — never spoken story data. */
+export type ScenePresentationPatch = Partial<
+  Pick<FootieScene, "captionMode" | "captionPreset" | "subtitleEffect" | "captionLayout">
+>;
+
+export type StoryPresentationPatch = Partial<Pick<FootieScript, "defaultCaptionLayout">>;
 
 /** Creates an object URL from a base64-encoded audio payload. */
 export function createAudioBlobUrl(
@@ -295,6 +316,80 @@ export function applySceneUpdate(
       updateSceneInScenes(script.scenes, sceneId, resolvedUpdates),
     ),
   };
+}
+
+/**
+ * Presentation-only scene patch — caption display/config fields only.
+ * Does not recalculate timings, seed subtitleText, or sync narration excerpts.
+ */
+export function applyPresentationSceneUpdate(
+  script: FootieScript,
+  sceneId: string,
+  patch: ScenePresentationPatch,
+): FootieScript {
+  const sceneIndex = script.scenes.findIndex((scene) => scene.id === sceneId);
+  if (sceneIndex < 0 || Object.keys(patch).length === 0) {
+    return script;
+  }
+
+  const scenes = script.scenes.map((scene, index) =>
+    index === sceneIndex ? normalizeSceneCaptionSettings({ ...scene, ...patch }) : scene,
+  );
+
+  const timelineItems = syncTimelineSceneRefs(
+    scenes,
+    ensureTimelineItems(scenes, script.timelineItems),
+  );
+
+  return { ...script, scenes, timelineItems };
+}
+
+/**
+ * Project-level presentation patch (e.g. default caption layout).
+ */
+export function applyPresentationScriptUpdate(
+  script: FootieScript,
+  patch: StoryPresentationPatch,
+): FootieScript {
+  if (Object.keys(patch).length === 0) {
+    return script;
+  }
+
+  return { ...script, ...patch };
+}
+
+/**
+ * Editor sync boundary for presentation-only commits.
+ * Skips narration excerpt sync, subtitleText seeding, and timing recompute.
+ */
+export function applyPresentationStoryUpdate(
+  prev: FootieScript,
+  next: FootieScript,
+): FootieScript {
+  void prev;
+  const coerced = coerceLegacyStoryFields(next);
+  const scenes = normalizeSceneIds(coerced.scenes ?? []).map(normalizeSceneCaptionSettings);
+  const totalDuration = getStoryTotalDuration(scenes);
+  const timelineItems = syncTimelineSceneRefs(
+    scenes,
+    ensureTimelineItems(
+      scenes,
+      coerced.timelineItems?.length ? coerced.timelineItems : prev.timelineItems,
+    ),
+  );
+
+  return { ...coerced, scenes, totalDuration, timelineItems };
+}
+
+/**
+ * Caption display mode switch — presentation only; updates `captionMode` alone.
+ */
+export function applyCaptionModeSwitchUpdate(
+  script: FootieScript,
+  sceneId: string,
+  mode: CaptionMode,
+): FootieScript {
+  return applyPresentationSceneUpdate(script, sceneId, { captionMode: mode });
 }
 
 /**

@@ -23,6 +23,8 @@ export { wordWeightedSubtitleTimingStrategy } from "./subtitle-timing.word-weigh
 
 export {
   allocateWordWeightedChunkWindows,
+  applyWordWeightedTimingFeel,
+  capWeightedChunkDurations,
   countTimingWords,
   isNarratedSubtitlesScene,
   mapSubtitleTimingChunksToEvents,
@@ -30,8 +32,17 @@ export {
   resolveDefaultSceneSubtitleChunks,
   resolveDefaultSubtitleText,
   splitSubtitleChunks,
+  SUBTITLE_TIMING_END_PAD_MS,
+  SUBTITLE_TIMING_LEAD_IN_MS,
+  SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS,
   SUBTITLE_TIMING_MIN_CHUNK_MS,
   toSubtitleTimingSceneEvents,
 } from "./subtitle-timing.utils";
+
+export {
+  splitSubtitleChunksForWordWeightedTiming,
+  SUBTITLE_TIMING_MAX_CHARS_PER_CHUNK,
+  SUBTITLE_TIMING_MAX_WORDS_PER_CHUNK,
+} from "./subtitle-timing.word-weighted-chunks";
 
 export type { SubtitleTimingEventConversionDiagnostics, WordWeightedChunkAllocation } from "./subtitle-timing.utils";

@@ -19,6 +19,7 @@ import SceneImageMotionControl from "@/features/editor/components/SceneImageMoti
 import {
   buildSceneCaptionPresetPatch,
   buildSceneSubtitleEffectPatch,
+  CaptionLayoutControl,
   CaptionPresetPanel,
 } from "@/features/caption-engine";
 import SubtitleEffectControl from "@/features/editor/components/SubtitleEffectControl";
@@ -31,7 +32,6 @@ import { useInspectorContext } from "@/features/editor/inspector/InspectorContex
 import { useEditorSelection } from "@/features/editor/selection";
 import { resolveSafeSceneIndex } from "@/features/editor/selection/selection.utils";
 import {
-  buildCaptionModeSwitchPatch,
   DEFAULT_SCENE_SUBTITLE,
   ensureTimelineItems,
   getSceneImage,
@@ -61,10 +61,15 @@ import {
   studioUploadZone,
 } from "@/lib/utils/studioUi";
 import {
+  applyCaptionModeSwitchUpdate,
+  applyPresentationSceneUpdate,
+  applyPresentationScriptUpdate,
   applyResetSceneImageSettings,
   applySceneImageSettings,
   applySceneUpdate,
   applyTransitionUpdate,
+  type ScenePresentationPatch,
+  type StoryScriptChangeOptions,
 } from "@/lib/utils/voiceover";
 import type {
   CaptionMode,
@@ -235,7 +240,7 @@ function SceneCaptionTextFields({ scene, isSubtitlesMode, onCommit }: SceneCapti
 
 export interface StudioSceneInspectorProps {
   script: FootieScript;
-  onScriptChange: (script: FootieScript) => void;
+  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
 }
 
 function formatTimeRange(start: number, end: number): string {
@@ -284,6 +289,15 @@ export default function StudioSceneInspector({
   const timelineItems = ensureTimelineItems(scenes, script.timelineItems);
   const safeIndex = resolveSafeSceneIndex(scenes, selectedSceneIndex);
   const scene = safeIndex >= 0 ? scenes[safeIndex] : null;
+
+  const commitPresentationPatch = useCallback(
+    (targetSceneId: string, patch: ScenePresentationPatch) => {
+      onScriptChange(applyPresentationSceneUpdate(script, targetSceneId, patch), {
+        intent: "presentation",
+      });
+    },
+    [onScriptChange, script],
+  );
 
   const commitScenePatch = useCallback(
     (targetSceneId: string, patch: Partial<FootieScript["scenes"][number]>) => {
@@ -354,12 +368,14 @@ export default function StudioSceneInspector({
 
   const handleCaptionModeChange = useCallback(
     (mode: CaptionMode) => {
-      if (!sceneId || !scene) {
+      if (!sceneId) {
         return;
       }
-      updateScene(sceneId, buildCaptionModeSwitchPatch(scene, mode));
+      onScriptChange(applyCaptionModeSwitchUpdate(script, sceneId, mode), {
+        intent: "presentation",
+      });
     },
-    [scene, sceneId, updateScene],
+    [onScriptChange, sceneId, script],
   );
 
   const handleImageUpload = (uploadSceneId: string, file: File | null) => {
@@ -558,6 +574,17 @@ export default function StudioSceneInspector({
       >
         <CaptionModeControl value={captionMode} onChange={handleCaptionModeChange} />
 
+        <CaptionLayoutControl
+          scene={scene}
+          script={script}
+          onSceneLayoutChange={(patch) => commitPresentationPatch(scene.id, patch)}
+          onProjectLayoutChange={(layout) =>
+            onScriptChange(applyPresentationScriptUpdate(script, { defaultCaptionLayout: layout }), {
+              intent: "presentation",
+            })
+          }
+        />
+
         {isSubtitlesMode ? (
           <>
             <CaptionPresetPanel
@@ -565,14 +592,14 @@ export default function StudioSceneInspector({
               captionPreset={scene.captionPreset}
               subtitleEffect={scene.subtitleEffect}
               onPresetSelect={(presetId) =>
-                updateScene(scene.id, buildSceneCaptionPresetPatch(presetId))
+                commitPresentationPatch(scene.id, buildSceneCaptionPresetPatch(presetId))
               }
             />
             <StudioAccordion variant="nested" title="Advanced subtitle effect">
               <SubtitleEffectControl
                 value={scene.subtitleEffect}
                 onChange={(effect) =>
-                  updateScene(scene.id, buildSceneSubtitleEffectPatch(effect))
+                  commitPresentationPatch(scene.id, buildSceneSubtitleEffectPatch(effect))
                 }
               />
             </StudioAccordion>

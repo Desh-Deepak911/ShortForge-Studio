@@ -8,6 +8,7 @@ import { join } from "node:path";
 
 import {
   classifyStoryPatch,
+  isCaptionModeSwitchStoryPatch,
   DEFERRED_STORY_EVOLUTION_DEBOUNCE_MS,
   IMMEDIATE_STORY_EVOLUTION_DEBOUNCE_MS,
   isMsBackfillOnlyStoryPatch,
@@ -19,6 +20,7 @@ import type { FootieScene, FootieScript } from "@/features/story/types";
 import { recalculateSceneTimings } from "@/features/story/utils";
 import { scenesStructurallyEqual } from "@/features/story/utils/timeline.utils";
 import {
+  applyCaptionModeSwitchUpdate,
   applySceneImageSettings,
   applySceneUpdate,
   applyScenesUpdate,
@@ -146,6 +148,30 @@ test("caption mode switch on legacy scene without ms fields is not timing", () =
   assert.doesNotMatch(classification.classes.join(","), /timing/);
   assert.ok(classification.classes.includes("caption"));
   assert.equal(isMsBackfillOnlyStoryPatch(prev, next), true);
+  assert.equal(isCaptionModeSwitchStoryPatch(prev, next), true);
+});
+
+test("caption mode switch production path classifies as caption only", () => {
+  const prev = syncFootieScript({
+    title: "Production path",
+    narration: "Opening spoken line. Second spoken line.",
+    scenes: [
+      {
+        ...makeLegacyScene("s1", 3),
+        captionMode: "generated",
+        subtitle: "Opening visual heading",
+        subtitleText: "Opening spoken line.",
+        narration: "Opening spoken line.",
+      },
+    ],
+    totalDuration: 3,
+    voiceoverUrl: "blob:voice",
+    voiceoverDurationMs: 3000,
+  });
+  const next = applyStoryUpdate(prev, applyCaptionModeSwitchUpdate(prev, "s1", "subtitles"));
+  const classification = classifyStoryPatch(prev, next);
+  assert.deepEqual(classification.classes, ["caption"]);
+  assert.equal(isCaptionModeSwitchStoryPatch(prev, next), true);
 });
 
 test("written caption edit classified as caption", () => {

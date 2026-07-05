@@ -322,7 +322,9 @@ function normalizeCaptionText(value: string | undefined): string {
 }
 
 function getSubtitlesSourceText(scene: SubtitleCaptionScene): string {
-  return normalizeCaptionText(scene.subtitleText || scene.narration);
+  return normalizeCaptionText(
+    scene.subtitleText || scene.narration || scene.caption || scene.subtitle,
+  );
 }
 
 /** Full editable subtitle source — never uses generated caption fields. */

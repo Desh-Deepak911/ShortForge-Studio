@@ -3,6 +3,7 @@ export {
   CONTENT_TIMELINE_REBUILD_DEBOUNCE_MS,
   DEFERRED_STORY_EVOLUTION_DEBOUNCE_MS,
   IMMEDIATE_STORY_EVOLUTION_DEBOUNCE_MS,
+  isCaptionModeSwitchStoryPatch,
   isMsBackfillOnlyStoryPatch,
   isSceneMsBackfillOnly,
   requiresDebouncedTimelineRebuild,

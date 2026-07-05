@@ -1,3 +1,5 @@
+import type { ResolvedCaptionLayout } from "@/features/caption-engine/caption-layout.utils";
+import { resolveExportCaptionPlacement } from "@/features/caption-engine/caption-layout.utils";
 import type { ExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
 import {
   applyExportCaptionTextDrawState,
@@ -39,9 +41,9 @@ export interface DrawExportSubtitlesCaptionOptions {
   ctx: CanvasRenderingContext2D;
   width: number;
   height: number;
-  subtitleY: number;
   scale: number;
   display: ExportSubtitleDisplay;
+  layout: ResolvedCaptionLayout;
 }
 
 const SUBTITLE_FONT_SIZE = 64;
@@ -49,7 +51,6 @@ const SUBTITLE_LINE_HEIGHT_RATIO = 1.3;
 const SUBTITLE_BOX_PAD_X = 18;
 const SUBTITLE_BOX_PAD_Y = 10;
 const SUBTITLE_BOX_RADIUS = 12;
-const SUBTITLE_BOX_BACKGROUND = "rgba(0, 0, 0, 0.45)";
 const SUBTITLE_BOX_BORDER = "rgba(255, 255, 255, 0.1)";
 
 export interface ExportSubtitleLayoutMetrics {
@@ -122,10 +123,11 @@ function drawSubtitleBox(
   boxHeight: number,
   scale: number,
   opacity: number,
+  backgroundAlpha = 0.45,
 ): void {
   ctx.save();
   ctx.globalAlpha = opacity;
-  ctx.fillStyle = SUBTITLE_BOX_BACKGROUND;
+  ctx.fillStyle = `rgba(0, 0, 0, ${backgroundAlpha})`;
   ctx.strokeStyle = SUBTITLE_BOX_BORDER;
   ctx.lineWidth = Math.max(1, scale);
   roundRectPath(
@@ -348,10 +350,11 @@ function drawWrappedSubtitleBlock(
   ctx: CanvasRenderingContext2D,
   lines: string[],
   width: number,
-  subtitleY: number,
+  height: number,
   scale: number,
   opacity: number,
   yOffset: number,
+  layout: ResolvedCaptionLayout,
   display?: ExportSubtitleDisplay,
   fontScale = 1,
 ): void {
@@ -417,14 +420,15 @@ function drawWrappedSubtitleBlock(
     exportStyle,
     scale,
   );
-  const boxTop = subtitleY - boxHeight + yOffset;
-  const centerX = width / 2;
+  const placement = resolveExportCaptionPlacement(layout, width, height, scale, boxWidth, boxHeight);
+  const centerX = placement.centerX;
+  const boxTop = placement.boxBottomY - boxHeight + yOffset;
   const textTopY = boxTop + metrics.padY;
   const blockCenterY = boxTop + boxHeight / 2;
   const useHighlightLines = display?.effect === "highlight";
 
   if (!useHighlightLines) {
-    drawSubtitleBox(ctx, centerX, boxTop, boxWidth, boxHeight, scale, opacity);
+    drawSubtitleBox(ctx, centerX, boxTop, boxWidth, boxHeight, scale, opacity, placement.backgroundAlpha);
   }
 
   ctx.save();
@@ -472,10 +476,11 @@ function drawActiveChunkLines(
   ctx: CanvasRenderingContext2D,
   display: ExportSubtitleDisplay,
   width: number,
-  subtitleY: number,
+  height: number,
   scale: number,
   captionOpacity: number,
   captionYOffset: number,
+  layout: ResolvedCaptionLayout,
 ): void {
   const fontScale = display.fontScale ?? 1;
   const exportStyle = resolveExportCaptionStyleForDisplay(display);
@@ -485,18 +490,19 @@ function drawActiveChunkLines(
     ctx,
     lines,
     width,
-    subtitleY,
+    height,
     scale,
     captionOpacity,
     captionYOffset,
+    layout,
     display,
     fontScale,
   );
 }
 
-/** Draws bottom-centered export subtitles for the single active chunk. */
+/** Draws export subtitles for the single active chunk. */
 export function drawExportSubtitlesCaption(options: DrawExportSubtitlesCaptionOptions): void {
-  const { ctx, width, subtitleY, scale, display } = options;
+  const { ctx, width, height, scale, display, layout } = options;
   prepareExportSubtitleLayer(ctx);
 
   if (!display.activeChunk.trim()) {
@@ -511,7 +517,7 @@ export function drawExportSubtitlesCaption(options: DrawExportSubtitlesCaptionOp
     captionYOffset = resolveCaptionAnimationTranslateYPx(display.animationState.transform) * scale;
   }
 
-  drawActiveChunkLines(ctx, display, width, subtitleY, scale, captionOpacity, captionYOffset);
+  drawActiveChunkLines(ctx, display, width, height, scale, captionOpacity, captionYOffset, layout);
   resetExportCanvasDrawState(ctx);
 }
 
@@ -531,14 +537,14 @@ export function wrapTextToLines(
   ).slice(0, layout.lines.length > maxLines ? layout.lines.length : undefined);
 }
 
-/** Draws bottom-centered generated captions without subtitle effects. */
+/** Draws generated captions without subtitle effects. */
 export function drawExportGeneratedCaption(
   ctx: CanvasRenderingContext2D,
   lines: string[],
   width: number,
   height: number,
-  subtitleY: number,
   scale: number,
+  captionLayout: ResolvedCaptionLayout,
 ): void {
   prepareExportSubtitleLayer(ctx);
 
@@ -552,7 +558,7 @@ export function drawExportGeneratedCaption(
     return;
   }
 
-  const layout = resolveSubtitleDisplayLayout(sourceText, {
+  const textLayout = resolveSubtitleDisplayLayout(sourceText, {
     maxLines: SUBTITLE_MAX_VISIBLE_LINES,
   });
   const wrappedLines = wrapSubtitleTextToLines(
@@ -566,12 +572,21 @@ export function drawExportGeneratedCaption(
     ctx,
     wrappedLines,
     width,
-    subtitleY,
+    height,
     scale,
     1,
     0,
-    undefined,
-    layout.fontScale,
+    captionLayout,
+    {
+      activeChunk: sourceText,
+      lines: wrappedLines.slice(0, textLayout.lines.length),
+      effect: "fade-up",
+      sceneElapsedMs: 0,
+      chunkElapsedMs: 0,
+      activeChunkDurationMs: 1,
+      effectProgress: 1,
+    },
+    Math.min(1, textLayout.fontScale),
   );
   resetExportCanvasDrawState(ctx);
 }

@@ -17,6 +17,7 @@ import {
   rebuildNarrationFromScenes,
   resolveStorySyncBanner,
   resolveStorySyncEditKind,
+  resolvePresentationSyncEditKind,
   resolveStorySyncSteps,
 } from "@/features/story-sync";
 import { classifyStoryPatch } from "@/features/editor/story-patches";
@@ -25,6 +26,8 @@ import { recalculateSceneTimings } from "@/features/story/utils";
 import {
   applySceneImageSettings,
   applySceneUpdate,
+  applyPresentationSceneUpdate,
+  applyPresentationStoryUpdate,
   applyStoryUpdate,
   applyTransitionUpdate,
   syncFootieScript,
@@ -186,8 +189,12 @@ test("caption mode switch does not show narration banner", () => {
       subtitleText: undefined,
     },
   ]);
-  const next = applyStoryUpdate(prev, applySceneUpdate(prev, "s1", { captionMode: "subtitles" }));
-  const { kind } = commit(prev, next);
+  const next = applyPresentationStoryUpdate(
+    prev,
+    applyPresentationSceneUpdate(prev, "s1", { captionMode: "subtitles" }),
+  );
+  const classification = classifyStoryPatch(prev, next);
+  const kind = resolvePresentationSyncEditKind(classification);
   assert.equal(kind, "caption");
   state = applyStorySyncEdit(state, kind!);
   assert.equal(resolveStorySyncBanner(state), null);
@@ -201,8 +208,11 @@ test("caption mode switch back to written caption does not dirty narration", () 
       captionMode: "subtitles",
     },
   ]);
-  const next = applyStoryUpdate(prev, applySceneUpdate(prev, "s1", { captionMode: "generated" }));
-  const { kind } = commit(prev, next);
+  const next = applyPresentationStoryUpdate(
+    prev,
+    applyPresentationSceneUpdate(prev, "s1", { captionMode: "generated" }),
+  );
+  const kind = resolvePresentationSyncEditKind(classifyStoryPatch(prev, next));
   assert.equal(kind, "caption");
   const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
   assert.equal(state.narrationDirty, false);
@@ -355,7 +365,10 @@ test("structural: editor wires banner, card, and lifecycle hooks", () => {
   assert.match(workspace, /applyPendingSceneCaptionDrafts/);
   assert.match(exportPanel, /isStorySyncExportBlocked/);
   assert.match(exportPanel, /STORY_SYNC_EXPORT_BLOCKED_MESSAGE/);
-  assert.match(studioSceneInspector, /buildCaptionModeSwitchPatch/);
+  assert.match(studioSceneInspector, /applyPresentationSceneUpdate/);
+  assert.match(studioSceneInspector, /intent: "presentation"/);
+  assert.match(draftEditorFlow, /applyPresentationStoryUpdate/);
+  assert.match(draftEditorFlow, /resolvePresentationSyncEditKind/);
   assert.match(workspace, /focusVoiceoverSection/);
   assert.match(workspace, /onRegenerateVoice=\{focusVoiceoverSection\}/);
   assert.match(workspace, /studio-project-voiceover-regenerate/);

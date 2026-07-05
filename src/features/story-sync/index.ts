@@ -30,6 +30,7 @@ export {
   markVoiceSynchronized,
   resolveStorySyncBanner,
   resolveStorySyncEditKind,
+  resolvePresentationSyncEditKind,
   resolveStorySyncSteps,
   STORY_SYNC_EXPORT_BLOCKED_MESSAGE,
 } from "./story-sync.utils";
