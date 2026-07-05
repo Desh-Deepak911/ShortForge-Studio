@@ -100,7 +100,7 @@
     "test:preview-master-timeline-context": "tsx src/verification/timeline/previewMasterTimelineContext.verify.ts",
     "test:single-sync-boundary": "tsx src/verification/timeline/singleSyncBoundary.verify.ts",
     "test:story-patch-classifier": "tsx src/verification/editor/storyPatchClassifier.verify.ts",
-    "test:story-sync": "tsx src/features/story-sync/story-sync.verify.ts",
+    "test:story-sync": "tsx src/features/story-sync/story-sync.verify.ts && tsx src/features/story-sync/narration-voice-hotfix.verify.ts",
     "test:story-sync-ui": "tsx src/features/story-sync/components/story-sync-ui.verify.ts",
     "test:timeline-caption-animation-qa": "tsx src/verification/timeline/timelineCaptionAnimationQa.verify.ts",
     "test:timeline-image-motion-qa": "tsx src/verification/timeline/timelineImageMotionQa.verify.ts",

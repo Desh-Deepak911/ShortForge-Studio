@@ -196,10 +196,6 @@ function materializeVoiceoverFromBase64(audioBase64: string): string {
   return materialized?.src ?? createVoiceoverBlobUrl(audioBase64);
 }
 
-function isEphemeralAudioUrl(url: string | undefined): boolean {
-  return Boolean(url?.trim().startsWith("blob:"));
-}
-
 function resolveVoiceoverFromPersistedBase64(
   story: FootieScript,
   durationMs?: number,
@@ -217,23 +213,22 @@ function resolveVoiceoverFromPersistedBase64(
 /**
  * Resolves the playable voiceover URL and duration from canonical and legacy story fields.
  * Falls back to persisted base64 when no URL field is present.
- * Prefers base64 over stale ephemeral blob URLs so reload/export can recover audio.
+ * Prefers persisted base64 over ephemeral blob URLs so regeneration/reload cannot replay stale audio.
  */
 export function getCanonicalVoiceover(
   story: FootieScript | null | undefined,
 ): CanonicalVoiceover | null {
-  const fromUrl = resolveCanonicalVoiceoverFromUrlFields(story);
   const base64 = readVoiceoverAudioBase64(story);
+  const storyDurationMs = resolveStoryDurationMs(story ?? ({} as FootieScript));
 
-  if (fromUrl?.url && isEphemeralAudioUrl(fromUrl.url) && base64) {
-    return resolveVoiceoverFromPersistedBase64(story ?? ({} as FootieScript), fromUrl.durationMs);
+  if (base64) {
+    return resolveVoiceoverFromPersistedBase64(
+      story ?? ({} as FootieScript),
+      storyDurationMs,
+    );
   }
 
-  if (fromUrl) {
-    return fromUrl;
-  }
-
-  return resolveVoiceoverFromPersistedBase64(story ?? ({} as FootieScript));
+  return resolveCanonicalVoiceoverFromUrlFields(story);
 }
 
 /** Non-destructive voiceover availability for export UI and diagnostics. */

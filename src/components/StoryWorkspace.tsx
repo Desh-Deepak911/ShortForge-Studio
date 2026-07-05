@@ -23,6 +23,7 @@ import { buildCaptionLayoutOffsetCommitPatch } from "@/features/caption-layout-d
 import { buildResetCaptionLayoutPatch } from "@/features/caption-layout";
 import {
   NO_USABLE_NARRATION_WARNING,
+  formatUnsafeNarrationRebuildWarning,
   rebuildNarrationFromScenes,
   StorySynchronizationBanner,
   SynchronizationStatusCard,
@@ -130,12 +131,16 @@ function StoryWorkspaceContent({
     const scriptWithDrafts = applyPendingSceneCaptionDrafts(script);
     const result = rebuildNarrationFromScenes(scriptWithDrafts);
     if (!result.ok) {
-      setNarrationRebuildWarning(NO_USABLE_NARRATION_WARNING);
+      if (result.reason === "unsafe_partial_rebuild") {
+        setNarrationRebuildWarning(formatUnsafeNarrationRebuildWarning(result.blockedSceneNumbers));
+      } else {
+        setNarrationRebuildWarning(NO_USABLE_NARRATION_WARNING);
+      }
       return;
     }
 
     setNarrationRebuildWarning(null);
-    onScriptChange(result.script);
+    onScriptChange(result.script, { intent: "narration_rebuild" });
     // Explicit user repair — clear stuck narration dirty when rebuilt text is unchanged.
     storySync?.applySyncEdit("narration");
   }, [onScriptChange, script, storySync]);

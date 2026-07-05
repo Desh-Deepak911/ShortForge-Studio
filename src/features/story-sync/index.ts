@@ -60,8 +60,24 @@ export type {
 } from "./components";
 
 export {
+  resolveSceneSpokenText,
+} from "./story-spoken-text.utils";
+export type {
+  SceneSpokenTextResolution,
+  SceneSpokenTextSource,
+} from "./story-spoken-text.utils";
+
+export {
   NO_USABLE_NARRATION_WARNING,
+  UNSAFE_NARRATION_REBUILD_WARNING,
+  formatUnsafeNarrationRebuildWarning,
   rebuildNarrationFromScenes,
   resolveSceneNarrationSourceText,
+  validateNarrationRebuildSources,
 } from "./story-narration-rebuild.utils";
-export type { RebuildNarrationResult } from "./story-narration-rebuild.utils";
+export type {
+  NarrationRebuildDiagnostics,
+  NarrationRebuildSourceEntry,
+  NarrationRebuildSourceType,
+  RebuildNarrationResult,
+} from "./story-narration-rebuild.utils";

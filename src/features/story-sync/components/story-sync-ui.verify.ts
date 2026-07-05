@@ -363,6 +363,7 @@ test("structural: editor wires banner, card, and lifecycle hooks", () => {
   assert.match(workspace, /rebuildNarrationFromScenes/);
   assert.match(workspace, /handleUpdateNarration/);
   assert.match(workspace, /applyPendingSceneCaptionDrafts/);
+  assert.match(workspace, /intent: "narration_rebuild"/);
   assert.match(exportPanel, /isStorySyncExportBlocked/);
   assert.match(exportPanel, /STORY_SYNC_EXPORT_BLOCKED_MESSAGE/);
   assert.match(studioSceneInspector, /applyPresentationSceneUpdate/);
@@ -409,11 +410,16 @@ test("structural: editor wires banner, card, and lifecycle hooks", () => {
 
 test("update narration action rebuilds text and clears narration dirty only", () => {
   const prev = buildStory([
-    makeScene("s1", 3),
+    {
+      ...makeScene("s1", 3),
+      captionMode: "subtitles",
+      subtitleText: "Narrated scene one.",
+    },
     {
       ...makeScene("inserted", 3),
+      captionMode: "subtitles",
       narration: undefined,
-      subtitleText: undefined,
+      subtitleText: "Fresh inserted narrated subtitle.",
       subtitle: "Fresh inserted caption.",
     },
   ]);
@@ -424,7 +430,7 @@ test("update narration action rebuilds text and clears narration dirty only", ()
     return;
   }
 
-  assert.match(result.narration, /Fresh inserted caption/);
+  assert.match(result.narration, /Fresh inserted narrated subtitle/);
 
   let state = applyStorySyncEdit(createInitialStorySynchronizationState(), "structural");
   const { kind } = commit(prev, result.script);
@@ -439,6 +445,7 @@ test("update narration noop clears narration dirty via explicit sync edit", () =
     ...buildStory([
       {
         ...makeScene("s1", 3),
+        captionMode: "subtitles",
         subtitleText: "Same line.",
         narration: "Same line.",
       },

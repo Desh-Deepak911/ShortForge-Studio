@@ -37,7 +37,7 @@ import {
   studioSectionTitle,
 } from "@/lib/utils/studioUi";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
-import { applyStoryUpdate, applyPresentationStoryUpdate, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
+import { applyStoryUpdate, applyPresentationStoryUpdate, applyNarrationRebuildStoryUpdate, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
 const SAVE_CONFIRMATION_MS = 3000;
 
@@ -206,10 +206,13 @@ function DraftEditorFlowBody({
       }
 
       const isPresentation = options?.intent === "presentation";
+      const isNarrationRebuild = options?.intent === "narration_rebuild";
       // Single editor sync boundary — patch helpers do not sync.
       const synced = isPresentation
         ? applyPresentationStoryUpdate(baseScript, next)
-        : applyStoryUpdate(baseScript, next);
+        : isNarrationRebuild
+          ? applyNarrationRebuildStoryUpdate(baseScript, next)
+          : applyStoryUpdate(baseScript, next);
       const classification = classifyStoryPatch(baseScript, synced);
       const timelinePolicy = resolveTimelineRebuildPolicy(baseScript, synced, classification);
       const evolutionDebounceMs = resolveStoryEvolutionDebounceMs(classification);
@@ -237,7 +240,9 @@ function DraftEditorFlowBody({
 
       const syncKind = isPresentation
         ? resolvePresentationSyncEditKind(classification)
-        : resolveStorySyncEditKind(baseScript, synced, classification);
+        : isNarrationRebuild
+          ? "narration"
+          : resolveStorySyncEditKind(baseScript, synced, classification);
       if (syncKind) {
         setStorySyncState((current) => applyStorySyncEdit(current, syncKind));
       }

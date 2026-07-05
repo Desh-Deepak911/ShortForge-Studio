@@ -55,7 +55,7 @@ export interface VoiceoverAttachment {
 }
 
 /** Editor commit intent — presentation edits skip story-data sync side effects. */
-export type StoryScriptChangeIntent = "story" | "presentation";
+export type StoryScriptChangeIntent = "story" | "presentation" | "narration_rebuild";
 
 export interface StoryScriptChangeOptions {
   intent?: StoryScriptChangeIntent;
@@ -356,6 +356,30 @@ export function applyPresentationScriptUpdate(
   }
 
   return { ...script, ...patch };
+}
+
+/**
+ * Editor sync boundary for Update Narration commits.
+ * Preserves user-authored subtitleText and written captions — does not re-split
+ * global narration back into per-scene excerpts.
+ */
+export function applyNarrationRebuildStoryUpdate(
+  prev: FootieScript,
+  next: FootieScript,
+): FootieScript {
+  void prev;
+  const coerced = coerceLegacyStoryFields(next);
+  const scenes = normalizeSceneIds(coerced.scenes ?? []).map(normalizeSceneCaptionSettings);
+  const totalDuration = getStoryTotalDuration(scenes);
+  const timelineItems = syncTimelineSceneRefs(
+    scenes,
+    ensureTimelineItems(
+      scenes,
+      coerced.timelineItems?.length ? coerced.timelineItems : prev.timelineItems,
+    ),
+  );
+
+  return { ...coerced, scenes, totalDuration, timelineItems };
 }
 
 /**

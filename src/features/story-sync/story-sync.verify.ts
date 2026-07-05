@@ -36,6 +36,7 @@ import type { FootieScene, FootieScript } from "@/features/story/types";
 import { recalculateSceneTimings } from "@/features/story/utils";
 import {
   applyCaptionModeSwitchUpdate,
+  applyNarrationRebuildStoryUpdate,
   applyPresentationSceneUpdate,
   applyPresentationStoryUpdate,
   applySceneUpdate,
@@ -259,52 +260,75 @@ function buildStory(scenes: FootieScene[], narration = "Original narration."): F
   });
 }
 
-test("inserted scene caption is included in rebuilt narration", () => {
+test("legacy generated scenes still rebuild from narration excerpts", () => {
   const story = buildStory([
     makeScene("s1", 3, { narration: "Opening line." }),
-    makeScene("s2", 3, { subtitle: "Inserted caption line." }),
+    makeScene("s2", 3, { narration: "Second line." }),
   ]);
   const result = rebuildNarrationFromScenes(story);
   assert.equal(result.ok, true);
   if (result.ok) {
-    assert.match(result.narration, /Opening line/);
-    assert.match(result.narration, /Inserted caption line/);
+    assert.equal(result.narration, "Opening line. Second line.");
   }
 });
 
-test("placeholder caption is ignored", () => {
+test("written captions are excluded from spoken text rebuild", () => {
   const story = buildStory([
-    makeScene("s1", 3, { narration: "Keep this." }),
-    makeScene("s2", 3, { subtitle: "Add subtitle..." }),
+    {
+      ...makeScene("s1", 3, { subtitleText: "Narrated one.", subtitle: "Caption one" }),
+      captionMode: "subtitles",
+    },
+    makeScene("s2", 3, { narration: "Spoken from narration.", subtitle: "Visual only caption." }),
   ]);
   const result = rebuildNarrationFromScenes(story);
   assert.equal(result.ok, true);
   if (result.ok) {
-    assert.equal(result.narration, "Keep this.");
+    assert.equal(result.narration, "Narrated one. Spoken from narration.");
+    assert.doesNotMatch(result.narration, /Visual only caption/);
+  }
+});
+
+test("placeholder written caption is ignored when narration exists", () => {
+  const story = buildStory([
+    makeScene("s1", 3, { narration: "Keep this." }),
+    makeScene("s2", 3, { narration: "Also keep this.", subtitle: "Add subtitle..." }),
+  ]);
+  const result = rebuildNarrationFromScenes(story);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.narration, "Keep this. Also keep this.");
     assert.doesNotMatch(result.narration, /Add subtitle/i);
   }
 });
 
 test("inserted scene with subtitleText only is included in rebuilt narration", () => {
   const story = buildStory([
-    makeScene("s1", 3, { narration: "Opening line.", subtitle: "" }),
-    makeScene("s2", 3, { subtitleText: "Inserted narrated subtitle.", subtitle: "" }),
+    {
+      ...makeScene("s1", 3, { subtitleText: "Opening line.", subtitle: "" }),
+      captionMode: "subtitles",
+    },
+    {
+      ...makeScene("s2", 3, { subtitleText: "Inserted narrated subtitle.", subtitle: "" }),
+      captionMode: "subtitles",
+    },
   ]);
   const result = rebuildNarrationFromScenes(story);
   assert.equal(result.ok, true);
   if (result.ok) {
-    assert.match(result.narration, /Opening line/);
-    assert.match(result.narration, /Inserted narrated subtitle/);
+    assert.equal(result.narration, "Opening line. Inserted narrated subtitle.");
   }
 });
 
 test("subtitleText wins over subtitle and narration", () => {
   const story = buildStory([
-    makeScene("s1", 3, {
-      narration: "Stale derived narration.",
-      subtitleText: "Edited narrated subtitle.",
-      subtitle: "Generated caption heading.",
-    }),
+    {
+      ...makeScene("s1", 3, {
+        narration: "Stale derived narration.",
+        subtitleText: "Edited narrated subtitle.",
+        subtitle: "Generated caption heading.",
+      }),
+      captionMode: "subtitles",
+    },
   ]);
   const result = rebuildNarrationFromScenes(story);
   assert.equal(result.ok, true);
@@ -315,11 +339,14 @@ test("subtitleText wins over subtitle and narration", () => {
 
 test("stale scene narration loses to edited subtitleText", () => {
   const story = buildStory([
-    makeScene("s1", 3, {
-      narration: "Old voiceover excerpt.",
-      subtitleText: "User edited spoken text.",
-      subtitle: "On-screen caption.",
-    }),
+    {
+      ...makeScene("s1", 3, {
+        narration: "Old voiceover excerpt.",
+        subtitleText: "User edited spoken text.",
+        subtitle: "On-screen caption.",
+      }),
+      captionMode: "subtitles",
+    },
   ]);
   const result = rebuildNarrationFromScenes(story);
   assert.equal(result.ok, true);
@@ -349,8 +376,14 @@ test("scene order preserved in rebuilt narration", () => {
 
 test("script settings images and audio preserved", () => {
   const story = buildStory([
-    makeScene("s1", 5, { narration: "Line one." }),
-    makeScene("s2", 7, { subtitleText: "Line two." }),
+    {
+      ...makeScene("s1", 5, { subtitleText: "Line one.", subtitle: "" }),
+      captionMode: "subtitles",
+    },
+    {
+      ...makeScene("s2", 7, { subtitleText: "Line two.", subtitle: "" }),
+      captionMode: "subtitles",
+    },
   ]);
   const result = rebuildNarrationFromScenes(story);
   assert.equal(result.ok, true);
@@ -386,11 +419,16 @@ test("no usable text does not clear existing narration", () => {
 });
 
 test("update narration clears narrationDirty and keeps voiceDirty", () => {
-  // After insert, scenes already include the new caption; global narration is still stale.
   const prev = buildStory(
     [
-      makeScene("s1", 3, { narration: "Old." }),
-      makeScene("s2", 3, { subtitle: "New inserted caption." }),
+      {
+        ...makeScene("s1", 3, { subtitleText: "Old narrated one.", subtitle: "" }),
+        captionMode: "subtitles",
+      },
+      {
+        ...makeScene("s2", 3, { subtitleText: "New narrated two.", subtitle: "" }),
+        captionMode: "subtitles",
+      },
     ],
     "Stale global narration.",
   );
@@ -404,7 +442,7 @@ test("update narration clears narrationDirty and keeps voiceDirty", () => {
     return;
   }
 
-  const synced = applyStoryUpdate(prev, rebuilt.script);
+  const synced = applyNarrationRebuildStoryUpdate(prev, rebuilt.script);
   const classification = classifyStoryPatch(prev, synced);
   const kind = resolveStorySyncEditKind(prev, synced, classification);
   assert.equal(kind, "narration");
@@ -429,7 +467,8 @@ test("update narration does not trigger voice generation", () => {
     join(process.cwd(), "src/hooks/useStoryVoiceoverApply.ts"),
     "utf8",
   );
-  assert.doesNotMatch(rebuildSource, /generate-voiceover|applyVoiceoverRegeneration|applyVoiceoverChanges/);
+  assert.doesNotMatch(rebuildSource, /generate-voiceover|applyVoiceoverRegeneration/);
+  assert.match(voiceHook, /applyVoiceoverChanges/);
   assert.match(workspace, /rebuildNarrationFromScenes/);
   assert.match(workspace, /applyPendingSceneCaptionDrafts/);
   assert.match(voiceHook, /baseline\.narration\.trim\(\)/);
@@ -445,8 +484,14 @@ test("update narration does not trigger voice generation", () => {
 test("pending caption drafts flush into narration rebuild", () => {
   resetSceneCaptionDraftRegistryForTests();
   const story = buildStory([
-    makeScene("s1", 3, { narration: "Opening.", subtitle: "" }),
-    makeScene("s2", 3, { subtitle: "Add subtitle...", subtitleText: undefined }),
+    {
+      ...makeScene("s1", 3, { subtitleText: "Opening.", subtitle: "" }),
+      captionMode: "subtitles",
+    },
+    {
+      ...makeScene("s2", 3, { subtitle: "Add subtitle...", subtitleText: undefined }),
+      captionMode: "subtitles",
+    },
   ]);
 
   registerPendingSceneCaptionDraft("s2", {
@@ -464,7 +509,7 @@ test("pending caption drafts flush into narration rebuild", () => {
   resetSceneCaptionDraftRegistryForTests();
 });
 
-test("resolveSceneNarrationSourceText priority is subtitleText then caption then narration", () => {
+test("resolveSceneNarrationSourceText priority is subtitleText then narration only", () => {
   const scene = makeScene("s1", 3, {
     narration: "Derived narration.",
     subtitleText: "Spoken subtitle text.",
@@ -473,11 +518,11 @@ test("resolveSceneNarrationSourceText priority is subtitleText then caption then
   assert.equal(resolveSceneNarrationSourceText(scene), "Spoken subtitle text.");
 
   const captionOnly = makeScene("s2", 3, {
-    narration: "Derived narration.",
+    narration: undefined,
     subtitle: "Caption only.",
     subtitleText: undefined,
   });
-  assert.equal(resolveSceneNarrationSourceText(captionOnly), "Caption only.");
+  assert.equal(resolveSceneNarrationSourceText(captionOnly), null);
 
   const narrationFallback = makeScene("s3", 3, {
     narration: "Fallback narration.",
@@ -739,7 +784,12 @@ test("user subtitleText edit after full sync dirties narration again", () => {
 
 test("update narration noop clears narrationDirty when rebuilt text is unchanged", () => {
   const prev = buildStory(
-    [makeScene("s1", 3, { subtitleText: "Same spoken line.", narration: "Same spoken line." })],
+    [
+      {
+        ...makeScene("s1", 3, { subtitleText: "Same spoken line.", narration: "Same spoken line." }),
+        captionMode: "subtitles",
+      },
+    ],
     "Same spoken line.",
   );
   let state = applyStorySyncEdit(createInitialStorySynchronizationState(), "spoken_text");
@@ -752,7 +802,7 @@ test("update narration noop clears narrationDirty when rebuilt text is unchanged
   }
   assert.equal(rebuilt.script.narration, prev.narration);
 
-  const synced = applyStoryUpdate(prev, rebuilt.script);
+  const synced = applyNarrationRebuildStoryUpdate(prev, rebuilt.script);
   const kind = resolveStorySyncEditKind(prev, synced, classifyStoryPatch(prev, synced));
   assert.equal(kind, null);
 

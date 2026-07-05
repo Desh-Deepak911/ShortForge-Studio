@@ -4,9 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getAudioEngine, getCanonicalVoiceover } from "@/features/audio";
 import { embedVoiceoverBlobInScript, type DraftPersistedScript } from "@/features/drafts";
+import { hasManualSceneDuration } from "@/features/timeline-intelligence/editor-scene-timing-authority.utils";
 import { getStoryVoiceSettings } from "@/features/story/utils";
 import type { FootieScript } from "@/features/story/types";
 import {
+  applyVoiceoverChanges as applyVoiceoverChangesToScript,
   applyVoiceoverRegeneration,
   resolveVoiceoverDurationFromBlob,
 } from "@/lib/utils/voiceover";
@@ -127,14 +129,16 @@ export function useStoryVoiceoverApply(
       const previousVoiceoverUrl = getCanonicalVoiceover(baseline)?.url;
 
       const withEmbeddedVoiceover = await embedVoiceoverBlobInScript(baseline, audioBlob);
+      const attachment = {
+        voiceoverUrl: pendingVoiceoverUrl,
+        voiceoverDurationMs,
+        voiceSettings,
+      };
+      const applyVoiceoverCommit = hasManualSceneDuration(baseline.scenes)
+        ? applyVoiceoverRegeneration
+        : applyVoiceoverChangesToScript;
 
-      onScriptChange(
-        applyVoiceoverRegeneration(withEmbeddedVoiceover, {
-          voiceoverUrl: pendingVoiceoverUrl,
-          voiceoverDurationMs,
-          voiceSettings,
-        }),
-      );
+      onScriptChange(applyVoiceoverCommit(withEmbeddedVoiceover, attachment));
 
       audioEngine.handleVoiceoverReplacement({
         previousUrl: previousVoiceoverUrl,
