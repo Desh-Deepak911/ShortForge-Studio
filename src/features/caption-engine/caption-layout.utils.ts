@@ -1,15 +1,50 @@
 import type { CSSProperties } from "react";
 
-import type { CaptionLayout, CaptionLayoutPosition, FootieScene, FootieScript } from "@/features/story/types";
+import {
+  CAPTION_LAYOUT_REFERENCE_HEIGHT,
+  CAPTION_LAYOUT_REFERENCE_WIDTH,
+  DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
+  DEFAULT_PREVIEW_CAPTION_BACKGROUND_OPACITY,
+  LEGACY_BOTTOM_CENTER_Y_PERCENT,
+  mergeCaptionLayoutSettings,
+  resolveCaptionBackgroundAlpha,
+  resolveCaptionLayout as resolveCaptionLayoutEngine,
+  type CaptionLayout,
+  type CaptionLayoutResolveInput,
+  type CaptionResolvedLayout,
+} from "@/features/caption-layout";
+import type { FootieScene, FootieScript } from "@/features/story/types";
 
-/** Matches export `height - 320 * scale` on a 1920px-tall frame. */
-export const DEFAULT_CAPTION_LAYOUT_BOTTOM_Y_PERCENT = 83.33;
+export type {
+  CaptionAnchor,
+  CaptionLayout,
+  CaptionResolvedLayout,
+} from "@/features/caption-layout";
 
-export const DEFAULT_PREVIEW_CAPTION_BACKGROUND_OPACITY = 65;
-export const DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY = 45;
+export {
+  buildSceneCaptionLayoutPatch,
+  CAPTION_ANCHORS,
+  CAPTION_LAYOUT_REFERENCE_HEIGHT,
+  CAPTION_LAYOUT_REFERENCE_WIDTH,
+  clampCaptionMaxWidthPercent,
+  clampCaptionOffsetPercent,
+  DEFAULT_CAPTION_LAYOUT,
+  DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
+  DEFAULT_PREVIEW_CAPTION_BACKGROUND_OPACITY,
+  LEGACY_BOTTOM_CENTER_Y_PERCENT,
+  mergeCaptionLayoutSettings,
+  normalizeCaptionAnchor,
+} from "@/features/caption-layout";
 
-export type CaptionLayoutTextAlign = "center" | "left";
+/** Alias for legacy tests — matches export bottom anchor constant name. */
+export const DEFAULT_CAPTION_LAYOUT_BOTTOM_Y_PERCENT = LEGACY_BOTTOM_CENTER_Y_PERCENT;
 
+/** @deprecated Legacy position alias — use `CaptionAnchor`. */
+export type CaptionLayoutPosition = "bottom" | "center" | "top" | "top_left" | "custom";
+
+export type CaptionLayoutTextAlign = "center" | "left" | "right";
+
+/** @deprecated Adapter shape for legacy UI/tests — derived from engine settings. */
 export interface ResolvedCaptionLayout {
   position: CaptionLayoutPosition;
   xPercent: number;
@@ -17,37 +52,33 @@ export interface ResolvedCaptionLayout {
   backgroundOpacityPercent: number | null;
   textAlign: CaptionLayoutTextAlign;
   usesLegacyBottomPlacement: boolean;
+  anchor: CaptionResolvedLayout["anchor"];
 }
-
-const CAPTION_LAYOUT_POSITIONS = new Set<CaptionLayoutPosition>([
-  "bottom",
-  "center",
-  "top",
-  "top_left",
-  "custom",
-]);
-
-const CAPTION_LAYOUT_PRESETS: Record<
-  Exclude<CaptionLayoutPosition, "custom">,
-  Pick<ResolvedCaptionLayout, "xPercent" | "yPercent" | "textAlign">
-> = {
-  bottom: { xPercent: 50, yPercent: DEFAULT_CAPTION_LAYOUT_BOTTOM_Y_PERCENT, textAlign: "center" },
-  center: { xPercent: 50, yPercent: 52, textAlign: "center" },
-  top: { xPercent: 50, yPercent: 15, textAlign: "center" },
-  top_left: { xPercent: 12, yPercent: 15, textAlign: "left" },
-};
 
 export function normalizeCaptionLayoutPosition(value: unknown): CaptionLayoutPosition {
   if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase() as CaptionLayoutPosition;
-    if (CAPTION_LAYOUT_POSITIONS.has(normalized)) {
-      return normalized;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "bottom" || normalized === "bottom_center") {
+      return "bottom";
+    }
+    if (normalized === "center") {
+      return "center";
+    }
+    if (normalized === "top" || normalized === "top_center") {
+      return "top";
+    }
+    if (normalized === "top_left") {
+      return "top_left";
+    }
+    if (normalized === "custom") {
+      return "custom";
     }
   }
 
   return "bottom";
 }
 
+/** @deprecated Use `clampCaptionOffsetPercent`. */
 export function clampCaptionLayoutPercent(value: number | undefined, fallback: number): number {
   if (value == null || !Number.isFinite(value)) {
     return fallback;
@@ -63,55 +94,70 @@ export function hasCaptionLayoutOverride(
   return Boolean(scene.captionLayout ?? script?.defaultCaptionLayout);
 }
 
+function anchorToLegacyPosition(anchor: CaptionResolvedLayout["anchor"]): CaptionLayoutPosition {
+  switch (anchor) {
+    case "bottom_center":
+    case "bottom_left":
+    case "bottom_right":
+      return "bottom";
+    case "center":
+      return "center";
+    case "top_center":
+      return "top";
+    case "top_left":
+      return "top_left";
+    default:
+      return "bottom";
+  }
+}
+
+function buildResolveInput(
+  scene: Pick<FootieScene, "captionLayout">,
+  script: Pick<FootieScript, "defaultCaptionLayout"> | undefined,
+  canvasWidth: number,
+  canvasHeight: number,
+  scale: number,
+  contentBoxWidth?: number,
+  contentBoxHeight?: number,
+): CaptionLayoutResolveInput {
+  return {
+    sceneLayout: scene.captionLayout,
+    projectLayout: script?.defaultCaptionLayout,
+    canvas: { width: canvasWidth, height: canvasHeight, scale },
+    contentBoxWidth,
+    contentBoxHeight,
+  };
+}
+
+/** Resolves merged settings for UI controls. */
+export function resolveCaptionLayoutSettings(
+  scene: Pick<FootieScene, "captionLayout">,
+  script?: Pick<FootieScript, "defaultCaptionLayout">,
+): CaptionLayout {
+  return mergeCaptionLayoutSettings(scene.captionLayout, script?.defaultCaptionLayout);
+}
+
+/** Legacy adapter — maps engine settings to previous ResolvedCaptionLayout shape. */
 export function resolveCaptionLayout(
   scene: Pick<FootieScene, "captionLayout">,
   script?: Pick<FootieScript, "defaultCaptionLayout">,
 ): ResolvedCaptionLayout {
-  const merged: CaptionLayout = {
-    position: "bottom",
-    ...script?.defaultCaptionLayout,
-    ...scene.captionLayout,
-  };
-
-  const position = normalizeCaptionLayoutPosition(merged.position);
-  const preset =
-    position === "custom"
-      ? CAPTION_LAYOUT_PRESETS.bottom
-      : CAPTION_LAYOUT_PRESETS[position];
-
-  const xPercent =
-    position === "custom"
-      ? clampCaptionLayoutPercent(merged.xPercent, preset.xPercent)
-      : preset.xPercent;
-  const yPercent =
-    position === "custom"
-      ? clampCaptionLayoutPercent(merged.yPercent, preset.yPercent)
-      : preset.yPercent;
-
-  const usesLegacyBottomPlacement =
-    !scene.captionLayout &&
-    !script?.defaultCaptionLayout &&
-    position === "bottom" &&
-    merged.backgroundOpacity == null;
+  const settings = resolveCaptionLayoutSettings(scene, script);
+  const enginePreview = resolveCaptionLayoutEngine(
+    buildResolveInput(scene, script, CAPTION_LAYOUT_REFERENCE_WIDTH, CAPTION_LAYOUT_REFERENCE_HEIGHT, 1),
+  );
 
   return {
-    position,
-    xPercent,
-    yPercent,
-    backgroundOpacityPercent:
-      merged.backgroundOpacity == null
-        ? null
-        : clampCaptionLayoutPercent(
-            merged.backgroundOpacity,
-            DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
-          ),
-    textAlign: preset.textAlign,
-    usesLegacyBottomPlacement,
+    position: anchorToLegacyPosition(enginePreview.anchor),
+    xPercent: 50 + ((settings.offsetX ?? 0) / CAPTION_LAYOUT_REFERENCE_WIDTH) * 100,
+    yPercent:
+      LEGACY_BOTTOM_CENTER_Y_PERCENT +
+      ((settings.offsetY ?? 0) / CAPTION_LAYOUT_REFERENCE_HEIGHT) * 100,
+    backgroundOpacityPercent: settings.backgroundOpacity ?? null,
+    textAlign: settings.textAlign ?? "center",
+    usesLegacyBottomPlacement: enginePreview.usesLegacyBottomCenter,
+    anchor: enginePreview.anchor,
   };
-}
-
-export function buildSceneCaptionLayoutPatch(layout: CaptionLayout): Pick<FootieScene, "captionLayout"> {
-  return { captionLayout: layout };
 }
 
 export function resolvePreviewCaptionBackgroundOpacity(layout: ResolvedCaptionLayout): number {
@@ -119,7 +165,9 @@ export function resolvePreviewCaptionBackgroundOpacity(layout: ResolvedCaptionLa
     return layout.backgroundOpacityPercent / 100;
   }
 
-  return DEFAULT_PREVIEW_CAPTION_BACKGROUND_OPACITY / 100;
+  return layout.usesLegacyBottomPlacement
+    ? DEFAULT_PREVIEW_CAPTION_BACKGROUND_OPACITY / 100
+    : DEFAULT_PREVIEW_CAPTION_BACKGROUND_OPACITY / 100;
 }
 
 export function resolveExportCaptionBackgroundOpacity(layout: ResolvedCaptionLayout): number {
@@ -130,101 +178,132 @@ export function resolveExportCaptionBackgroundOpacity(layout: ResolvedCaptionLay
   return DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY / 100;
 }
 
-export function resolvePreviewCaptionOverlayStyle(layout: ResolvedCaptionLayout): CSSProperties {
-  if (layout.usesLegacyBottomPlacement) {
+export function resolvePreviewCaptionOverlayStyle(resolved: CaptionResolvedLayout): CSSProperties {
+  if (resolved.usesLegacyBottomCenter) {
     return {};
   }
 
-  const shared: CSSProperties = {
+  const canvasWidth = CAPTION_LAYOUT_REFERENCE_WIDTH;
+  const canvasHeight = CAPTION_LAYOUT_REFERENCE_HEIGHT;
+  const leftPercent = (resolved.x / canvasWidth) * 100;
+  const topPercent = (resolved.y / canvasHeight) * 100;
+  const maxWidthPercent = (resolved.maxWidth / canvasWidth) * 100;
+
+  return {
     pointerEvents: "none",
     position: "absolute",
     zIndex: 10,
     display: "flex",
     boxSizing: "border-box",
-    maxWidth: "100%",
     overflow: "hidden",
-  };
-
-  if (layout.textAlign === "left") {
-    return {
-      ...shared,
-      left: `${layout.xPercent}%`,
-      top: `${layout.yPercent}%`,
-      transform: "translate(0, 0)",
-      justifyContent: "flex-start",
-      width: "auto",
-      maxWidth: "90%",
-    };
-  }
-
-  const translateY =
-    layout.position === "center" ? "-50%" : layout.position === "top" ? "0" : "-100%";
-
-  return {
-    ...shared,
-    left: `${layout.xPercent}%`,
-    top: `${layout.yPercent}%`,
-    transform: `translate(-50%, ${translateY})`,
-    justifyContent: "center",
-    paddingInline: "6%",
+    left: `${leftPercent}%`,
+    top: `${topPercent}%`,
+    maxWidth: `${maxWidthPercent}%`,
     width: "max-content",
-    maxWidth: "90%",
+    justifyContent:
+      resolved.textAlign === "left"
+        ? "flex-start"
+        : resolved.textAlign === "right"
+          ? "flex-end"
+          : "center",
   };
 }
 
-export function resolvePreviewCaptionPillStyle(layout: ResolvedCaptionLayout): CSSProperties {
-  const opacity = resolvePreviewCaptionBackgroundOpacity(layout);
-  if (layout.usesLegacyBottomPlacement) {
+export function resolvePreviewCaptionPillStyle(resolved: CaptionResolvedLayout): CSSProperties {
+  if (resolved.usesLegacyBottomCenter) {
     return {};
   }
 
+  const alpha = resolveCaptionBackgroundAlpha(resolved);
   return {
-    backgroundColor: `rgba(0, 0, 0, ${opacity.toFixed(3)})`,
+    backgroundColor: `rgba(0, 0, 0, ${alpha.toFixed(3)})`,
+    textAlign: resolved.textAlign,
+    width: "100%",
   };
 }
 
 export interface ExportCaptionPlacement {
   centerX: number;
+  boxLeft: number;
+  boxTop: number;
   boxBottomY: number;
+  textAlign: CaptionResolvedLayout["textAlign"];
   backgroundAlpha: number;
 }
 
+export function resolveExportCaptionTextX(
+  textAlign: CaptionResolvedLayout["textAlign"],
+  boxLeft: number,
+  boxWidth: number,
+  padX: number,
+): number {
+  switch (textAlign) {
+    case "left":
+      return boxLeft + padX;
+    case "right":
+      return boxLeft + boxWidth - padX;
+    default:
+      return boxLeft + boxWidth / 2;
+  }
+}
+
+export function resolveEngineCaptionLayout(
+  scene: Pick<FootieScene, "captionLayout">,
+  script: Pick<FootieScript, "defaultCaptionLayout"> | undefined,
+  width: number,
+  height: number,
+  scale: number,
+  contentBoxWidth?: number,
+  contentBoxHeight?: number,
+): CaptionResolvedLayout {
+  return resolveCaptionLayoutEngine(
+    buildResolveInput(scene, script, width, height, scale, contentBoxWidth, contentBoxHeight),
+  );
+}
+
 export function resolveExportCaptionPlacement(
-  layout: ResolvedCaptionLayout,
+  scene: Pick<FootieScene, "captionLayout">,
+  script: Pick<FootieScript, "defaultCaptionLayout"> | undefined,
   width: number,
   height: number,
   scale: number,
   boxWidth: number,
   boxHeight: number,
 ): ExportCaptionPlacement {
-  const backgroundAlpha = resolveExportCaptionBackgroundOpacity(layout);
-
-  if (layout.usesLegacyBottomPlacement) {
-    return {
-      centerX: width / 2,
-      boxBottomY: height - 320 * scale,
-      backgroundAlpha,
-    };
-  }
-
-  const centerX =
-    layout.textAlign === "left"
-      ? width * (layout.xPercent / 100) + boxWidth / 2
-      : width * (layout.xPercent / 100);
-  const anchorY = height * (layout.yPercent / 100);
-
-  let boxBottomY: number;
-  if (layout.position === "center") {
-    boxBottomY = anchorY + boxHeight / 2;
-  } else if (layout.position === "top" || layout.position === "top_left") {
-    boxBottomY = anchorY + boxHeight;
-  } else {
-    boxBottomY = anchorY;
-  }
+  const resolved = resolveEngineCaptionLayout(
+    scene,
+    script,
+    width,
+    height,
+    scale,
+    boxWidth,
+    boxHeight,
+  );
 
   return {
-    centerX,
-    boxBottomY,
-    backgroundAlpha,
+    centerX: resolved.centerX,
+    boxLeft: resolved.x,
+    boxTop: resolved.boxTopY,
+    boxBottomY: resolved.boxBottomY,
+    textAlign: resolved.textAlign,
+    backgroundAlpha: resolveCaptionBackgroundAlpha(resolved),
   };
+}
+
+/** Resolves caption layout for preview overlays on the reference canvas. */
+export function resolvePreviewCaptionLayout(
+  scene: Pick<FootieScene, "captionLayout">,
+  script?: Pick<FootieScript, "defaultCaptionLayout">,
+  contentBoxWidth?: number,
+  contentBoxHeight?: number,
+): CaptionResolvedLayout {
+  return resolveEngineCaptionLayout(
+    scene,
+    script,
+    CAPTION_LAYOUT_REFERENCE_WIDTH,
+    CAPTION_LAYOUT_REFERENCE_HEIGHT,
+    1,
+    contentBoxWidth,
+    contentBoxHeight,
+  );
 }

@@ -22,6 +22,7 @@ import {
   CaptionLayoutControl,
   CaptionPresetPanel,
 } from "@/features/caption-engine";
+import { CaptionLayoutWorkflow } from "@/features/caption-layout-workflow";
 import SubtitleEffectControl from "@/features/editor/components/SubtitleEffectControl";
 import TransitionCard from "@/features/editor/components/TransitionCard";
 import SmartEditImageAction, {
@@ -63,7 +64,6 @@ import {
 import {
   applyCaptionModeSwitchUpdate,
   applyPresentationSceneUpdate,
-  applyPresentationScriptUpdate,
   applyResetSceneImageSettings,
   applySceneImageSettings,
   applySceneUpdate,
@@ -297,6 +297,13 @@ export default function StudioSceneInspector({
       });
     },
     [onScriptChange, script],
+  );
+
+  const commitPresentationScript = useCallback(
+    (nextScript: FootieScript) => {
+      onScriptChange(nextScript, { intent: "presentation" });
+    },
+    [onScriptChange],
   );
 
   const commitScenePatch = useCallback(
@@ -568,22 +575,30 @@ export default function StudioSceneInspector({
       </InspectorSection>
 
       <InspectorSection
+        title="Caption Layout"
+        description="Anchor, alignment, spacing, and safe area."
+        open={inspectorImageEditing ? false : undefined}
+      >
+        <CaptionLayoutControl
+          scene={scene}
+          script={script}
+          onSceneLayoutChange={(patch) => commitPresentationPatch(scene.id, patch)}
+        />
+        <CaptionLayoutWorkflow
+          scene={scene}
+          script={script}
+          sceneIndex={safeIndex}
+          onSceneLayoutChange={(patch) => commitPresentationPatch(scene.id, patch)}
+          onScriptPresentationChange={commitPresentationScript}
+        />
+      </InspectorSection>
+
+      <InspectorSection
         title="Captions"
         description="On-screen text and subtitle style."
         open={inspectorImageEditing ? false : undefined}
       >
         <CaptionModeControl value={captionMode} onChange={handleCaptionModeChange} />
-
-        <CaptionLayoutControl
-          scene={scene}
-          script={script}
-          onSceneLayoutChange={(patch) => commitPresentationPatch(scene.id, patch)}
-          onProjectLayoutChange={(layout) =>
-            onScriptChange(applyPresentationScriptUpdate(script, { defaultCaptionLayout: layout }), {
-              intent: "presentation",
-            })
-          }
-        />
 
         {isSubtitlesMode ? (
           <>

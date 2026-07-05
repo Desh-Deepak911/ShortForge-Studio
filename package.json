@@ -34,7 +34,7 @@
     "test:voice-preview": "tsx src/features/voice-preview/voice-preview.verify.ts",
     "test:speech-style": "tsx src/features/speech-style/speech-style.verify.ts",
     "test:caption-engine": "tsx src/features/caption-engine/caption-engine.verify.ts",
-    "test:caption-layout": "tsx src/features/caption-engine/caption-layout.verify.ts",
+    "test:caption-layout": "tsx src/features/caption-layout/caption-layout.verify.ts && tsx src/features/caption-engine/caption-layout.verify.ts && tsx src/features/caption-layout-drag/caption-layout-drag.verify.ts && tsx src/features/caption-layout-workflow/caption-layout-workflow.verify.ts",
     "test:creator-templates": "tsx src/features/creator-templates/creator-template.verify.ts",
     "test:transitions-scope": "tsx src/verification/timeline/transitionsScope.verify.ts",
     "test:transition-overlay": "tsx src/verification/timeline/transitionOverlay.verify.ts",

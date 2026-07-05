@@ -1,6 +1,6 @@
-import type { ResolvedCaptionLayout } from "@/features/caption-engine/caption-layout.utils";
-import { resolveExportCaptionPlacement } from "@/features/caption-engine/caption-layout.utils";
+import { resolveExportCaptionPlacement, resolveExportCaptionTextX } from "@/features/caption-engine/caption-layout.utils";
 import type { ExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
+import type { FootieScene, FootieScript } from "@/features/story/types";
 import {
   applyExportCaptionTextDrawState,
   resetExportCaptionTextDrawState,
@@ -43,7 +43,8 @@ export interface DrawExportSubtitlesCaptionOptions {
   height: number;
   scale: number;
   display: ExportSubtitleDisplay;
-  layout: ResolvedCaptionLayout;
+  scene: Pick<FootieScene, "captionLayout">;
+  script?: Pick<FootieScript, "defaultCaptionLayout">;
 }
 
 const SUBTITLE_FONT_SIZE = 64;
@@ -117,7 +118,7 @@ function roundRectPath(
 
 function drawSubtitleBox(
   ctx: CanvasRenderingContext2D,
-  centerX: number,
+  boxLeft: number,
   topY: number,
   boxWidth: number,
   boxHeight: number,
@@ -132,7 +133,7 @@ function drawSubtitleBox(
   ctx.lineWidth = Math.max(1, scale);
   roundRectPath(
     ctx,
-    centerX - boxWidth / 2,
+    boxLeft,
     topY,
     boxWidth,
     boxHeight,
@@ -354,7 +355,8 @@ function drawWrappedSubtitleBlock(
   scale: number,
   opacity: number,
   yOffset: number,
-  layout: ResolvedCaptionLayout,
+  scene: Pick<FootieScene, "captionLayout">,
+  script: Pick<FootieScript, "defaultCaptionLayout"> | undefined,
   display?: ExportSubtitleDisplay,
   fontScale = 1,
 ): void {
@@ -420,15 +422,17 @@ function drawWrappedSubtitleBlock(
     exportStyle,
     scale,
   );
-  const placement = resolveExportCaptionPlacement(layout, width, height, scale, boxWidth, boxHeight);
+  const placement = resolveExportCaptionPlacement(scene, script, width, height, scale, boxWidth, boxHeight);
   const centerX = placement.centerX;
+  const boxLeft = placement.boxLeft;
   const boxTop = placement.boxBottomY - boxHeight + yOffset;
   const textTopY = boxTop + metrics.padY;
   const blockCenterY = boxTop + boxHeight / 2;
+  const textX = resolveExportCaptionTextX(placement.textAlign, boxLeft, boxWidth, metrics.padX);
   const useHighlightLines = display?.effect === "highlight";
 
   if (!useHighlightLines) {
-    drawSubtitleBox(ctx, centerX, boxTop, boxWidth, boxHeight, scale, opacity, placement.backgroundAlpha);
+    drawSubtitleBox(ctx, boxLeft, boxTop, boxWidth, boxHeight, scale, opacity, placement.backgroundAlpha);
   }
 
   ctx.save();
@@ -463,8 +467,8 @@ function drawWrappedSubtitleBlock(
     } else {
       applyExportCaptionTextDrawState(ctx, metrics.fontSize, exportStyle, scale);
       ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "center";
-      ctx.fillText(line, centerX, lineY);
+      ctx.textAlign = placement.textAlign;
+      ctx.fillText(line, textX, lineY);
       resetExportCaptionTextDrawState(ctx);
     }
   }
@@ -480,7 +484,8 @@ function drawActiveChunkLines(
   scale: number,
   captionOpacity: number,
   captionYOffset: number,
-  layout: ResolvedCaptionLayout,
+  scene: Pick<FootieScene, "captionLayout">,
+  script: Pick<FootieScript, "defaultCaptionLayout"> | undefined,
 ): void {
   const fontScale = display.fontScale ?? 1;
   const exportStyle = resolveExportCaptionStyleForDisplay(display);
@@ -494,7 +499,8 @@ function drawActiveChunkLines(
     scale,
     captionOpacity,
     captionYOffset,
-    layout,
+    scene,
+    script,
     display,
     fontScale,
   );
@@ -502,7 +508,7 @@ function drawActiveChunkLines(
 
 /** Draws export subtitles for the single active chunk. */
 export function drawExportSubtitlesCaption(options: DrawExportSubtitlesCaptionOptions): void {
-  const { ctx, width, height, scale, display, layout } = options;
+  const { ctx, width, height, scale, display, scene, script } = options;
   prepareExportSubtitleLayer(ctx);
 
   if (!display.activeChunk.trim()) {
@@ -517,7 +523,7 @@ export function drawExportSubtitlesCaption(options: DrawExportSubtitlesCaptionOp
     captionYOffset = resolveCaptionAnimationTranslateYPx(display.animationState.transform) * scale;
   }
 
-  drawActiveChunkLines(ctx, display, width, height, scale, captionOpacity, captionYOffset, layout);
+  drawActiveChunkLines(ctx, display, width, height, scale, captionOpacity, captionYOffset, scene, script);
   resetExportCanvasDrawState(ctx);
 }
 
@@ -544,7 +550,8 @@ export function drawExportGeneratedCaption(
   width: number,
   height: number,
   scale: number,
-  captionLayout: ResolvedCaptionLayout,
+  scene: Pick<FootieScene, "captionLayout">,
+  script?: Pick<FootieScript, "defaultCaptionLayout">,
 ): void {
   prepareExportSubtitleLayer(ctx);
 
@@ -576,7 +583,8 @@ export function drawExportGeneratedCaption(
     scale,
     1,
     0,
-    captionLayout,
+    scene,
+    script,
     {
       activeChunk: sourceText,
       lines: wrappedLines.slice(0, textLayout.lines.length),

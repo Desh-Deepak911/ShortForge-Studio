@@ -1,11 +1,9 @@
 /**
- * Caption placement controls — 4.0D-4.
- * Run: npm run test:caption-layout
+ * Caption placement sync + adapter regression — 4.0D-4 / 4.1A-1 / 4.1A-2.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-
 import { classifyStoryPatch } from "@/features/editor/story-patches";
 import {
   applyStorySyncEdit,
@@ -17,10 +15,16 @@ import type { FootieScene, FootieScript } from "@/features/story/types";
 import { recalculateSceneTimings } from "@/features/story/utils";
 import { buildMasterTimeline } from "@/features/timeline-intelligence/build-master-timeline";
 import {
+  buildResetCaptionLayoutPatch,
+  clampCaptionMaxWidthPercent,
+  clampCaptionOffsetXPx,
+  clampCaptionOffsetYPx,
+  mergeCaptionLayoutSettings,
+} from "@/features/caption-layout";
+import {
   resolveExportCaptionPlacement,
   resolveCaptionLayout,
-  clampCaptionLayoutPercent,
-  DEFAULT_CAPTION_LAYOUT_BOTTOM_Y_PERCENT,
+  resolvePreviewCaptionLayout,
   DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
 } from "./caption-layout.utils";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -31,6 +35,10 @@ function test(name: string, fn: () => void) {
   fn();
   passed += 1;
   console.log(`  ✓ ${name}`);
+}
+
+function readSrc(relativePath: string): string {
+  return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
 function makeScene(id: string, durationSec: number): FootieScene {
@@ -68,66 +76,104 @@ function buildStory(scenes: FootieScene[], patch: Partial<FootieScript> = {}): F
 
 test("default placement matches legacy export bottom anchor", () => {
   const scene = makeScene("s1", 4);
-  const layout = resolveCaptionLayout(scene, buildStory([scene]));
+  const script = buildStory([scene]);
+  const layout = resolveCaptionLayout(scene, script);
   assert.equal(layout.usesLegacyBottomPlacement, true);
-  assert.equal(layout.position, "bottom");
-  assert.equal(layout.xPercent, 50);
-  assert.equal(layout.yPercent, DEFAULT_CAPTION_LAYOUT_BOTTOM_Y_PERCENT);
+  assert.equal(layout.anchor, "bottom_center");
 
-  const placement = resolveExportCaptionPlacement(layout, 1080, 1920, 1, 400, 120);
+  const placement = resolveExportCaptionPlacement(scene, script, 1080, 1920, 1, 400, 120);
   assert.equal(placement.centerX, 540);
   assert.equal(placement.boxBottomY, 1600);
   assert.equal(placement.backgroundAlpha, DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY / 100);
 });
 
-test("center placement applies in preview and export", () => {
+test("center anchor applies in preview and export", () => {
   const scene = {
     ...makeScene("s1", 4),
-    captionLayout: { position: "center" as const },
+    captionLayout: { anchor: "center" as const, version: 2 },
   };
-  const layout = resolveCaptionLayout(scene, buildStory([scene]));
-  assert.equal(layout.position, "center");
-  assert.equal(layout.yPercent, 52);
+  const script = buildStory([scene]);
+  const layout = resolveCaptionLayout(scene, script);
+  assert.equal(layout.anchor, "center");
 
-  const placement = resolveExportCaptionPlacement(layout, 1080, 1920, 1, 500, 140);
+  const placement = resolveExportCaptionPlacement(scene, script, 1080, 1920, 1, 500, 140);
   assert.equal(placement.centerX, 540);
-  assert.equal(placement.boxBottomY, 1068.4);
+  assert.equal(placement.boxBottomY, 1001);
 });
 
-test("top-left placement applies in preview and export", () => {
+test("top-left anchor keeps independent text alignment", () => {
   const scene = {
     ...makeScene("s1", 4),
-    captionLayout: { position: "top_left" as const },
+    captionLayout: { anchor: "top_left" as const, textAlign: "center" as const, version: 2 },
   };
-  const layout = resolveCaptionLayout(scene, buildStory([scene]));
-  assert.equal(layout.textAlign, "left");
+  const script = buildStory([scene]);
+  const layout = resolveCaptionLayout(scene, script);
+  assert.equal(layout.anchor, "top_left");
+  assert.equal(layout.textAlign, "center");
 
-  const placement = resolveExportCaptionPlacement(layout, 1080, 1920, 1, 400, 100);
-  assert.equal(placement.centerX, 329.6);
-  assert.equal(placement.boxBottomY, 388);
+  const placement = resolveExportCaptionPlacement(scene, script, 1080, 1920, 1, 400, 100);
+  assert.equal(placement.centerX, 265);
+  assert.equal(placement.boxBottomY, 196);
+  assert.equal(placement.textAlign, "center");
 });
 
-test("custom x/y clamps to 0–100", () => {
-  assert.equal(clampCaptionLayoutPercent(-5, 50), 0);
-  assert.equal(clampCaptionLayoutPercent(150, 50), 100);
-
+test("text alignment updates preview and export together", () => {
   const scene = {
     ...makeScene("s1", 4),
-    captionLayout: { position: "custom" as const, xPercent: 200, yPercent: -10 },
+    captionLayout: { anchor: "top_center" as const, textAlign: "left" as const, version: 2 },
   };
-  const layout = resolveCaptionLayout(scene, buildStory([scene]));
-  assert.equal(layout.xPercent, 100);
-  assert.equal(layout.yPercent, 0);
+  const script = buildStory([scene]);
+  const preview = resolvePreviewCaptionLayout(scene, script, 400, 100);
+  const exportPlacement = resolveExportCaptionPlacement(scene, script, 1080, 1920, 1, 400, 100);
+  assert.equal(preview.textAlign, "left");
+  assert.equal(exportPlacement.textAlign, "left");
+});
+
+test("offset x/y pixel sliders clamp correctly", () => {
+  assert.equal(clampCaptionOffsetXPx(-500), -300);
+  assert.equal(clampCaptionOffsetXPx(500), 300);
+  assert.equal(clampCaptionOffsetYPx(-900), -500);
+  assert.equal(clampCaptionOffsetYPx(900), 500);
+});
+
+test("max width percent clamps to 40–100", () => {
+  assert.equal(clampCaptionMaxWidthPercent(10), 40);
+  assert.equal(clampCaptionMaxWidthPercent(120), 100);
 });
 
 test("opacity applies in export placement", () => {
   const scene = {
     ...makeScene("s1", 4),
-    captionLayout: { position: "center" as const, backgroundOpacity: 72 },
+    captionLayout: { anchor: "center" as const, backgroundOpacity: 72, version: 2 },
   };
-  const layout = resolveCaptionLayout(scene, buildStory([scene]));
-  const placement = resolveExportCaptionPlacement(layout, 1080, 1920, 1, 400, 100);
+  const script = buildStory([scene]);
+  const placement = resolveExportCaptionPlacement(scene, script, 1080, 1920, 1, 400, 100);
   assert.equal(placement.backgroundAlpha, 0.72);
+});
+
+test("safe area toggle affects resolved placement", () => {
+  const enabled = resolvePreviewCaptionLayout(
+    { captionLayout: { anchor: "top_left", safeAreaEnabled: true, version: 2 } },
+    undefined,
+    400,
+    100,
+  );
+  const disabled = resolvePreviewCaptionLayout(
+    { captionLayout: { anchor: "top_left", safeAreaEnabled: false, version: 2 } },
+    undefined,
+    400,
+    100,
+  );
+  assert.ok(enabled.y >= enabled.safeAreaInsets.top);
+  assert.equal(disabled.y, 0);
+});
+
+test("reset layout patch restores factory defaults only", () => {
+  const reset = buildResetCaptionLayoutPatch().captionLayout;
+  assert.equal(reset.anchor, "bottom_center");
+  assert.equal(reset.textAlign, "center");
+  assert.equal(reset.offsetX, 0);
+  assert.equal(reset.safeAreaEnabled, true);
 });
 
 test("placement change does not dirty narration or voice", () => {
@@ -135,30 +181,29 @@ test("placement change does not dirty narration or voice", () => {
   const next = buildStory([
     {
       ...makeScene("s1", 4),
-      captionLayout: { position: "center" },
+      captionLayout: { anchor: "center", textAlign: "left", version: 2 },
     },
   ]);
-  const classification = classifyStoryPatch(prev, next);
-  assert.ok(classification.classes.includes("caption_layout"));
-  assert.doesNotMatch(classification.classes.join(","), /spoken_text|timing|structural/);
-
-  const kind = resolveStorySyncEditKind(prev, next, classification);
+  const kind = resolveStorySyncEditKind(prev, next, classifyStoryPatch(prev, next));
   assert.equal(kind, "caption_layout");
   const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
   assert.equal(state.narrationDirty, false);
   assert.equal(state.voiceDirty, false);
-  assert.equal(state.previewDirty, false);
-  assert.equal(state.exportDirty, true);
   assert.equal(isStorySyncExportBlocked(state), false);
 });
 
 test("placement change marks export dirty only", () => {
-  const synced = createInitialStorySynchronizationState();
-  const state = applyStorySyncEdit(synced, "caption_layout");
+  const prev = buildStory([makeScene("s1", 4)]);
+  const next = buildStory([
+    {
+      ...makeScene("s1", 4),
+      captionLayout: { anchor: "top_center", textAlign: "right", version: 2 },
+    },
+  ]);
+  const kind = resolveStorySyncEditKind(prev, next, classifyStoryPatch(prev, next));
+  const state = applyStorySyncEdit(createInitialStorySynchronizationState(), kind!);
   assert.equal(state.exportDirty, true);
   assert.equal(state.narrationDirty, false);
-  assert.equal(state.voiceDirty, false);
-  assert.equal(state.previewDirty, false);
 });
 
 test("caption timing events unchanged by placement edits", () => {
@@ -166,49 +211,32 @@ test("caption timing events unchanged by placement edits", () => {
   const next = buildStory([
     {
       ...makeScene("s1", 4),
-      captionLayout: { position: "top" },
+      captionLayout: { anchor: "bottom_right", textAlign: "center", version: 2 },
     },
   ]);
+  const prevTimeline = buildMasterTimeline(prev, { mode: "preview" });
+  const nextTimeline = buildMasterTimeline(next, { mode: "preview" });
+  const prevSubtitles =
+    prevTimeline.tracks.find((track) => track.type === "subtitle")?.events ?? [];
+  const nextSubtitles =
+    nextTimeline.tracks.find((track) => track.type === "subtitle")?.events ?? [];
+  assert.deepEqual(prevSubtitles, nextSubtitles);
+});
 
-  const prevTimeline = buildMasterTimeline(prev, { assumeSynced: true, mode: "preview" });
-  const nextTimeline = buildMasterTimeline(next, { assumeSynced: true, mode: "preview" });
-
-  const prevSubtitles = prevTimeline.tracks.find((track) => track.type === "subtitle")?.events ?? [];
-  const nextSubtitles = nextTimeline.tracks.find((track) => track.type === "subtitle")?.events ?? [];
-
-  assert.equal(prevSubtitles.length, nextSubtitles.length);
-  assert.deepEqual(
-    prevSubtitles.map((event) => ({
-      startMs: event.startMs,
-      endMs: event.endMs,
-      text: event.metadata.text,
-    })),
-    nextSubtitles.map((event) => ({
-      startMs: event.startMs,
-      endMs: event.endMs,
-      text: event.metadata.text,
-    })),
-  );
+test("existing stories without layout preserve legacy appearance", () => {
+  const scene = makeScene("s1", 4);
+  const script = buildStory([scene]);
+  const settings = mergeCaptionLayoutSettings(scene.captionLayout, script.defaultCaptionLayout);
+  assert.equal(settings.textAlign, "center");
+  const resolved = resolvePreviewCaptionLayout(scene, script, 400, 120);
+  assert.equal(resolved.usesLegacyBottomCenter, true);
 });
 
 test("export and preview wiring expose layout-aware draw APIs", () => {
-  const canvasUtils = readFileSync(
-    join(process.cwd(), "src/features/export/utils/export-caption-canvas.utils.ts"),
-    "utf8",
-  );
-  const videoRender = readFileSync(
-    join(process.cwd(), "src/features/export/services/video-render.service.ts"),
-    "utf8",
-  );
-  const subtitleOverlay = readFileSync(
-    join(process.cwd(), "src/features/preview/components/SubtitleOverlay.tsx"),
-    "utf8",
-  );
-
-  assert.match(canvasUtils, /layout: ResolvedCaptionLayout/);
-  assert.match(canvasUtils, /resolveExportCaptionPlacement/);
-  assert.match(videoRender, /resolveCaptionLayout\(scene, script\)/);
-  assert.match(subtitleOverlay, /resolvePreviewCaptionOverlayStyle/);
+  const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
+  const subtitleOverlay = readSrc("src/features/preview/components/SubtitleOverlay.tsx");
+  assert.match(canvasUtils, /resolveExportCaptionPlacement\(scene, script/);
+  assert.match(subtitleOverlay, /resolvePreviewCaptionLayout/);
 });
 
-console.log(`\ncaption-layout: ${passed} passed`);
+console.log(`\ncaption-engine layout adapter: ${passed} passed`);

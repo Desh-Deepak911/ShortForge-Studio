@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
+import { formatCaptionLayoutDiagnosticsForDev } from "@/features/caption-layout/caption-layout-diagnostics.dev.utils";
 import type { FootieScript } from "@/features/story/types";
 import { studioGhostButton, studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
 
@@ -166,6 +167,15 @@ export default function TimelineDeveloperView({ script }: TimelineDeveloperViewP
           title="Timeline optimizer"
           warnings={snapshot.optimizerFindings}
         />
+
+        <DevSection title="Caption layout (scene 1)">
+          <DevPre
+            value={formatCaptionLayoutDiagnosticsForDev(
+              script.scenes[0] ?? { captionLayout: undefined },
+              script,
+            )}
+          />
+        </DevSection>
 
         <DevSection title="Full diagnostics">
           <DevPre value={formatTimelineDevDiagnosticsForDev(snapshot)} />

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import EditorCanvasEditLayer from "@/features/editor/components/EditorCanvasEditLayer";
+import { isCaptionDragEnabled } from "@/features/caption-layout-drag";
 import { useEditorSelection } from "@/features/editor/selection";
 import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
 import PreviewFrame, { DynamicIsland, PreviewDeviceFrame } from "@/features/preview/components/PreviewFrame";
@@ -42,6 +43,8 @@ interface VideoPreviewProps {
   canvasEditBlocked?: boolean;
   onSceneImageTransformChange?: (sceneId: string, patch: SceneImageTransformPatch) => void;
   onSceneImageReset?: (sceneId: string) => void;
+  onCaptionLayoutOffsetCommit?: (sceneId: string, offsetX: number, offsetY: number) => void;
+  onCaptionLayoutReset?: (sceneId: string) => void;
   /** Publishes preview clock snapshots for timeline playhead — does not affect playback. */
   onClockUpdate?: (snapshot: TimelinePlaybackSnapshot) => void;
   /** Optional — notifies parent when voiceover preview playback starts (sync wiring only). */
@@ -54,6 +57,8 @@ export default function VideoPreview({
   canvasEditBlocked = false,
   onSceneImageTransformChange,
   onSceneImageReset,
+  onCaptionLayoutOffsetCommit,
+  onCaptionLayoutReset,
   onClockUpdate,
   onPreviewStart,
 }: VideoPreviewProps) {
@@ -252,6 +257,25 @@ export default function VideoPreview({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [exitFrameEdit, isFrameEditing]);
 
+  const handleCaptionOffsetCommit = useCallback(
+    (offsetX: number, offsetY: number) => {
+      if (!onCaptionLayoutOffsetCommit || !selection.selectedSceneId) {
+        return;
+      }
+
+      onCaptionLayoutOffsetCommit(selection.selectedSceneId, offsetX, offsetY);
+    },
+    [onCaptionLayoutOffsetCommit, selection.selectedSceneId],
+  );
+
+  const handleCaptionLayoutReset = useCallback(() => {
+    if (!onCaptionLayoutReset || !selection.selectedSceneId) {
+      return;
+    }
+
+    onCaptionLayoutReset(selection.selectedSceneId);
+  }, [onCaptionLayoutReset, selection.selectedSceneId]);
+
   if (!script || sceneCount === 0 || !scene || !previewFrame || !displayScene || !previewSceneTiming) {
     return (
       <div className="flex w-full min-w-0 flex-col items-center gap-3 sm:gap-4">
@@ -300,6 +324,14 @@ export default function VideoPreview({
   const showSubtitles = isNarrationSubtitles && !hideCaptionsDuringTransition;
   const showGeneratedCaption = !isNarrationSubtitles && !hideCaptionsDuringTransition;
 
+  const captionDragEnabled = isCaptionDragEnabled({
+    enabled: canvasEditActive,
+    sceneId: displayScene.id,
+    selectedSceneId: selection.selectedSceneId,
+    playbackActive,
+    frameEditActive: isFrameEditing,
+  });
+
   const editLayer =
     canvasEditAvailable && onSceneImageTransformChange && displayScene ? (
       <EditorCanvasEditLayer
@@ -341,6 +373,9 @@ export default function VideoPreview({
                 captionAnimationState={previewSceneTiming.captionAnimationState}
                 subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
                 captionTooShortForEffect={previewSceneTiming.captionTooShortForEffect}
+                draggable={captionDragEnabled}
+                onOffsetCommit={handleCaptionOffsetCommit}
+                onResetLayout={handleCaptionLayoutReset}
                 className={
                   isFrameEditing ? "pointer-events-none opacity-55 transition-opacity duration-150" : ""
                 }
@@ -350,6 +385,9 @@ export default function VideoPreview({
               <CaptionOverlay
                 scene={displayScene}
                 script={script}
+                draggable={captionDragEnabled}
+                onOffsetCommit={handleCaptionOffsetCommit}
+                onResetLayout={handleCaptionLayoutReset}
                 className={
                   isFrameEditing ? "pointer-events-none opacity-55 transition-opacity duration-150" : ""
                 }

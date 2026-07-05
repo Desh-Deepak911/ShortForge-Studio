@@ -310,17 +310,16 @@ test("generated caption export path is unchanged", () => {
 
 test("export subtitles stay bottom-centered on canvas", () => {
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
-  const layoutUtils = readSrc("src/features/caption-engine/caption-layout.utils.ts");
-  const videoRender = readSrc("src/features/export/services/video-render.service.ts");
+  const layoutEngine = readSrc("src/features/caption-layout/caption-layout.engine.ts");
 
-  assert.match(videoRender, /resolveCaptionLayout\(scene, script\)/);
-  assert.match(canvasUtils, /resolveExportCaptionPlacement\(layout, width, height, scale, boxWidth, boxHeight\)/);
+  assert.match(canvasUtils, /resolveExportCaptionPlacement\(scene, script, width, height, scale, boxWidth, boxHeight\)/);
+  assert.match(canvasUtils, /resolveExportCaptionPlacement/);
   assert.match(canvasUtils, /placement\.centerX/);
   assert.match(canvasUtils, /placement\.boxBottomY - boxHeight/);
-  assert.match(layoutUtils, /width \/ 2/);
-  assert.match(layoutUtils, /height - 320 \* scale/);
-  assert.match(canvasUtils, /textAlign = "center"/);
-  assert.match(canvasUtils, /centerX - blockWidth \/ 2/);
+  assert.match(layoutEngine, /width \/ 2/);
+  assert.match(layoutEngine, /LEGACY_EXPORT_BOTTOM_MARGIN_PX \* scale/);
+  assert.match(canvasUtils, /placement\.textAlign/);
+  assert.match(canvasUtils, /resolveExportCaptionTextX/);
 });
 
 test("export does not render full narration as one static subtitle block", () => {
@@ -513,9 +512,9 @@ test("fade-up and typewriter export paths remain separate from highlight overlay
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
 
   assert.match(canvasUtils, /display\?\.effect === "highlight"/);
-  assert.match(canvasUtils, /drawSubtitleBox\(ctx, centerX, boxTop, boxWidth, boxHeight/);
+  assert.match(canvasUtils, /drawSubtitleBox\(ctx, boxLeft, boxTop, boxWidth, boxHeight/);
   assert.match(canvasUtils, /display\.animationState && display\.effect === "typewriter"/);
-  assert.match(canvasUtils, /ctx\.fillText\(line, centerX, lineY\)/);
+  assert.match(canvasUtils, /ctx\.fillText\(line, textX, lineY\)/);
 });
 
 test("export subtitle styling: no full-width bottom band, content-sized pill at ~45% opacity", () => {

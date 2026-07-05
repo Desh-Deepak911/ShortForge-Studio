@@ -19,7 +19,8 @@ import { StudioTimeline, TimelinePlaybackPortProvider, useTimelinePlaybackPublis
 import { PreviewMasterTimelineProvider } from "@/features/timeline-intelligence/master-timeline";
 import TimelineDeveloperView from "@/features/timeline-intelligence/TimelineDeveloperView";
 import { VideoPreview } from "@/features/preview/components";
-import { applyPendingSceneCaptionDrafts } from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
+import { buildCaptionLayoutOffsetCommitPatch } from "@/features/caption-layout-drag";
+import { buildResetCaptionLayoutPatch } from "@/features/caption-layout";
 import {
   NO_USABLE_NARRATION_WARNING,
   rebuildNarrationFromScenes,
@@ -29,7 +30,8 @@ import {
 } from "@/features/story-sync";
 import type { SceneImageTransformPatch } from "@/features/story/utils";
 import { getSceneImage } from "@/features/story/utils";
-import { applySceneImageSettings, applyResetSceneImageSettings, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
+import { applyPendingSceneCaptionDrafts } from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
+import { applyPresentationSceneUpdate, applyResetSceneImageSettings, applySceneImageSettings, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 import {
   studioMobileActionBar,
   studioMobileActionButton,
@@ -166,6 +168,34 @@ function StoryWorkspaceContent({
     [onScriptChange, script],
   );
 
+  const handleCaptionLayoutOffsetCommit = useCallback(
+    (sceneId: string, offsetX: number, offsetY: number) => {
+      const scene = script.scenes.find((entry) => entry.id === sceneId);
+      if (!scene) {
+        return;
+      }
+
+      onScriptChange(
+        applyPresentationSceneUpdate(
+          script,
+          sceneId,
+          buildCaptionLayoutOffsetCommitPatch(scene, script, offsetX, offsetY),
+        ),
+        { intent: "presentation" },
+      );
+    },
+    [onScriptChange, script],
+  );
+
+  const handleCaptionLayoutReset = useCallback(
+    (sceneId: string) => {
+      onScriptChange(applyPresentationSceneUpdate(script, sceneId, buildResetCaptionLayoutPatch()), {
+        intent: "presentation",
+      });
+    },
+    [onScriptChange, script],
+  );
+
   const { replaceSceneImage } = useSceneImageUpload({ script, onScriptChange });
 
   const selectedScene =
@@ -261,6 +291,8 @@ function StoryWorkspaceContent({
                   canvasEditBlocked={exportActive}
                   onSceneImageTransformChange={handleSceneImageTransformChange}
                   onSceneImageReset={handleSceneImageReset}
+                  onCaptionLayoutOffsetCommit={handleCaptionLayoutOffsetCommit}
+                  onCaptionLayoutReset={handleCaptionLayoutReset}
                   onClockUpdate={publishTimelinePlayback}
                   onPreviewStart={handlePreviewStart}
                 />

@@ -1,35 +1,65 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import type { ReactNode } from "react";
 
 import {
   buildSceneCaptionLayoutPatch,
-  clampCaptionLayoutPercent,
-  normalizeCaptionLayoutPosition,
-  resolveCaptionLayout,
-} from "@/features/caption-engine/caption-layout.utils";
-import type { CaptionLayout, CaptionLayoutPosition, FootieScene, FootieScript } from "@/features/story/types";
+  CAPTION_OFFSET_X_MAX_PX,
+  CAPTION_OFFSET_X_MIN_PX,
+  CAPTION_OFFSET_Y_MAX_PX,
+  CAPTION_OFFSET_Y_MIN_PX,
+  clampCaptionBackgroundOpacity,
+  clampCaptionMaxWidthPercent,
+  clampCaptionOffsetXPx,
+  clampCaptionOffsetYPx,
+  mergeCaptionLayoutSettings,
+  normalizeCaptionAnchor,
+  normalizeCaptionTextAlign,
+} from "@/features/caption-layout";
+import type { CaptionTextAlign } from "@/features/caption-layout";
+import type { CaptionAnchor, CaptionLayout, FootieScene, FootieScript } from "@/features/story/types";
 import {
   studioFieldLabel,
-  studioInputCompact,
+  studioSegment,
+  studioSegmentActive,
+  studioSegmentedControl,
   studioSelectChevronCompact,
   studioSelectCompact,
   studioSubtleText,
 } from "@/lib/utils/studioUi";
 
-const POSITION_OPTIONS: { value: CaptionLayoutPosition; label: string }[] = [
-  { value: "bottom", label: "Bottom" },
+const ANCHOR_OPTIONS: { value: CaptionAnchor; label: string }[] = [
+  { value: "top_left", label: "Top Left" },
+  { value: "top_center", label: "Top Center" },
+  { value: "top_right", label: "Top Right" },
+  { value: "center_left", label: "Center Left" },
   { value: "center", label: "Center" },
-  { value: "top", label: "Top" },
-  { value: "top_left", label: "Top left" },
-  { value: "custom", label: "Custom" },
+  { value: "center_right", label: "Center Right" },
+  { value: "bottom_left", label: "Bottom Left" },
+  { value: "bottom_center", label: "Bottom Center" },
+  { value: "bottom_right", label: "Bottom Right" },
+];
+
+const TEXT_ALIGN_OPTIONS: { value: CaptionTextAlign; label: string }[] = [
+  { value: "left", label: "Left" },
+  { value: "center", label: "Center" },
+  { value: "right", label: "Right" },
 ];
 
 export interface CaptionLayoutControlProps {
   scene: FootieScene;
   script: FootieScript;
   onSceneLayoutChange: (patch: Partial<FootieScene>) => void;
-  onProjectLayoutChange: (layout: CaptionLayout | undefined) => void;
+}
+
+function LayoutSubsection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-2.5">
+      <p className="text-[11px] font-semibold tracking-tight text-foreground/80">{title}</p>
+      <div className="space-y-2.5">{children}</div>
+    </section>
+  );
 }
 
 function mergeLayout(
@@ -37,25 +67,23 @@ function mergeLayout(
   script: FootieScript,
   patch: Partial<CaptionLayout>,
 ): CaptionLayout {
-  const current = resolveCaptionLayout(scene, script);
   return {
-    position: current.position,
-    xPercent: current.xPercent,
-    yPercent: current.yPercent,
-    ...(scene.captionLayout ?? script.defaultCaptionLayout ?? {}),
+    ...mergeCaptionLayoutSettings(scene.captionLayout, script.defaultCaptionLayout),
     ...patch,
+    version: 2,
   };
 }
 
-function effectiveToStored(layout: ReturnType<typeof resolveCaptionLayout>): CaptionLayout {
+function effectiveToStored(layout: CaptionLayout): CaptionLayout {
   return {
-    position: layout.position,
-    ...(layout.position === "custom"
-      ? { xPercent: layout.xPercent, yPercent: layout.yPercent }
-      : {}),
-    ...(layout.backgroundOpacityPercent != null
-      ? { backgroundOpacity: layout.backgroundOpacityPercent }
-      : {}),
+    version: layout.version,
+    anchor: layout.anchor,
+    textAlign: layout.textAlign,
+    offsetX: layout.offsetX,
+    offsetY: layout.offsetY,
+    maxWidthPercent: layout.maxWidthPercent,
+    safeAreaEnabled: layout.safeAreaEnabled,
+    ...(layout.backgroundOpacity != null ? { backgroundOpacity: layout.backgroundOpacity } : {}),
   };
 }
 
@@ -63,124 +91,176 @@ export default function CaptionLayoutControl({
   scene,
   script,
   onSceneLayoutChange,
-  onProjectLayoutChange,
 }: CaptionLayoutControlProps) {
-  const effective = resolveCaptionLayout(scene, script);
-  const sceneUsesOverride = Boolean(scene.captionLayout);
-  const position = effective.position;
-  const opacityValue = effective.backgroundOpacityPercent ?? 45;
+  const effective = mergeCaptionLayoutSettings(scene.captionLayout, script.defaultCaptionLayout);
+  const anchor = effective.anchor ?? "bottom_center";
+  const textAlign = effective.textAlign ?? "center";
+  const opacityValue = effective.backgroundOpacity ?? 45;
+  const maxWidthValue = effective.maxWidthPercent ?? 90;
+  const offsetXValue = effective.offsetX ?? 0;
+  const offsetYValue = effective.offsetY ?? 0;
 
   const applySceneLayout = (patch: Partial<CaptionLayout>) => {
     onSceneLayoutChange(buildSceneCaptionLayoutPatch(mergeLayout(scene, script, patch)));
   };
 
   return (
-    <div className="space-y-3 border-t border-border/15 pt-3">
-      <div>
-        <label htmlFor={`caption-layout-position-${scene.id}`} className={studioFieldLabel}>
-          Position
-        </label>
-        <div className="relative mt-1.5">
-          <select
-            id={`caption-layout-position-${scene.id}`}
-            className={`${studioSelectCompact} w-full appearance-none pr-8`}
-            value={position}
+    <div className="space-y-4">
+      <LayoutSubsection title="Placement">
+        <div>
+          <label htmlFor={`caption-layout-anchor-${scene.id}`} className={studioFieldLabel}>
+            Anchor
+          </label>
+          <div className="relative mt-1.5">
+            <select
+              id={`caption-layout-anchor-${scene.id}`}
+              className={`${studioSelectCompact} w-full appearance-none pr-8`}
+              value={anchor}
+              onChange={(event) =>
+                applySceneLayout({
+                  anchor: normalizeCaptionAnchor(event.target.value),
+                })
+              }
+            >
+              {ANCHOR_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className={studioSelectChevronCompact} aria-hidden />
+          </div>
+        </div>
+
+        <div>
+          <p className={studioFieldLabel}>Text Alignment</p>
+          <div
+            className={`${studioSegmentedControl} mt-1.5`}
+            role="radiogroup"
+            aria-label="Caption text alignment"
+          >
+            {TEXT_ALIGN_OPTIONS.map((option) => {
+              const isActive = textAlign === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={isActive}
+                  className={isActive ? studioSegmentActive : studioSegment}
+                  onClick={() =>
+                    applySceneLayout({
+                      textAlign: normalizeCaptionTextAlign(option.value),
+                    })
+                  }
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor={`caption-layout-offset-x-${scene.id}`} className={studioFieldLabel}>
+            Offset X
+          </label>
+          <input
+            id={`caption-layout-offset-x-${scene.id}`}
+            type="range"
+            min={CAPTION_OFFSET_X_MIN_PX}
+            max={CAPTION_OFFSET_X_MAX_PX}
+            step={1}
+            className="mt-2 w-full accent-primary"
+            value={offsetXValue}
             onChange={(event) =>
               applySceneLayout({
-                position: normalizeCaptionLayoutPosition(event.target.value),
+                offsetX: clampCaptionOffsetXPx(Number(event.target.value), offsetXValue),
               })
             }
-          >
-            {POSITION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className={studioSelectChevronCompact} aria-hidden />
+          />
+          <p className={`${studioSubtleText} mt-1 tabular-nums`}>{offsetXValue}px</p>
         </div>
-      </div>
 
-      {position === "custom" ? (
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label htmlFor={`caption-layout-x-${scene.id}`} className={studioFieldLabel}>
-              X %
-            </label>
-            <input
-              id={`caption-layout-x-${scene.id}`}
-              type="number"
-              min={0}
-              max={100}
-              className={`${studioInputCompact} mt-1.5 w-full`}
-              value={effective.xPercent}
-              onChange={(event) =>
-                applySceneLayout({
-                  xPercent: clampCaptionLayoutPercent(Number(event.target.value), effective.xPercent),
-                })
-              }
-            />
-          </div>
-          <div>
-            <label htmlFor={`caption-layout-y-${scene.id}`} className={studioFieldLabel}>
-              Y %
-            </label>
-            <input
-              id={`caption-layout-y-${scene.id}`}
-              type="number"
-              min={0}
-              max={100}
-              className={`${studioInputCompact} mt-1.5 w-full`}
-              value={effective.yPercent}
-              onChange={(event) =>
-                applySceneLayout({
-                  yPercent: clampCaptionLayoutPercent(Number(event.target.value), effective.yPercent),
-                })
-              }
-            />
-          </div>
+        <div>
+          <label htmlFor={`caption-layout-offset-y-${scene.id}`} className={studioFieldLabel}>
+            Offset Y
+          </label>
+          <input
+            id={`caption-layout-offset-y-${scene.id}`}
+            type="range"
+            min={CAPTION_OFFSET_Y_MIN_PX}
+            max={CAPTION_OFFSET_Y_MAX_PX}
+            step={1}
+            className="mt-2 w-full accent-primary"
+            value={offsetYValue}
+            onChange={(event) =>
+              applySceneLayout({
+                offsetY: clampCaptionOffsetYPx(Number(event.target.value), offsetYValue),
+              })
+            }
+          />
+          <p className={`${studioSubtleText} mt-1 tabular-nums`}>{offsetYValue}px</p>
         </div>
-      ) : null}
+      </LayoutSubsection>
 
-      <div>
-        <label htmlFor={`caption-layout-opacity-${scene.id}`} className={studioFieldLabel}>
-          Background opacity
+      <LayoutSubsection title="Sizing">
+        <div>
+          <label htmlFor={`caption-layout-max-width-${scene.id}`} className={studioFieldLabel}>
+            Maximum Width
+          </label>
+          <input
+            id={`caption-layout-max-width-${scene.id}`}
+            type="range"
+            min={40}
+            max={100}
+            step={1}
+            className="mt-2 w-full accent-primary"
+            value={maxWidthValue}
+            onChange={(event) =>
+              applySceneLayout({
+                maxWidthPercent: clampCaptionMaxWidthPercent(Number(event.target.value)),
+              })
+            }
+          />
+          <p className={`${studioSubtleText} mt-1 tabular-nums`}>{maxWidthValue}%</p>
+        </div>
+      </LayoutSubsection>
+
+      <LayoutSubsection title="Appearance">
+        <div>
+          <label htmlFor={`caption-layout-opacity-${scene.id}`} className={studioFieldLabel}>
+            Background Opacity
+          </label>
+          <input
+            id={`caption-layout-opacity-${scene.id}`}
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            className="mt-2 w-full accent-primary"
+            value={opacityValue}
+            onChange={(event) =>
+              applySceneLayout({
+                backgroundOpacity:
+                  clampCaptionBackgroundOpacity(Number(event.target.value)) ?? opacityValue,
+              })
+            }
+          />
+          <p className={`${studioSubtleText} mt-1 tabular-nums`}>{opacityValue}%</p>
+        </div>
+
+        <label className="flex items-center gap-2 text-xs text-foreground/80">
+          <input
+            type="checkbox"
+            checked={effective.safeAreaEnabled !== false}
+            onChange={(event) => applySceneLayout({ safeAreaEnabled: event.target.checked })}
+          />
+          Safe Area Enabled
         </label>
-        <input
-          id={`caption-layout-opacity-${scene.id}`}
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          className="mt-2 w-full accent-primary"
-          value={opacityValue}
-          onChange={(event) =>
-            applySceneLayout({
-              backgroundOpacity: clampCaptionLayoutPercent(Number(event.target.value), opacityValue),
-            })
-          }
-        />
-        <p className={`${studioSubtleText} mt-1 tabular-nums`}>{opacityValue}%</p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="rounded-md border border-border/40 px-2.5 py-1 text-[11px] font-medium text-foreground/80 hover:bg-muted/40"
-          onClick={() => onProjectLayoutChange(scene.captionLayout ?? effectiveToStored(effective))}
-        >
-          Save as project default
-        </button>
-        {sceneUsesOverride ? (
-          <button
-            type="button"
-            className="rounded-md border border-border/40 px-2.5 py-1 text-[11px] font-medium text-muted hover:bg-muted/40"
-            onClick={() => onSceneLayoutChange({ captionLayout: undefined })}
-          >
-            Use project default
-          </button>
-        ) : null}
-      </div>
+      </LayoutSubsection>
     </div>
   );
 }
+
+export { effectiveToStored };

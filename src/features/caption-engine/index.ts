@@ -39,6 +39,8 @@ export {
   normalizeCaptionLayoutPosition,
   resolveCaptionLayout,
   resolveExportCaptionBackgroundOpacity,
+  resolvePreviewCaptionLayout,
+  resolveEngineCaptionLayout,
   resolveExportCaptionPlacement,
   resolvePreviewCaptionOverlayStyle,
   resolvePreviewCaptionPillStyle,

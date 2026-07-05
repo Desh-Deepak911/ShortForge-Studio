@@ -1,10 +1,11 @@
 "use client";
 
 import {
-  resolveCaptionLayout,
+  resolvePreviewCaptionLayout,
   resolvePreviewCaptionOverlayStyle,
   resolvePreviewCaptionPillStyle,
 } from "@/features/caption-engine/caption-layout.utils";
+import { CaptionPreviewOverlay } from "@/features/caption-layout-drag";
 import type { CaptionAnimationState } from "@/features/timeline-intelligence/resolve-caption-animation-state.utils";
 import { isTransitionVideoContent, resolveActiveSubtitleForScene } from "@/features/story/utils";
 import { type DisplayCaptionScene } from "@/features/story/utils";
@@ -23,6 +24,9 @@ interface SubtitleOverlayProps {
   subtitleAvailableDurationMs?: number;
   captionTooShortForEffect?: boolean;
   className?: string;
+  draggable?: boolean;
+  onOffsetCommit?: (offsetX: number, offsetY: number) => void;
+  onResetLayout?: () => void;
 }
 
 /** Timed narration subtitles inside the phone preview frame. */
@@ -37,6 +41,9 @@ export default function SubtitleOverlay({
   subtitleAvailableDurationMs,
   captionTooShortForEffect,
   className = "",
+  draggable = false,
+  onOffsetCommit,
+  onResetLayout,
 }: SubtitleOverlayProps) {
   const previewChunkState =
     activeSubtitleChunk?.trim()
@@ -69,10 +76,26 @@ export default function SubtitleOverlay({
     return null;
   }
 
-  const layout = resolveCaptionLayout(scene, script);
-  const overlayStyle = resolvePreviewCaptionOverlayStyle(layout);
-  const pillStyle = resolvePreviewCaptionPillStyle(layout);
-  const useLegacyClass = layout.usesLegacyBottomPlacement;
+  if (draggable) {
+    return (
+      <CaptionPreviewOverlay
+        scene={scene}
+        script={script}
+        draggable
+        overlayClassName={className}
+        pillClassName="preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
+        onOffsetCommit={onOffsetCommit}
+        onResetLayout={onResetLayout}
+      >
+        {caption}
+      </CaptionPreviewOverlay>
+    );
+  }
+
+  const resolvedLayout = resolvePreviewCaptionLayout(scene, script);
+  const overlayStyle = resolvePreviewCaptionOverlayStyle(resolvedLayout);
+  const pillStyle = resolvePreviewCaptionPillStyle(resolvedLayout);
+  const useLegacyClass = resolvedLayout.usesLegacyBottomCenter;
 
   return (
     <div
@@ -81,7 +104,11 @@ export default function SubtitleOverlay({
       aria-hidden
     >
       <div
-        className={useLegacyClass ? "preview-narration-subtitle-pill" : "preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"}
+        className={
+          useLegacyClass
+            ? "preview-narration-subtitle-pill"
+            : "preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
+        }
         style={pillStyle}
       >
         {caption}

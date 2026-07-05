@@ -1,4 +1,5 @@
 import type { AssetAttachMetadata } from "@/features/asset-attach/asset-attach.types";
+import type { CaptionLayout, CaptionAnchor } from "@/features/caption-layout";
 import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.types";
 import type { PlatformExportPresetId } from "@/features/export-profiles/export-profile.types";
 import type { SpeechStylePreset } from "@/features/speech-style";
@@ -11,19 +12,10 @@ export type CaptionMode = "generated" | "subtitles";
 /** Visual treatment when displaying captions (subtitles mode or generated text). */
 export type SubtitleEffect = "fade-up" | "typewriter" | "highlight";
 
-/** On-frame caption placement preset. */
+/** @deprecated Use `CaptionAnchor`. */
 export type CaptionLayoutPosition = "bottom" | "center" | "top" | "top_left" | "custom";
 
-/** Optional caption placement — scene override or project default on `FootieScript`. */
-export interface CaptionLayout {
-  position: CaptionLayoutPosition;
-  /** Used when `position` is `custom`. Clamped to 0–100. */
-  xPercent?: number;
-  /** Used when `position` is `custom`. Clamped to 0–100. */
-  yPercent?: number;
-  /** Caption pill background opacity (0–100). */
-  backgroundOpacity?: number;
-}
+export type { CaptionAnchor, CaptionLayout };
 
 /** How a scene image fills its frame. */
 export type SceneImageFitMode = "fill" | "fit";

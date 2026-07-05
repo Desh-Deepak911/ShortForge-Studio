@@ -51,7 +51,6 @@ import { prepareStoryForExport } from "@/features/export/utils/export-preflight.
 import { EXPORT_NARRATION_UNAVAILABLE_WARNING } from "@/features/export/utils/export-narration-voiceover.utils";
 import { logExportMasterTimelineDiagnostics } from "@/features/timeline-intelligence/export-timeline-diagnostics.dev.utils";
 import type { ExportAudioMuxOutputFormat } from "@/features/export/utils/ffmpeg.utils";
-import { resolveCaptionLayout } from "@/features/caption-engine/caption-layout.utils";
 import {
   drawExportGeneratedCaption,
   drawExportSubtitlesCaption,
@@ -307,7 +306,6 @@ function drawSceneFrame(
   const scale = width / 1080;
   const padX = 72 * scale;
   const titleY = 180 * scale;
-  const captionLayout = resolveCaptionLayout(scene, script);
 
   resetExportCanvasDrawState(ctx);
   ctx.clearRect(0, 0, width, height);
@@ -387,7 +385,8 @@ function drawSceneFrame(
         height,
         scale,
         display: subtitleDisplay,
-        layout: captionLayout,
+        scene,
+        script,
       });
     }
   } else {
@@ -395,7 +394,7 @@ function drawSceneFrame(
       (line) => !isTransitionVideoContent(line),
     );
     if (captionLines.length > 0) {
-      drawExportGeneratedCaption(ctx, captionLines, width, height, scale, captionLayout);
+      drawExportGeneratedCaption(ctx, captionLines, width, height, scale, scene, script);
     }
   }
 }
