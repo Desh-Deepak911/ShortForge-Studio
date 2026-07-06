@@ -494,4 +494,49 @@ test("motion edit does not dirty narration or voice", () => {
   assert.equal(resolveStorySyncBanner(state, prev)?.kind, "narration");
 });
 
+test("synchronization card is collapsible with compact status dots", () => {
+  const card = readSrc(
+    "src/features/story-sync/components/SynchronizationStatusCard.tsx",
+  );
+  const banner = readSrc(
+    "src/features/story-sync/components/StorySynchronizationBanner.tsx",
+  );
+  const workspace = readSrc("src/components/StoryWorkspace.tsx");
+
+  assert.match(card, /useState\(false\)/);
+  assert.match(card, /data-story-sync-card-expanded/);
+  assert.match(card, /data-story-sync-card-toggle/);
+  assert.match(card, /aria-expanded=\{expanded\}/);
+  assert.match(card, /setExpanded\(\(open\) => !open\)/);
+  assert.match(card, /Synchronization/);
+  assert.match(card, /Story, voice, media, and export readiness/);
+  assert.match(card, /data-story-sync-status-dots/);
+  assert.match(card, /data-sync-step-dot=\{step\.id\}/);
+  assert.match(card, /data-sync-tone=\{step\.tone\}/);
+  assert.match(card, /SYNC_STEP_TONE_DOT\[step\.tone\]/);
+  assert.match(card, /bg-emerald-400/);
+  assert.match(card, /bg-amber-300/);
+  assert.match(card, /ChevronDown/);
+  assert.match(card, /resolveStorySyncSteps\(storySync\.state, script\)/);
+  assert.match(card, /SynchronizationStep/);
+  assert.match(card, /"Update"/);
+  assert.match(card, /"Regenerate"/);
+  assert.doesNotMatch(card, /applyStorySyncEdit|resolveStorySyncBanner|onScriptChange/);
+
+  const script = buildStory([makeScene("s1", 3), makeScene("s2", 4)]);
+  const state = applyStorySyncEdit(createInitialStorySynchronizationState(), "structural");
+  const steps = resolveStorySyncSteps(state, script);
+  assert.equal(steps.length, 6);
+  assert.deepEqual(
+    steps.map((step) => step.id),
+    ["story", "narration", "voice", "media", "preview", "export"],
+  );
+  assert.equal(steps.find((step) => step.id === "narration")?.tone, "warning");
+
+  assert.match(workspace, /StorySynchronizationBanner/);
+  assert.match(workspace, /inspectorBanner=\{/);
+  assert.match(banner, /data-story-sync-banner/);
+  assert.doesNotMatch(banner, /data-story-sync-card/);
+});
+
 console.log(`\nstory-sync-ui: ${passed} passed`);
