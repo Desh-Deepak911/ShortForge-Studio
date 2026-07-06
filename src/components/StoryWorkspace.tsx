@@ -13,6 +13,7 @@ import {
   useCreatorAssetStudioVisible,
 } from "@/features/editor/creator-asset-planning/useCreatorAssetPlanningCache";
 import { InspectorContextProvider, InspectorResolver } from "@/features/editor/inspector";
+import { focusInspectorProjectTab } from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import { EditorSelectionProvider, useEditorSelection } from "@/features/editor/selection";
 import { StudioTimeline, TimelinePlaybackPortProvider, useTimelinePlaybackPublisher } from "@/features/timeline-editor";
@@ -118,13 +119,16 @@ function StoryWorkspaceContent({
   }, []);
 
   const focusVoiceoverSection = useCallback(() => {
-    document.getElementById("studio-project-voiceover")?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
+    focusInspectorProjectTab();
+    window.requestAnimationFrame(() => {
+      document.getElementById("studio-project-voiceover")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      window.setTimeout(() => {
+        document.getElementById("studio-project-voiceover-regenerate")?.focus();
+      }, 200);
     });
-    window.setTimeout(() => {
-      document.getElementById("studio-project-voiceover-regenerate")?.focus();
-    }, 200);
   }, []);
 
   const handleUpdateNarration = useCallback(() => {
@@ -251,6 +255,7 @@ function StoryWorkspaceContent({
     <>
       <StudioShell
         aria-label="Editor"
+        viewportMode="fixed"
         canvasCenterContent={false}
         canvasLayout="editor"
         sidebarVisibleBelowLg
@@ -322,15 +327,17 @@ function StoryWorkspaceContent({
             assetPlanning={assetPlanning}
             creatorAssetStudioVisible={creatorAssetStudioVisible}
           >
-            <div className="mb-3 shrink-0">
-              <SynchronizationStatusCard
-                script={script}
-                onUpdateNarration={handleUpdateNarration}
-                onRegenerateVoice={focusVoiceoverSection}
-                warning={narrationRebuildWarning}
-              />
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <div className="mb-3 shrink-0">
+                <SynchronizationStatusCard
+                  script={script}
+                  onUpdateNarration={handleUpdateNarration}
+                  onRegenerateVoice={focusVoiceoverSection}
+                  warning={narrationRebuildWarning}
+                />
+              </div>
+              <InspectorResolver />
             </div>
-            <InspectorResolver />
           </InspectorContextProvider>
         }
         timeline={

@@ -1,57 +1,38 @@
-import { isCaptionDragEnabled } from "@/features/caption-layout-drag";
+import {
+  resolvePreviewCaptionOverlayClassName,
+  resolvePreviewInteractionLayer,
+  type PreviewInteractionLayerInput,
+  type PreviewInteractionLayerState,
+  type PreviewInteractionMode,
+} from "./preview-interaction-layer.utils";
 
-export interface PreviewInteractionInput {
-  canvasEditEnabled: boolean;
-  sceneId?: string;
-  selectedSceneId: string | null;
-  playbackActive: boolean;
-  imageEditActive: boolean;
-}
+export type {
+  PreviewInteractionLayerInput,
+  PreviewInteractionLayerState,
+  PreviewInteractionMode,
+};
 
+export { resolvePreviewCaptionOverlayClassName, resolvePreviewInteractionLayer };
+
+/** @deprecated Use PreviewInteractionLayerInput — kept for transitional callers. */
+export type PreviewInteractionInput = PreviewInteractionLayerInput;
+
+/** @deprecated Use PreviewInteractionLayerState — kept for transitional callers. */
 export interface PreviewInteractionState {
-  /** Caption drag handles are active for the selected scene. */
   captionDragEnabled: boolean;
-  /** Caption layer must not intercept pointer events (image edit or playback). */
   captionInteractionLocked: boolean;
-  /** Pointer events policy for the caption overlay root. */
   captionLayerPointerEvents: "none" | "auto";
 }
 
-/**
- * Resolves preview interaction priority:
- * playback > image edit > caption drag.
- */
+/** Maps the interaction layer resolver to the legacy preview interaction shape. */
 export function resolvePreviewInteractionState(
   input: PreviewInteractionInput,
 ): PreviewInteractionState {
-  const captionDragEnabled = isCaptionDragEnabled({
-    enabled: input.canvasEditEnabled,
-    sceneId: input.sceneId,
-    selectedSceneId: input.selectedSceneId,
-    playbackActive: input.playbackActive,
-    frameEditActive: input.imageEditActive,
-  });
-
-  const captionInteractionLocked = input.playbackActive || input.imageEditActive;
+  const layer = resolvePreviewInteractionLayer(input);
 
   return {
-    captionDragEnabled,
-    captionInteractionLocked,
-    captionLayerPointerEvents: captionDragEnabled ? "auto" : "none",
+    captionDragEnabled: layer.allowCaptionDrag,
+    captionInteractionLocked: !layer.allowCaptionPointerEvents,
+    captionLayerPointerEvents: layer.allowCaptionPointerEvents ? "auto" : "none",
   };
-}
-
-/** Tailwind classes for caption overlays under image edit mode. */
-export function resolvePreviewCaptionOverlayClassName(
-  interaction: PreviewInteractionState,
-): string {
-  if (interaction.captionInteractionLocked) {
-    return "pointer-events-none opacity-55 transition-opacity duration-150";
-  }
-
-  if (!interaction.captionDragEnabled) {
-    return "pointer-events-none";
-  }
-
-  return "";
 }

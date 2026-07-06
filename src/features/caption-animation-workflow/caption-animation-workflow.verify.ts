@@ -165,10 +165,10 @@ test("workflow actions mark export dirty only", () => {
 });
 
 test("caption animation inspector wiring uses presentation intent", () => {
-  const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const inspector = readSrc("src/features/editor/components/caption-workspace/CaptionWorkspace.tsx");
   assert.match(inspector, /CaptionAnimationControl/);
   assert.match(inspector, /CaptionAnimationWorkflow/);
-  assert.match(inspector, /title="Caption Animation"/);
+  assert.match(inspector, /CAPTION_WORKSPACE_TAB_LABELS\[tabId\]/);
 });
 
 console.log(`\ncaption-animation-workflow: ${passed} passed`);

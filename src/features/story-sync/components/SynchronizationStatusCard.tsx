@@ -1,6 +1,6 @@
 "use client";
 
-import { studioSubtleText } from "@/lib/utils/studioUi";
+import { studioSubtleText, studioSyncStatusCard } from "@/lib/utils/studioUi";
 
 import type { FootieScript } from "@/features/story/types";
 
@@ -32,18 +32,18 @@ export default function SynchronizationStatusCard({
   return (
     <section
       aria-label="Story synchronization status"
-      className="rounded-xl bg-surface-elevated/35 px-2.5 py-2.5 ring-1 ring-border/20"
+      className={studioSyncStatusCard}
       data-story-sync-card
     >
-      <header className="mb-1.5 px-1">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-foreground/80">
+      <header className="mb-2.5 border-b border-border/15 px-0.5 pb-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/85">
           Synchronization
         </p>
-        <p className={`${studioSubtleText} mt-0.5 text-[11px] leading-snug`}>
+        <p className={`${studioSubtleText} mt-1 text-[11px] leading-snug`}>
           Story, voice, media, and export readiness are tracked separately.
         </p>
       </header>
-      <div className="space-y-0.5" role="list">
+      <div className="space-y-1.5" role="list">
         {resolveStorySyncSteps(storySync.state, script).map((step) => {
           const actionLabel =
             step.id === "narration" && storySync.state.narrationDirty

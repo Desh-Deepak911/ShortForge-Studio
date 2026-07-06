@@ -197,7 +197,8 @@ test("written captions and narrated subtitles share drag overlay", () => {
   const dragOverlay = readSrc("src/features/caption-layout-drag/CaptionPreviewOverlay.tsx");
   assert.match(subtitleOverlay, /CaptionPreviewOverlay/);
   assert.match(captionOverlay, /CaptionPreviewOverlay/);
-  assert.match(dragOverlay, /aria-label=\{draggable \? "Move caption"/);
+  assert.match(dragOverlay, /aria-label=\{captionInteractive \? "Move caption"/);
+  assert.match(dragOverlay, /allowPointerEvents/);
 });
 
 test("drag offset commit is presentation-only sync", () => {

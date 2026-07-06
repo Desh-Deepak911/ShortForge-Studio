@@ -32,6 +32,7 @@ interface SubtitleOverlayProps {
   captionTooShortForEffect?: boolean;
   className?: string;
   draggable?: boolean;
+  allowPointerEvents?: boolean;
   onOffsetCommit?: (offsetX: number, offsetY: number) => void;
   onResetLayout?: () => void;
 }
@@ -50,6 +51,7 @@ export default function SubtitleOverlay({
   captionTooShortForEffect,
   className = "",
   draggable = false,
+  allowPointerEvents = true,
   onOffsetCommit,
   onResetLayout,
 }: SubtitleOverlayProps) {
@@ -102,6 +104,7 @@ export default function SubtitleOverlay({
         script={script}
         sceneIndex={sceneIndex}
         draggable
+        allowPointerEvents={allowPointerEvents}
         overlayClassName={className}
         pillClassName="preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
         onOffsetCommit={onOffsetCommit}

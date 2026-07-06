@@ -1,11 +1,15 @@
 "use client";
 
 import {
-  studioShellBodyRow,
-  studioShellMainColumn,
+  studioShellBodyRowDocument,
+  studioShellBodyRowFixed,
+  studioShellMainColumnDocument,
+  studioShellMainColumnFixed,
   studioShellMaxWidth,
   studioShellPanelGap,
   studioShellRoot,
+  studioShellRootDocument,
+  studioShellRootFixed,
 } from "@/lib/utils/studioUi";
 
 import StudioCanvas from "./StudioCanvas";
@@ -33,42 +37,62 @@ export default function StudioShell({
   canvasCenterContent = true,
   canvasLayout,
   sidebarVisibleBelowLg = false,
+  viewportMode = "document",
   className = "",
   "aria-label": ariaLabel = "Studio workspace",
 }: StudioShellProps) {
+  const isFixedViewport = viewportMode === "fixed";
   const showSidebar = Boolean(sidebar) && !focusMode;
   const showFooter = Boolean(footer) && !(focusMode && hideFooterInFocusMode);
   const bodyRowClass = sidebarVisibleBelowLg
-    ? `flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row ${studioShellPanelGap}`
-    : `flex min-h-0 flex-1 overflow-hidden ${studioShellPanelGap}`;
+    ? `flex flex-1 flex-col ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} lg:flex-row ${studioShellPanelGap}`
+    : `flex flex-1 ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} ${studioShellPanelGap}`;
+  const mainColumnClass = isFixedViewport
+    ? studioShellMainColumnFixed
+    : studioShellMainColumnDocument;
+  const bodyRowInnerClass = isFixedViewport
+    ? studioShellBodyRowFixed
+    : studioShellBodyRowDocument;
+  const rootViewportClass = isFixedViewport ? studioShellRootFixed : studioShellRootDocument;
 
   return (
     <div
-      className={`${studioShellRoot} h-dvh ${className}`.trim()}
+      className={`${studioShellRoot} ${rootViewportClass} ${className}`.trim()}
       data-compact-mode={compactMode ? "true" : "false"}
       data-focus-mode={focusMode ? "true" : "false"}
+      data-viewport-mode={viewportMode}
       role="application"
       aria-label={ariaLabel}
     >
       {header}
 
-      <div className={`${studioShellMaxWidth} flex min-h-0 flex-1 flex-col ${studioShellPanelGap}`}>
+      <div
+        className={`${studioShellMaxWidth} flex flex-1 flex-col ${isFixedViewport ? "min-h-0" : ""} ${studioShellPanelGap}`}
+      >
         <div className={bodyRowClass}>
           {showSidebar ? (
-            <StudioSidebar compactMode={compactMode} visibleBelowLg={sidebarVisibleBelowLg}>
+            <StudioSidebar
+              compactMode={compactMode}
+              visibleBelowLg={sidebarVisibleBelowLg}
+              viewportMode={viewportMode}
+            >
               {sidebar}
             </StudioSidebar>
           ) : null}
 
-          <div className={studioShellMainColumn}>
-            <div className={studioShellBodyRow}>
+          <div className={mainColumnClass}>
+            <div className={bodyRowInnerClass}>
               {canvas ? (
-                <StudioCanvas centerContent={canvasCenterContent} layout={canvasLayout}>
+                <StudioCanvas
+                  centerContent={canvasCenterContent}
+                  layout={canvasLayout}
+                  viewportMode={viewportMode}
+                >
                   {canvas}
                 </StudioCanvas>
               ) : null}
               {inspector || inspectorBanner ? (
-                <StudioInspector compactMode={compactMode}>
+                <StudioInspector compactMode={compactMode} viewportMode={viewportMode}>
                   {inspectorBanner}
                   {inspector}
                 </StudioInspector>

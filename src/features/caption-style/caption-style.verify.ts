@@ -321,10 +321,10 @@ test("caption style edits do not dirty narration or voice", () => {
 });
 
 test("caption style inspector wiring uses presentation intent", () => {
-  const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const inspector = readSrc("src/features/editor/components/caption-workspace/CaptionWorkspace.tsx");
   assert.match(inspector, /CaptionStyleControl/);
-  assert.match(inspector, /title="Caption Style"/);
-  assert.match(inspector, /commitPresentationPatch\(scene\.id, patch\)/);
+  assert.match(inspector, /CAPTION_WORKSPACE_TAB_LABELS\[tabId\]/);
+  assert.match(inspector, /onCommitPresentationPatch/);
 });
 
 test("font family resolves correctly", () => {

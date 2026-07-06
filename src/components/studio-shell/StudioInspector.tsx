@@ -1,7 +1,8 @@
 import {
+  studioShellInspectorSurface,
+  studioShellInspectorSurfaceFixed,
   studioShellInspectorWidth,
   studioShellInspectorWidthCompact,
-  studioShellRailScrollHost,
   studioShellRegionPadding,
 } from "@/lib/utils/studioUi";
 
@@ -9,6 +10,8 @@ import type { StudioShellRegionProps } from "./studio-shell.types";
 
 export interface StudioInspectorProps extends StudioShellRegionProps {
   compactMode?: boolean;
+  /** Matches StudioShell viewport — editor fixed vs document scroll routes. */
+  viewportMode?: "fixed" | "document";
   /** Accessible label for the inspector landmark. */
   "aria-label"?: string;
 }
@@ -21,19 +24,24 @@ export default function StudioInspector({
   className = "",
   id,
   compactMode = false,
+  viewportMode = "document",
   "aria-label": ariaLabel = "Inspector",
 }: StudioInspectorProps) {
   const widthClass = compactMode ? studioShellInspectorWidthCompact : studioShellInspectorWidth;
+  const surfaceClass =
+    viewportMode === "fixed" ? studioShellInspectorSurfaceFixed : studioShellInspectorSurface;
+  const innerClass =
+    viewportMode === "fixed"
+      ? `flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${studioShellRegionPadding}`
+      : `flex min-w-0 flex-col ${studioShellRegionPadding}`;
 
   return (
     <aside
       id={id}
       aria-label={ariaLabel}
-      className={`${widthClass} border-t border-border/40 bg-surface/15 lg:border-l lg:border-t-0 ${className}`.trim()}
+      className={`${widthClass} ${surfaceClass} ${className}`.trim()}
     >
-      <div className={`${studioShellRailScrollHost} flex min-w-0 flex-col ${studioShellRegionPadding}`}>
-        {children}
-      </div>
+      <div className={innerClass}>{children}</div>
     </aside>
   );
 }

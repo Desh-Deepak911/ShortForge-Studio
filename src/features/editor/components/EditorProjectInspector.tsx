@@ -1,5 +1,7 @@
 "use client";
 
+import { FileText } from "lucide-react";
+
 import StoryReview from "@/components/StoryReview";
 import ProjectAudioStudio from "@/features/editor/components/ProjectAudioStudio";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
@@ -19,10 +21,14 @@ export default function EditorProjectInspector({
   onScriptChange,
 }: EditorProjectInspectorProps) {
   return (
-    <div className={`${studioInspectorStack} shrink-0`}>
+    <div className={`${studioInspectorStack} pb-1`}>
       <ProjectAudioStudio script={script} onScriptChange={onScriptChange} />
 
-      <InspectorSection title="Project" description="Story title and narration text.">
+      <InspectorSection
+        icon={FileText}
+        title="Project"
+        description="Story title and narration text."
+      >
         <StoryReview story={script} onStoryChange={onScriptChange} variant="storyboard" />
       </InspectorSection>
     </div>

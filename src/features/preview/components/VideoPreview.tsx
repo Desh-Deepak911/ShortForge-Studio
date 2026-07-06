@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Pause,
   Play,
+  Repeat,
   Smartphone,
   Square,
   Volume2,
@@ -21,7 +22,8 @@ import { usePreviewPlayback } from "@/features/preview/hooks/usePreviewPlayback"
 import {
   getPreviewSceneTiming,
   resolvePreviewCaptionOverlayClassName,
-  resolvePreviewInteractionState,
+  resolvePreviewImageEditLayerClassName,
+  resolvePreviewInteractionLayer,
   resolvePreviewTimelineImageMotion,
   resolvePreviewTransitionOverlay,
 } from "@/features/preview/utils";
@@ -31,6 +33,9 @@ import { EMPTY_TIMELINE_PLAYBACK_SNAPSHOT } from "@/features/timeline-editor/tim
 import { StudioStatus } from "@/components/studio-status";
 import {
   studioPreviewControls,
+  studioPreviewFrameSlot,
+  studioPreviewStack,
+  studioPreviewTransportStack,
   studioPreviewPill,
   studioPreviewPillMuted,
   studioPreviewPillPrimary,
@@ -114,7 +119,11 @@ export default function VideoPreview({
     masterTimeline,
     currentTimeMs,
     scene,
+    playbackScope,
+    loopSceneEnabled,
     playPreview,
+    playScenePreview,
+    toggleLoopScene,
     playWithBrowserVoice,
     pauseVoice,
     stopVoice,
@@ -148,6 +157,7 @@ export default function VideoPreview({
       : null;
 
   const playbackActive = isPlaying || isSpeaking;
+  const sceneScopePlaybackActive = isPlaying && playbackScope === "scene";
   const canvasEditAvailable = Boolean(
     canvasEditActive &&
       displayScene &&
@@ -159,6 +169,7 @@ export default function VideoPreview({
   );
 
   const isFrameEditing = canvasEditActive && selection.isImageEditing;
+  const scenePreviewControlsDisabled = isFrameEditing;
 
   const exitFrameEdit = useCallback(() => {
     selection.exitImageEdit();
@@ -334,7 +345,7 @@ export default function VideoPreview({
   const showSubtitles = isNarrationSubtitles && !hideCaptionsDuringTransition;
   const showGeneratedCaption = !isNarrationSubtitles && !hideCaptionsDuringTransition;
 
-  const previewInteraction = resolvePreviewInteractionState({
+  const previewInteraction = resolvePreviewInteractionLayer({
     canvasEditEnabled: canvasEditActive,
     sceneId: displayScene.id,
     selectedSceneId: selection.selectedSceneId,
@@ -342,12 +353,15 @@ export default function VideoPreview({
     imageEditActive: isFrameEditing,
   });
   const captionOverlayClassName = resolvePreviewCaptionOverlayClassName(previewInteraction);
+  const imageEditLayerClassName = resolvePreviewImageEditLayerClassName(previewInteraction);
 
   const editLayer =
     canvasEditAvailable && onSceneImageTransformChange && displayScene ? (
       <EditorCanvasEditLayer
         scene={displayScene}
         sceneIndex={previewFrame.sceneIndex}
+        allowPointerEvents={previewInteraction.allowImagePointerEvents}
+        layerClassName={imageEditLayerClassName}
         onTransformChange={(patch) => onSceneImageTransformChange(displayScene.id, patch)}
         onResetFrame={
           onSceneImageReset ? () => onSceneImageReset(displayScene.id) : undefined
@@ -358,118 +372,123 @@ export default function VideoPreview({
   return (
     <div
       ref={previewRootRef}
-      className="flex w-full min-w-0 flex-col items-center gap-3 sm:gap-4"
+      className={studioPreviewStack}
     >
-      <PreviewFrame
-        title={script.title}
-        previewFrame={previewFrame}
-        transitionOverlay={transitionOverlay}
-        sceneTimelineImageMotion={sceneTimelineImageMotion}
-        transitionFromTimelineImageMotion={transitionFromTimelineImageMotion}
-        transitionToTimelineImageMotion={transitionToTimelineImageMotion}
-        editLayer={editLayer}
-        hideSceneImage={isFrameEditing}
-        frameEditActive={isFrameEditing}
-        onExitFrameEdit={exitFrameEdit}
-        overlay={
-          <>
-            {showSubtitles ? (
-              <SubtitleOverlay
-                scene={subtitleScene}
-                script={script}
-                sceneIndex={subtitleSceneIndex}
-                sceneElapsedMs={sceneElapsedMs}
-                sceneDurationMs={sceneDurationMs}
-                activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
-                chunkProgress={previewSceneTiming.chunkProgress}
-                captionAnimationState={previewSceneTiming.captionAnimationState}
-                subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
-                captionTooShortForEffect={previewSceneTiming.captionTooShortForEffect}
-                draggable={previewInteraction.captionDragEnabled}
-                onOffsetCommit={handleCaptionOffsetCommit}
-                onResetLayout={handleCaptionLayoutReset}
-                className={captionOverlayClassName}
-              />
-            ) : null}
-            {showGeneratedCaption ? (
-              <CaptionOverlay
-                scene={displayScene}
-                script={script}
-                sceneIndex={previewFrame.sceneIndex}
-                draggable={previewInteraction.captionDragEnabled}
-                onOffsetCommit={handleCaptionOffsetCommit}
-                onResetLayout={handleCaptionLayoutReset}
-                className={captionOverlayClassName}
-              />
-            ) : null}
-          </>
-        }
-        footer={
-          <>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] text-white/50">
-              {displayScene.sceneType && displayScene.sceneType !== "transition" ? (
-                <span className="capitalize">{displayScene.sceneType}</span>
-              ) : null}
-              {displayScene.sceneType && displayScene.sceneType !== "transition" ? (
-                <span>·</span>
-              ) : null}
-              <span className="tabular-nums">
-                {formatDisplayTimeRangeSec(displayScene.start, displayScene.end)}
-              </span>
-              {isSpeaking ? (
-                <>
-                  <span>·</span>
-                  <span>Speaking</span>
-                </>
-              ) : null}
-              {isPlaying && playbackMode === "narration" ? (
-                <>
-                  <span>·</span>
-                  <span>Narration</span>
-                </>
-              ) : null}
-            </div>
-
-            {playbackMode === "narration" && totalDuration > 0 ? (
-              <div className="overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-0.5 rounded-full bg-white/70 transition-all duration-300"
-                  style={{ width: `${progressPct}%` }}
+      <div className={studioPreviewFrameSlot}>
+        <PreviewFrame
+          title={script.title}
+          previewFrame={previewFrame}
+          transitionOverlay={transitionOverlay}
+          sceneTimelineImageMotion={sceneTimelineImageMotion}
+          transitionFromTimelineImageMotion={transitionFromTimelineImageMotion}
+          transitionToTimelineImageMotion={transitionToTimelineImageMotion}
+          editLayer={editLayer}
+          hideSceneImage={isFrameEditing}
+          frameEditActive={isFrameEditing}
+          onExitFrameEdit={exitFrameEdit}
+          overlay={
+            <>
+              {showSubtitles ? (
+                <SubtitleOverlay
+                  scene={subtitleScene}
+                  script={script}
+                  sceneIndex={subtitleSceneIndex}
+                  sceneElapsedMs={sceneElapsedMs}
+                  sceneDurationMs={sceneDurationMs}
+                  activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
+                  chunkProgress={previewSceneTiming.chunkProgress}
+                  captionAnimationState={previewSceneTiming.captionAnimationState}
+                  subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
+                  captionTooShortForEffect={previewSceneTiming.captionTooShortForEffect}
+                  draggable={previewInteraction.allowCaptionDrag}
+                  allowPointerEvents={previewInteraction.allowCaptionPointerEvents}
+                  onOffsetCommit={handleCaptionOffsetCommit}
+                  onResetLayout={handleCaptionLayoutReset}
+                  className={captionOverlayClassName}
                 />
+              ) : null}
+              {showGeneratedCaption ? (
+                <CaptionOverlay
+                  scene={displayScene}
+                  script={script}
+                  sceneIndex={previewFrame.sceneIndex}
+                  draggable={previewInteraction.allowCaptionDrag}
+                  allowPointerEvents={previewInteraction.allowCaptionPointerEvents}
+                  onOffsetCommit={handleCaptionOffsetCommit}
+                  onResetLayout={handleCaptionLayoutReset}
+                  className={captionOverlayClassName}
+                />
+              ) : null}
+            </>
+          }
+          footer={
+            <>
+              <div className="flex flex-wrap items-center justify-center gap-1 text-[10px] text-white/50">
+                {displayScene.sceneType && displayScene.sceneType !== "transition" ? (
+                  <span className="capitalize">{displayScene.sceneType}</span>
+                ) : null}
+                {displayScene.sceneType && displayScene.sceneType !== "transition" ? (
+                  <span>·</span>
+                ) : null}
+                <span className="tabular-nums">
+                  {formatDisplayTimeRangeSec(displayScene.start, displayScene.end)}
+                </span>
+                {isSpeaking ? (
+                  <>
+                    <span>·</span>
+                    <span>Speaking</span>
+                  </>
+                ) : null}
+                {isPlaying && playbackMode === "narration" ? (
+                  <>
+                    <span>·</span>
+                    <span>{playbackScope === "scene" ? "Scene" : "Narration"}</span>
+                  </>
+                ) : null}
               </div>
-            ) : null}
-          </>
-        }
-      />
 
-      <div className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1.5`}>
-        {scenes.map((s, index) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => {
-              if (isPlaying) {
-                return;
-              }
-
-              const targetScene = scenes[index];
-              if (targetScene) {
-                selection.selectScene(targetScene.id);
-              }
-            }}
-            disabled={isPlaying}
-            aria-label={`Scene ${index + 1}`}
-            aria-current={index === activeSceneIndex ? "true" : undefined}
-            className={`rounded-full transition-all duration-200 disabled:cursor-default ${
-              index === activeSceneIndex
-                ? "h-1.5 w-5 bg-white/70"
-                : "h-1.5 w-1.5 bg-white/25 hover:bg-white/40"
-            }`}
-          />
-        ))}
+              {playbackMode === "narration" && totalDuration > 0 ? (
+                <div className="overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-0.5 rounded-full bg-white/70 transition-all duration-300"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+              ) : null}
+            </>
+          }
+        />
       </div>
 
-      <div className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1.5`}>
+      <div className={studioPreviewTransportStack}>
+        <div className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1`}>
+          {scenes.map((s, index) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => {
+                if (isPlaying && playbackScope !== "scene") {
+                  return;
+                }
+
+                const targetScene = scenes[index];
+                if (targetScene) {
+                  selection.selectScene(targetScene.id);
+                }
+              }}
+              disabled={isPlaying && playbackScope !== "scene"}
+              aria-label={`Scene ${index + 1}`}
+              aria-current={index === activeSceneIndex ? "true" : undefined}
+              className={`rounded-full transition-all duration-200 disabled:cursor-default ${
+                index === activeSceneIndex
+                  ? "h-1.5 w-5 bg-white/70"
+                  : "h-1.5 w-1.5 bg-white/25 hover:bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1`}>
         <button
           type="button"
           onClick={() => {
@@ -478,26 +497,46 @@ export default function VideoPreview({
           }}
           disabled={isPlaying || !hasPlayableVoiceover}
           className={studioPreviewPillPrimary}
-          aria-label="Play preview with voiceover"
+          aria-label="Play story with voiceover"
         >
           <Play className="h-3 w-3" />
-          Play
+          Play Story
         </button>
         <button
           type="button"
-          data-preview-action="voice"
-          onClick={playWithBrowserVoice}
-          disabled={isPlaying}
+          onClick={() => {
+            onPreviewStart?.();
+            void playScenePreview();
+          }}
+          disabled={isPlaying || !hasPlayableVoiceover || scenePreviewControlsDisabled}
           className={studioPreviewPill}
-          aria-label="Preview with browser text-to-speech"
+          aria-label="Play selected scene with voiceover"
           title={
-            hasCanonicalVoiceover
-              ? "Preview with browser text-to-speech (does not use generated voiceover)"
-              : "Preview with browser text-to-speech"
+            scenePreviewControlsDisabled
+              ? "Exit image edit to preview a single scene"
+              : "Play the selected scene with voiceover"
           }
         >
-          <Volume2 className="h-3 w-3" />
-          Voice
+          <Play className="h-3 w-3" />
+          Play Scene
+        </button>
+        <button
+          type="button"
+          onClick={toggleLoopScene}
+          disabled={scenePreviewControlsDisabled}
+          aria-pressed={loopSceneEnabled}
+          className={`${studioPreviewPill} ${loopSceneEnabled ? "ring-accent/40 bg-accent/15 text-foreground" : ""}`}
+          aria-label="Loop selected scene during scene preview"
+          title={
+            scenePreviewControlsDisabled
+              ? "Exit image edit to use scene loop"
+              : loopSceneEnabled
+                ? "Scene loop enabled"
+                : "Loop the selected scene during scene preview"
+          }
+        >
+          <Repeat className="h-3 w-3" />
+          Loop Scene
         </button>
         <button
           type="button"
@@ -518,6 +557,22 @@ export default function VideoPreview({
           title="Stop preview"
         >
           <Square className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          data-preview-action="voice"
+          onClick={playWithBrowserVoice}
+          disabled={isPlaying}
+          className={studioPreviewPill}
+          aria-label="Preview with browser text-to-speech"
+          title={
+            hasCanonicalVoiceover
+              ? "Preview with browser text-to-speech (does not use generated voiceover)"
+              : "Preview with browser text-to-speech"
+          }
+        >
+          <Volume2 className="h-3 w-3" />
+          Voice
         </button>
       </div>
 
@@ -542,24 +597,24 @@ export default function VideoPreview({
         />
       ) : null}
 
-      <div className={`${studioPreviewControls} flex items-center gap-1.5`}>
+      <div className={`${studioPreviewControls} flex items-center gap-1`}>
         <button
           type="button"
           onClick={goPrevious}
-          disabled={isPlaying || safeIndex === 0}
+          disabled={(isPlaying && !sceneScopePlaybackActive) || safeIndex === 0}
           className={`${studioPreviewPillMuted} flex-1`}
           aria-label="Previous scene"
           title={safeIndex === 0 ? "Already on the first scene" : "Previous scene"}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-        <span className="shrink-0 rounded-full bg-surface-elevated/50 px-3 py-1.5 text-[10px] font-medium tabular-nums text-muted ring-1 ring-border/30">
+        <span className="shrink-0 rounded-full bg-surface-elevated/50 px-2.5 py-1 text-[10px] font-medium tabular-nums text-muted ring-1 ring-border/30 sm:px-3 sm:py-1.5">
           {activeSceneIndex + 1} / {sceneCount}
         </span>
         <button
           type="button"
           onClick={goNext}
-          disabled={isPlaying || safeIndex >= sceneCount - 1}
+          disabled={(isPlaying && !sceneScopePlaybackActive) || safeIndex >= sceneCount - 1}
           className={`${studioPreviewPillMuted} flex-1`}
           aria-label="Next scene"
           title={safeIndex >= sceneCount - 1 ? "Already on the last scene" : "Next scene"}
@@ -570,10 +625,10 @@ export default function VideoPreview({
 
       {isClient ? (
         <details className={`${studioPreviewControls} rounded-xl bg-surface/30 ring-1 ring-border/30`}>
-          <summary className="cursor-pointer list-none px-3 py-2.5 text-[10px] font-medium text-muted [&::-webkit-details-marker]:hidden">
+          <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-medium text-muted [&::-webkit-details-marker]:hidden">
             Browser voice settings
           </summary>
-          <div className="space-y-3 border-t border-border/30 px-3 pb-3 pt-2">
+          <div className="space-y-2.5 border-t border-border/30 px-3 pb-2.5 pt-2">
             <div className="relative">
               <select
                 id="preview-voice"
@@ -621,6 +676,7 @@ export default function VideoPreview({
           </div>
         </details>
       ) : null}
+      </div>
     </div>
   );
 }

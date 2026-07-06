@@ -727,7 +727,7 @@ test("sports preset remains unchanged by news motion module", () => {
 });
 
 test("StudioSceneInspector wires CaptionPresetPanel without voiceover side effects", () => {
-  const inspector = readRepo("src/features/editor/components/StudioSceneInspector.tsx");
+  const inspector = readRepo("src/features/editor/components/caption-workspace/CaptionWorkspace.tsx");
   const panel = readRepo("src/features/caption-engine/CaptionPresetPanel.tsx");
 
   assert.match(inspector, /CaptionPresetPanel/);

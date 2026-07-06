@@ -2,6 +2,7 @@ import {
   studioShellPanelSurface,
   studioShellRailScrollHost,
   studioShellRegionPadding,
+  studioShellSidebarSurface,
   studioShellSidebarWidth,
   studioShellSidebarWidthCompact,
 } from "@/lib/utils/studioUi";
@@ -12,6 +13,8 @@ export interface StudioSidebarProps extends StudioShellRegionProps {
   compactMode?: boolean;
   /** When true, sidebar is visible below `lg` (stacked above canvas). */
   visibleBelowLg?: boolean;
+  /** Matches StudioShell viewport — editor fixed vs document scroll routes. */
+  viewportMode?: "fixed" | "document";
   /** Accessible label for the sidebar landmark. */
   "aria-label"?: string;
 }
@@ -25,22 +28,30 @@ export default function StudioSidebar({
   id,
   compactMode = false,
   visibleBelowLg = false,
+  viewportMode = "document",
   "aria-label": ariaLabel = "Scene list",
 }: StudioSidebarProps) {
   const widthClass = compactMode ? studioShellSidebarWidthCompact : studioShellSidebarWidth;
   const visibilityClass = visibleBelowLg
-    ? "flex max-h-[42vh] w-full shrink-0 flex-col overflow-hidden border-b border-border/40 bg-surface/15 lg:max-h-none lg:w-[15rem] lg:overflow-hidden lg:border-b-0 lg:border-r xl:w-[15rem]"
+    ? `flex max-h-[42vh] w-full shrink-0 flex-col overflow-hidden ${studioShellSidebarSurface} lg:max-h-none lg:w-[15rem] lg:overflow-hidden lg:border-b-0 lg:border-r xl:w-[15rem]`
     : widthClass;
+  const isFixedViewport = viewportMode === "fixed";
 
   return (
     <aside
       id={id}
       aria-label={ariaLabel}
-      className={`${visibilityClass} ${visibleBelowLg ? "" : "flex flex-col border-r border-border/40 bg-surface/15"} ${className}`.trim()}
+      className={`${visibilityClass} ${visibleBelowLg ? "" : `flex flex-col ${studioShellSidebarSurface}`} ${className}`.trim()}
     >
-      <div className={`flex min-h-0 flex-1 flex-col ${studioShellRegionPadding}`}>
-        <div className={`${studioShellRailScrollHost} ${studioShellPanelSurface}`}>{children}</div>
-      </div>
+      {isFixedViewport ? (
+        <div className={`flex min-h-0 flex-1 flex-col ${studioShellRegionPadding}`}>
+          <div className={`${studioShellRailScrollHost} ${studioShellPanelSurface}`}>{children}</div>
+        </div>
+      ) : (
+        <div className={`flex flex-col ${studioShellRegionPadding}`}>
+          <div className={studioShellPanelSurface}>{children}</div>
+        </div>
+      )}
     </aside>
   );
 }

@@ -4,7 +4,7 @@ import { studioTimelineRailScroll } from "@/lib/utils/studioUi";
 export const timelineEditorRailScroll = `${studioTimelineRailScroll} scroll-smooth [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-border/10 [&::-webkit-scrollbar-thumb]:bg-border/55 [&::-webkit-scrollbar-thumb]:hover:bg-border/70`;
 
 export const timelineEditorTrackSurface =
-  "relative min-h-[5.25rem] min-w-full rounded-xl bg-surface/15 px-1 py-1 ring-1 ring-border/15 sm:min-h-[5.5rem]";
+  "relative min-h-[5.25rem] min-w-full rounded-xl bg-surface/25 px-1.5 py-1.5 ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:min-h-[5.5rem]";
 
 export const timelineEditorSegmentRow =
   "flex min-h-[4.75rem] min-w-full items-stretch gap-0.5 sm:min-h-[5rem]";
@@ -27,10 +27,10 @@ export const timelineSceneBlockBase =
   "group/scene-block relative flex min-w-[3.5rem] shrink-0 flex-col items-stretch gap-1 rounded-xl bg-surface/40 p-1 text-left ring-1 ring-border/25 transition duration-200 hover:-translate-y-0.5 hover:bg-surface-elevated/55 hover:ring-border/40 hover:shadow-md active:translate-y-0 active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 sm:min-w-[4rem]";
 
 export const timelineSceneBlockSelected =
-  "bg-accent-soft/90 ring-accent/45 shadow-[0_0_0_1px_rgba(91,140,255,0.18),0_8px_20px_-12px_rgba(91,140,255,0.45)]";
+  "bg-accent-soft/95 ring-2 ring-accent/55 shadow-[0_0_0_1px_rgba(91,140,255,0.28),0_10px_24px_-12px_rgba(91,140,255,0.55)]";
 
 export const timelineSceneBlockSelectedAccent =
-  "pointer-events-none absolute bottom-1 left-0 top-1 z-[1] w-0.5 rounded-full bg-accent shadow-[0_0_8px_rgba(91,140,255,0.55)]";
+  "pointer-events-none absolute bottom-1 left-0 top-1 z-[1] w-1 rounded-full bg-accent shadow-[0_0_12px_rgba(91,140,255,0.75)]";
 
 export const timelineSceneBlockDragging =
   "z-20 scale-[0.96] opacity-55 shadow-xl ring-2 ring-dashed ring-accent/50";
@@ -92,25 +92,25 @@ export const timelineTransitionMarkerWrap =
   "group/transition flex w-3.5 shrink-0 flex-col items-center justify-center self-stretch py-1 sm:w-4";
 
 export const timelineTransitionMarkerBody =
-  "relative flex h-full min-h-[3rem] w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-surface/25 ring-1 ring-border/25 transition group-hover/transition:bg-surface/40 group-hover/transition:ring-border/40 sm:min-h-[3.25rem]";
+  "relative flex h-full min-h-[3rem] w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-surface/40 ring-1 ring-border/35 transition group-hover/transition:bg-surface/55 group-hover/transition:ring-accent/20 sm:min-h-[3.25rem]";
 
 export const timelineTransitionMarkerDivider =
-  "pointer-events-none absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-border/35";
+  "pointer-events-none absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-accent/25";
 
 export const timelinePlaybackHeadRoot =
   "pointer-events-none absolute inset-y-0 z-30 w-0 will-change-[left]";
 
 export const timelinePlaybackHeadLine =
-  "absolute bottom-0 top-3 left-0 w-[2px] -translate-x-1/2 rounded-full bg-gradient-to-b from-accent/20 via-accent to-accent/20 shadow-[0_0_12px_rgba(91,140,255,0.45)]";
+  "absolute bottom-0 top-3 left-0 w-[2.5px] -translate-x-1/2 rounded-full bg-gradient-to-b from-accent/35 via-accent to-accent/35 shadow-[0_0_16px_rgba(91,140,255,0.65)]";
 
 export const timelinePlaybackHeadLineActive =
-  "shadow-[0_0_16px_rgba(91,140,255,0.65)]";
+  "shadow-[0_0_22px_rgba(91,140,255,0.85)]";
 
 export const timelinePlaybackHeadHandle =
   "absolute top-0 left-0 flex h-3 w-3 -translate-x-1/2 items-center justify-center";
 
 export const timelinePlaybackHeadHandleDot =
-  "h-2 w-2 rotate-45 rounded-sm bg-accent ring-2 ring-accent/30 shadow-[0_0_8px_rgba(91,140,255,0.5)]";
+  "h-2.5 w-2.5 rotate-45 rounded-sm bg-accent ring-2 ring-accent/40 shadow-[0_0_10px_rgba(91,140,255,0.65)]";
 
 export const timelinePlaybackHeadHandleDotActive =
-  "animate-pulse ring-accent/50 shadow-[0_0_12px_rgba(91,140,255,0.75)]";
+  "animate-pulse ring-accent/60 shadow-[0_0_16px_rgba(91,140,255,0.9)]";

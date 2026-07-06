@@ -580,6 +580,7 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
   return (
     <StudioShell
       aria-label="Script review"
+      viewportMode="document"
       canvasCenterContent={false}
       header={
         <ReviewStudioHeader

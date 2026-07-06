@@ -27,6 +27,11 @@ export interface StudioShellProps {
   canvasLayout?: "form" | "editor";
   /** When true, sidebar stacks above the canvas on viewports below `lg`. */
   sidebarVisibleBelowLg?: boolean;
+  /**
+   * `fixed` — editor: locks shell to viewport height (h-dvh), internal rail scroll.
+   * `document` — create/review: min-height page flow, browser scroll allowed.
+   */
+  viewportMode?: "fixed" | "document";
   className?: string;
   /** Accessible label for the shell landmark. */
   "aria-label"?: string;

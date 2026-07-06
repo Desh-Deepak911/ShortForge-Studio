@@ -4,7 +4,7 @@ const shadowInset = "shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]";
 
 const surfaceRing = "ring-1 ring-border/20";
 const fieldSurface =
-  "bg-surface-elevated/40 ring-1 ring-border/25 hover:bg-surface-elevated/55 hover:ring-border/35";
+  "bg-surface-elevated/50 ring-1 ring-border/30 hover:bg-surface-elevated/60 hover:ring-border/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
 /* ── Form control primitives (Apple-style) ─────────────────────────────────── */
 
@@ -315,9 +315,21 @@ export const studioPreviewDevice =
 export const studioPreviewScreen =
   "relative aspect-[9/16] w-full overflow-hidden rounded-[1.45rem] bg-background sm:rounded-[1.65rem]";
 
+/** Preview stack — natural height; editor center column scrolls when needed. */
+export const studioPreviewStack =
+  "flex w-full min-w-0 flex-col items-center gap-1.5 sm:gap-2";
+
+/** Centers the phone at its intrinsic 9:16 size. */
+export const studioPreviewFrameSlot =
+  "flex w-full items-center justify-center";
+
+/** Transport controls beneath the device — never shrink. */
+export const studioPreviewTransportStack =
+  "flex w-full shrink-0 flex-col items-center gap-1 sm:gap-1.5";
+
 /** Width constraint for preview controls below the device frame. */
 export const studioPreviewControls =
-  "w-full max-w-[min(100%,17.5rem)] sm:max-w-[260px]";
+  "w-full max-w-[min(100%,17.5rem)] rounded-xl bg-black/45 px-2 py-1.5 ring-1 ring-white/[0.06] sm:max-w-[260px] sm:px-2 sm:py-2";
 
 export const studioPreviewCaption =
   "rounded-xl bg-black/50 px-3 py-2.5 text-center text-[13px] font-semibold leading-snug text-white backdrop-blur-md sm:text-[14px]";
@@ -326,21 +338,21 @@ export const studioPreviewCaption =
 export const studioStoryboardCaptionOverlay =
   "rounded-lg bg-black/55 px-2.5 py-2 text-center text-[11px] font-semibold leading-snug text-white/95 backdrop-blur-sm sm:text-xs";
 
-export const studioPreviewPill = studioSecondaryButton + " min-h-[2.25rem] rounded-full px-3 py-2 text-[11px] sm:min-h-0";
+export const studioPreviewPill = studioSecondaryButton + " min-h-[2rem] rounded-full px-2.5 py-1.5 text-[10px] sm:min-h-0 sm:px-3 sm:py-2 sm:text-[11px]";
 
 export const studioPreviewPillPrimary =
-  studioPrimaryButton + " min-h-[2.25rem] rounded-full px-3.5 py-2 text-[11px] shadow-none sm:min-h-0";
+  studioPrimaryButton + " min-h-[2rem] rounded-full px-3 py-1.5 text-[10px] shadow-none sm:min-h-0 sm:px-3.5 sm:py-2 sm:text-[11px]";
 
 export const studioPreviewPillMuted =
-  `inline-flex min-h-[2.25rem] items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-medium text-muted ring-1 ring-border/20 hover:bg-surface-elevated/45 hover:text-foreground/85 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:min-h-0 ${focusRing}`;
+  `inline-flex min-h-[2rem] items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-medium text-muted ring-1 ring-border/20 hover:bg-surface-elevated/45 hover:text-foreground/85 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:min-h-0 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[11px] ${focusRing}`;
 
 /* ── Empty & loading states ────────────────────────────────────────────────── */
 
 export const studioEmptyStateCard =
-  `mx-auto flex w-full min-w-0 max-w-lg flex-col items-center rounded-2xl bg-surface/40 px-5 py-9 text-center ring-1 ring-border/20 backdrop-blur-xl sm:px-10 sm:py-12 ${shadowInset}`;
+  `mx-auto flex w-full min-w-0 max-w-lg flex-col items-center rounded-2xl bg-surface/50 px-5 py-8 text-center ring-1 ring-border/30 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-10 sm:py-10 ${shadowInset}`;
 
 export const studioEmptyStateIcon =
-  "relative mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft ring-1 ring-accent/15 sm:mb-6 sm:h-[4.5rem] sm:w-[4.5rem]";
+  "relative mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-elevated/70 ring-1 ring-border/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:mb-5 sm:h-16 sm:w-16";
 
 export const studioEmptyStateTitle =
   "text-lg font-semibold tracking-tight text-foreground sm:text-xl lg:text-[1.35rem]";
@@ -377,18 +389,24 @@ export const studioStatusDescription = "mt-1 text-xs leading-relaxed text-muted"
 
 /* ── Studio UX 2.0 shell layout (presentation only) ───────────────────────── */
 
-/** Full studio viewport shell — fixed-height editor chrome. */
+/** Full studio shell — shared base (overflow rules applied per viewport mode). */
 export const studioShellRoot =
-  "studio-shell flex min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-hidden bg-background";
+  "studio-shell flex min-w-0 flex-col overflow-x-hidden bg-background";
+
+/** Editor shell — fixed viewport height, no page scroll. */
+export const studioShellRootFixed = "min-h-0 overflow-y-hidden h-dvh";
+
+/** Create/review shell — document flow, page scroll allowed. */
+export const studioShellRootDocument = "min-h-screen";
 
 /** Centered shell content max width (editor workspace). */
 export const studioShellMaxWidth = "mx-auto w-full min-w-0 max-w-[100rem]";
 
 /** Gap between shell regions (sidebar, canvas, inspector). */
-export const studioShellPanelGap = "gap-3 lg:gap-4";
+export const studioShellPanelGap = "gap-3 lg:gap-5";
 
 /** Horizontal padding inside shell regions. */
-export const studioShellRegionPadding = "px-3 py-3 sm:px-4 sm:py-4 lg:px-4";
+export const studioShellRegionPadding = "px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-4";
 
 /** Thin vertical scrollbar — inspector, sidebar, drawers. */
 export const studioScrollbarVertical =
@@ -412,33 +430,40 @@ export const studioShellInspectorWidthCompact =
 
 /** Primary scroll host inside shell rails — single owner per column. */
 export const studioShellRailScrollHost =
-  `min-h-0 flex-1 overflow-y-auto overscroll-contain ${studioScrollbarVertical}`;
+  `min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] ${studioScrollbarVertical}`;
+
+/** Inspector tab body — sole vertical scroll owner beneath pinned sync UI. */
+export const studioInspectorTabBodyScrollHost = studioShellRailScrollHost;
 
 /** Primary canvas column — centers preview content. */
 export const studioShellCanvasRegion =
   "flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto overscroll-contain";
 
-/** Brief/script canvas — top-aligned forms; avoids preview centering on inputs. */
+/** Brief/script canvas — top-aligned forms; scrolls inside fixed editor or with page. */
 export const studioShellCanvasRegionForm =
   "flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start overflow-y-auto overscroll-contain";
 
-/** Editor preview canvas — fills body below header; top-aligned, no viewport centering. */
-export const studioShellCanvasRegionEditor =
-  "flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start overflow-hidden overscroll-contain";
+/** Document-route canvas — grows with page content, no viewport clipping. */
+export const studioShellCanvasRegionDocument =
+  "flex min-w-0 flex-1 flex-col items-stretch justify-start";
 
-/** Editor canvas column — stretches to available canvas height. */
-export const studioShellEditorCanvasHost = "flex h-full min-h-0 w-full flex-col";
+/** Editor preview canvas — near-black stage; scrolls vertically when viewport is short. */
+export const studioShellCanvasRegionEditor =
+  "flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start overflow-y-auto overscroll-contain rounded-xl bg-[#070708] ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] lg:rounded-2xl";
+
+/** Editor canvas column host — top-aligned preview stack. */
+export const studioShellEditorCanvasHost = "flex w-full min-w-0 flex-col items-center";
 
 /** Editor preview stack — top-aligned under header inset. */
 export const studioShellEditorCanvasColumn =
-  "mx-auto flex h-full min-h-0 w-full flex-col items-center";
+  "mx-auto flex w-full min-w-0 flex-col items-center";
 
-/** Breathing room below the sticky header (~24–32px). */
-export const studioShellEditorCanvasInset = "pt-6 lg:pt-8";
+/** Breathing room below the sticky header (~12–16px). */
+export const studioShellEditorCanvasInset = "pt-3 lg:pt-4";
 
-/** Centers the phone within remaining canvas height (ribbon above, timeline below). */
+/** Preview content column — no extra stage panel behind the device. */
 export const studioShellEditorPreviewStage =
-  "flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-2 pb-2";
+  "flex w-full flex-col items-center gap-2 px-2 sm:px-3 lg:py-2";
 
 /** Preview frame sizing inside canvas (9:16 device). */
 export const studioShellCanvasMaxWidth =
@@ -448,28 +473,54 @@ export const studioShellCanvasMaxWidth =
 export const studioShellEditorCanvasMaxWidth =
   "w-full max-w-[min(100%,22rem)] sm:max-w-[min(100%,26rem)] lg:max-w-[min(100%,32rem)] xl:max-w-[min(100%,36rem)]";
 
-/** Scales preview within the editor stage — origin top avoids clipping the notch area. */
+/** Preview column inside the editor stage. */
 export const studioShellEditorPreviewWrap =
-  "flex w-full max-h-full min-h-0 flex-col items-center justify-center origin-top scale-[1.0] sm:scale-[1.02] lg:scale-[1.04] xl:scale-[1.06]";
+  "flex w-full max-w-full flex-col items-center";
 
 /** Bottom timeline rail — default height. */
 export const studioShellTimelineHeight =
-  "flex h-[7.5rem] shrink-0 flex-col overflow-hidden border-t border-border/40 bg-surface/20 lg:h-[7.5rem]";
+  "flex h-[7.5rem] shrink-0 flex-col overflow-hidden border-t border-border/50 bg-surface/30 shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.85)] lg:h-[7.5rem]";
 
 /** Bottom timeline rail — compact height. */
 export const studioShellTimelineHeightCompact =
-  "flex h-[6.25rem] shrink-0 flex-col overflow-hidden border-t border-border/40 bg-surface/20";
+  "flex h-[6.25rem] shrink-0 flex-col overflow-hidden border-t border-border/50 bg-surface/30 shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.85)]";
 
-/** Row containing canvas + inspector. */
-export const studioShellBodyRow =
+/** Row containing canvas + inspector — fixed editor viewport. */
+export const studioShellBodyRowFixed =
   "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row";
 
-/** Column containing body row + timeline. */
-export const studioShellMainColumn = "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
+/** Row containing canvas + inspector — document routes. */
+export const studioShellBodyRowDocument =
+  "flex min-w-0 flex-1 flex-col lg:flex-row";
+
+/** @deprecated Use studioShellBodyRowFixed or studioShellBodyRowDocument */
+export const studioShellBodyRow = studioShellBodyRowFixed;
+
+/** Column containing body row + timeline — fixed editor viewport. */
+export const studioShellMainColumnFixed =
+  "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
+
+/** Column containing body row + timeline — document routes. */
+export const studioShellMainColumnDocument = "flex min-w-0 flex-1 flex-col";
+
+/** @deprecated Use studioShellMainColumnFixed or studioShellMainColumnDocument */
+export const studioShellMainColumn = studioShellMainColumnFixed;
 
 /** Header slot container inside shell. */
 export const studioShellHeaderRegion =
-  `shrink-0 border-b border-border/60 bg-background/60 backdrop-blur-2xl backdrop-saturate-150 ${shadowInset}`;
+  `shrink-0 border-b border-border/50 bg-[#0b0b0d]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.9)] ${shadowInset}`;
+
+/** Left scene-list rail surface — slightly darker than inspector. */
+export const studioShellSidebarSurface =
+  "border-r border-border/45 bg-[#0a0a0c]/95 lg:bg-[#09090b]/95";
+
+/** Right inspector surface — elevated workspace panel (document routes). */
+export const studioShellInspectorSurface =
+  "border-t border-border/45 bg-surface/30 lg:border-l lg:border-t-0 lg:bg-surface/35";
+
+/** Right inspector surface — editor fixed viewport with internal scroll chain. */
+export const studioShellInspectorSurfaceFixed =
+  "flex min-h-0 flex-col overflow-hidden border-t border-border/45 bg-surface/30 lg:border-l lg:border-t-0 lg:bg-surface/35";
 
 /** Footer slot — hidden in focus mode via shell modifier. */
 export const studioShellFooterRegion =
@@ -477,7 +528,7 @@ export const studioShellFooterRegion =
 
 /** Inner panel surface for shell slots. */
 export const studioShellPanelSurface =
-  `min-h-0 min-w-0 rounded-xl bg-surface/30 p-3 ring-1 ring-border/15 sm:p-4 ${shadowInset}`;
+  `min-h-0 min-w-0 rounded-xl bg-surface/40 p-3 ring-1 ring-border/25 shadow-[0_10px_28px_-22px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4 ${shadowInset}`;
 
 /** Section title inside shell panels. */
 export const studioShellSectionTitle =
@@ -557,33 +608,36 @@ export const studioTimelineRailDuration =
 
 /** Collapsible inspector section container. */
 export const studioInspectorSection =
-  "group/details w-full min-w-0 shrink-0 rounded-xl bg-surface/25 ring-1 ring-border/15";
-
-/** Animated accordion body wrapper — overflow hidden only on inner content. */
-export const studioInspectorSectionContent =
-  "grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none group-open/details:grid-rows-[1fr]";
-
-/** Inner clip for accordion height animation. */
-export const studioInspectorSectionContentInner = "overflow-hidden min-h-0";
+  "group/details w-full min-w-0 shrink-0 rounded-xl bg-surface-elevated/45 ring-1 ring-border/30 shadow-[0_10px_28px_-24px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)]";
 
 /** Inspector section summary row. */
 export const studioInspectorSectionSummary =
-  "flex min-h-[2.5rem] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 sm:px-3.5 [&::-webkit-details-marker]:hidden";
+  "flex min-h-[2.75rem] cursor-pointer list-none items-center gap-2.5 px-3 py-2.5 sm:px-3.5 sm:py-3 [&::-webkit-details-marker]:hidden";
 
 /** Inspector section title. */
 export const studioInspectorSectionTitle =
-  "text-xs font-semibold tracking-tight text-foreground/90 sm:text-[13px]";
+  "text-xs font-semibold tracking-tight text-foreground/95 sm:text-[13px]";
+
+/** Inspector section icon chip in summary row. */
+export const studioInspectorSectionIcon =
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface/55 ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+
+/** Accordion body wrapper — stable document flow inside the tab scroll host. */
+export const studioInspectorSectionContent = "min-w-0";
+
+/** Inner accordion body wrapper — no independent height animation. */
+export const studioInspectorSectionContentInner = "min-w-0";
 
 /** Inspector section body padding. */
 export const studioInspectorSectionBody =
-  "space-y-2.5 border-t border-border/15 px-3 py-2.5 sm:px-3.5 sm:py-3";
+  "space-y-3 border-t border-border/20 px-3 py-3 sm:px-3.5 sm:py-3.5";
 
 /** Vertical stack spacing between inspector sections. */
-export const studioInspectorStack = "flex min-w-0 flex-col gap-2";
+export const studioInspectorStack = "flex min-w-0 flex-col gap-3.5";
 
 /** Nested accordion inside an inspector section — lighter surface. */
 export const studioInspectorNestedSection =
-  "group/details w-full min-w-0 rounded-lg bg-surface/20 ring-1 ring-border/15";
+  "group/details w-full min-w-0 rounded-lg bg-surface/35 ring-1 ring-border/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]";
 
 /** Nested accordion summary — matches main section header height. */
 export const studioInspectorNestedSummary =
@@ -623,7 +677,27 @@ export const studioPickerCardDescriptionCompact = `${studioSubtleText} line-clam
 
 /** Scene summary strip at top of inspector. */
 export const studioInspectorSummaryStrip =
-  "rounded-xl bg-surface/30 px-3 py-3 ring-1 ring-border/15 sm:px-3.5";
+  "rounded-xl bg-surface/45 px-3 py-3 ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3.5";
+
+/** Story sync status card in inspector. */
+export const studioSyncStatusCard =
+  "rounded-xl bg-surface-elevated/50 px-3 py-3 ring-1 ring-border/30 shadow-[0_10px_28px_-24px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)]";
+
+/** Story sync step row surface. */
+export const studioSyncStatusStep =
+  "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 rounded-lg bg-surface/25 px-2.5 py-2 ring-1 ring-border/15";
+
+/** Workspace secondary tab track — caption workspace, nested editors. */
+export const studioWorkspaceTabTrack =
+  "flex w-full rounded-[0.7rem] bg-surface/35 p-0.5 ring-1 ring-border/25";
+
+/** Workspace tab — active / filled. */
+export const studioWorkspaceTabActive =
+  "flex min-h-[2.125rem] flex-1 items-center justify-center rounded-[0.55rem] bg-surface-elevated/90 px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_12px_-8px_rgba(0,0,0,0.75)] ring-1 ring-border/35 sm:min-h-0 sm:text-xs";
+
+/** Workspace tab — inactive / subtle outline. */
+export const studioWorkspaceTabInactive =
+  "flex min-h-[2.125rem] flex-1 items-center justify-center rounded-[0.55rem] px-2 py-1.5 text-center text-[11px] font-medium leading-tight text-muted ring-1 ring-transparent transition hover:bg-surface/30 hover:text-foreground/85 hover:ring-border/20 sm:min-h-0 sm:text-xs";
 
 /* ── Editor project sidebar (navigation only) ──────────────────────────────── */
 
@@ -632,15 +706,15 @@ export const studioSidebarSceneList = "flex min-w-0 flex-col gap-1";
 
 /** Sidebar scene row — inactive. */
 export const studioSidebarSceneItem =
-  `flex w-full min-w-0 items-center gap-2.5 rounded-xl px-2 py-2 text-left ring-1 ring-transparent transition duration-150 hover:bg-surface-elevated/40 hover:ring-border/20 active:scale-[0.99] ${focusRing}`;
+  `flex w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ring-1 ring-border/15 bg-surface/20 transition duration-150 hover:-translate-y-px hover:bg-surface-elevated/45 hover:ring-border/30 hover:shadow-[0_8px_20px_-16px_rgba(0,0,0,0.85)] active:scale-[0.99] ${focusRing}`;
 
 /** Sidebar scene row — selected. */
 export const studioSidebarSceneItemActive =
-  "bg-accent-soft ring-1 ring-accent/30 hover:bg-accent-soft hover:ring-accent/35";
+  "bg-accent-soft/80 ring-1 ring-accent/45 shadow-[0_0_0_1px_rgba(91,140,255,0.18),0_10px_24px_-16px_rgba(91,140,255,0.35)] hover:bg-accent-soft/85 hover:ring-accent/50";
 
 /** Sidebar scene thumbnail. */
 export const studioSidebarSceneThumb =
-  "flex h-10 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-elevated/45 ring-1 ring-border/15";
+  "flex h-10 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-elevated/55 ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
 /** Sidebar scene title. */
 export const studioSidebarSceneTitle =
@@ -654,7 +728,7 @@ export const studioSidebarSceneMeta =
 
 /** Context ribbon container above the editor canvas. */
 export const studioContextRibbon =
-  "mb-3 flex w-full min-w-0 flex-wrap items-center gap-3 rounded-xl bg-surface/35 px-3 py-2 ring-1 ring-border/20 sm:px-3.5";
+  "mb-2 flex w-full shrink-0 min-w-0 flex-wrap items-center gap-3 rounded-xl bg-surface/45 px-3 py-2.5 ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3.5";
 
 /** Ribbon section grouping. */
 export const studioRibbonSection = "flex min-w-0 flex-wrap items-center gap-2 sm:gap-3";

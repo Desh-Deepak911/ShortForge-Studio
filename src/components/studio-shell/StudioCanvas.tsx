@@ -1,6 +1,7 @@
 import {
   studioShellCanvasMaxWidth,
   studioShellCanvasRegion,
+  studioShellCanvasRegionDocument,
   studioShellCanvasRegionEditor,
   studioShellCanvasRegionForm,
   studioShellEditorCanvasHost,
@@ -14,16 +15,23 @@ export interface StudioCanvasProps extends StudioShellRegionProps {
   centerContent?: boolean;
   /** Overrides the canvas region layout when set. */
   layout?: "form" | "editor";
+  /** Matches StudioShell viewport — editor fixed vs document scroll routes. */
+  viewportMode?: "fixed" | "document";
   /** Accessible label for the canvas landmark. */
   "aria-label"?: string;
 }
 
 function resolveCanvasRegionClass(
   centerContent: boolean,
-  layout?: StudioCanvasProps["layout"],
+  layout: StudioCanvasProps["layout"],
+  viewportMode: StudioCanvasProps["viewportMode"],
 ): string {
   if (layout === "editor") {
     return studioShellCanvasRegionEditor;
+  }
+
+  if (viewportMode === "document") {
+    return studioShellCanvasRegionDocument;
   }
 
   if (layout === "form" || !centerContent) {
@@ -43,9 +51,10 @@ export default function StudioCanvas({
   id,
   centerContent = true,
   layout,
+  viewportMode = "document",
   "aria-label": ariaLabel = "Preview canvas",
 }: StudioCanvasProps) {
-  const regionClass = resolveCanvasRegionClass(centerContent, layout);
+  const regionClass = resolveCanvasRegionClass(centerContent, layout, viewportMode);
   const useCenteredChildWrap = centerContent && layout !== "editor" && layout !== "form";
   const useEditorHost = layout === "editor";
 

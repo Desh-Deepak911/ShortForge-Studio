@@ -25,6 +25,7 @@ interface CaptionOverlayProps {
   sceneIndex?: number;
   className?: string;
   draggable?: boolean;
+  allowPointerEvents?: boolean;
   onOffsetCommit?: (offsetX: number, offsetY: number) => void;
   onResetLayout?: () => void;
 }
@@ -36,6 +37,7 @@ export default function CaptionOverlay({
   sceneIndex,
   className = "",
   draggable = false,
+  allowPointerEvents = true,
   onOffsetCommit,
   onResetLayout,
 }: CaptionOverlayProps) {
@@ -73,6 +75,7 @@ export default function CaptionOverlay({
         script={script}
         sceneIndex={sceneIndex}
         draggable
+        allowPointerEvents={allowPointerEvents}
         overlayClassName={className}
         pillClassName="preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
         onOffsetCommit={onOffsetCommit}

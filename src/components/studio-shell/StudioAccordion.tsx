@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import { useState, type ReactNode, type SyntheticEvent } from "react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
+import { useState, type MouseEvent, type ReactNode, type SyntheticEvent } from "react";
 
 import {
   studioInspectorNestedSection,
@@ -11,6 +11,7 @@ import {
   studioInspectorSectionBody,
   studioInspectorSectionContent,
   studioInspectorSectionContentInner,
+  studioInspectorSectionIcon,
   studioInspectorSectionSummary,
   studioInspectorSectionTitle,
   studioSubtleText,
@@ -23,6 +24,8 @@ export interface StudioAccordionProps {
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Optional section icon — presentation only. */
+  icon?: LucideIcon;
   /** Nested accordions use a lighter surface inside inspector sections. */
   variant?: "default" | "nested";
   className?: string;
@@ -30,7 +33,7 @@ export interface StudioAccordionProps {
 }
 
 /**
- * Shared Studio accordion — same animation and chevron as InspectorSection.
+ * Shared Studio accordion — document-flow body inside the inspector scroll host.
  * Use nested variant for sub-sections (caption advanced, export details).
  */
 export default function StudioAccordion({
@@ -40,6 +43,7 @@ export default function StudioAccordion({
   defaultOpen = false,
   open,
   onOpenChange,
+  icon: Icon,
   variant = "default",
   className = "",
   id,
@@ -49,10 +53,18 @@ export default function StudioAccordion({
   const isOpen = isControlled ? open : uncontrolledOpen;
   const isNested = variant === "nested";
 
+  const handleSummaryClick = (event: MouseEvent<HTMLElement>) => {
+    if (!isControlled) {
+      return;
+    }
+
+    event.preventDefault();
+    onOpenChange?.(!isOpen);
+  };
+
   const handleToggle = (event: SyntheticEvent<HTMLDetailsElement>) => {
     if (isControlled) {
       event.preventDefault();
-      onOpenChange?.(!isOpen);
       return;
     }
 
@@ -70,7 +82,12 @@ export default function StudioAccordion({
       className={`${sectionClass} ${className}`.trim()}
       onToggle={handleToggle}
     >
-      <summary className={summaryClass}>
+      <summary className={summaryClass} onClick={handleSummaryClick}>
+        {Icon && !isNested ? (
+          <span className={studioInspectorSectionIcon} aria-hidden>
+            <Icon className="h-3.5 w-3.5 text-foreground/75" strokeWidth={1.75} />
+          </span>
+        ) : null}
         <span className="min-w-0 flex-1">
           <span className={titleClass}>{title}</span>
           {description ? (

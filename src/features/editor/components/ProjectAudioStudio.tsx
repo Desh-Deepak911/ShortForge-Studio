@@ -1,5 +1,7 @@
 "use client";
 
+import { Download, Mic, Music2, SlidersHorizontal } from "lucide-react";
+
 import ProjectAudioBackgroundMusicSection from "@/features/editor/components/ProjectAudioBackgroundMusicSection";
 import ProjectAudioExportMixSummary from "@/features/editor/components/ProjectAudioExportMixSummary";
 import ProjectAudioVoiceoverSection from "@/features/editor/components/ProjectAudioVoiceoverSection";
@@ -34,6 +36,7 @@ export default function ProjectAudioStudio({
       </header>
 
       <InspectorSection
+        icon={Mic}
         title="Voiceover"
         description="Narration status, voice settings, generation, and upload."
         defaultOpen
@@ -42,6 +45,7 @@ export default function ProjectAudioStudio({
       </InspectorSection>
 
       <InspectorSection
+        icon={Music2}
         title="Background Music"
         description="Optional soundtrack — upload, volume, and fades."
       >
@@ -49,13 +53,18 @@ export default function ProjectAudioStudio({
       </InspectorSection>
 
       <InspectorSection
+        icon={SlidersHorizontal}
         title="Audio Mixer"
         description="Voice, music, and master volume for preview and export."
       >
         <AudioMixerPanel script={script} onScriptChange={onScriptChange} />
       </InspectorSection>
 
-      <InspectorSection title="Export Mix" description="What will be included in your download.">
+      <InspectorSection
+        icon={Download}
+        title="Export Mix"
+        description="What will be included in your download."
+      >
         <ProjectAudioExportMixSummary script={script} embedded />
       </InspectorSection>
     </div>

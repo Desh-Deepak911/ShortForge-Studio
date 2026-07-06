@@ -327,7 +327,7 @@ test("smart guides include thirds lines", () => {
 });
 
 test("workflow UI wired in caption layout inspector", () => {
-  const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const inspector = readSrc("src/features/editor/components/caption-workspace/CaptionWorkspace.tsx");
   const workflow = readSrc("src/features/caption-layout-workflow/CaptionLayoutWorkflow.tsx");
   assert.match(inspector, /CaptionLayoutWorkflow/);
   assert.match(workflow, /Apply All/);

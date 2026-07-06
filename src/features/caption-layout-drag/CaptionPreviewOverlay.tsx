@@ -14,7 +14,6 @@ import {
 } from "react";
 
 import {
-  hasCaptionLayoutOverride,
   resolvePreviewCaptionLayoutForScene,
   resolvePreviewCaptionLayoutScene,
   resolvePreviewCaptionOverlayStyle,
@@ -44,6 +43,8 @@ export interface CaptionPreviewOverlayProps {
   overlayClassName?: string;
   pillClassName: string;
   draggable: boolean;
+  /** When false, caption overlay must not capture pointer events (image edit / playback). */
+  allowPointerEvents?: boolean;
   onOffsetCommit?: (offsetX: number, offsetY: number) => void;
   onResetLayout?: () => void;
 }
@@ -64,6 +65,7 @@ export default function CaptionPreviewOverlay({
   overlayClassName = "",
   pillClassName,
   draggable,
+  allowPointerEvents = true,
   onOffsetCommit,
   onResetLayout,
 }: CaptionPreviewOverlayProps) {
@@ -115,8 +117,7 @@ export default function CaptionPreviewOverlay({
     layoutScene.captionLayout,
     script?.defaultCaptionLayout,
   );
-  const usesEnginePlacement =
-    isDragging || draftOffsets != null || hasCaptionLayoutOverride(layoutScene, script);
+  const usesEnginePlacement = isDragging || draftOffsets != null;
 
   const resolvedLayout = usesEnginePlacement
     ? resolvePreviewCaptionLayoutForDrag(
@@ -149,7 +150,27 @@ export default function CaptionPreviewOverlay({
       );
 
   const boxCenterY = resolvedLayout.boxTopY + (resolvedLayout.boxBottomY - resolvedLayout.boxTopY) / 2;
-  const showBoundingBox = draggable;
+  const captionInteractive = draggable && allowPointerEvents;
+  const showBoundingBox = captionInteractive;
+
+  useEffect(() => {
+    if (captionInteractive) {
+      return;
+    }
+
+    if (rafRef.current) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+
+    dragSessionRef.current = null;
+    pendingPointerRef.current = null;
+    // Clear in-flight drag when preview interaction mode changes (e.g. image edit).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- interaction handoff must reset drag chrome
+    setDraftOffsets(null);
+    setIsDragging(false);
+    setIsFocused(false);
+  }, [captionInteractive]);
 
   useLayoutEffect(() => {
     if (!showBoundingBox || !pillRef.current || !frameRef.current) {
@@ -214,7 +235,7 @@ export default function CaptionPreviewOverlay({
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
-      if (!draggable) {
+      if (!captionInteractive) {
         return;
       }
 
@@ -233,7 +254,7 @@ export default function CaptionPreviewOverlay({
       setDraftOffsets(storedOffsets);
       setIsDragging(true);
     },
-    [draggable, storedOffsets],
+    [captionInteractive, storedOffsets],
   );
 
   const handlePointerMove = useCallback(
@@ -285,7 +306,7 @@ export default function CaptionPreviewOverlay({
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (!draggable) {
+      if (!captionInteractive) {
         return;
       }
 
@@ -302,12 +323,12 @@ export default function CaptionPreviewOverlay({
       const patch = buildCaptionLayoutOffsetCommitPatch(layoutScene, script, next.offsetX, next.offsetY);
       commitOffsets(patch.captionLayout.offsetX ?? 0, patch.captionLayout.offsetY ?? 0);
     },
-    [commitOffsets, draggable, layoutScene, script, storedOffsets.offsetX, storedOffsets.offsetY],
+    [commitOffsets, captionInteractive, layoutScene, script, storedOffsets.offsetX, storedOffsets.offsetY],
   );
 
   const handleDoubleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!draggable) {
+      if (!captionInteractive) {
         return;
       }
 
@@ -315,7 +336,7 @@ export default function CaptionPreviewOverlay({
       event.stopPropagation();
       onResetLayout?.();
     },
-    [draggable, onResetLayout],
+    [captionInteractive, onResetLayout],
   );
 
   useEffect(() => {
@@ -326,7 +347,7 @@ export default function CaptionPreviewOverlay({
     };
   }, []);
 
-  const showChrome = draggable && (isDragging || isFocused);
+  const showChrome = captionInteractive && (isDragging || isFocused);
 
   return (
     <div ref={frameRef} className="pointer-events-none absolute inset-0 z-[15]">
@@ -368,16 +389,16 @@ export default function CaptionPreviewOverlay({
         className={`${usesLegacyBottomCenter ? "preview-narration-subtitle-overlay" : ""} ${overlayClassName}`.trim()}
         style={{
           ...overlayStyle,
-          pointerEvents: draggable ? "auto" : "none",
-          cursor: draggable ? (isDragging ? "grabbing" : "move") : undefined,
+          pointerEvents: captionInteractive ? "auto" : "none",
+          cursor: captionInteractive ? (isDragging ? "grabbing" : "move") : undefined,
         }}
       >
         <div
           ref={pillRef}
-          role={draggable ? "button" : undefined}
-          tabIndex={draggable ? 0 : -1}
-          aria-label={draggable ? "Move caption" : undefined}
-          className={`${pillClassName} ${draggable ? "outline-none focus-visible:ring-2 focus-visible:ring-accent/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40" : ""}`.trim()}
+          role={captionInteractive ? "button" : undefined}
+          tabIndex={captionInteractive ? 0 : -1}
+          aria-label={captionInteractive ? "Move caption" : undefined}
+          className={`${pillClassName} ${captionInteractive ? "outline-none focus-visible:ring-2 focus-visible:ring-accent/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40" : ""}`.trim()}
           style={pillStyle}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}

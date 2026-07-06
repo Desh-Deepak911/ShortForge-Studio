@@ -1,11 +1,13 @@
 "use client";
 
+import { studioSyncStatusStep } from "@/lib/utils/studioUi";
+
 import type { StorySyncStepModel, StorySyncStepTone } from "../story-sync.utils";
 
 const TONE_DOT: Record<StorySyncStepTone, string> = {
-  success: "bg-emerald-400/80",
-  warning: "bg-amber-300/80",
-  neutral: "bg-muted/50",
+  success: "bg-emerald-400 ring-1 ring-emerald-300/40 shadow-[0_0_8px_rgba(52,211,153,0.35)]",
+  warning: "bg-amber-300 ring-1 ring-amber-200/35 shadow-[0_0_8px_rgba(252,211,77,0.25)]",
+  neutral: "bg-muted/70 ring-1 ring-border/30",
 };
 
 const TONE_TEXT: Record<StorySyncStepTone, string> = {
@@ -35,13 +37,13 @@ export default function SynchronizationStep({
 }: SynchronizationStepProps) {
   return (
     <div
-      className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 rounded-lg px-2 py-1.5"
+      className={studioSyncStatusStep}
       data-sync-step={step.id}
       data-sync-tone={step.tone}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <span
-          className={`inline-flex h-1.5 w-1.5 shrink-0 rounded-full ${TONE_DOT[step.tone]}`}
+          className={`inline-flex h-2 w-2 shrink-0 rounded-full ${TONE_DOT[step.tone]}`}
           aria-hidden
         />
         <span className="whitespace-nowrap text-xs font-medium text-foreground/90">

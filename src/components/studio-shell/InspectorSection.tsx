@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import StudioAccordion from "./StudioAccordion";
@@ -8,6 +9,7 @@ export interface InspectorSectionProps {
   title: string;
   description?: string;
   children: ReactNode;
+  icon?: LucideIcon;
   /** When true, section starts expanded (uncontrolled). */
   defaultOpen?: boolean;
   /** Controlled open state — when set, overrides user toggle until released. */

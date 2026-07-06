@@ -31,6 +31,10 @@ export interface EditorCanvasEditLayerProps {
   onTransformChange: (patch: SceneImageTransformPatch) => void;
   /** Resets pan/zoom via existing scene image reset (preserves motion presets). */
   onResetFrame?: () => void;
+  /** When false, the layer must not intercept pointer events (playback). */
+  allowPointerEvents?: boolean;
+  /** Layer positioning class — elevated above caption overlays during image edit. */
+  layerClassName?: string;
 }
 
 /**
@@ -42,6 +46,8 @@ export default function EditorCanvasEditLayer({
   sceneIndex,
   onTransformChange,
   onResetFrame,
+  allowPointerEvents = true,
+  layerClassName = "absolute inset-0 z-[4]",
 }: EditorCanvasEditLayerProps) {
   const { canvasEditMode, selectImage, setImageHover } = useEditorSelection();
   const mode = canvasEditMode;
@@ -158,10 +164,14 @@ export default function EditorCanvasEditLayer({
       <button
         type="button"
         aria-label="Edit scene image framing"
-        className="absolute inset-0 z-[4] cursor-pointer bg-transparent"
+        className={`${layerClassName} bg-transparent ${allowPointerEvents ? "cursor-pointer" : "pointer-events-none cursor-default"}`}
         onPointerEnter={() => setImageHover(scene.id)}
         onPointerLeave={() => setImageHover(null)}
         onPointerDown={(event) => {
+          if (!allowPointerEvents) {
+            return;
+          }
+
           if (!event.isPrimary) {
             return;
           }
@@ -189,7 +199,7 @@ export default function EditorCanvasEditLayer({
   return (
     <div
       ref={frameRef}
-      className="absolute inset-0 z-[4]"
+      className={`${layerClassName} ${allowPointerEvents ? "" : "pointer-events-none"}`.trim()}
       onDoubleClick={handleDoubleClick}
     >
       <EditorCanvasSelectionLayer />

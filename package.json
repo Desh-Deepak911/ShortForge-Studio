@@ -145,7 +145,11 @@
     "test:asset-search-pexels": "tsx src/features/asset-search/providers/pexels/pexels.verify.ts",
     "test:asset-browser": "tsx src/features/editor/components/asset-browser/asset-browser.verify.ts",
     "test:asset-attach": "tsx src/features/asset-attach/asset-attach.verify.ts",
-    "test:asset-materialization": "tsx src/features/asset-materialization/asset-materialization.verify.ts"
+    "test:asset-materialization": "tsx src/features/asset-materialization/asset-materialization.verify.ts",
+    "test:inspector-tab-shell": "tsx src/features/editor/inspector/inspector-tab-shell.verify.ts",
+    "test:caption-workspace": "tsx src/features/editor/components/caption-workspace/caption-workspace.verify.ts",
+    "test:workspace-hierarchy": "tsx src/features/editor/workspace-hierarchy.verify.ts",
+    "test:preview-scene-playback": "tsx src/features/preview/preview-scene-playback.verify.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

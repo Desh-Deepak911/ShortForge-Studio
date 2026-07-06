@@ -1,4 +1,5 @@
 import ScriptReviewFlow from "@/features/create/components/ScriptReviewFlow";
+import { StudioPage } from "@/components/layout";
 import { pageMetadata } from "@/lib/constants/product-metadata";
 
 export const metadata = pageMetadata(
@@ -12,5 +13,9 @@ interface ScriptReviewPageProps {
 
 export default async function ScriptReviewPage({ params }: ScriptReviewPageProps) {
   const { draftId } = await params;
-  return <ScriptReviewFlow draftId={draftId} />;
+  return (
+    <StudioPage>
+      <ScriptReviewFlow draftId={draftId} />
+    </StudioPage>
+  );
 }

@@ -21,6 +21,7 @@ import {
   type PlayableVoiceoverDiagnostics,
 } from "@/features/audio/utils/playable-voiceover-src.utils";
 import { getDisplayCaption, getSceneTimingMap, getSceneVoiceoverExcerpt } from "@/features/story/utils";
+import type { PreviewPlaybackScope } from "@/features/preview/types/preview-playback-scope.types";
 import {
   buildPreviewMasterTimeline,
   resolvePreviewDurationSec,
@@ -31,6 +32,10 @@ import {
   resolveTimelineItems,
   type PreviewSceneFrame,
 } from "@/features/preview/utils";
+import {
+  resolveScenePlaybackBounds,
+  resolveScenePlaybackBoundary,
+} from "@/features/preview/utils/preview-scene-playback.utils";
 import { usePreviewMasterTimelineContext } from "@/features/timeline-intelligence/master-timeline";
 import { logPreviewMasterTimelineDiagnostics } from "@/features/timeline-intelligence/preview-timeline-diagnostics.dev.utils";
 import { isTimelineDevDiagnosticsEnabled } from "@/features/timeline-intelligence/timeline-diagnostics.dev.types";
@@ -141,9 +146,15 @@ export function usePreviewPlayback({
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [narrationEnded, setNarrationEnded] = useState(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [playbackScope, setPlaybackScope] = useState<PreviewPlaybackScope | null>(null);
+  const [loopSceneEnabled, setLoopSceneEnabled] = useState(false);
+  const [currentSceneId, setCurrentSceneId] = useState<string | null>(null);
 
   const isPlayingRef = useRef(false);
   const playbackModeRef = useRef<PlaybackMode | null>(null);
+  const playbackScopeRef = useRef<PreviewPlaybackScope | null>(null);
+  const loopSceneEnabledRef = useRef(false);
+  const scenePlaybackIndexRef = useRef(0);
   const speakSceneRef = useRef<(index: number) => void>(() => {});
   const advanceToSceneRef = useRef<(index: number) => void>(() => {});
   const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -287,9 +298,15 @@ export function usePreviewPlayback({
     }
     isPlayingRef.current = false;
     playbackModeRef.current = null;
+    playbackScopeRef.current = null;
+    loopSceneEnabledRef.current = false;
+    scenePlaybackIndexRef.current = 0;
     setIsPlaying(false);
     setIsSpeaking(false);
     setPlaybackMode(null);
+    setPlaybackScope(null);
+    setLoopSceneEnabled(false);
+    setCurrentSceneId(null);
     resetTimeline();
   }, [clearAdvanceTimeout, resetTimeline, stopBackgroundMusic, stopNarrationAudio]);
 
@@ -316,9 +333,10 @@ export function usePreviewPlayback({
   }, [clearAdvanceTimeout, pauseBackgroundMusic]);
 
   const syncSceneToTimelineTime = useCallback(
-    (timeMs: number) => {
+    (timeMs: number, options?: { updateSelection?: boolean }) => {
       if (!masterTimeline) return;
 
+      const updateSelection = options?.updateSelection ?? true;
       const clampedMs = Math.min(Math.max(0, timeMs), masterTimeline.renderDurationMs);
       timelineClockMsRef.current = clampedMs;
       const state = resolvePreviewPlaybackState(masterTimeline, scenes, clampedMs);
@@ -327,9 +345,103 @@ export function usePreviewPlayback({
       setCurrentSceneIndex(state.sceneIndex);
       setElapsedSec(clampedMs / 1000);
       setCurrentTimeMs(clampedMs);
-      onSelectedSceneChange(state.sceneIndex);
+      if (updateSelection) {
+        onSelectedSceneChange(state.sceneIndex);
+      }
     },
     [masterTimeline, onSelectedSceneChange, scenes],
+  );
+
+  const pauseScenePlaybackAtBoundary = useCallback(() => {
+    isPlayingRef.current = false;
+    setIsPlaying(false);
+    setIsSpeaking(false);
+    pauseBackgroundMusic();
+  }, [pauseBackgroundMusic]);
+
+  const applyScenePlaybackBoundary = useCallback(
+    (timeMs: number): boolean => {
+      if (playbackScopeRef.current !== "scene") {
+        return false;
+      }
+
+      const bounds = resolveScenePlaybackBounds(scenes, scenePlaybackIndexRef.current);
+      if (!bounds) {
+        return false;
+      }
+
+      const boundary = resolveScenePlaybackBoundary(
+        timeMs,
+        bounds,
+        loopSceneEnabledRef.current,
+      );
+      if (!boundary) {
+        return false;
+      }
+
+      const audio = narrationAudioRef.current;
+      if (audio) {
+        audio.currentTime = boundary.timelineMs / 1000;
+      }
+
+      syncSceneToTimelineTime(boundary.timelineMs);
+
+      if (boundary.continuePlaying) {
+        if (audio?.paused && isPlayingRef.current) {
+          void audio.play().catch(() => {
+            pauseScenePlaybackAtBoundary();
+          });
+        }
+        return true;
+      }
+
+      if (audio && !audio.paused) {
+        audio.pause();
+      }
+      pauseScenePlaybackAtBoundary();
+      return true;
+    },
+    [pauseScenePlaybackAtBoundary, scenes, syncSceneToTimelineTime],
+  );
+
+  const seekSceneDuringPlayback = useCallback(
+    (sceneIndex: number) => {
+      const bounds = resolveScenePlaybackBounds(scenes, sceneIndex);
+      if (!bounds) {
+        return;
+      }
+
+      scenePlaybackIndexRef.current = sceneIndex;
+      setCurrentSceneId(bounds.sceneId);
+      onSelectedSceneChange(sceneIndex);
+
+      const audio = narrationAudioRef.current;
+      if (audio) {
+        audio.currentTime = bounds.startMs / 1000;
+        narrationEndedRef.current = false;
+        lastTailTickWallMsRef.current = null;
+        tailHoldLoggedRef.current = false;
+        setNarrationEnded(false);
+      }
+
+      syncSceneToTimelineTime(bounds.startMs);
+
+      if (audio && isPlayingRef.current && audio.paused) {
+        void audio.play().catch(() => {
+          pauseScenePlaybackAtBoundary();
+        });
+        void startBackgroundMusic(bounds.startMs / 1000);
+      } else if (audio && isPlayingRef.current) {
+        void startBackgroundMusic(bounds.startMs / 1000);
+      }
+    },
+    [
+      onSelectedSceneChange,
+      pauseScenePlaybackAtBoundary,
+      scenes,
+      startBackgroundMusic,
+      syncSceneToTimelineTime,
+    ],
   );
 
   const scheduleAdvanceAfterScene = useCallback(
@@ -439,12 +551,26 @@ export function usePreviewPlayback({
         const audio = narrationAudioRef.current;
         if (audio && isPlayingRef.current) {
           if (!audio.ended && !audio.paused) {
-            narrationEndedRef.current = false;
-            lastTailTickWallMsRef.current = null;
-            tailHoldLoggedRef.current = false;
-            setNarrationEnded(false);
-            syncSceneToTimelineTime(Math.floor(audio.currentTime * 1000));
-          } else if (audio.ended || narrationEndedRef.current) {
+            const timeMs = Math.floor(audio.currentTime * 1000);
+            if (playbackScopeRef.current === "scene") {
+              if (applyScenePlaybackBoundary(timeMs)) {
+                syncBackgroundMusicVolume();
+                syncVoiceoverVolume();
+                frameId = window.requestAnimationFrame(tick);
+                return;
+              }
+              syncSceneToTimelineTime(timeMs);
+            } else {
+              narrationEndedRef.current = false;
+              lastTailTickWallMsRef.current = null;
+              tailHoldLoggedRef.current = false;
+              setNarrationEnded(false);
+              syncSceneToTimelineTime(timeMs);
+            }
+          } else if (
+            playbackScopeRef.current !== "scene" &&
+            (audio.ended || narrationEndedRef.current)
+          ) {
             if (!narrationEndedRef.current) {
               narrationEndedRef.current = true;
               setNarrationEnded(true);
@@ -492,7 +618,16 @@ export function usePreviewPlayback({
 
     frameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frameId);
-  }, [isPlaying, masterTimeline, script, stopVoice, syncBackgroundMusicVolume, syncVoiceoverVolume, syncSceneToTimelineTime]);
+  }, [
+    applyScenePlaybackBoundary,
+    isPlaying,
+    masterTimeline,
+    script,
+    stopVoice,
+    syncBackgroundMusicVolume,
+    syncVoiceoverVolume,
+    syncSceneToTimelineTime,
+  ]);
 
   useEffect(() => {
     isSpeakingRef.current = isSpeaking;
@@ -541,6 +676,11 @@ export function usePreviewPlayback({
     stopNarrationAudio();
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
     playbackModeRef.current = "browser";
+    playbackScopeRef.current = null;
+    setPlaybackScope(null);
+    setLoopSceneEnabled(false);
+    loopSceneEnabledRef.current = false;
+    setCurrentSceneId(null);
     setPlaybackMode("browser");
     isPlayingRef.current = true;
     setIsPlaying(true);
@@ -551,7 +691,12 @@ export function usePreviewPlayback({
     speakSceneAt(0);
   }, [onSelectedSceneChange, sceneCount, speakSceneAt, startBackgroundMusic, stopNarrationAudio]);
 
-  const playPreview = async () => {
+  const beginNarrationPlayback = async (options: {
+    scope: PreviewPlaybackScope;
+    sceneIndex: number;
+    startMs: number;
+    allowResume?: boolean;
+  }) => {
     setPlaybackError(null);
 
     if (sceneCount === 0 || !script) {
@@ -594,11 +739,38 @@ export function usePreviewPlayback({
     applyVoiceoverPlaybackRate(playbackAudio);
     syncVoiceoverVolume();
 
+    const previousScope = playbackScopeRef.current;
+    const previousSceneIndex = scenePlaybackIndexRef.current;
+
+    playbackScopeRef.current = options.scope;
+    setPlaybackScope(options.scope);
+    scenePlaybackIndexRef.current = options.sceneIndex;
+    setCurrentSceneId(scenes[options.sceneIndex]?.id ?? null);
+
+    if (options.scope === "story") {
+      loopSceneEnabledRef.current = false;
+      setLoopSceneEnabled(false);
+    }
+
+    const sceneBounds =
+      options.scope === "scene"
+        ? resolveScenePlaybackBounds(scenes, options.sceneIndex)
+        : null;
+    const pausedTimeMs = Math.floor(playbackAudio.currentTime * 1000);
+    const canResumeWithinScene =
+      sceneBounds != null &&
+      pausedTimeMs >= sceneBounds.startMs &&
+      pausedTimeMs < sceneBounds.endMs;
+
     if (
+      options.allowResume !== false &&
       playbackModeRef.current === "narration" &&
+      previousScope === options.scope &&
+      previousSceneIndex === options.sceneIndex &&
       !playbackAudio.ended &&
       playbackAudio.paused &&
-      playbackAudio.currentTime > 0
+      playbackAudio.currentTime > 0 &&
+      (options.scope === "story" || canResumeWithinScene)
     ) {
       isPlayingRef.current = true;
       setIsPlaying(true);
@@ -629,21 +801,21 @@ export function usePreviewPlayback({
     setIsSpeaking(false);
 
     playbackAudio.pause();
-    playbackAudio.currentTime = 0;
+    playbackAudio.currentTime = options.startMs / 1000;
     narrationEndedRef.current = false;
     lastTailTickWallMsRef.current = null;
     tailHoldLoggedRef.current = false;
     setNarrationEnded(false);
-    setCurrentSceneIndex(0);
-    setElapsedSec(0);
-    setCurrentTimeMs(0);
-    timelineClockMsRef.current = 0;
-    onSelectedSceneChange(0);
+    setCurrentSceneIndex(options.sceneIndex);
+    setElapsedSec(options.startMs / 1000);
+    setCurrentTimeMs(options.startMs);
+    timelineClockMsRef.current = options.startMs;
+    onSelectedSceneChange(options.sceneIndex);
 
     try {
       await playbackAudio.play();
       playbackStartedAtMsRef.current = Date.now();
-      await startBackgroundMusic(0);
+      await startBackgroundMusic(options.startMs / 1000);
       syncBackgroundMusicVolume();
       syncVoiceoverVolume();
     } catch (err) {
@@ -653,6 +825,35 @@ export function usePreviewPlayback({
       stopVoice();
     }
   };
+
+  const playPreview = async () => {
+    await beginNarrationPlayback({
+      scope: "story",
+      sceneIndex: 0,
+      startMs: 0,
+    });
+  };
+
+  const playScenePreview = async () => {
+    const bounds = resolveScenePlaybackBounds(scenes, safeIndex);
+    if (!bounds) {
+      return;
+    }
+
+    await beginNarrationPlayback({
+      scope: "scene",
+      sceneIndex: safeIndex,
+      startMs: bounds.startMs,
+    });
+  };
+
+  const toggleLoopScene = useCallback(() => {
+    setLoopSceneEnabled((previous) => {
+      const next = !previous;
+      loopSceneEnabledRef.current = next;
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!script || !voiceoverUrl) {
@@ -673,11 +874,21 @@ export function usePreviewPlayback({
     const handleTimeUpdate = () => {
       if (!isPlayingRef.current || playbackModeRef.current !== "narration") return;
       if (narrationEndedRef.current) return;
-      syncSceneToTimelineTime(Math.floor(audio.currentTime * 1000));
+      const timeMs = Math.floor(audio.currentTime * 1000);
+      if (playbackScopeRef.current === "scene") {
+        if (applyScenePlaybackBoundary(timeMs)) {
+          return;
+        }
+      }
+      syncSceneToTimelineTime(timeMs);
     };
 
     const handleEnded = () => {
       if (playbackModeRef.current !== "narration") return;
+      if (playbackScopeRef.current === "scene") {
+        applyScenePlaybackBoundary(Number.MAX_SAFE_INTEGER);
+        return;
+      }
       narrationEndedRef.current = true;
       setNarrationEnded(true);
     };
@@ -695,7 +906,15 @@ export function usePreviewPlayback({
         }
       }
     };
-  }, [applyVoiceoverPlaybackRate, audioEngine, script, syncSceneToTimelineTime, syncVoiceoverVolume, voiceoverUrl]);
+  }, [
+    applyScenePlaybackBoundary,
+    applyVoiceoverPlaybackRate,
+    audioEngine,
+    script,
+    syncSceneToTimelineTime,
+    syncVoiceoverVolume,
+    voiceoverUrl,
+  ]);
 
   useEffect(() => {
     if (!masterTimeline || !script) {
@@ -741,16 +960,47 @@ export function usePreviewPlayback({
     };
   }, [clearAdvanceTimeout, stopBackgroundMusic, stopNarrationAudio]);
 
+  useEffect(() => {
+    if (!isPlaying || playbackScopeRef.current !== "scene") {
+      return;
+    }
+
+    if (safeIndex === scenePlaybackIndexRef.current) {
+      return;
+    }
+
+    seekSceneDuringPlayback(safeIndex);
+  }, [isPlaying, safeIndex, seekSceneDuringPlayback]);
+
   const activeBrowserSceneStartedAtMs = isPlaying ? browserSceneStartedAtMs : null;
 
+  const isSceneScopePlayback = playbackScope === "scene";
+  const sceneNavigationWhilePlaying = isPlaying && isSceneScopePlayback;
+
   const goPrevious = () => {
-    if (isPlaying || safeIndex <= 0) return;
-    onSelectedSceneChange(safeIndex - 1);
+    if (safeIndex <= 0) return;
+    if (isPlaying && !isSceneScopePlayback) return;
+
+    const nextIndex = safeIndex - 1;
+    if (sceneNavigationWhilePlaying) {
+      seekSceneDuringPlayback(nextIndex);
+      return;
+    }
+
+    onSelectedSceneChange(nextIndex);
   };
 
   const goNext = () => {
-    if (isPlaying || safeIndex >= sceneCount - 1) return;
-    onSelectedSceneChange(safeIndex + 1);
+    if (safeIndex >= sceneCount - 1) return;
+    if (isPlaying && !isSceneScopePlayback) return;
+
+    const nextIndex = safeIndex + 1;
+    if (sceneNavigationWhilePlaying) {
+      seekSceneDuringPlayback(nextIndex);
+      return;
+    }
+
+    onSelectedSceneChange(nextIndex);
   };
 
   return {
@@ -788,7 +1038,12 @@ export function usePreviewPlayback({
     currentTimeMs,
     narrationEnded,
     scene,
+    playbackScope,
+    loopSceneEnabled,
+    currentSceneId,
     playPreview,
+    playScenePreview,
+    toggleLoopScene,
     playWithBrowserVoice,
     pauseVoice,
     stopVoice,

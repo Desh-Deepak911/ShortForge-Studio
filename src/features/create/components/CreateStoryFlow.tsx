@@ -330,6 +330,7 @@ export default function CreateStoryFlow() {
   return (
     <StudioShell
       aria-label="Create story brief"
+      viewportMode="document"
       compactMode={false}
       focusMode={false}
       canvasCenterContent={false}
