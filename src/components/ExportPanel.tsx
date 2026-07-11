@@ -13,9 +13,15 @@ import {
 import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
 
 import ExportSuccessSummary, {
+  ChangeExportSettingsButton,
+  CloseExportResultButton,
   ExportAgainButton,
   ExportDownloadAgainButton,
 } from "@/components/export/ExportSuccessSummary";
+import {
+  ExportFallbackActions,
+  resolveExportFallbackAudioOption,
+} from "@/components/export/ExportFallbackActions";
 import { buildExportFingerprint } from "@/components/export/build-export-fingerprint.utils";
 import { StudioStatus } from "@/components/studio-status";
 import { buildExportSuccessDiagnostics } from "@/components/export/build-export-success-diagnostics.utils";
@@ -47,6 +53,32 @@ import {
   type ExportAudioMode,
   type ExportProgress,
 } from "@/features/export/services";
+import {
+  prepareExportRequest,
+  type ExportCapabilityResult,
+} from "@/features/export/domain";
+import {
+  ExportFinalizationError,
+  type ExportFallbackChoice,
+} from "@/features/export/formats";
+import { ExportCancelledError } from "@/features/export/runtime";
+import {
+  beginExportSessionAttempt,
+  cancelExportSession,
+  closeExportSessionResult,
+  completeExportSession,
+  createExportSession,
+  exportSettingsToSessionOptions,
+  failExportSession,
+  openExportSessionConfiguration,
+  resolveExportAgainOptions,
+  sessionOptionsToExportSettings,
+  type ExportSession,
+} from "@/features/export/session";
+import {
+  logExportPipelineFailure,
+  resolveExportUserFacingErrorMessage,
+} from "@/features/export/utils/export-pipeline-forensics.utils";
 import {
   EXPORT_NARRATION_UNAVAILABLE_WARNING,
   EXPORT_NARRATION_VOICEOVER_MISMATCH_WARNING,
@@ -80,6 +112,7 @@ import {
   studioInput,
   studioOptionRow,
   studioPanel,
+  studioGhostButton,
   studioPrimaryButton,
   studioSecondaryButton,
   studioSectionDesc,
@@ -230,13 +263,28 @@ export default function ExportPanel({
   const [progress, setProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [availableFallbacks, setAvailableFallbacks] = useState<
+    readonly ExportFallbackChoice[]
+  >([]);
   const [exportSuccessSnapshot, setExportSuccessSnapshot] = useState<ExportSuccessSnapshot | null>(
     null,
+  );
+  const [exportSession, setExportSession] = useState<ExportSession>(() =>
+    createExportSession(
+      exportSettingsToSessionOptions(resolveExportSettings(script), {
+        includeNarration: true,
+        includeBackgroundMusic: false,
+      }),
+    ),
   );
   const pendingExportContextRef = useRef<PendingExportContext | null>(null);
   const capturedDownloadRef = useRef<{ blob: Blob; filename: string } | null>(null);
   const [includeNarrationPreference, setIncludeNarrationPreference] = useState(true);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [capabilityPreflight, setCapabilityPreflight] = useState<ExportCapabilityResult | null>(
+    null,
+  );
+  const [capabilityPreflightKey, setCapabilityPreflightKey] = useState<string | null>(null);
   const baseExportSettings = useMemo(
     (): ExportSettings => resolveExportSettings(script),
     [script],
@@ -439,6 +487,100 @@ export default function ExportPanel({
     if (!includeNarration) return "silent";
     return getDefaultExportAudioMode(true);
   }, [includeNarration]);
+
+  const capabilityRequestKey = useMemo(
+    () =>
+      JSON.stringify({
+        title: script.title,
+        scenes: script.scenes.map((scene) => scene.id),
+        exportSettings,
+        exportAudioMode,
+        includeBackgroundMusic,
+        voiceoverUrl: script.voiceoverUrl ?? null,
+        musicEnabled: script.backgroundMusic?.enabled ?? null,
+      }),
+    [
+      script.title,
+      script.scenes,
+      script.voiceoverUrl,
+      script.backgroundMusic?.enabled,
+      exportSettings,
+      exportAudioMode,
+      includeBackgroundMusic,
+    ],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void prepareExportRequest({
+      story: script,
+      options: {
+        audioMode: exportAudioMode,
+        exportSettings,
+      },
+      includeBackgroundMusic,
+      throwIfBlocked: false,
+    }).then((prepared) => {
+      if (cancelled) return;
+      setCapabilityPreflight(prepared.preflight);
+      setCapabilityPreflightKey(capabilityRequestKey);
+    }).catch(() => {
+      if (cancelled) return;
+      setCapabilityPreflight({
+        supported: false,
+        renderer: "blocked",
+        warnings: [],
+        blockers: [
+          {
+            code: "INVALID_MANIFEST",
+            message: "Export preparation failed. Try again.",
+          },
+        ],
+        estimatedCost: {
+          estimatedFrames: 0,
+          estimatedRawFrameBytes: 0,
+          estimatedIntermediateBytes: 0,
+          estimatedPeakMemoryBytes: 0,
+          durationClass: "short",
+          risk: "unsafe",
+        },
+        manifestFingerprint: "",
+      });
+      setCapabilityPreflightKey(capabilityRequestKey);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [script, exportSettings, exportAudioMode, includeBackgroundMusic, capabilityRequestKey]);
+
+  const capabilityPreflightStatus: 
+    | "checking"
+    | "ready"
+    | "ready-with-warnings"
+    | "blocked"
+    | "server-required" =
+    capabilityPreflightKey !== capabilityRequestKey || !capabilityPreflight
+      ? "checking"
+      : capabilityPreflight.renderer === "blocked"
+        ? capabilityPreflight.blockers.some((blocker) => blocker.code === "SERVER_RENDERER_REQUIRED")
+          ? "server-required"
+          : "blocked"
+        : capabilityPreflight.renderer === "server"
+          ? "server-required"
+          : capabilityPreflight.warnings.length > 0
+            ? "ready-with-warnings"
+            : "ready";
+
+  const capabilityBlocked =
+    capabilityPreflightStatus === "blocked" ||
+    capabilityPreflightStatus === "server-required" ||
+    capabilityPreflightStatus === "checking";
+  const capabilityBlockerMessages =
+    capabilityPreflight?.blockers.map((blocker) => blocker.message) ?? [];
+  const capabilityWarningMessages =
+    capabilityPreflight?.warnings.map((entry) => entry.message) ?? [];
   const exportWithNarration = exportAudioMode === "with-voice" && hasNarration;
   const showAudioMergeNote =
     exportWithNarration && isHighQualityExportSettings(exportSettings);
@@ -447,7 +589,15 @@ export default function ExportPanel({
     .split("x")
     .map(Number);
   const isBusy = isExporting || disabled;
-  const isPostExport = exportState === "done" && exportSuccessSnapshot !== null;
+  const showResultScreen =
+    exportSession.view === "result" &&
+    (exportSession.status === "completed" ||
+      exportSession.status === "failed" ||
+      exportSession.status === "cancelled");
+  const isPostExport =
+    exportSession.status === "completed" &&
+    exportSuccessSnapshot !== null &&
+    exportSession.view === "result";
   const shouldTrackExportFingerprint = trackExportFingerprint || isPostExport;
   const currentExportFingerprint = useMemo(() => {
     if (!shouldTrackExportFingerprint) {
@@ -479,7 +629,12 @@ export default function ExportPanel({
       ? exportBlockedMessage
       : resolvedExportPath.blocked
         ? resolvedExportPath.blockReason ?? "Selected export format is unavailable"
-        : undefined;
+        : capabilityPreflightStatus === "checking"
+          ? "Checking export..."
+          : capabilityBlocked
+            ? capabilityBlockerMessages[0] ??
+              "This export configuration isn't available yet."
+            : undefined;
   const exportAgainDisabled = isBusy || Boolean(exportDisabledReason);
   const activeFormat = exportSettings.format;
   const webmAvailable = isWebmExportAvailable();
@@ -492,19 +647,53 @@ export default function ExportPanel({
     onScriptChange(applyStoryBackgroundMusic(script, { enabled }));
   };
 
-  const handleExport = async () => {
+  const handleExport = async (
+    audioFallback?: "voice-only" | "silent" | "webm",
+    optionsOverride?: ReturnType<typeof exportSettingsToSessionOptions>,
+  ) => {
     setErrorMessage(null);
+    setAvailableFallbacks([]);
     setExportMessage(null);
-    setExportSuccessSnapshot(null);
+    // Keep last artifact until a new attempt starts so Change Settings can still download.
     setProgress(0);
+    setExportSession((prev) => beginExportSessionAttempt(prev));
+
+    const sessionOptions =
+      optionsOverride ??
+      exportSettingsToSessionOptions(exportSettings, {
+        includeNarration,
+        includeBackgroundMusic,
+      });
+    const attemptSettings = normalizeExportSettings(
+      sessionOptionsToExportSettings(sessionOptions),
+      script.title,
+    );
 
     if (exportBlocked) {
       setExportState("error");
+      setExportSuccessSnapshot(null);
       setErrorMessage(exportBlockedMessage ?? "Export is blocked.");
+      setExportSession((prev) => failExportSession(prev));
+      return;
+    }
+
+    if (
+      capabilityPreflightStatus === "checking" ||
+      capabilityPreflightStatus === "blocked" ||
+      capabilityPreflightStatus === "server-required"
+    ) {
+      setExportState("error");
+      setExportSuccessSnapshot(null);
+      setErrorMessage(
+        capabilityBlockerMessages[0] ??
+          "This export configuration isn't available yet.",
+      );
+      setExportSession((prev) => failExportSession(prev));
       return;
     }
 
     setExportState("preparing");
+    setExportSuccessSnapshot(null);
     pendingExportContextRef.current = null;
     capturedDownloadRef.current = null;
     setExportDownloadCaptureHandler((blob, filename) => {
@@ -512,25 +701,25 @@ export default function ExportPanel({
     });
 
     try {
-      const normalizedExportSettings = normalizeExportSettings(exportSettings, script.title);
-      const exportPath = resolveExportPath(normalizedExportSettings);
+      const exportPath = resolveExportPath(attemptSettings);
 
       if (exportPath.blocked) {
         setExportState("error");
         setErrorMessage(exportPath.blockReason ?? "Selected export format is unavailable.");
+        setExportSession((prev) => failExportSession(prev));
         return;
       }
 
       const exportScript = prepareStoryVoiceoverForExport(syncFootieScript(script));
       const preflight = prepareStoryForExport(exportScript);
       pendingExportContextRef.current = {
-        settings: normalizedExportSettings,
-        requestedVoiceover: includeNarration,
-        requestedMusic: includeBackgroundMusic,
+        settings: attemptSettings,
+        requestedVoiceover: sessionOptions.includeNarration,
+        requestedMusic: sessionOptions.includeBackgroundMusic,
         durationSec: preflight.exportDurationMs / 1000,
       };
       const exportMix = buildAudioMixFromStory(exportScript);
-      const resolvedExportAudioMode: ExportAudioMode = includeNarration
+      const resolvedExportAudioMode: ExportAudioMode = sessionOptions.includeNarration
         ? getDefaultExportAudioMode(true)
         : "silent";
 
@@ -543,12 +732,14 @@ export default function ExportPanel({
         "export-panel",
       );
 
-      if (includeNarrationPreference && !exportMix.voiceover?.src) {
+      if (sessionOptions.includeNarration && !exportMix.voiceover?.src) {
         setExportState("error");
         setErrorMessage(EXPORT_NARRATION_UNAVAILABLE_WARNING);
+        setExportSession((prev) => failExportSession(prev));
         return;
       }
 
+      // Every attempt builds a fresh ExportManifest via prepareExportRequest inside exportFootieShort.
       await exportFootieShort(
         exportScript,
         (update) => {
@@ -558,14 +749,24 @@ export default function ExportPanel({
 
           if (update.status === "done") {
             const context = pendingExportContextRef.current;
-            const settings = context?.settings ?? normalizedExportSettings;
+            const settings = context?.settings ?? attemptSettings;
             const path = resolveExportPath(settings);
             const completedFileName = buildExportDownloadFileName(settings, path.path);
             const audioFlags = resolveExportedAudioFlags(
               update.resultKind,
-              context?.requestedVoiceover ?? includeNarration,
-              context?.requestedMusic ?? includeBackgroundMusic,
+              context?.requestedVoiceover ?? sessionOptions.includeNarration,
+              context?.requestedMusic ?? sessionOptions.includeBackgroundMusic,
             );
+            const downloadBlob = capturedDownloadRef.current?.blob ?? null;
+            const downloadFileName =
+              capturedDownloadRef.current?.filename ?? completedFileName;
+            const fingerprint = buildExportFingerprint({
+              script: exportScript,
+              exportSettings: settings,
+              includeNarration: context?.requestedVoiceover ?? sessionOptions.includeNarration,
+              includeBackgroundMusic:
+                context?.requestedMusic ?? sessionOptions.includeBackgroundMusic,
+            });
 
             setExportSuccessSnapshot({
               fileName: completedFileName,
@@ -576,34 +777,87 @@ export default function ExportPanel({
                 runtimeWarning: update.warning,
                 runtimeMessage: update.message,
               }),
-              downloadBlob: capturedDownloadRef.current?.blob ?? null,
-              downloadFileName: capturedDownloadRef.current?.filename ?? completedFileName,
-              exportedFingerprint: buildExportFingerprint({
-                script: exportScript,
-                exportSettings: settings,
-                includeNarration: context?.requestedVoiceover ?? includeNarration,
-                includeBackgroundMusic: context?.requestedMusic ?? includeBackgroundMusic,
-              }),
+              downloadBlob,
+              downloadFileName,
+              exportedFingerprint: fingerprint,
             });
+            setExportSession((prev) =>
+              completeExportSession(prev, {
+                options: sessionOptions,
+                artifact: downloadBlob
+                  ? {
+                      blob: downloadBlob,
+                      fileName: downloadFileName,
+                    }
+                  : {
+                      blob: new Blob(),
+                      fileName: downloadFileName,
+                    },
+                manifestFingerprint: fingerprint,
+                renderer: "browser",
+              }),
+            );
             onExportSuccess?.();
           }
         },
         {
           audioMode: resolvedExportAudioMode,
-          exportSettings: normalizedExportSettings,
+          exportSettings: attemptSettings,
+          ...(audioFallback ? { audioFallback } : {}),
         },
       );
     } catch (error) {
       setExportState("error");
       setProgress(0);
       setExportMessage(null);
-      setErrorMessage(error instanceof Error ? error.message : "We couldn't finish the export. Try again.");
+      logExportPipelineFailure(error);
+      setErrorMessage(resolveExportUserFacingErrorMessage(error));
+      if (error instanceof ExportCancelledError) {
+        setExportSession((prev) => cancelExportSession(prev));
+        setAvailableFallbacks([]);
+      } else {
+        setExportSession((prev) => failExportSession(prev));
+        if (error instanceof ExportFinalizationError) {
+          setAvailableFallbacks(error.availableFallbacks);
+        } else {
+          setAvailableFallbacks(["retry"]);
+        }
+      }
     } finally {
       setExportDownloadCaptureHandler(null);
     }
   };
 
-  const handleDownloadAgain = () => {
+  const handleExportAgain = () => {
+    const againOptions = resolveExportAgainOptions(exportSession);
+    const nextSettings = normalizeExportSettings(
+      sessionOptionsToExportSettings(againOptions),
+      script.title,
+    );
+    updateExportSettings(nextSettings);
+    if (againOptions.includeNarration !== includeNarrationPreference) {
+      setIncludeNarrationPreference(againOptions.includeNarration);
+    }
+    void handleExport(undefined, againOptions);
+  };
+
+  const handleChangeExportSettings = () => {
+    setExportSession((prev) => openExportSessionConfiguration(prev));
+    setErrorMessage(null);
+    setAvailableFallbacks([]);
+  };
+
+  const handleCloseExportResult = () => {
+    setExportSession((prev) => closeExportSessionResult(prev));
+    setErrorMessage(null);
+    setAvailableFallbacks([]);
+    // Keep snapshot/settings as defaults — do not clear lastSuccessfulOptions.
+  };
+
+  const handleFallbackChoice = (choice: ExportFallbackChoice) => {
+    const audioFallback = resolveExportFallbackAudioOption(choice);
+    void handleExport(audioFallback);
+  };  const handleDownloadAgain = () => {
     if (!exportSuccessSnapshot?.downloadBlob) {
       return;
     }
@@ -613,7 +867,7 @@ export default function ExportPanel({
 
   return (
     <div className={`${compact ? "space-y-5" : "space-y-7"} min-w-0`}>
-      {isPostExport && exportSuccessSnapshot ? (
+      {showResultScreen && exportSession.status === "completed" && exportSuccessSnapshot ? (
         <div className="space-y-4">
           <ExportSuccessSummary
             fileName={exportSuccessSnapshot.fileName}
@@ -650,7 +904,7 @@ export default function ExportPanel({
           {isExportStale ? (
             <ExportAgainButton
               disabled={exportAgainDisabled}
-              onClick={handleExport}
+              onClick={handleExportAgain}
               label="Export updated video"
               className={`${studioPrimaryButton} w-full`}
             />
@@ -682,13 +936,22 @@ export default function ExportPanel({
             className={`${studioSecondaryButton} w-full`}
           />
 
-          {!isExportStale ? (
-            <ExportAgainButton
-              disabled={exportAgainDisabled}
-              onClick={handleExport}
-              className={`${studioSecondaryButton} w-full`}
-            />
-          ) : null}
+          <ExportAgainButton
+            disabled={exportAgainDisabled}
+            onClick={handleExportAgain}
+            className={`${studioSecondaryButton} w-full`}
+          />
+
+          <ChangeExportSettingsButton
+            disabled={isBusy}
+            onClick={handleChangeExportSettings}
+            className={`${studioSecondaryButton} w-full`}
+          />
+
+          <CloseExportResultButton
+            onClick={handleCloseExportResult}
+            className={`${studioGhostButton} w-full justify-center`}
+          />
 
           {exportAgainDisabled && exportDisabledReason ? (
             <p className={`${studioSubtleText} text-center text-xs`}>{exportDisabledReason}</p>
@@ -708,8 +971,78 @@ export default function ExportPanel({
             objectUrl={sessionExportObjectUrl}
           />
         </div>
+      ) : showResultScreen && exportSession.status === "failed" ? (
+        <div className="space-y-4">
+          <StudioStatus
+            variant="error"
+            layout="panel"
+            title="Export failed"
+            description={errorMessage ?? "Export could not be completed."}
+          />
+          {availableFallbacks.length > 0 ? (
+            <ExportFallbackActions
+              availableFallbacks={availableFallbacks}
+              onChoose={handleFallbackChoice}
+              disabled={isBusy}
+            />
+          ) : (
+            <ExportAgainButton
+              disabled={exportAgainDisabled}
+              onClick={() => void handleExport()}
+              label="Retry"
+              className={`${studioPrimaryButton} w-full`}
+            />
+          )}
+          <ChangeExportSettingsButton
+            disabled={isBusy}
+            onClick={handleChangeExportSettings}
+            className={`${studioSecondaryButton} w-full`}
+          />
+          <CloseExportResultButton
+            onClick={handleCloseExportResult}
+            className={`${studioGhostButton} w-full justify-center`}
+          />
+        </div>
+      ) : showResultScreen && exportSession.status === "cancelled" ? (
+        <div className="space-y-4">
+          <StudioStatus
+            variant="warning"
+            layout="panel"
+            title="Export cancelled"
+            description="Resume is not supported. Start a new export or change settings."
+          />
+          <ExportAgainButton
+            disabled={exportAgainDisabled}
+            onClick={handleExportAgain}
+            className={`${studioPrimaryButton} w-full`}
+          />
+          <ChangeExportSettingsButton
+            disabled={isBusy}
+            onClick={handleChangeExportSettings}
+            className={`${studioSecondaryButton} w-full`}
+          />
+          <CloseExportResultButton
+            onClick={handleCloseExportResult}
+            className={`${studioGhostButton} w-full justify-center`}
+          />
+        </div>
       ) : (
         <>
+      {exportSuccessSnapshot?.downloadBlob && exportSession.view === "configuration" ? (
+        <div className="space-y-2">
+          <StudioStatus
+            variant="warning"
+            layout="panel"
+            icon={Info}
+            description="Previous export is still available to download while you change settings."
+          />
+          <ExportDownloadAgainButton
+            disabled={!exportSuccessSnapshot.downloadBlob}
+            onClick={handleDownloadAgain}
+            className={`${studioSecondaryButton} w-full`}
+          />
+        </div>
+      ) : null}
       {!compact ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
@@ -1117,10 +1450,46 @@ export default function ExportPanel({
           title="Download"
           className={compact ? studioStickyMobileFooterAboveBar : undefined}
         >
+          {capabilityPreflightStatus === "checking" ? (
+            <StudioStatus
+              variant="loading"
+              layout="inline"
+              description="Checking export..."
+            />
+          ) : null}
+          {capabilityPreflightStatus === "ready" ? (
+            <StudioStatus variant="success" layout="inline" description="Ready to export." />
+          ) : null}
+          {capabilityPreflightStatus === "ready-with-warnings"
+            ? capabilityWarningMessages.map((message) => (
+                <StudioStatus
+                  key={message}
+                  variant="warning"
+                  layout="inline"
+                  description={message}
+                />
+              ))
+            : null}
+          {capabilityPreflightStatus === "blocked" ||
+          capabilityPreflightStatus === "server-required"
+            ? capabilityBlockerMessages.map((message) => (
+                <StudioStatus
+                  key={message}
+                  variant="error"
+                  layout="inline"
+                  description={message}
+                />
+              ))
+            : null}
           <button
             type="button"
-            onClick={handleExport}
-            disabled={isBusy || resolvedExportPath.blocked || exportBlocked}
+            onClick={() => void handleExport()}
+            disabled={
+              isBusy ||
+              resolvedExportPath.blocked ||
+              exportBlocked ||
+              capabilityBlocked
+            }
             title={exportDisabledReason}
             className={`${studioPrimaryButton} w-full`}
           >
@@ -1128,6 +1497,11 @@ export default function ExportPanel({
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Exporting...
+              </>
+            ) : capabilityPreflightStatus === "checking" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Checking export...
               </>
             ) : (
               <>
@@ -1146,8 +1520,17 @@ export default function ExportPanel({
         </>
       )}
 
-      {errorMessage ? (
-        <StudioStatus variant="error" layout="panel" description={errorMessage} />
+      {errorMessage && !showResultScreen ? (
+        <div className="space-y-3">
+          <StudioStatus variant="error" layout="panel" description={errorMessage} />
+          {availableFallbacks.length > 0 ? (
+            <ExportFallbackActions
+              availableFallbacks={availableFallbacks}
+              onChoose={handleFallbackChoice}
+              disabled={isBusy}
+            />
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

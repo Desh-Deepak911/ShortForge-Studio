@@ -5,8 +5,15 @@ import {
 } from "@/features/story/utils/caption.utils";
 import {
   getSceneImage,
+  getSceneMedia,
+  getSceneMediaType,
+  getSceneMediaUrl,
   normalizeSceneImageMotion,
 } from "@/features/story/utils/scene.utils";
+import {
+  resolveSceneMediaMotionFromMedia,
+  serializeSceneMediaMotionFingerprint,
+} from "@/features/media-motion";
 
 /** Coarse edit classes for editor update policy. */
 export type StoryPatchClass =
@@ -297,14 +304,59 @@ function sceneSpokenTextChanged(prev: FootieScene, next: FootieScene): boolean {
   return isUserAuthoredSpokenTextChange(prev, next);
 }
 
+function sceneMediaPosterSignature(
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+): string {
+  const media = getSceneMedia(scene);
+  if (!media) {
+    return "";
+  }
+
+  const posterTimeMs =
+    typeof media.posterTimeMs === "number" && Number.isFinite(media.posterTimeMs)
+      ? Math.round(media.posterTimeMs)
+      : "";
+  const posterUrl = typeof media.posterUrl === "string" ? media.posterUrl.trim() : "";
+
+  return `${posterTimeMs}|${posterUrl}`;
+}
+
+function sceneMediaTrimSignature(
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+): string {
+  const media = getSceneMedia(scene);
+  if (!media || media.type !== "video") {
+    return "";
+  }
+
+  const trimStartMs =
+    typeof media.trimStartMs === "number" && Number.isFinite(media.trimStartMs)
+      ? Math.round(media.trimStartMs)
+      : "";
+  const trimEndMs =
+    typeof media.trimEndMs === "number" && Number.isFinite(media.trimEndMs)
+      ? Math.round(media.trimEndMs)
+      : "";
+
+  return `${trimStartMs}|${trimEndMs}`;
+}
+
 function sceneMediaChanged(prev: FootieScene, next: FootieScene): boolean {
   const prevImage = getSceneImage(prev);
   const nextImage = getSceneImage(next);
   const prevUrl = prevImage?.url ?? prev.uploadedImage ?? "";
   const nextUrl = nextImage?.url ?? next.uploadedImage ?? "";
+  const prevMediaUrl = getSceneMediaUrl(prev) ?? "";
+  const nextMediaUrl = getSceneMediaUrl(next) ?? "";
+  const prevMediaType = getSceneMediaType(prev) ?? "";
+  const nextMediaType = getSceneMediaType(next) ?? "";
 
   return (
     prevUrl !== nextUrl ||
+    prevMediaUrl !== nextMediaUrl ||
+    prevMediaType !== nextMediaType ||
+    sceneMediaPosterSignature(prev) !== sceneMediaPosterSignature(next) ||
+    sceneMediaTrimSignature(prev) !== sceneMediaTrimSignature(next) ||
     JSON.stringify(prev.assetAttachment ?? null) !== JSON.stringify(next.assetAttachment ?? null)
   );
 }
@@ -313,26 +365,35 @@ function sceneMotionChanged(prev: FootieScene, next: FootieScene): boolean {
   const prevImage = getSceneImage(prev);
   const nextImage = getSceneImage(next);
 
-  if (!prevImage && !nextImage) {
-    return false;
+  if (prevImage && nextImage) {
+    const prevMotion = normalizeSceneImageMotion(prevImage.imageMotion);
+    const nextMotion = normalizeSceneImageMotion(nextImage.imageMotion);
+
+    if (
+      prevMotion.type !== nextMotion.type ||
+      prevMotion.intensity !== nextMotion.intensity ||
+      prevImage.scale !== nextImage.scale ||
+      prevImage.x !== nextImage.x ||
+      prevImage.y !== nextImage.y ||
+      (prevImage.rotation ?? 0) !== (nextImage.rotation ?? 0) ||
+      (prevImage.fitMode ?? "fit") !== (nextImage.fitMode ?? "fit")
+    ) {
+      return true;
+    }
+  } else if (Boolean(prevImage) !== Boolean(nextImage)) {
+    // Image slot appearance alone is media, not motion — fall through to media.motion check.
   }
 
-  if (!prevImage || !nextImage) {
-    return false;
-  }
-
-  const prevMotion = normalizeSceneImageMotion(prevImage.imageMotion);
-  const nextMotion = normalizeSceneImageMotion(nextImage.imageMotion);
-
-  return (
-    prevMotion.type !== nextMotion.type ||
-    prevMotion.intensity !== nextMotion.intensity ||
-    prevImage.scale !== nextImage.scale ||
-    prevImage.x !== nextImage.x ||
-    prevImage.y !== nextImage.y ||
-    (prevImage.rotation ?? 0) !== (nextImage.rotation ?? 0) ||
-    (prevImage.fitMode ?? "fit") !== (nextImage.fitMode ?? "fit")
+  const prevMedia = getSceneMedia(prev);
+  const nextMedia = getSceneMedia(next);
+  const prevResolved = serializeSceneMediaMotionFingerprint(
+    resolveSceneMediaMotionFromMedia(prevMedia),
   );
+  const nextResolved = serializeSceneMediaMotionFingerprint(
+    resolveSceneMediaMotionFromMedia(nextMedia),
+  );
+
+  return prevResolved !== nextResolved;
 }
 
 function transitionItemsSignature(items: TimelineItem[] | undefined): string {

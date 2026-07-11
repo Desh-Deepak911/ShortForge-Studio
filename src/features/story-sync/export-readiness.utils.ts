@@ -35,14 +35,14 @@ export function resolveMissingMediaBlockedMessage(
   const sceneLabel = formatMissingSceneNumbersLabel(script, media.scenesMissingMedia);
 
   if (missingCount === 1 && sceneLabel) {
-    return `${sceneLabel} is missing an image.`;
+    return `${sceneLabel} is missing media.`;
   }
 
   if (sceneLabel) {
-    return `${missingCount} scenes missing images (${sceneLabel}).`;
+    return `${missingCount} scenes missing media (${sceneLabel}).`;
   }
 
-  return `${missingCount} scene${missingCount === 1 ? "" : "s"} missing images.`;
+  return `${missingCount} scene${missingCount === 1 ? "" : "s"} missing media.`;
 }
 
 /**

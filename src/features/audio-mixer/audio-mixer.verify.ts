@@ -377,7 +377,8 @@ test("export ducking settings align with preview multiplier during voiceover", (
   assert.match(exportMusicUtils, /resolveExportDuckedMusicGain/);
   assert.match(exportMusicUtils, /applyDucking/);
   assert.match(ffmpegUtils, /buildExportBackgroundMusicFilterChain/);
-  assert.match(ffmpegUtils, /buildExportFfmpegPeakLimiterFilterChain/);
+  assert.match(ffmpegUtils, /buildMuxVideoExportAudioFilterComplex/);
+  assert.doesNotMatch(ffmpegUtils, /buildExportFfmpegPeakLimiterFilterChain\(/);
   assert.doesNotMatch(exportMusicUtils, /loudnorm/);
   assert.doesNotMatch(ffmpegUtils, /loudnorm/);
 });
@@ -400,7 +401,7 @@ test("preview and export modules apply mixer stem gains", () => {
   assert.match(exportMix, /mixSettings\.voiceGain/);
   assert.match(exportMix, /settings\.musicGain/);
   assert.match(ffmpegUtils, /voiceGain/);
-  assert.match(ffmpegUtils, /buildExportFfmpegPeakLimiterFilterChain/);
+  assert.match(ffmpegUtils, /volume=\$\{voiceGain/);
   assert.doesNotMatch(ffmpegUtils, /loudnorm/);
   assert.doesNotMatch(ffmpegUtils, /dynaudnorm/);
 });

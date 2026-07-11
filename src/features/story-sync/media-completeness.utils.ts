@@ -1,18 +1,18 @@
 import type { FootieScript } from "@/features/story/types";
-import { sceneHasImage } from "@/features/story/utils";
+import { sceneHasMedia } from "@/features/story/utils";
 
 /** Per-scene media readiness derived from the current script. */
 export interface MediaCompletenessState {
   totalScenes: number;
   scenesWithMedia: number;
-  /** Scene ids without a usable image URL. */
+  /** Scene ids without ready media (image URL or video URL + duration). */
   scenesMissingMedia: string[];
   isComplete: boolean;
   hasScenes: boolean;
   completionPercent: number;
 }
 
-/** Resolves media completeness from scene image URLs (`sceneHasImage`). */
+/** Resolves media completeness from scene media readiness (`sceneHasMedia`). */
 export function resolveMediaCompleteness(script: FootieScript): MediaCompletenessState {
   const scenes = script.scenes ?? [];
   const totalScenes = scenes.length;
@@ -20,7 +20,7 @@ export function resolveMediaCompleteness(script: FootieScript): MediaCompletenes
   let scenesWithMedia = 0;
 
   for (const scene of scenes) {
-    if (sceneHasImage(scene)) {
+    if (sceneHasMedia(scene)) {
       scenesWithMedia += 1;
     } else {
       scenesMissingMedia.push(scene.id);

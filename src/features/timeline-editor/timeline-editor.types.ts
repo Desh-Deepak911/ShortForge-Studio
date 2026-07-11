@@ -56,3 +56,21 @@ export interface TimelineResizeState {
   /** Live preview duration in whole seconds (snapped/clamped). */
   previewDurationSec: number;
 }
+
+/** Local-only video clip trim session — never persisted; does not affect scene duration. */
+export interface TimelineVideoTrimState {
+  sceneId: string;
+  activeHandle: "start" | "end";
+  pointerId: number;
+  sourceDurationMs: number;
+  committedTrimStartMs: number;
+  committedTrimEndMs: number;
+  previewTrimStartMs: number;
+  previewTrimEndMs: number;
+  stripLeftPx: number;
+  stripWidthPx: number;
+  pointerStartX: number;
+  isActive: boolean;
+  /** Media URL snapshot at session start — used to cancel on replace/remove. */
+  mediaUrl: string;
+}

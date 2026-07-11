@@ -8,4 +8,7 @@ export * from "./export-subtitle.utils";
 export * from "./export-caption-canvas.utils";
 export * from "./export-narration-voiceover.utils";
 export * from "./export-preflight.utils";
+export * from "./export-media-validation.utils";
+export * from "./export-media-cache.utils";
+export * from "./export-scene-media-renderer";
 export * from "./ffmpeg.utils";

@@ -24,7 +24,34 @@ export {
   TIMELINE_RESIZE_NUDGE_STEP_LARGE_SEC,
   TIMELINE_RESIZE_NUDGE_STEP_SEC,
 } from "./timeline-resize.utils";
-export type { TimelineDragState, TimelineResizeState } from "./timeline-editor.types";
+export type {
+  TimelineDragState,
+  TimelineResizeState,
+  TimelineVideoTrimState,
+} from "./timeline-editor.types";
+export {
+  TIMELINE_VIDEO_TRIM_MIN_BLOCK_WIDTH_PX,
+  applyTimelineTrimHandleDrag,
+  pointerXToSourceTimeMs,
+  resolveTimelineVideoTrimEligibility,
+  resolveTimelineVideoTrimWindow,
+} from "./timeline-video-trim.utils";
+export type {
+  TimelineVideoTrimEligibility,
+  TimelineVideoTrimHandle,
+  TimelineVideoTrimWindow,
+} from "./timeline-video-trim.utils";
+export {
+  TIMELINE_MEDIA_VIZ_WIDTH,
+  formatTimelineMediaSeconds,
+  resolveTimelineMediaVisualization,
+  resolveTimelineMediaVizDensity,
+} from "./timeline-media-visualization.utils";
+export type {
+  TimelineMediaKind,
+  TimelineMediaVisualization,
+  TimelineMediaVizDensity,
+} from "./timeline-media-visualization.utils";
 export {
   TimelinePlaybackPortProvider,
   useTimelinePlayback,

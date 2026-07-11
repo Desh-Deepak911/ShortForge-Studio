@@ -41,6 +41,8 @@ export type {
 export { default as CaptionModeControl } from "./CaptionModeControl";
 export { default as MediaPicker } from "./MediaPicker";
 export { default as SceneFrameImage } from "./SceneFrameImage";
+export { default as SceneFrameMedia, resolveSceneFrameMediaKind } from "./SceneFrameMedia";
+export { default as SceneFrameVideo } from "./SceneFrameVideo";
 export { default as SceneImageInspector } from "./SceneImageInspector";
 export { default as SubtitleEffectControl } from "./SubtitleEffectControl";
 export { default as StudioSceneInspector } from "./StudioSceneInspector";

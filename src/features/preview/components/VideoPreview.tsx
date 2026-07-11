@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -15,6 +15,7 @@ import {
 
 import EditorCanvasEditLayer from "@/features/editor/components/EditorCanvasEditLayer";
 import { useEditorSelection } from "@/features/editor/selection";
+import { sceneHasFramableMedia } from "@/features/media-framing";
 import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
 import PreviewFrame, { DynamicIsland, PreviewDeviceFrame } from "@/features/preview/components/PreviewFrame";
 import SubtitleOverlay from "@/features/preview/components/SubtitleOverlay";
@@ -24,10 +25,17 @@ import {
   resolvePreviewCaptionOverlayClassName,
   resolvePreviewImageEditLayerClassName,
   resolvePreviewInteractionLayer,
-  resolvePreviewTimelineImageMotion,
   resolvePreviewTransitionOverlay,
 } from "@/features/preview/utils";
-import { normalizeCaptionMode, sceneHasImage, type SceneImageTransformPatch } from "@/features/story/utils";
+import { resolvePreviewSceneLocalTimeMs } from "@/features/editor/preview/motion";
+import { useVideoTrimPreviewOptional } from "@/features/preview/video-trim-preview";
+import {
+  getSceneMediaType,
+  getSceneTimingMap,
+  normalizeCaptionMode,
+  resolveSceneDurationMsForTiming,
+  type SceneImageTransformPatch,
+} from "@/features/story/utils";
 import type { TimelinePlaybackSnapshot } from "@/features/timeline-editor/timeline-playback-port.types";
 import { EMPTY_TIMELINE_PLAYBACK_SNAPSHOT } from "@/features/timeline-editor/timeline-playback-port.types";
 import { StudioStatus } from "@/components/studio-status";
@@ -83,6 +91,8 @@ export default function VideoPreview({
   );
 
   const previewRootRef = useRef<HTMLDivElement>(null);
+  const trimPreview = useVideoTrimPreviewOptional();
+  const trimPreviewActive = Boolean(trimPreview?.override?.isActive);
   const playback = usePreviewPlayback({
     script,
     selectedSceneIndex: selection.selectedSceneIndex,
@@ -131,6 +141,13 @@ export default function VideoPreview({
     goNext,
   } = playback;
 
+  useEffect(() => {
+    // Pause story/scene playback when trim scrubbing begins so clocks don't fight.
+    if (trimPreviewActive) {
+      pauseVoice();
+    }
+  }, [trimPreviewActive, pauseVoice]);
+
   const displayScene = previewFrame?.scene ?? null;
   const previewSceneTiming =
     script && sceneCount > 0 && scene && previewFrame
@@ -158,10 +175,13 @@ export default function VideoPreview({
 
   const playbackActive = isPlaying || isSpeaking;
   const sceneScopePlaybackActive = isPlaying && playbackScope === "scene";
+  const isVideoScene = Boolean(
+    displayScene && getSceneMediaType(displayScene) === "video",
+  );
   const canvasEditAvailable = Boolean(
     canvasEditActive &&
       displayScene &&
-      sceneHasImage(displayScene) &&
+      sceneHasFramableMedia(displayScene) &&
       !playbackActive &&
       !canvasEditBlocked &&
       !transitionOverlay &&
@@ -170,6 +190,10 @@ export default function VideoPreview({
 
   const isFrameEditing = canvasEditActive && selection.isImageEditing;
   const scenePreviewControlsDisabled = isFrameEditing;
+  const [framingDragOffset, setFramingDragOffset] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const exitFrameEdit = useCallback(() => {
     selection.exitImageEdit();
@@ -315,24 +339,36 @@ export default function VideoPreview({
   const isNarrationSubtitles =
     normalizeCaptionMode(displayScene.captionMode) === "subtitles";
 
-  const { sceneElapsedMs, sceneDurationMs, sceneTimelineImageMotion, timelineTimeMs } =
-    previewSceneTiming;
-  const transitionFromTimelineImageMotion =
-    transitionOverlay && masterTimeline && timelineTimeMs != null
-      ? resolvePreviewTimelineImageMotion(
-          masterTimeline,
-          transitionOverlay.fromScene,
+  const { sceneElapsedMs, sceneDurationMs, timelineTimeMs } = previewSceneTiming;
+  const timingMap = getSceneTimingMap(scenes);
+  const transitionFromSceneElapsedMs =
+    transitionOverlay && timelineTimeMs != null
+      ? resolvePreviewSceneLocalTimeMs({
           timelineTimeMs,
-        )
-      : null;
-  const transitionToTimelineImageMotion =
-    transitionOverlay && masterTimeline && timelineTimeMs != null
-      ? resolvePreviewTimelineImageMotion(
-          masterTimeline,
-          transitionOverlay.toScene,
+          sceneStartMs:
+            transitionOverlay.fromScene.startMs ??
+            timingMap[transitionOverlay.fromSceneIndex]?.startMs ??
+            0,
+          sceneDurationMs: resolveSceneDurationMsForTiming(transitionOverlay.fromScene),
+        })
+      : 0;
+  const transitionFromSceneDurationMs = transitionOverlay
+    ? resolveSceneDurationMsForTiming(transitionOverlay.fromScene)
+    : 0;
+  const transitionToSceneElapsedMs =
+    transitionOverlay && timelineTimeMs != null
+      ? resolvePreviewSceneLocalTimeMs({
           timelineTimeMs,
-        )
-      : null;
+          sceneStartMs:
+            transitionOverlay.toScene.startMs ??
+            timingMap[transitionOverlay.toSceneIndex]?.startMs ??
+            0,
+          sceneDurationMs: resolveSceneDurationMsForTiming(transitionOverlay.toScene),
+        })
+      : 0;
+  const transitionToSceneDurationMs = transitionOverlay
+    ? resolveSceneDurationMsForTiming(transitionOverlay.toScene)
+    : 0;
   const hideCaptionsDuringTransition = transitionOverlay != null;
   const subtitleSceneIndex =
     playbackMode === "narration" && previewSceneTiming.activeSceneIndex != null
@@ -362,6 +398,8 @@ export default function VideoPreview({
         sceneIndex={previewFrame.sceneIndex}
         allowPointerEvents={previewInteraction.allowImagePointerEvents}
         layerClassName={imageEditLayerClassName}
+        overlayOnly={isVideoScene}
+        onDragOffsetChange={setFramingDragOffset}
         onTransformChange={(patch) => onSceneImageTransformChange(displayScene.id, patch)}
         onResetFrame={
           onSceneImageReset ? () => onSceneImageReset(displayScene.id) : undefined
@@ -379,13 +417,18 @@ export default function VideoPreview({
           title={script.title}
           previewFrame={previewFrame}
           transitionOverlay={transitionOverlay}
-          sceneTimelineImageMotion={sceneTimelineImageMotion}
-          transitionFromTimelineImageMotion={transitionFromTimelineImageMotion}
-          transitionToTimelineImageMotion={transitionToTimelineImageMotion}
+          transitionFromSceneElapsedMs={transitionFromSceneElapsedMs}
+          transitionFromSceneDurationMs={transitionFromSceneDurationMs}
+          transitionToSceneElapsedMs={transitionToSceneElapsedMs}
+          transitionToSceneDurationMs={transitionToSceneDurationMs}
           editLayer={editLayer}
-          hideSceneImage={isFrameEditing}
+          hideSceneImage={isFrameEditing && !isVideoScene}
+          framingDragOffset={isFrameEditing && isVideoScene ? framingDragOffset : null}
           frameEditActive={isFrameEditing}
           onExitFrameEdit={exitFrameEdit}
+          sceneElapsedMs={sceneElapsedMs}
+          sceneDurationMs={sceneDurationMs}
+          isPlaying={playbackActive}
           overlay={
             <>
               {showSubtitles ? (

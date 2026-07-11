@@ -11,11 +11,15 @@ import {
   dismissCanvasEditHints,
 } from "@/features/editor/components/canvasOverlayStorage";
 import { useEditorSelection } from "@/features/editor/selection";
+import {
+  framingToSceneImageFields,
+  resolveSceneMediaFraming,
+  sceneHasFramableMedia,
+} from "@/features/media-framing";
 import type { FootieScene } from "@/features/story/types";
 import {
   clampSceneImageScale,
-  getSceneImage,
-  sceneHasImage,
+  getSceneMediaType,
   withScreenDragOffset,
   type SceneImageTransformPatch,
 } from "@/features/story/utils";
@@ -29,17 +33,24 @@ export interface EditorCanvasEditLayerProps {
   scene: FootieScene;
   sceneIndex: number;
   onTransformChange: (patch: SceneImageTransformPatch) => void;
-  /** Resets pan/zoom via existing scene image reset (preserves motion presets). */
+  /** Resets pan/zoom via existing media framing reset (preserves motion presets). */
   onResetFrame?: () => void;
   /** When false, the layer must not intercept pointer events (playback). */
   allowPointerEvents?: boolean;
   /** Layer positioning class — elevated above caption overlays during image edit. */
   layerClassName?: string;
+  /**
+   * When true, MediaPicker renders only the drag overlay (video element stays in backdrop).
+   */
+  overlayOnly?: boolean;
+  /** Presentation-only — live screen-space drag offset for backdrop framing preview. */
+  onDragOffsetChange?: (offset: { x: number; y: number } | null) => void;
 }
 
 /**
  * Canvas interaction layer for the editor preview frame.
  * Edit mode is owned by EditorSelectionProvider — this layer reads SelectionContext only.
+ * Supports image and video persistent framing.
  */
 export default function EditorCanvasEditLayer({
   scene,
@@ -48,6 +59,8 @@ export default function EditorCanvasEditLayer({
   onResetFrame,
   allowPointerEvents = true,
   layerClassName = "absolute inset-0 z-[4]",
+  overlayOnly = false,
+  onDragOffsetChange,
 }: EditorCanvasEditLayerProps) {
   const { canvasEditMode, selectImage, setImageHover } = useEditorSelection();
   const mode = canvasEditMode;
@@ -59,21 +72,28 @@ export default function EditorCanvasEditLayer({
   const [wheelActive, setWheelActive] = useState(false);
   const [hintsDismissed, setHintsDismissed] = useState(areCanvasEditHintsDismissed);
 
-  const sceneImage = getSceneImage(scene);
+  const framing = resolveSceneMediaFraming(scene);
   const guideImage = useMemo(() => {
-    if (!sceneImage) {
+    if (!sceneHasFramableMedia(scene)) {
       return null;
     }
 
+    const asImage = {
+      url: "",
+      ...framingToSceneImageFields(framing),
+    };
+
     if (dragOffset && frameWidth > 0 && frameHeight > 0) {
-      return withScreenDragOffset(sceneImage, dragOffset, frameWidth, frameHeight);
+      return withScreenDragOffset(asImage, dragOffset, frameWidth, frameHeight);
     }
 
-    return sceneImage;
-  }, [dragOffset, frameHeight, frameWidth, sceneImage]);
-  const displayScale = sceneImage?.scale ?? 1;
-  const displayPanX = sceneImage?.x ?? 0;
-  const displayPanY = sceneImage?.y ?? 0;
+    return asImage;
+  }, [dragOffset, frameHeight, frameWidth, framing, scene]);
+
+  const displayScale = framing.zoom;
+  const displayPanX = framing.positionX;
+  const displayPanY = framing.positionY;
+  const isVideo = getSceneMediaType(scene) === "video";
 
   const enterFrameEdit = useCallback(() => {
     selectImage(scene.id);
@@ -103,6 +123,14 @@ export default function EditorCanvasEditLayer({
     }, WHEEL_FEEDBACK_MS);
   }, []);
 
+  const handleDragOffsetChange = useCallback(
+    (offset: { x: number; y: number } | null) => {
+      setDragOffset(offset);
+      onDragOffsetChange?.(offset);
+    },
+    [onDragOffsetChange],
+  );
+
   useEffect(() => {
     return () => {
       if (wheelFeedbackTimeoutRef.current != null) {
@@ -127,8 +155,7 @@ export default function EditorCanvasEditLayer({
     }
 
     const handleWheel = (event: WheelEvent) => {
-      const image = getSceneImage(scene);
-      if (!image) {
+      if (!sceneHasFramableMedia(scene)) {
         return;
       }
 
@@ -140,7 +167,8 @@ export default function EditorCanvasEditLayer({
         return;
       }
 
-      const currentScale = clampSceneImageScale(image.scale);
+      const live = resolveSceneMediaFraming(scene);
+      const currentScale = clampSceneImageScale(live.zoom);
       const nextScale = clampSceneImageScale(currentScale + direction * WHEEL_ZOOM_STEP);
 
       if (nextScale === currentScale) {
@@ -155,7 +183,7 @@ export default function EditorCanvasEditLayer({
     return () => frame.removeEventListener("wheel", handleWheel);
   }, [mode, onTransformChange, pulseWheelFeedback, scene, frameRef]);
 
-  if (!sceneHasImage(scene) || mode === "playback") {
+  if (!sceneHasFramableMedia(scene) || mode === "playback") {
     return null;
   }
 
@@ -163,7 +191,7 @@ export default function EditorCanvasEditLayer({
     return (
       <button
         type="button"
-        aria-label="Edit scene image framing"
+        aria-label={isVideo ? "Edit scene video framing" : "Edit scene image framing"}
         className={`${layerClassName} bg-transparent ${allowPointerEvents ? "cursor-pointer" : "pointer-events-none cursor-default"}`}
         onPointerEnter={() => setImageHover(scene.id)}
         onPointerLeave={() => setImageHover(null)}
@@ -201,6 +229,7 @@ export default function EditorCanvasEditLayer({
       ref={frameRef}
       className={`${layerClassName} ${allowPointerEvents ? "" : "pointer-events-none"}`.trim()}
       onDoubleClick={handleDoubleClick}
+      data-media-framing-edit={isVideo ? "video" : "image"}
     >
       <EditorCanvasSelectionLayer />
       {guideImage ? <CanvasGuideLayer visible image={guideImage} /> : null}
@@ -214,10 +243,11 @@ export default function EditorCanvasEditLayer({
       <MediaPicker
         scene={scene}
         alt={`Scene ${sceneIndex + 1}`}
+        overlayOnly={overlayOnly || isVideo}
         onInteractionStart={handleInteractionStart}
         onTransformChange={onTransformChange}
         onDraggingChange={setIsDragging}
-        onDragOffsetChange={setDragOffset}
+        onDragOffsetChange={handleDragOffsetChange}
       />
     </div>
   );

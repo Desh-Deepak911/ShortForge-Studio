@@ -7,8 +7,13 @@ import {
 import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 import type { FootieScript } from "@/features/story/types";
 import { getCanonicalVoiceover } from "@/features/audio/utils/canonical-voiceover.utils";
+import type { MediaPlaybackValidationIssue } from "@/features/media-playback";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
+import {
+  formatExportMediaValidationWarnings,
+  validateExportStoryMedia,
+} from "./export-media-validation.utils";
 import { resolveNarrationVoiceoverMismatchWarning } from "./export-narration-voiceover.utils";
 
 export interface PrepareStoryForExportResult {
@@ -18,6 +23,8 @@ export interface PrepareStoryForExportResult {
   /** Latest active visual moment before the final render hold buffer. */
   contentEndMs: number;
   warnings: string[];
+  /** SceneMedia validation issues — surfaced as warnings; renderer unchanged. */
+  mediaIssues: MediaPlaybackValidationIssue[];
   masterTimeline: MasterTimeline;
 }
 
@@ -52,6 +59,9 @@ export function prepareStoryForExport(story: FootieScript): PrepareStoryForExpor
     warnings.push(narrationMismatchWarning);
   }
 
+  const mediaIssues = validateExportStoryMedia(synced);
+  warnings.push(...formatExportMediaValidationWarnings(mediaIssues));
+
   const refittedScenes = applyMasterTimelineSceneTiming(synced.scenes, masterTimeline);
 
   const normalizedStory = syncFootieScript({
@@ -68,6 +78,7 @@ export function prepareStoryForExport(story: FootieScript): PrepareStoryForExpor
     exportDurationMs: masterTimeline.renderDurationMs,
     contentEndMs: masterTimeline.contentEndMs,
     warnings,
+    mediaIssues,
     masterTimeline,
   };
 }

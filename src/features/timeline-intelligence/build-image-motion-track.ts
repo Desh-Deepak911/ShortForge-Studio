@@ -124,7 +124,13 @@ export interface BuildImageMotionTrackOptions {
   sceneEvents: SceneTimelineEvent[];
 }
 
-/** Builds image-motion track events from scene windows and editor motion settings. */
+/**
+ * Builds image-motion track events from scene windows and editor motion settings.
+ *
+ * Note (4.2C-5): Preview and Export rendering resolve motion via resolveMediaMotionState
+ * and no longer consume these timeline events for drawing. Track generation remains for
+ * timeline foundation / QA compatibility until a dedicated track cleanup phase.
+ */
 export function buildImageMotionTrackFromScenes(
   options: BuildImageMotionTrackOptions,
 ): ImageMotionTrackBuildResult {

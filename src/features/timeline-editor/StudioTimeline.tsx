@@ -5,8 +5,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditorSelection } from "@/features/editor/selection";
 import { SelectionPhase } from "@/features/editor/selection/selection.types";
 import { buildPreviewMasterTimeline } from "@/features/preview/utils/preview-master-timeline.utils";
+import {
+  buildVideoTrimPreviewOverride,
+  useVideoTrimPreviewOptional,
+} from "@/features/preview/video-trim-preview";
 import { usePreviewMasterTimelineContext } from "@/features/timeline-intelligence/master-timeline";
 import type { FootieScript } from "@/features/story/types";
+import { getSceneMedia } from "@/features/story/utils";
 import { applySceneUpdate } from "@/lib/utils/voiceover";
 
 import { deriveTimelineLayout } from "./derive-timeline-layout.utils";
@@ -25,6 +30,7 @@ import {
   timelineEditorPlaybackLocked,
   timelineEditorRailResizing,
   timelineEditorRailScroll,
+  timelineEditorRailTrimming,
   timelineEditorSegmentRow,
   timelineEditorTrackSurface,
 } from "./timeline-editor.ui";
@@ -37,17 +43,36 @@ import {
   insertTimelineSceneBefore,
   reorderTimelineScene,
 } from "./timeline-editor.commands";
-import type { TimelineDragState, TimelineResizeState } from "./timeline-editor.types";
+import type {
+  TimelineDragState,
+  TimelineResizeState,
+  TimelineVideoTrimState,
+} from "./timeline-editor.types";
 import { computeDragPreview } from "./timeline-reorder.utils";
 import {
   applyResizePreviewToLayout,
   nudgeDurationSec,
   resolveResizedDurationSec,
 } from "./timeline-resize.utils";
+import {
+  applyTimelineTrimHandleDrag,
+  nudgeTrimHandle,
+  resolveTimelineVideoTrimWindow,
+  type TimelineVideoTrimHandle,
+} from "./timeline-video-trim.utils";
+import { releaseTimelineTrimPointerCapture } from "./timeline-trim-interaction.utils";
 
 export interface StudioTimelineProps {
   script: FootieScript;
   onScriptChange: (script: FootieScript) => void;
+  /**
+   * Dedicated media-intent trim commit — must call buildVideoTrimPatch
+   * and onScriptChange(..., { intent: "media" }).
+   */
+  onApplyVideoTrim?: (
+    sceneId: string,
+    trim: { trimStartMs: number; trimEndMs: number },
+  ) => boolean;
   className?: string;
   id?: string;
 }
@@ -77,11 +102,14 @@ function buildScriptFromSceneOrder(script: FootieScript, sceneIds: string[]): Fo
 export default function StudioTimeline({
   script,
   onScriptChange,
+  onApplyVideoTrim,
   className = "",
   id,
 }: StudioTimelineProps) {
   const selection = useEditorSelection();
   const playback = useTimelinePlayback();
+  const trimPreview = useVideoTrimPreviewOptional();
+  const trimPreviewRef = useRef(trimPreview);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const segmentRowRef = useRef<HTMLDivElement>(null);
   const blockRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
@@ -89,8 +117,13 @@ export default function StudioTimeline({
   const [menu, setMenu] = useState<TimelineContextMenuState | null>(null);
   const [dragState, setDragState] = useState<TimelineDragState | null>(null);
   const [resizeState, setResizeState] = useState<TimelineResizeState | null>(null);
+  const [trimState, setTrimState] = useState<TimelineVideoTrimState | null>(null);
+  const [isFinePointer, setIsFinePointer] = useState(true);
   const dragStateRef = useRef<TimelineDragState | null>(null);
   const resizeStateRef = useRef<TimelineResizeState | null>(null);
+  const trimStateRef = useRef<TimelineVideoTrimState | null>(null);
+  const trimCaptureTargetRef = useRef<Element | null>(null);
+  const trimSettledRef = useRef(false);
   const scriptRef = useRef(script);
   const lastPlayheadScrollAtRef = useRef(0);
 
@@ -98,9 +131,26 @@ export default function StudioTimeline({
     scriptRef.current = script;
   }, [script]);
 
+  useEffect(() => {
+    trimPreviewRef.current = trimPreview;
+  }, [trimPreview]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+    const mediaQuery = window.matchMedia("(pointer: fine)");
+    const sync = () => setIsFinePointer(mediaQuery.matches);
+    sync();
+    mediaQuery.addEventListener("change", sync);
+    return () => mediaQuery.removeEventListener("change", sync);
+  }, []);
+
   const playbackLocked = selection.phase === SelectionPhase.PlaybackLocked;
-  const reorderDisabled = playbackLocked || resizeState != null;
-  const resizeDisabled = playbackLocked || dragState != null;
+  const reorderDisabled = playbackLocked || resizeState != null || trimState != null;
+  const resizeDisabled = playbackLocked || dragState != null || trimState != null;
+  const trimDisabled = playbackLocked || dragState != null || resizeState != null;
+  const contextMenuDisabled = trimState != null;
 
   const layoutScript = useMemo(() => {
     if (!dragState) {
@@ -207,7 +257,7 @@ export default function StudioTimeline({
 
   const handleDragHandlePointerDown = useCallback(
     (sceneId: string, event: React.PointerEvent<HTMLButtonElement>) => {
-      if (playbackLocked || resizeStateRef.current) {
+      if (playbackLocked || resizeStateRef.current || trimStateRef.current) {
         return;
       }
 
@@ -234,7 +284,7 @@ export default function StudioTimeline({
 
   const handleDurationNudge = useCallback(
     (sceneId: string, deltaSec: number) => {
-      if (playbackLocked || dragStateRef.current || resizeStateRef.current) {
+      if (playbackLocked || dragStateRef.current || resizeStateRef.current || trimStateRef.current) {
         return;
       }
 
@@ -265,7 +315,7 @@ export default function StudioTimeline({
 
   const handleResizeHandlePointerDown = useCallback(
     (sceneId: string, event: React.PointerEvent<HTMLButtonElement>) => {
-      if (playbackLocked || dragStateRef.current) {
+      if (playbackLocked || dragStateRef.current || trimStateRef.current) {
         return;
       }
 
@@ -302,6 +352,197 @@ export default function StudioTimeline({
       setResizeState(nextResizeState);
     },
     [baseLayout.totalDurationMs, playbackLocked, selection],
+  );
+
+  const publishTimelineTrimPreview = useCallback(
+    (state: TimelineVideoTrimState) => {
+      trimPreview?.setOverride(
+        buildVideoTrimPreviewOverride({
+          sceneId: state.sceneId,
+          trimStartMs: state.previewTrimStartMs,
+          trimEndMs: state.previewTrimEndMs,
+          activeHandle: state.activeHandle,
+          sourceDurationMs: state.sourceDurationMs,
+          isActive: true,
+          surface: "timeline",
+        }),
+      );
+    },
+    [trimPreview],
+  );
+
+  const clearTimelineTrimSession = useCallback(
+    (options?: { clearOverride?: boolean }) => {
+      const current = trimStateRef.current;
+      releaseTimelineTrimPointerCapture(
+        trimCaptureTargetRef.current,
+        current?.pointerId,
+      );
+      trimCaptureTargetRef.current = null;
+      trimStateRef.current = null;
+      setTrimState(null);
+      if (options?.clearOverride !== false) {
+        trimPreview?.clearOverride();
+      }
+    },
+    [trimPreview],
+  );
+
+  const cancelTimelineTrimSession = useCallback(() => {
+    if (trimSettledRef.current) {
+      return;
+    }
+    trimSettledRef.current = true;
+    clearTimelineTrimSession({ clearOverride: true });
+  }, [clearTimelineTrimSession]);
+
+  const handleTrimHandlePointerDown = useCallback(
+    (
+      sceneId: string,
+      handle: TimelineVideoTrimHandle,
+      event: React.PointerEvent<HTMLButtonElement>,
+      stripRect: DOMRect,
+    ) => {
+      if (playbackLocked || dragStateRef.current || resizeStateRef.current || trimStateRef.current) {
+        return;
+      }
+
+      if (!onApplyVideoTrim) {
+        return;
+      }
+
+      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      if (!scene) {
+        return;
+      }
+
+      const window = resolveTimelineVideoTrimWindow(scene);
+      const media = getSceneMedia(scene);
+      if (!window || !media?.url?.trim()) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        trimCaptureTargetRef.current = event.currentTarget;
+      } catch {
+        trimCaptureTargetRef.current = event.currentTarget;
+      }
+
+      trimSettledRef.current = false;
+      setMenu(null);
+      selection.selectScene(sceneId);
+      trimPreview?.clearOverride();
+
+      const nextTrimState: TimelineVideoTrimState = {
+        sceneId,
+        activeHandle: handle,
+        pointerId: event.pointerId,
+        sourceDurationMs: window.sourceDurationMs,
+        committedTrimStartMs: window.trimStartMs,
+        committedTrimEndMs: window.trimEndMs,
+        previewTrimStartMs: window.trimStartMs,
+        previewTrimEndMs: window.trimEndMs,
+        stripLeftPx: stripRect.left,
+        stripWidthPx: Math.max(1, stripRect.width),
+        pointerStartX: event.clientX,
+        isActive: true,
+        mediaUrl: media.url.trim(),
+      };
+
+      const drafted = applyTimelineTrimHandleDrag(
+        handle,
+        event.clientX,
+        nextTrimState.stripLeftPx,
+        nextTrimState.stripWidthPx,
+        {
+          trimStartMs: nextTrimState.previewTrimStartMs,
+          trimEndMs: nextTrimState.previewTrimEndMs,
+        },
+        nextTrimState.sourceDurationMs,
+      );
+
+      const withDraft: TimelineVideoTrimState = {
+        ...nextTrimState,
+        previewTrimStartMs: drafted.trimStartMs,
+        previewTrimEndMs: drafted.trimEndMs,
+      };
+
+      trimStateRef.current = withDraft;
+      setTrimState(withDraft);
+      publishTimelineTrimPreview(withDraft);
+    },
+    [
+      onApplyVideoTrim,
+      playbackLocked,
+      publishTimelineTrimPreview,
+      selection,
+      trimPreview,
+    ],
+  );
+
+  const handleTrimHandleKeyDown = useCallback(
+    (
+      sceneId: string,
+      handle: TimelineVideoTrimHandle,
+      event: React.KeyboardEvent<HTMLButtonElement>,
+    ) => {
+      if (playbackLocked || dragStateRef.current || resizeStateRef.current || trimStateRef.current) {
+        return;
+      }
+
+      if (!onApplyVideoTrim) {
+        return;
+      }
+
+      if (
+        event.key !== "ArrowLeft" &&
+        event.key !== "ArrowRight" &&
+        event.key !== "Home" &&
+        event.key !== "End"
+      ) {
+        return;
+      }
+
+      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      const window = resolveTimelineVideoTrimWindow(scene);
+      if (!window) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      selection.selectScene(sceneId);
+
+      const next = nudgeTrimHandle(
+        handle,
+        event.key,
+        {
+          trimStartMs: window.trimStartMs,
+          trimEndMs: window.trimEndMs,
+        },
+        window.sourceDurationMs,
+        event.shiftKey,
+      );
+
+      trimPreview?.setOverride(
+        buildVideoTrimPreviewOverride({
+          sceneId,
+          trimStartMs: next.trimStartMs,
+          trimEndMs: next.trimEndMs,
+          activeHandle: handle,
+          sourceDurationMs: window.sourceDurationMs,
+          isActive: true,
+          surface: "timeline",
+        }),
+      );
+
+      onApplyVideoTrim(sceneId, next);
+      trimPreview?.clearOverride();
+    },
+    [onApplyVideoTrim, playbackLocked, selection, trimPreview],
   );
 
   useEffect(() => {
@@ -454,6 +695,202 @@ export default function StudioTimeline({
     };
   }, [onScriptChange, resizingSceneId]);
 
+  const trimmingSceneId = trimState?.sceneId ?? null;
+
+  useEffect(() => {
+    if (!trimmingSceneId) {
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const current = trimStateRef.current;
+      if (!current || current.pointerId !== event.pointerId || trimSettledRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const drafted = applyTimelineTrimHandleDrag(
+        current.activeHandle,
+        event.clientX,
+        current.stripLeftPx,
+        current.stripWidthPx,
+        {
+          trimStartMs: current.previewTrimStartMs,
+          trimEndMs: current.previewTrimEndMs,
+        },
+        current.sourceDurationMs,
+      );
+
+      if (
+        drafted.trimStartMs === current.previewTrimStartMs &&
+        drafted.trimEndMs === current.previewTrimEndMs
+      ) {
+        return;
+      }
+
+      const nextTrimState: TimelineVideoTrimState = {
+        ...current,
+        previewTrimStartMs: drafted.trimStartMs,
+        previewTrimEndMs: drafted.trimEndMs,
+      };
+      trimStateRef.current = nextTrimState;
+      setTrimState(nextTrimState);
+      publishTimelineTrimPreview(nextTrimState);
+    };
+
+    const cancelTrim = () => {
+      cancelTimelineTrimSession();
+    };
+
+    const commitTrim = () => {
+      if (trimSettledRef.current) {
+        return;
+      }
+      trimSettledRef.current = true;
+
+      const current = trimStateRef.current;
+      if (!current) {
+        clearTimelineTrimSession({ clearOverride: true });
+        return;
+      }
+
+      const changed =
+        current.previewTrimStartMs !== current.committedTrimStartMs ||
+        current.previewTrimEndMs !== current.committedTrimEndMs;
+
+      if (changed && onApplyVideoTrim) {
+        onApplyVideoTrim(current.sceneId, {
+          trimStartMs: current.previewTrimStartMs,
+          trimEndMs: current.previewTrimEndMs,
+        });
+      }
+
+      clearTimelineTrimSession({ clearOverride: true });
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const current = trimStateRef.current;
+      if (!current || current.pointerId !== event.pointerId) {
+        return;
+      }
+      commitTrim();
+    };
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      const current = trimStateRef.current;
+      if (!current || current.pointerId !== event.pointerId) {
+        return;
+      }
+      cancelTrim();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelTrim();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      cancelTrim();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [
+    cancelTimelineTrimSession,
+    clearTimelineTrimSession,
+    onApplyVideoTrim,
+    publishTimelineTrimPreview,
+    trimmingSceneId,
+  ]);
+
+  // Cancel trim when selection leaves the trimmed scene (no silent commit).
+  useEffect(() => {
+    if (!trimmingSceneId) {
+      return;
+    }
+    if (selection.selectedSceneId !== trimmingSceneId) {
+      cancelTimelineTrimSession();
+    }
+  }, [cancelTimelineTrimSession, selection.selectedSceneId, trimmingSceneId]);
+
+  // Cancel trim when playback starts or the timeline becomes playback-locked.
+  useEffect(() => {
+    if (!trimmingSceneId) {
+      return;
+    }
+    if (playback.isPlaying || playbackLocked) {
+      cancelTimelineTrimSession();
+    }
+  }, [
+    cancelTimelineTrimSession,
+    playback.isPlaying,
+    playbackLocked,
+    trimmingSceneId,
+  ]);
+
+  // Cancel when media is replaced, removed, or the block becomes ineligible.
+  useEffect(() => {
+    if (!trimmingSceneId) {
+      return;
+    }
+
+    const current = trimStateRef.current;
+    if (!current) {
+      return;
+    }
+
+    const scene = script.scenes.find((entry) => entry.id === trimmingSceneId);
+    if (!scene) {
+      cancelTimelineTrimSession();
+      return;
+    }
+
+    const media = getSceneMedia(scene);
+    const window = resolveTimelineVideoTrimWindow(scene);
+    const mediaUrl = media?.url?.trim() ?? "";
+    const ineligible =
+      !media ||
+      media.type !== "video" ||
+      !mediaUrl ||
+      mediaUrl !== current.mediaUrl ||
+      !window;
+
+    if (ineligible) {
+      cancelTimelineTrimSession();
+    }
+  }, [cancelTimelineTrimSession, script.scenes, trimmingSceneId]);
+
+  // Release capture + clear override if the timeline unmounts mid-session.
+  useEffect(() => {
+    return () => {
+      if (!trimStateRef.current) {
+        return;
+      }
+      trimSettledRef.current = true;
+      releaseTimelineTrimPointerCapture(
+        trimCaptureTargetRef.current,
+        trimStateRef.current.pointerId,
+      );
+      trimCaptureTargetRef.current = null;
+      trimStateRef.current = null;
+      trimPreviewRef.current?.clearOverride();
+    };
+  }, []);
+
   useEffect(() => {
     if (process.env.NODE_ENV === "development" && layout.devWarning) {
       console.warn(`[StudioTimeline] ${layout.devWarning}`);
@@ -461,7 +898,7 @@ export default function StudioTimeline({
   }, [layout.devWarning]);
 
   useEffect(() => {
-    if (dragState || resizeState || playback.isPlaying) {
+    if (dragState || resizeState || trimState || playback.isPlaying) {
       return;
     }
 
@@ -475,7 +912,8 @@ export default function StudioTimeline({
       block: "nearest",
       inline: "center",
     });
-  }, [dragState, playback.isPlaying, resizeState, selection.selectedSceneId]);
+  }, [dragState, playback.isPlaying, resizeState, selection.selectedSceneId, trimState]);
+
 
   useEffect(() => {
     if (!playback.isPlaying || !showPlaybackHead) {
@@ -548,6 +986,7 @@ export default function StudioTimeline({
         data-timeline-layout={layout.layoutSource}
         data-timeline-dragging={dragState ? "true" : "false"}
         data-timeline-resizing={resizeState ? "true" : "false"}
+        data-timeline-trimming={trimState ? "true" : "false"}
         data-timeline-playback={playback.isPlaying ? "active" : "idle"}
         data-timeline-playback-locked={playbackLocked ? "true" : "false"}
       >
@@ -558,16 +997,18 @@ export default function StudioTimeline({
         ) : null}
 
         <p className={timelineEditorCoarsePointerHint}>
-          Tap the ⋮ menu on any scene for insert, duplicate, and delete actions.
+          Tap the ⋮ menu on any scene for insert, duplicate, and delete actions. Trim video clips in
+          the Video Inspector.
         </p>
 
         <p className={timelineEditorDurationHint} data-timeline-duration-hint>
-          Drag a scene edge to adjust duration.
+          Drag a scene edge to adjust duration. Inner handles trim the video clip without changing
+          scene length.
         </p>
 
         <div
           ref={scrollContainerRef}
-          className={`${timelineEditorRailScroll} ${playbackLocked ? `cursor-not-allowed ${timelineEditorPlaybackLocked}` : ""} ${resizeState ? timelineEditorRailResizing : ""}`.trim()}
+          className={`${timelineEditorRailScroll} ${playbackLocked ? `cursor-not-allowed ${timelineEditorPlaybackLocked}` : ""} ${resizeState ? timelineEditorRailResizing : ""} ${trimState ? timelineEditorRailTrimming : ""}`.trim()}
         >
           <div className={timelineEditorTrackSurface}>
             <div ref={segmentRowRef} className={timelineEditorSegmentRow}>
@@ -585,6 +1026,7 @@ export default function StudioTimeline({
               const isSelected = selection.selectedSceneId === segment.block.sceneId;
               const isDragging = dragState?.draggedSceneId === segment.block.sceneId;
               const isResizing = resizeState?.sceneId === segment.block.sceneId;
+              const isTrimming = trimState?.sceneId === segment.block.sceneId;
               const showInsertBefore =
                 dragState != null && dragState.hoverTargetIndex === sceneIndex;
 
@@ -600,18 +1042,26 @@ export default function StudioTimeline({
                   isSelected={isSelected}
                   isDragging={isDragging}
                   isResizing={isResizing}
+                  isTrimming={isTrimming}
+                  trimState={isTrimming ? trimState : null}
                   reorderDisabled={reorderDisabled}
                   resizeDisabled={resizeDisabled}
+                  trimDisabled={trimDisabled}
+                  contextMenuDisabled={contextMenuDisabled}
+                  isFinePointer={isFinePointer}
                   showInsertBefore={showInsertBefore}
                   onSelect={() => selection.selectScene(segment.block.sceneId)}
-                  onMenuOpen={({ x, y }) =>
+                  onMenuOpen={({ x, y }) => {
+                    if (trimStateRef.current) {
+                      return;
+                    }
                     setMenu({
                       sceneId: segment.block.sceneId,
                       sceneNumber: sceneIndex + 1,
                       x,
                       y,
-                    })
-                  }
+                    });
+                  }}
                   onDragHandlePointerDown={(event) =>
                     handleDragHandlePointerDown(segment.block.sceneId, event)
                   }
@@ -620,6 +1070,12 @@ export default function StudioTimeline({
                   }
                   onDurationNudge={(deltaSec) =>
                     handleDurationNudge(segment.block.sceneId, deltaSec)
+                  }
+                  onTrimHandlePointerDown={(handle, event, stripRect) =>
+                    handleTrimHandlePointerDown(segment.block.sceneId, handle, event, stripRect)
+                  }
+                  onTrimHandleKeyDown={(handle, event) =>
+                    handleTrimHandleKeyDown(segment.block.sceneId, handle, event)
                   }
                   blockRef={(element) => {
                     blockRefs.current.set(segment.block.sceneId, element);

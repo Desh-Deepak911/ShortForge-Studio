@@ -1,3 +1,9 @@
+/**
+ * Legacy timeline image-motion transform resolver.
+ * Preview (4.2C-4) and Export (4.2C-5) use resolveMediaMotionState via adapters.
+ * Retained for timeline QA / migration tests that exercise image-motion track events.
+ * Not used by active preview or export rendering.
+ */
 import type { SceneImage } from "@/features/story/types";
 import {
   resolveSceneImageTransformForFrame,
@@ -103,7 +109,9 @@ export function resolveImageMotionSceneBaseTransform(
   };
 }
 
-/** Shared preview/export image motion transform from a timeline event and absolute time. */
+/** Shared timeline image-motion transform from a timeline event and absolute time.
+ * Legacy track-event path — not used by active preview/export rendering (4.2C-5).
+ */
 export function resolveImageMotionTransform(
   input: ResolveImageMotionTransformInput,
 ): ImageMotionTransformState {
@@ -140,7 +148,9 @@ export function resolveImageMotionTransform(
   };
 }
 
-/** Resolves preview/export image motion for one scene image and timeline event. */
+/** Resolves timeline image-motion for one scene image and timeline event.
+ * Legacy track-event path — not used by active preview/export rendering (4.2C-5).
+ */
 export function resolveSceneImageMotionTransformState(
   sceneImage: SceneImage,
   imageMotion: TimelineImageMotionInput | null | undefined,

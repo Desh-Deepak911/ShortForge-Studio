@@ -52,6 +52,69 @@ export interface SceneImageMotion {
   intensity: SceneImageMotionIntensity;
 }
 
+/** Scene media slot kind — images today; video and placeholder reserved for later phases. */
+export type SceneMediaType = "image" | "video" | "placeholder";
+
+export type SceneMediaSource =
+  | "upload"
+  | "asset"
+  | "generated"
+  | "external"
+  | "legacy";
+
+export interface SceneMediaTransform {
+  x: number;
+  y: number;
+  scale: number;
+  rotation?: number;
+}
+
+export type SceneMediaFitMode = "cover" | "contain";
+
+/** Easing curve for shared media motion (image + video). */
+export type MediaMotionEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
+
+/**
+ * Shared media motion config (4.2C).
+ * Additive and optional — legacy `imageMotion` remains valid and is mapped on read.
+ */
+export interface SceneMediaMotion {
+  version: 1;
+  enabled?: boolean;
+  presetId?: string;
+  easing?: MediaMotionEasing;
+  /** 0–2 intensity multiplier (1 = full preset strength). */
+  intensity?: number;
+  startTransform?: SceneMediaTransform;
+  endTransform?: SceneMediaTransform;
+}
+
+export interface SceneMedia {
+  type: SceneMediaType;
+  url?: string;
+  source?: SceneMediaSource;
+  mimeType?: string;
+  durationMs?: number;
+  trimStartMs?: number;
+  trimEndMs?: number;
+  /** Intrinsic clip dimensions when known (video uploads). */
+  width?: number;
+  height?: number;
+  muted?: boolean;
+  fitMode?: SceneMediaFitMode;
+  transform?: SceneMediaTransform;
+  /** @deprecated Prefer `motion`. Kept for upload dual-write / legacy reads. */
+  imageMotion?: SceneImageMotion;
+  /** Shared image/video motion — optional; no migration required. */
+  motion?: SceneMediaMotion;
+  /** Optional still / poster frame URL (video). Images use `url` as poster. */
+  posterUrl?: string;
+  /** Absolute media time for the poster frame (video). Defaults to trim/window start. */
+  posterTimeMs?: number;
+  /** Preferred filmstrip sample count for future thumbnail UI. */
+  thumbnailCount?: number;
+}
+
 /** Pan/zoom transform for a manually uploaded scene image. */
 export interface SceneImage {
   url: string;
@@ -79,6 +142,11 @@ export interface FootieScene {
   sceneType?: SceneType;
   /** Scene media with optional pan/zoom transform metadata. */
   image?: SceneImage;
+  /**
+   * Optional unified media slot — read-path foundation for image and video clips.
+   * When absent, legacy `image` / `uploadedImage` remain authoritative.
+   */
+  media?: SceneMedia;
   /**
    * @deprecated Legacy string URL — migrated to `image` on sync.
    * Still accepted on load for backward compatibility.

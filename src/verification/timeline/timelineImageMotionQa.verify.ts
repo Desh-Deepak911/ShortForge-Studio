@@ -520,19 +520,23 @@ test("9. old draft with existing Ken Burns — legacy zoom-in/out map safely", (
   );
 });
 
-test("structural: preview/export wired to timeline image motion resolver", () => {
+test("structural: preview and export use shared media-motion adapters", () => {
   const sceneFrameImage = readSrc("src/features/editor/components/SceneFrameImage.tsx");
   const previewFrame = readSrc("src/features/preview/components/PreviewFrame.tsx");
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
+  const mediaRenderer = readSrc("src/features/export/utils/export-scene-media-renderer.ts");
   const previewTiming = readSrc("src/features/preview/utils/previewSceneTiming.ts");
 
-  assert.match(sceneFrameImage, /resolveSceneImageMotionTransformState/);
-  assert.match(previewFrame, /timelineImageMotion/);
+  assert.match(sceneFrameImage, /resolvePreviewMediaMotionStyle/);
+  assert.match(previewFrame, /sceneDurationMs/);
   assert.match(previewTiming, /resolvePreviewTimelineImageMotion/);
-  assert.match(videoRender, /resolveSceneImageMotionTransformState/);
-  assert.match(videoRender, /getImageMotionEventForScene/);
+  assert.match(videoRender, /drawSceneMediaFrame/);
+  assert.match(mediaRenderer, /resolveExportMediaMotionTransform|@\/features\/editor\/export\/motion/);
+  assert.doesNotMatch(mediaRenderer, /resolveSceneImageMotionTransformState/);
+  assert.doesNotMatch(mediaRenderer, /getImageMotionEventForScene/);
   assert.doesNotMatch(previewFrame, /resolveSceneImageMotionScale/);
   assert.doesNotMatch(videoRender, /resolveSceneImageMotionScale/);
+  assert.doesNotMatch(mediaRenderer, /resolveSceneImageMotionScale/);
 });
 
 const total = passed + failures.length;

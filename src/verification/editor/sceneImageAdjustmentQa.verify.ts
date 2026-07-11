@@ -124,7 +124,7 @@ test("4. image control interactions wire preview activation by scene index", () 
 });
 
 test("5. new uploads default to fit/contain with scale 1 and centered pan", () => {
-  assert.match(sceneImageUpload, /createSceneImageFromUrl\(objectUrl\)/);
+  assert.match(sceneImageUpload, /createSceneImageFromUrl\((objectUrl|url)\)/);
   const uploaded = createSceneImageFromUrl("blob:new");
   assert.equal(uploaded.fitMode, "fit");
   assert.equal(uploaded.scale, 1);

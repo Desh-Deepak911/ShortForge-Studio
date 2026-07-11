@@ -70,13 +70,17 @@ test("image motion controls appear for every scene with image (not selection-gat
   const inspector = readSrc("src/features/editor/components/SceneImageInspector.tsx");
   const sceneInspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
 
-  assert.match(sceneInspector, /sceneImage \?/);
-  assert.match(sceneInspector, /SceneImageMotionControl/);
+  assert.match(sceneInspector, /sceneHasMedia\(scene\)/);
+  assert.match(sceneInspector, /MediaMotionInspectorPanel/);
   assert.match(inspector, /SceneImageMotionControl/);
   assert.match(inspector, /onMotionChange/);
   assert.match(inspector, /Image Inspector/);
-  assert.match(inspector, /Fit full image/);
-  assert.match(inspector, /Reset frame/);
+  assert.match(inspector, /MediaFramingInspectorControls/);
+  assert.match(
+    readSrc("src/features/editor/components/MediaFramingInspectorControls.tsx"),
+    /Fit|Fill/,
+  );
+  assert.match(inspector, /Reset framing|Reset frame|onReset/);
 
   const script = threeSceneScript();
   assert.equal(sceneHasImage(script.scenes[0]!), true);
@@ -89,8 +93,8 @@ test("zoom-in works in preview — scale increases over scene progress", () => {
   const sceneFrameImage = readSrc("src/features/editor/components/SceneFrameImage.tsx");
   const motion = { type: "zoom-in" as const, intensity: "medium" as const };
 
-  assert.match(previewFrame, /timelineImageMotion/);
-  assert.match(sceneFrameImage, /resolveSceneImageMotionTransformState/);
+  assert.match(previewFrame, /sceneDurationMs/);
+  assert.match(sceneFrameImage, /resolvePreviewMediaMotionStyle/);
 
   const start = resolveSceneImageMotionScale(motion, 0);
   const mid = resolveSceneImageMotionScale(motion, 0.5);
@@ -123,10 +127,12 @@ test("zoom-out works in preview — scale decreases over scene progress", () => 
 
 test("zoom-in works in export — motion scale applied in background draw path", () => {
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
+  const mediaRenderer = readSrc("src/features/export/utils/export-scene-media-renderer.ts");
   const sceneUtils = readSrc("src/features/story/utils/scene.utils.ts");
 
-  assert.match(videoRender, /resolveSceneImageMotionTransformState/);
-  assert.match(videoRender, /drawSceneImageInFrame\([\s\S]*motionState/);
+  assert.match(videoRender, /drawSceneMediaFrame/);
+  assert.match(mediaRenderer, /resolveExportMediaMotionTransform|@\/features\/editor\/export\/motion/);
+  assert.match(mediaRenderer, /drawSceneImageInFrame\([\s\S]*motionState/);
   assert.match(sceneUtils, /drawTransformOverride\?\.scale \?\? resolved\.scale \* motionScale/);
 
   const motion = { type: "zoom-in" as const, intensity: "subtle" as const };
@@ -147,8 +153,9 @@ test("text and subtitles stay stable — motion only on background image layer",
   const sceneFrameImage = readSrc("src/features/editor/components/SceneFrameImage.tsx");
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
 
-  assert.match(sceneFrameImage, /timelineImageMotion/);
-  assert.match(previewFrame, /SceneFrameImage[\s\S]*timelineImageMotion/);
+  assert.match(sceneFrameImage, /resolvePreviewMediaMotionStyle/);
+  assert.match(previewFrame, /SceneFrameMedia/);
+  assert.match(previewFrame, /sceneElapsedMs/);
   assert.doesNotMatch(previewFrame, /CaptionOverlay/);
   assert.doesNotMatch(previewFrame, /SubtitleOverlay/);
   assert.match(videoPreview, /hideCaptionsDuringTransition/);
@@ -166,6 +173,7 @@ test("text and subtitles stay stable — motion only on background image layer",
   const backgroundDrawIdx = drawSceneFrame.indexOf("drawSceneBackground(");
   const subtitleDrawIdx = drawSceneFrame.indexOf("drawExportSubtitlesCaption(");
   assert.ok(backgroundDrawIdx > -1 && subtitleDrawIdx > backgroundDrawIdx);
+  assert.match(drawSceneFrame, /drawSceneMediaFrame|drawSceneBackground/);
 });
 
 test("fit/fill/position/zoom controls still work alongside motion", () => {

@@ -178,6 +178,24 @@ test("all scenes with images can export when story and voice are synced", () => 
   assert.equal(isExportReadinessBlocked(script, syncState), false);
 });
 
+test("video scene with duration counts as media complete", () => {
+  const script = buildStory([
+    {
+      ...makeScene("s1", 3, { withImage: false }),
+      media: {
+        type: "video",
+        url: "blob:clip",
+        durationMs: 3000,
+      },
+    },
+    makeScene("s2", 4),
+  ]);
+
+  const media = resolveMediaCompleteness(script);
+  assert.equal(media.scenesWithMedia, 2);
+  assert.equal(media.isComplete, true);
+});
+
 test("replace image keeps narration and voice clean and marks export stale", () => {
   const prev = buildStory([makeScene("s1", 3)]);
   const clean = markExportSynchronized(

@@ -3,10 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import SceneFrameImage from "@/features/editor/components/SceneFrameImage";
+import SceneFrameVideo from "@/features/editor/components/SceneFrameVideo";
+import {
+  resolveSceneMediaFraming,
+  sceneHasFramableMedia,
+} from "@/features/media-framing";
 import { useDragScrollLock } from "@/hooks/useDragScrollLock";
 import {
   applyReferencePanFromScreenDelta,
-  getSceneImage,
+  getSceneMedia,
+  getSceneMediaType,
   type SceneImageTransformPatch,
 } from "@/features/story/utils";
 import type { FootieScene } from "@/features/story/types";
@@ -20,6 +26,11 @@ interface MediaPickerProps {
   onDraggingChange?: (dragging: boolean) => void;
   /** Presentation-only — live drag offset for canvas guide preview. */
   onDragOffsetChange?: (offset: { x: number; y: number } | null) => void;
+  /**
+   * When true, only the drag overlay is rendered (video stays in SceneBackdrop
+   * so the element is not recreated during reposition).
+   */
+  overlayOnly?: boolean;
   className?: string;
 }
 
@@ -31,6 +42,10 @@ type DragSession = {
   originY: number;
 };
 
+/**
+ * Direct media framing manipulation (image + video).
+ * Local drag delta is temporary; pointer release commits one StoryDocument patch.
+ */
 export default function MediaPicker({
   scene,
   alt,
@@ -38,9 +53,11 @@ export default function MediaPicker({
   onTransformChange,
   onDraggingChange,
   onDragOffsetChange,
+  overlayOnly = false,
   className = "absolute inset-0 overflow-hidden",
 }: MediaPickerProps) {
-  const image = getSceneImage(scene);
+  const media = getSceneMedia(scene);
+  const mediaType = getSceneMediaType(scene);
   const dragSessionRef = useRef<DragSession | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -57,7 +74,7 @@ export default function MediaPicker({
     onDragOffsetChange?.(isDragging ? dragOffset : null);
   }, [dragOffset, isDragging, onDragOffsetChange]);
 
-  const interactionEnabled = Boolean(image);
+  const interactionEnabled = sceneHasFramableMedia(scene);
 
   const commitDrag = useCallback(
     (deltaX: number, deltaY: number, pointerId: number) => {
@@ -102,7 +119,7 @@ export default function MediaPicker({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!image || !event.isPrimary) {
+    if (!interactionEnabled || !event.isPrimary) {
       return;
     }
 
@@ -110,6 +127,7 @@ export default function MediaPicker({
       return;
     }
 
+    const liveFraming = resolveSceneMediaFraming(scene);
     onInteractionStart?.();
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -118,8 +136,8 @@ export default function MediaPicker({
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      originX: image.x,
-      originY: image.y,
+      originX: liveFraming.positionX,
+      originY: liveFraming.positionY,
     };
 
     dragOffsetRef.current = { x: 0, y: 0 };
@@ -144,22 +162,43 @@ export default function MediaPicker({
     setDragOffset(nextOffset);
   };
 
-  if (!image) {
+  if (!interactionEnabled) {
     return null;
   }
 
+  const liveOffset = isDragging ? dragOffset : undefined;
+  const showImage =
+    !overlayOnly && mediaType !== "video" && Boolean(resolveSceneMediaFraming(scene));
+  const showVideo =
+    !overlayOnly && mediaType === "video" && media?.type === "video" && Boolean(media.url);
+
   return (
     <>
-      <SceneFrameImage
-        scene={scene}
-        alt={alt}
-        className={className}
-        transformOffset={isDragging ? dragOffset : undefined}
-        isDragging={isDragging}
-      />
+      {showImage ? (
+        <SceneFrameImage
+          scene={scene}
+          alt={alt}
+          className={className}
+          transformOffset={liveOffset}
+          isDragging={isDragging}
+        />
+      ) : null}
+      {showVideo && media?.type === "video" ? (
+        <SceneFrameVideo
+          media={media}
+          scene={scene}
+          alt={alt}
+          className={className}
+          transformOffset={liveOffset}
+          isDragging={isDragging}
+          isPlaying={false}
+          isActive
+        />
+      ) : null}
       <div
         ref={overlayRef}
         aria-hidden
+        data-media-framing-drag="true"
         style={{ touchAction: "none" }}
         className={`absolute inset-0 z-[5] touch-none select-none ${
           interactionEnabled ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""

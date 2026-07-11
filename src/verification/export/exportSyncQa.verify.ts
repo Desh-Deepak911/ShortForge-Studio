@@ -166,13 +166,17 @@ test("1. initial generated story exports with voiceover + music", () => {
   assert.ok(mix.background?.src);
   assert.equal(musicSettings?.exportDurationMs, preflight.exportDurationMs);
 
+  // Sprint 6C: semantic prepare happens once in the gateway; renderer uses manifest only.
+  const gateway = readSrc("src/features/export/domain/prepare-export-request.ts");
+  assert.match(gateway, /prepareStoryVoiceoverForExport/);
+  assert.match(gateway, /prepareStoryForExport/);
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
-  assert.match(videoRender, /prepareStoryVoiceoverForExport\(script\)/);
-  assert.match(videoRender, /prepareStoryForExport\(voiceoverPreparedScript\)/);
-  assert.match(videoRender, /resolveExportVoiceoverAudioInput/);
-  assert.match(videoRender, /mixExportVoiceoverAndBackgroundMusic/);
-  assert.match(videoRender, /includeBackgroundMusicMix/);
-  assert.match(videoRender, /exportDurationMs/);
+  assert.match(videoRender, /prepareExportRequest/);
+  assert.match(videoRender, /renderExport\(request\.manifest,\s*context/);
+  const renderExport = readSrc("src/features/export/runtime/render-export.ts");
+  assert.match(renderExport, /mixExportVoiceoverAndBackgroundMusic|muxWebmExportWithBrowserMixedAudio/);
+  assert.match(renderExport, /manifest\.audio/);
+  assert.match(renderExport, /resolveExportRenderEndMs|renderDurationMs/);
 });
 
 test("2. edit scene duration, then export refits to voiceover authority", () => {
@@ -354,7 +358,7 @@ test("9. transitions and Ken Burns still work on export path", () => {
 
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
   assert.match(videoRender, /resolveTimelineTransitionOverlay/);
-  assert.match(videoRender, /resolveSceneImageMotionTransformState/);
+  assert.match(videoRender, /drawSceneMediaFrame|resolveExportMediaMotionTransform/);
   assert.match(videoRender, /drawExportTransitionBackgrounds/);
 });
 

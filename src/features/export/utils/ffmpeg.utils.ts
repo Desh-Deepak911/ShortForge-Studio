@@ -3,7 +3,6 @@ const FFMPEG_CORE_BASE_URL = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG
 
 import type { ExportBackgroundMusicMixSettings } from "./export-background-music.utils";
 import {
-  buildExportFfmpegPeakLimiterFilterChain,
   PEAK_PROTECTION_GAIN_THRESHOLD,
 } from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
 import {
@@ -217,6 +216,8 @@ export interface MuxVideoWithAudioOptions {
   outputFormat?: ExportAudioMuxOutputFormat;
   /** Voice stem gain when muxing narration — defaults to 1. */
   voiceGain?: number;
+  /** Frozen peak-protection decision from ExportManifest. */
+  applyPeakProtection?: boolean;
 }
 
 export interface MuxVideoWithExportAudioOptions extends MuxVideoWithAudioOptions {
@@ -225,6 +226,8 @@ export interface MuxVideoWithExportAudioOptions extends MuxVideoWithAudioOptions
   backgroundMusicMix?: ExportBackgroundMusicMixSettings;
   /** Voice stem gain when muxing narration — defaults to mix settings or 1. */
   voiceGain?: number;
+  /** Frozen peak-protection decision from ExportManifest (voice-only and mixed). */
+  applyPeakProtection?: boolean;
   /**
    * WebM mux stream-copies canvas video (fast path).
    * MP4 mux encodes H.264 + AAC in the same pass — avoids a second transcode exec.
@@ -255,8 +258,70 @@ function buildVoiceFilterChain(
 function resolveExportPeakProtectionActive(
   mixSettings: ExportBackgroundMusicMixSettings | null | undefined,
   voiceGain: number,
+  explicit?: boolean,
 ): boolean {
+  if (typeof explicit === "boolean") return explicit;
   return mixSettings?.applyPeakProtection ?? voiceGain > PEAK_PROTECTION_GAIN_THRESHOLD;
+}
+
+/**
+ * Clamp export mux gains to finite non-negative values.
+ * Stem gain may exceed 1 (Preview/export allow bus×master up to 4).
+ */
+export function normalizeExportMuxGain(gain: unknown, fallback = 1): number {
+  if (typeof gain !== "number" || !Number.isFinite(gain) || gain < 0) {
+    return fallback;
+  }
+  return gain;
+}
+
+/**
+ * FFmpeg.wasm audio mux filter graph.
+ *
+ * Stem gain is applied with `volume=`. Post-mix `alimiter` is intentionally NOT
+ * used here: the browser @ffmpeg core aborts mux when alimiter is linked after
+ * Sprint 6G re-enabled peak protection (visual encode succeeds; audio mux fails).
+ * Browser offline mix still applies DynamicsCompressor when applyPeakProtection.
+ */
+export function buildMuxVideoExportAudioFilterComplex(input: {
+  readonly hasVoiceover: boolean;
+  readonly hasMusic: boolean;
+  readonly voiceInputIndex: number | null;
+  readonly musicInputIndex: number | null;
+  readonly durationSec: number;
+  readonly voiceGain: number;
+  readonly backgroundMusicMix?: ExportBackgroundMusicMixSettings | null;
+}): string {
+  const voiceGain = normalizeExportMuxGain(input.voiceGain, 1);
+  const { hasVoiceover, hasMusic, voiceInputIndex, musicInputIndex, durationSec } = input;
+
+  if (hasVoiceover && hasMusic && voiceInputIndex != null && musicInputIndex != null) {
+    const mixBase =
+      "[voice][music]amix=inputs=2:duration=first:dropout_transition=0,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo";
+    return [
+      buildExportBackgroundMusicFilterChain(
+        musicInputIndex,
+        input.backgroundMusicMix!,
+        "music",
+      ),
+      buildVoiceFilterChain(voiceInputIndex, durationSec, "voice", voiceGain),
+      `${mixBase}[aout]`,
+    ].join(";");
+  }
+
+  if (hasMusic && musicInputIndex != null && input.backgroundMusicMix) {
+    return buildExportBackgroundMusicFilterChain(
+      musicInputIndex,
+      input.backgroundMusicMix,
+      "aout",
+    );
+  }
+
+  if (hasVoiceover && voiceInputIndex != null) {
+    return buildVoiceOnlyFilterChain(voiceInputIndex, durationSec, voiceGain);
+  }
+
+  return "";
 }
 
 function buildVoiceOnlyFilterChain(
@@ -332,53 +397,30 @@ export async function muxVideoWithExportAudio(
     nextInputIndex += 1;
   }
 
-  const voiceGain = options.voiceGain ?? options.backgroundMusicMix?.voiceGain ?? 1;
-  const applyPeakProtection = resolveExportPeakProtectionActive(
+  const voiceGain = normalizeExportMuxGain(
+    options.voiceGain ?? options.backgroundMusicMix?.voiceGain ?? 1,
+    1,
+  );
+  // Peak-protection boolean is retained for diagnostics / browser mix parity.
+  // FFmpeg.wasm must not inject alimiter (see buildMuxVideoExportAudioFilterComplex).
+  void resolveExportPeakProtectionActive(
     options.backgroundMusicMix,
     voiceGain,
+    options.applyPeakProtection,
   );
 
-  let filterComplex = "";
-  if (hasVoiceover && hasMusic && voiceInputIndex != null && musicInputIndex != null) {
-    const mixBase =
-      "[voice][music]amix=inputs=2:duration=first:dropout_transition=0,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo";
-    filterComplex = [
-      buildExportBackgroundMusicFilterChain(
-        musicInputIndex,
-        options.backgroundMusicMix!,
-        "music",
-      ),
-      buildVoiceFilterChain(voiceInputIndex, durationSec, "voice", voiceGain),
-      applyPeakProtection
-        ? `${mixBase}[premix];${buildExportFfmpegPeakLimiterFilterChain("premix", "aout")}`
-        : `${mixBase}[aout]`,
-    ].join(";");
-  } else if (hasMusic && musicInputIndex != null && options.backgroundMusicMix) {
-    if (options.backgroundMusicMix.applyPeakProtection) {
-      filterComplex = [
-        buildExportBackgroundMusicFilterChain(
-          musicInputIndex,
-          options.backgroundMusicMix,
-          "music",
-        ),
-        buildExportFfmpegPeakLimiterFilterChain("music", "aout"),
-      ].join(";");
-    } else {
-      filterComplex = buildExportBackgroundMusicFilterChain(
-        musicInputIndex,
-        options.backgroundMusicMix,
-        "aout",
-      );
-    }
-  } else if (hasVoiceover && voiceInputIndex != null) {
-    if (applyPeakProtection) {
-      filterComplex = [
-        buildVoiceFilterChain(voiceInputIndex, durationSec, "voice", voiceGain),
-        buildExportFfmpegPeakLimiterFilterChain("voice", "aout"),
-      ].join(";");
-    } else {
-      filterComplex = buildVoiceOnlyFilterChain(voiceInputIndex, durationSec, voiceGain);
-    }
+  const filterComplex = buildMuxVideoExportAudioFilterComplex({
+    hasVoiceover,
+    hasMusic,
+    voiceInputIndex,
+    musicInputIndex,
+    durationSec,
+    voiceGain,
+    backgroundMusicMix: options.backgroundMusicMix,
+  });
+
+  if (!filterComplex) {
+    throw new Error("Export audio mux requires a valid filter graph");
   }
 
   const handleProgress = ({ progress }: { progress: number; time?: number }) => {
@@ -675,3 +717,306 @@ export async function transcodeWebmToMp4(
     await cleanupFFmpegFiles(ffmpeg, [TRANSCODE_INPUT, TRANSCODE_OUTPUT]);
   }
 }
+
+const SILENT_TIMING_INPUT = "silent-timing-in.webm";
+const SILENT_TIMING_OUTPUT = "silent-timing-out.webm";
+
+/**
+ * Rebuilds a manually captured silent WebM to constant frame rate.
+ *
+ * Strategy (4.2C-8B.2): MediaRecorder timestamps are unusable. Extract every
+ * decoded frame (vsync 0), then encode an image sequence with `-framerate` as
+ * the sole timing authority so PTS = frameIndex / fps.
+ *
+ * Video-only libvpx re-encode. Final audio mux should `-c:v copy` this result.
+ */
+export async function normalizeSilentVisualFrameTiming(
+  videoBlob: Blob,
+  options: {
+    fps: number;
+    /** @deprecated Prefer frameCount; retained for call-site compatibility. */
+    durationSec?: number;
+    /** Canonical frame count from manual capture (required for CFR rebuild). */
+    frameCount: number;
+    onProgress?: (progress: number) => void;
+  },
+): Promise<Blob> {
+  const [{ fetchFile }, ffmpeg] = await Promise.all([
+    import("@ffmpeg/util"),
+    getFFmpeg(),
+  ]);
+
+  const {
+    buildSilentVisualFrameExtractArgs,
+    buildSilentVisualFrameSequenceEncodeArgs,
+    listNormalizedFrameFilenames,
+    SILENT_VISUAL_NORMALIZE_STRATEGY,
+  } = await import("@/features/export/utils/export-timestamp-normalization.utils");
+
+  const {
+    ExportPipelineError,
+    assertExtractedFrameSet,
+    emitExportStageEvent,
+    isExportDebugEnabled,
+    listFfmpegMemfsEntries,
+    captureExportJsHeapSnapshot,
+    summarizeExtractedJpegFiles,
+  } = await import("@/features/export/utils/export-pipeline-forensics.utils");
+
+  const fps = options.fps > 0 && Number.isFinite(options.fps) ? options.fps : 30;
+  const frameCount = Math.max(1, Math.floor(options.frameCount));
+  const cleanupFrameFiles = listNormalizedFrameFilenames(frameCount + 4);
+  const writtenFiles = [SILENT_TIMING_INPUT, SILENT_TIMING_OUTPUT, ...cleanupFrameFiles];
+
+  const extractStartedAt =
+    typeof performance !== "undefined" ? performance.now() : Date.now();
+  emitExportStageEvent({
+    stage: "extract-frame-sequence",
+    status: "start",
+    startedAtMs: extractStartedAt,
+    context: {
+      strategy: SILENT_VISUAL_NORMALIZE_STRATEGY,
+      fps,
+      frameCount,
+      rawWebmBytes: videoBlob.size,
+      heap: captureExportJsHeapSnapshot(),
+    },
+  });
+
+  await ffmpeg.writeFile(SILENT_TIMING_INPUT, await fetchFile(videoBlob));
+
+  const handleProgress = ({ progress }: { progress: number; time?: number }) => {
+    if (!options.onProgress) return;
+    const normalized = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0;
+    options.onProgress(Math.round(normalized * 55));
+  };
+
+  const logNormalizeCommand = (phase: string, args: string[]) => {
+    if (!isExportDebugEnabled()) return;
+    console.info("[ExportNormalize]", {
+      strategy: SILENT_VISUAL_NORMALIZE_STRATEGY,
+      phase,
+      fps,
+      frameCount,
+      command: formatFfmpegExecCommand(args),
+      args,
+    });
+  };
+
+  const logCapture = createFfmpegLogCapture();
+  ffmpeg.on("progress", handleProgress);
+  ffmpeg.on("log", logCapture.handleLog);
+
+  try {
+    const extractArgs = buildSilentVisualFrameExtractArgs({
+      inputFile: SILENT_TIMING_INPUT,
+    });
+    logNormalizeCommand("extract", extractArgs);
+
+    let extractCode: number;
+    try {
+      extractCode = await ffmpeg.exec(extractArgs);
+    } catch (cause) {
+      throw new ExportPipelineError({
+        stage: "extract-frame-sequence",
+        code: "EXPORT_EXTRACT_FAILED",
+        message:
+          "The visual frames could not be prepared for encoding. No file was downloaded.",
+        detail: `FFmpeg extract threw: ${cause instanceof Error ? cause.message : String(cause)}`,
+        cause,
+        context: {
+          exitCode: null,
+          stderrTail: logCapture.stderr.slice(-4000),
+          command: formatFfmpegExecCommand(extractArgs),
+          heap: captureExportJsHeapSnapshot(),
+        },
+      });
+    }
+
+    if (extractCode !== 0) {
+      throw new ExportPipelineError({
+        stage: "extract-frame-sequence",
+        code: "EXPORT_EXTRACT_FAILED",
+        message:
+          "The visual frames could not be prepared for encoding. No file was downloaded.",
+        detail: `FFmpeg extract exit ${extractCode}`,
+        context: {
+          exitCode: extractCode,
+          stderrTail: logCapture.stderr.slice(-4000),
+          command: formatFfmpegExecCommand(extractArgs),
+        },
+      });
+    }
+
+    options.onProgress?.(55);
+
+    const memfs = await listFfmpegMemfsEntries(ffmpeg, "/", {
+      readSizes: isExportDebugEnabled(),
+      sizeSampleLimit: 4,
+    }).catch(() => []);
+    const jpegNames = memfs
+      .filter((entry) => !entry.isDir && entry.path.startsWith("norm-frame-"))
+      .map((entry) => entry.path);
+    const sizesByName: Record<string, number> = {};
+    for (const entry of memfs) {
+      if (!entry.isDir && entry.path.startsWith("norm-frame-") && entry.size != null) {
+        sizesByName[entry.path] = entry.size;
+      }
+    }
+    const jpegSummary = summarizeExtractedJpegFiles(jpegNames, sizesByName);
+
+    if (isExportDebugEnabled()) {
+      console.info("[ExportNormalize]", {
+        phase: "extract-complete",
+        jpegSummary,
+        memfsFileCount: memfs.length,
+        heap: captureExportJsHeapSnapshot(),
+      });
+    }
+
+    emitExportStageEvent({
+      stage: "extract-frame-sequence",
+      status: "success",
+      startedAtMs: extractStartedAt,
+      endedAtMs: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      context: { jpegSummary, frameCount },
+    });
+
+    const validateStartedAt =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    emitExportStageEvent({
+      stage: "validate-extracted-frames",
+      status: "start",
+      startedAtMs: validateStartedAt,
+      context: { expectedFrameCount: frameCount, jpegSummary },
+    });
+
+    try {
+      if (jpegNames.length === 0) {
+        throw new ExportPipelineError({
+          stage: "validate-extracted-frames",
+          code: "EXPORT_EXTRACT_FRAME_MISSING",
+          message:
+            "The visual frames could not be prepared for encoding. No file was downloaded.",
+          detail:
+            "FFmpeg extract reported success but no norm-frame-*.jpg files were found in MEMFS.",
+          context: { expectedFrameCount: frameCount, memfsFileCount: memfs.length },
+        });
+      }
+      assertExtractedFrameSet({
+        expectedFrameCount: frameCount,
+        fileNames: jpegNames,
+      });
+    } catch (error) {
+      emitExportStageEvent({
+        stage: "validate-extracted-frames",
+        status: "failure",
+        startedAtMs: validateStartedAt,
+        endedAtMs: typeof performance !== "undefined" ? performance.now() : Date.now(),
+        error: {
+          code: error instanceof ExportPipelineError ? error.code : "EXPORT_EXTRACT_FRAME_MISSING",
+          message: error instanceof Error ? error.message : String(error),
+        },
+      });
+      throw error;
+    }
+
+    emitExportStageEvent({
+      stage: "validate-extracted-frames",
+      status: "success",
+      startedAtMs: validateStartedAt,
+      endedAtMs: typeof performance !== "undefined" ? performance.now() : Date.now(),
+    });
+
+    const encodeStartedAt =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    emitExportStageEvent({
+      stage: "encode-normalized-visual",
+      status: "start",
+      startedAtMs: encodeStartedAt,
+      context: { fps, frameCount, heap: captureExportJsHeapSnapshot() },
+    });
+
+    const encodeArgs = buildSilentVisualFrameSequenceEncodeArgs({
+      outputFile: SILENT_TIMING_OUTPUT,
+      fps,
+      frameCount,
+    });
+    logNormalizeCommand("encode", encodeArgs);
+
+    const encodeHandleProgress = ({ progress }: { progress: number; time?: number }) => {
+      if (!options.onProgress) return;
+      const normalized = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0;
+      options.onProgress(55 + Math.round(normalized * 45));
+    };
+    ffmpeg.off("progress", handleProgress);
+    ffmpeg.on("progress", encodeHandleProgress);
+
+    try {
+      let encodeCode: number;
+      try {
+        encodeCode = await ffmpeg.exec(encodeArgs);
+      } catch (cause) {
+        throw new ExportPipelineError({
+          stage: "encode-normalized-visual",
+          code: "EXPORT_ENCODE_FAILED",
+          message:
+            "The video encoder could not finish this export. Try again or choose a lower resolution.",
+          detail: `FFmpeg encode threw: ${cause instanceof Error ? cause.message : String(cause)}`,
+          cause,
+          context: {
+            stderrTail: logCapture.stderr.slice(-4000),
+            command: formatFfmpegExecCommand(encodeArgs),
+            heap: captureExportJsHeapSnapshot(),
+          },
+        });
+      }
+
+      if (encodeCode !== 0) {
+        throw new ExportPipelineError({
+          stage: "encode-normalized-visual",
+          code: "EXPORT_ENCODE_FAILED",
+          message:
+            "The video encoder could not finish this export. Try again or choose a lower resolution.",
+          detail: `FFmpeg encode exit ${encodeCode}`,
+          context: {
+            exitCode: encodeCode,
+            stderrTail: logCapture.stderr.slice(-4000),
+            command: formatFfmpegExecCommand(encodeArgs),
+          },
+        });
+      }
+    } finally {
+      ffmpeg.off("progress", encodeHandleProgress);
+    }
+
+    const data = await ffmpeg.readFile(SILENT_TIMING_OUTPUT);
+    if (typeof data === "string") {
+      throw new ExportPipelineError({
+        stage: "encode-normalized-visual",
+        code: "EXPORT_ENCODE_FAILED",
+        message:
+          "The video encoder could not finish this export. Try again or choose a lower resolution.",
+        detail: "Unexpected text output from FFmpeg timing normalize",
+      });
+    }
+
+    emitExportStageEvent({
+      stage: "encode-normalized-visual",
+      status: "success",
+      startedAtMs: encodeStartedAt,
+      endedAtMs: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      context: { outputBytes: data.byteLength },
+    });
+
+    options.onProgress?.(100);
+    return new Blob([new Uint8Array(data)], { type: "video/webm" });
+  } finally {
+    ffmpeg.off("progress", handleProgress);
+    ffmpeg.off("log", logCapture.handleLog);
+    await cleanupFFmpegFiles(ffmpeg, writtenFiles);
+  }
+}
+
+
+

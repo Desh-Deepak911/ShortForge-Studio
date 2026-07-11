@@ -105,14 +105,18 @@ Offline frame-by-frame render to a downloadable WebM file.
 
 ```
 1. buildFootieExportPayload()  — normalize scenes for render
-2. Preload all scene images
+2. Preload all scene media
 3. Create offscreen canvas at export resolution
-4. For each frame at 30 fps:
-     clear → draw scene → draw transition → draw captions
-     captureStream → MediaRecorder
-5. (Optional) FFmpeg.wasm mux narration MP3 → final WebM
-6. downloadBlob()
+4. canvas.captureStream(0) + MediaRecorder (manual frames only)
+5. For each semantic frame (frameIndex / fps):
+     prepare media → draw scene/captions/transitions
+     requestFrame(frameIndex) exactly once
+6. Optional FFmpeg CFR timing normalize when MediaRecorder wall-clock stamps inflate duration
+7. (Optional) FFmpeg.wasm mux narration → final WebM/MP4
+8. downloadBlob()
 ```
+
+See `docs/EXPORT_DETERMINISTIC_CAPTURE.md` and `docs/qa/mixed-media-export-freeze.md`.
 
 ### Key differences summary
 

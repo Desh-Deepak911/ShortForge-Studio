@@ -1,6 +1,16 @@
 import { buildScriptHash } from "@/features/editor/creator-asset-planning/creator-asset-planning.utils";
 import { normalizeExportSettings } from "@/features/export/services";
-import type { ExportSettings, FootieScene, FootieScript } from "@/features/story/types";
+import {
+  resolveSceneMediaMotionFromMedia,
+  serializeSceneMediaMotionFingerprint,
+} from "@/features/media-motion";
+import type {
+  ExportSettings,
+  FootieScene,
+  FootieScript,
+  SceneMedia,
+} from "@/features/story/types";
+import { getSceneMedia } from "@/features/story/utils";
 
 export interface BuildExportFingerprintInput {
   script: FootieScript;
@@ -9,18 +19,70 @@ export interface BuildExportFingerprintInput {
   includeBackgroundMusic: boolean;
 }
 
-function buildSceneExportFingerprint(scene: FootieScene): string {
-  const imageKey = scene.image
+/**
+ * Stable media segment for export staleness.
+ * SceneMedia is the single authority — resolved via getSceneMedia()
+ * (covers legacy image / uploadedImage automatically).
+ */
+export function buildSceneMediaExportFingerprintKey(
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+): string {
+  const media = getSceneMedia(scene);
+  if (!media) {
+    return "";
+  }
+
+  return serializeSceneMediaFingerprint(media);
+}
+
+function serializeSceneMediaFingerprint(media: SceneMedia): string {
+  if (media.type === "placeholder") {
+    return "placeholder";
+  }
+
+  const transform = media.transform
     ? [
-        scene.image.url,
-        scene.image.scale,
-        scene.image.x,
-        scene.image.y,
-        scene.image.rotation ?? 0,
-        scene.image.fitMode ?? "",
-        JSON.stringify(scene.image.imageMotion ?? null),
+        media.transform.x ?? 0,
+        media.transform.y ?? 0,
+        media.transform.scale ?? 1,
+        media.transform.rotation ?? 0,
       ].join(",")
-    : (scene.uploadedImage ?? "");
+    : "";
+
+  const motionKey = serializeSceneMediaMotionFingerprint(
+    resolveSceneMediaMotionFromMedia(media),
+  );
+
+  if (media.type === "image") {
+    return [
+      "image",
+      media.url ?? "",
+      media.fitMode ?? "",
+      transform,
+      motionKey,
+    ].join("|");
+  }
+
+  if (media.type === "video") {
+    return [
+      "video",
+      media.url ?? "",
+      media.durationMs ?? "",
+      media.trimStartMs ?? "",
+      media.trimEndMs ?? "",
+      media.posterUrl ?? "",
+      media.fitMode ?? "",
+      transform,
+      media.muted === false ? "0" : "1",
+      motionKey,
+    ].join("|");
+  }
+
+  return media.type;
+}
+
+function buildSceneExportFingerprint(scene: FootieScene): string {
+  const mediaKey = buildSceneMediaExportFingerprintKey(scene);
 
   return [
     scene.id,
@@ -30,7 +92,7 @@ function buildSceneExportFingerprint(scene: FootieScene): string {
     scene.captionMode ?? "",
     scene.captionPreset ?? "",
     scene.subtitleEffect ?? "",
-    imageKey,
+    mediaKey,
   ].join(":");
 }
 

@@ -353,6 +353,7 @@ export type SceneTimelineUpdates = Partial<
     | "sceneType"
     | "image"
     | "uploadedImage"
+    | "media"
     | "captionMode"
     | "captionPreset"
     | "subtitleEffect"

@@ -7,6 +7,10 @@ import type {
   SceneImageMotionIntensity,
   SceneImageMotionPreset,
   SceneImageMotionType,
+  SceneMedia,
+  SceneMediaFitMode,
+  SceneMediaMotion,
+  SceneMediaType,
 } from "@/features/story/types";
 
 export const DEFAULT_IMAGE_SCALE = 1;
@@ -275,6 +279,285 @@ export function sceneHasImage(scene: Pick<FootieScene, "image" | "uploadedImage"
   return Boolean(getSceneImageUrl(scene));
 }
 
+function mapSceneImageFitModeToSceneMediaFitMode(
+  fitMode: SceneImageFitMode | undefined,
+): SceneMediaFitMode | undefined {
+  if (fitMode === "fill") {
+    return "cover";
+  }
+
+  if (fitMode === "fit") {
+    return "contain";
+  }
+
+  return undefined;
+}
+
+function isValidSceneMediaDurationMs(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function normalizeSceneMediaTransform(
+  value: unknown,
+  fallback?: SceneMedia["transform"],
+): SceneMedia["transform"] | undefined {
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const record = value as Record<string, unknown>;
+  const defaults = fallback ?? {
+    x: 0,
+    y: 0,
+    scale: DEFAULT_IMAGE_SCALE,
+    rotation: 0,
+  };
+
+  return {
+    x: normalizeNumber(record.x, defaults.x),
+    y: normalizeNumber(record.y, defaults.y),
+    scale: clampSceneImageScale(normalizeNumber(record.scale, defaults.scale)),
+    rotation: normalizeNumber(record.rotation, defaults.rotation ?? 0),
+  };
+}
+
+function normalizeSceneMediaFitMode(value: unknown): SceneMediaFitMode | undefined {
+  if (value === "cover" || value === "contain") {
+    return value;
+  }
+
+  return undefined;
+}
+
+function normalizeSceneMediaType(value: unknown): SceneMediaType | undefined {
+  if (value === "image" || value === "video" || value === "placeholder") {
+    return value;
+  }
+
+  return undefined;
+}
+
+function normalizeSceneMediaUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/** Normalizes a persisted `SceneMedia` record without legacy fallback. */
+export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
+  if (!media || typeof media !== "object") {
+    return undefined;
+  }
+
+  const record = media as Record<string, unknown>;
+  const type = normalizeSceneMediaType(record.type);
+  if (!type) {
+    return undefined;
+  }
+
+  const normalized: SceneMedia = { type };
+
+  const url = normalizeSceneMediaUrl(record.url);
+  if (url) {
+    normalized.url = url;
+  }
+
+  if (
+    record.source === "upload" ||
+    record.source === "asset" ||
+    record.source === "generated" ||
+    record.source === "external" ||
+    record.source === "legacy"
+  ) {
+    normalized.source = record.source;
+  }
+
+  if (typeof record.mimeType === "string" && record.mimeType.trim()) {
+    normalized.mimeType = record.mimeType.trim();
+  }
+
+  if (isValidSceneMediaDurationMs(record.durationMs)) {
+    normalized.durationMs = record.durationMs;
+  }
+
+  if (typeof record.width === "number" && Number.isFinite(record.width) && record.width > 0) {
+    normalized.width = Math.round(record.width);
+  }
+
+  if (typeof record.height === "number" && Number.isFinite(record.height) && record.height > 0) {
+    normalized.height = Math.round(record.height);
+  }
+
+  if (typeof record.trimStartMs === "number" && Number.isFinite(record.trimStartMs) && record.trimStartMs >= 0) {
+    normalized.trimStartMs = record.trimStartMs;
+  }
+
+  if (typeof record.trimEndMs === "number" && Number.isFinite(record.trimEndMs) && record.trimEndMs >= 0) {
+    normalized.trimEndMs = record.trimEndMs;
+  }
+
+  if (typeof record.muted === "boolean") {
+    normalized.muted = record.muted;
+  }
+
+  const fitMode = normalizeSceneMediaFitMode(record.fitMode);
+  if (fitMode) {
+    normalized.fitMode = fitMode;
+  }
+
+  const transform = normalizeSceneMediaTransform(record.transform);
+  if (transform) {
+    normalized.transform = transform;
+  }
+
+  if (record.imageMotion != null) {
+    normalized.imageMotion = normalizeSceneImageMotion(record.imageMotion);
+  }
+
+  if (record.motion != null && typeof record.motion === "object") {
+    const motionRecord = record.motion as Record<string, unknown>;
+    const motion: SceneMediaMotion = { version: 1 };
+    if (typeof motionRecord.enabled === "boolean") {
+      motion.enabled = motionRecord.enabled;
+    }
+    if (typeof motionRecord.presetId === "string" && motionRecord.presetId.trim()) {
+      motion.presetId = motionRecord.presetId.trim();
+    }
+    if (
+      motionRecord.easing === "linear" ||
+      motionRecord.easing === "ease-in" ||
+      motionRecord.easing === "ease-out" ||
+      motionRecord.easing === "ease-in-out"
+    ) {
+      motion.easing = motionRecord.easing;
+    }
+    if (
+      typeof motionRecord.intensity === "number" &&
+      Number.isFinite(motionRecord.intensity)
+    ) {
+      motion.intensity = Math.min(2, Math.max(0, motionRecord.intensity));
+    }
+    const start = normalizeSceneMediaTransform(motionRecord.startTransform);
+    if (start) {
+      motion.startTransform = start;
+    }
+    const end = normalizeSceneMediaTransform(motionRecord.endTransform);
+    if (end) {
+      motion.endTransform = end;
+    }
+    normalized.motion = motion;
+  }
+
+  const posterUrl = normalizeSceneMediaUrl(record.posterUrl);
+  if (posterUrl) {
+    normalized.posterUrl = posterUrl;
+  }
+
+  if (
+    typeof record.posterTimeMs === "number" &&
+    Number.isFinite(record.posterTimeMs) &&
+    record.posterTimeMs >= 0
+  ) {
+    normalized.posterTimeMs = Math.round(record.posterTimeMs);
+  }
+
+  if (
+    typeof record.thumbnailCount === "number" &&
+    Number.isFinite(record.thumbnailCount) &&
+    record.thumbnailCount > 0
+  ) {
+    normalized.thumbnailCount = Math.floor(record.thumbnailCount);
+  }
+
+  return normalized;
+}
+
+function mapLegacySceneImageToSceneMedia(image: SceneImage): SceneMedia {
+  return {
+    type: "image",
+    url: image.url,
+    source: "legacy",
+    fitMode: mapSceneImageFitModeToSceneMediaFitMode(image.fitMode),
+    transform: {
+      x: image.x,
+      y: image.y,
+      scale: image.scale,
+      rotation: image.rotation ?? 0,
+    },
+    imageMotion: normalizeSceneImageMotion(image.imageMotion),
+  };
+}
+
+/**
+ * Resolves the scene media slot — prefers `scene.media`, then maps legacy image fields.
+ */
+export function getSceneMedia(
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+): SceneMedia | undefined {
+  if (scene.media != null) {
+    return normalizeSceneMedia(scene.media);
+  }
+
+  const legacyImage = getSceneImage(scene);
+  if (!legacyImage) {
+    return undefined;
+  }
+
+  return mapLegacySceneImageToSceneMedia(legacyImage);
+}
+
+/** Returns the media URL when the resolved slot is image or video. */
+export function getSceneMediaUrl(
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+): string | undefined {
+  const media = getSceneMedia(scene);
+  if (!media || media.type === "placeholder") {
+    return undefined;
+  }
+
+  return media.url;
+}
+
+/** Returns the resolved media type, including legacy image fallback. */
+export function getSceneMediaType(
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+): SceneMediaType | undefined {
+  return getSceneMedia(scene)?.type;
+}
+
+/**
+ * Read-path media readiness helper.
+ * Used by media completeness / export readiness via `resolveMediaCompleteness`.
+ * Falls back to `sceneHasImage` when `scene.media` is absent.
+ */
+export function sceneHasMedia(scene: Pick<FootieScene, "image" | "uploadedImage" | "media">): boolean {
+  if (scene.media != null) {
+    const media = normalizeSceneMedia(scene.media);
+    if (!media) {
+      return false;
+    }
+
+    if (media.type === "placeholder") {
+      return false;
+    }
+
+    if (!media.url) {
+      return false;
+    }
+
+    if (media.type === "video") {
+      return isValidSceneMediaDurationMs(media.durationMs);
+    }
+
+    return media.type === "image";
+  }
+
+  return sceneHasImage(scene);
+}
+
 export function sceneImagesEqual(
   left: Pick<FootieScene, "image" | "uploadedImage">,
   right: Pick<FootieScene, "image" | "uploadedImage">,
@@ -420,6 +703,49 @@ export function normalizeSceneSettings(scene: FootieScene): FootieScene {
   return normalizeSceneImageSettings(normalizeSceneCaptionSettings(scene));
 }
 
+/**
+ * Syncs scene.media.transform/fitMode from scene.image after image framing writes.
+ * Prevents Preview/Export (which historically preferred media.transform) from
+ * snapping back to stale upload values after drag/inspector commits.
+ */
+function syncImageFramingOntoSceneMedia(scene: FootieScene, image: SceneImage): FootieScene {
+  if (scene.media != null && scene.media.type !== "image") {
+    return { ...scene, image };
+  }
+
+  const fitMode = mapSceneImageFitModeToSceneMediaFitMode(image.fitMode);
+  const transform = {
+    x: image.x,
+    y: image.y,
+    scale: image.scale,
+    rotation: image.rotation ?? 0,
+  };
+
+  const nextMedia: SceneMedia =
+    scene.media?.type === "image"
+      ? {
+          ...scene.media,
+          url: image.url,
+          fitMode,
+          transform,
+          imageMotion: image.imageMotion,
+        }
+      : {
+          type: "image",
+          url: image.url,
+          source: "legacy",
+          fitMode,
+          transform,
+          imageMotion: image.imageMotion,
+        };
+
+  return {
+    ...scene,
+    image,
+    media: nextMedia,
+  };
+}
+
 /** Patches transform metadata on a scene image without changing the URL. */
 export function updateSceneImageSettings(
   scenes: FootieScene[],
@@ -445,10 +771,7 @@ export function updateSceneImageSettings(
       return normalizeSceneSettings(scene);
     }
 
-    return normalizeSceneSettings({
-      ...scene,
-      image: nextImage,
-    });
+    return normalizeSceneSettings(syncImageFramingOntoSceneMedia(scene, nextImage));
   });
 }
 
@@ -464,10 +787,9 @@ export function resetSceneImageSettings(scenes: FootieScene[], sceneId: string):
       return normalizeSceneSettings(scene);
     }
 
-    return normalizeSceneSettings({
-      ...scene,
-      image: resetSceneImageTransform(current),
-    });
+    return normalizeSceneSettings(
+      syncImageFramingOntoSceneMedia(scene, resetSceneImageTransform(current)),
+    );
   });
 }
 

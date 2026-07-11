@@ -137,3 +137,38 @@ export function ExportAgainButton({
     </button>
   );
 }
+
+export function ChangeExportSettingsButton({
+  disabled,
+  onClick,
+  className = "",
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={className}
+    >
+      Change export settings
+    </button>
+  );
+}
+
+export function CloseExportResultButton({
+  onClick,
+  className = "",
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      Close
+    </button>
+  );
+}

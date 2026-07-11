@@ -30,10 +30,13 @@ export interface PreviewSceneTiming {
   subtitleAvailableDurationMs?: number;
   captionTooShortForEffect?: boolean;
   timelineTimeMs?: number;
-  sceneTimelineImageMotion?: TimelineImageMotionInput | null;
 }
 
-/** Builds timeline image motion input for one scene at an absolute time. */
+/**
+ * Builds timeline image motion input for one scene at an absolute time.
+ * Legacy timeline QA helper — preview/export rendering use resolveMediaMotionState (4.2C-4/5).
+ * Track events are no longer consumed by active media renderers.
+ */
 export function resolvePreviewTimelineImageMotion(
   masterTimeline: MasterTimeline | null | undefined,
   scene: FootieScene,
@@ -84,12 +87,6 @@ export function getPreviewSceneTiming(input: PreviewSceneTimingInput): PreviewSc
       defaultCaptionAnimation: input.defaultCaptionAnimation,
     });
     if (state) {
-      const sceneTimelineImageMotion = resolvePreviewTimelineImageMotion(
-        masterTimeline,
-        state.scene,
-        timeMs,
-      );
-
       return {
         sceneElapsedMs: state.sceneElapsedMs,
         sceneDurationMs: state.sceneDurationMs,
@@ -100,7 +97,6 @@ export function getPreviewSceneTiming(input: PreviewSceneTimingInput): PreviewSc
         subtitleAvailableDurationMs: state.subtitleAvailableDurationMs,
         captionTooShortForEffect: state.captionTooShortForEffect,
         timelineTimeMs: timeMs,
-        sceneTimelineImageMotion,
       };
     }
   }
@@ -114,16 +110,10 @@ export function getPreviewSceneTiming(input: PreviewSceneTimingInput): PreviewSc
   }
 
   const timelineTimeMs = resolvePreviewTimelineTimeMs(input);
-  const scene = scenes[sceneIndex];
-  const sceneTimelineImageMotion =
-    timelineTimeMs != null && scene
-      ? resolvePreviewTimelineImageMotion(masterTimeline, scene, timelineTimeMs)
-      : null;
 
   return {
     sceneElapsedMs,
     sceneDurationMs,
     timelineTimeMs: timelineTimeMs ?? undefined,
-    sceneTimelineImageMotion,
   };
 }

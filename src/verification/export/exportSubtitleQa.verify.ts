@@ -124,7 +124,7 @@ test("export renderer uses timed subtitle display and effect canvas helpers", ()
   assert.match(videoRender, /resolveExportFrameFromMasterTimeline/);
   assert.match(videoRender, /sceneElapsedMs/);
   assert.match(videoRender, /clearRect\(0, 0, width, height\)/);
-  assert.match(videoRender, /requestCanvasCaptureFrame/);
+  assert.match(videoRender, /capture\.requestFrame|createManualCanvasFrameCapture/);
   assert.match(exportSubtitle, /getActiveSubtitleChunkFromList/);
   assert.match(exportSubtitle, /resolveExportSubtitleDisplay/);
   assert.match(exportSubtitle, /resolveExportCaptionAnimation/);

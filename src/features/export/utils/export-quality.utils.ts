@@ -62,6 +62,11 @@ export interface FootieExportOptions {
   qualityId?: ExportQualityId;
   audioMode?: ExportAudioMode;
   exportSettings?: Partial<ExportSettings>;
+  /**
+   * Sprint 6E: explicit user-chosen fallback after mux failure.
+   * Without this, capability-reducing fallbacks are not applied automatically.
+   */
+  audioFallback?: "voice-only" | "silent" | "webm";
 }
 
 export function getExportQualityPreset(id: ExportQualityId): ExportQualityPreset {

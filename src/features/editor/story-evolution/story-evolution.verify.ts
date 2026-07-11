@@ -312,6 +312,40 @@ test("motion and transition changes do not create asset planning staleness", () 
   );
   assert.equal(motionStaleness.isStale, false);
 
+  // Canonical media.motion edits must also emit scene.motion (Sprint 5 write path).
+  const canonicalPrev = buildScript([
+    buildScene({
+      id: "1",
+      media: {
+        type: "image",
+        url: "blob:a",
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        motion: {
+          version: 1,
+          enabled: false,
+          presetId: "static",
+          intensity: 0,
+        },
+      },
+    }),
+  ]);
+  const canonicalNext = applySceneUpdate(canonicalPrev, "1", {
+    media: {
+      type: "image",
+      url: "blob:a",
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      motion: {
+        version: 1,
+        enabled: true,
+        presetId: "slow-zoom-in",
+        intensity: 1,
+        easing: "ease-in-out",
+      },
+    },
+  });
+  const canonicalEvents = detectStoryChanges(canonicalPrev, canonicalNext);
+  assert.ok(hasChangeType(canonicalEvents, "scene.motion"));
+
   const withTransition = syncFootieScript({
     ...prev,
     timelineItems: (prev.timelineItems ?? []).map((item) =>

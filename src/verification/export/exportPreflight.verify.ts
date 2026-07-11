@@ -13,6 +13,7 @@ import {
   hasNarrationVoiceoverMismatch,
 } from "@/features/export/utils/export-narration-voiceover.utils";
 import { TIMELINE_END_BUFFER_MS } from "@/features/timeline-intelligence/build-master-timeline";
+import { STORY_DURATION_NARRATION_MISMATCH_WARNING } from "@/features/timeline-intelligence/editor-scene-timing-authority.utils";
 import { getStoryTotalDuration } from "@/features/story/utils/scene.utils";
 import type { FootieScript } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -56,19 +57,22 @@ const baseScript: FootieScript = {
 
 console.log("exportPreflight");
 
-test("prepareStoryForExport refits scenes to voiceoverDurationMs", () => {
+test("prepareStoryForExport prefers editor scene timing when scenes exceed voiceover", () => {
   const result = prepareStoryForExport(syncFootieScript(baseScript));
 
-  assert.equal(result.exportDurationMs, 10_000 + TIMELINE_END_BUFFER_MS);
+  assert.equal(result.exportDurationMs, 12_000 + TIMELINE_END_BUFFER_MS);
   assert.ok(result.masterTimeline);
-  assert.equal(Math.round(getStoryTotalDuration(result.story.scenes) * 1000), 10_000);
-  assert.equal(result.story.scenes[0]?.durationMs, 5000);
-  assert.equal(result.story.scenes[1]?.durationMs, 5000);
-  assert.equal(result.story.scenes[1]?.endMs, 10_000);
-  assert.ok(result.warnings.some((warning) => /refit applied/i.test(warning)));
+  assert.equal(result.masterTimeline.diagnostics.authority, "editor-scene-timing");
+  assert.equal(result.masterTimeline.diagnostics.exportRefitApplied, false);
+  assert.equal(Math.round(getStoryTotalDuration(result.story.scenes) * 1000), 12_000);
+  assert.equal(result.story.scenes[0]?.durationMs, 6000);
+  assert.equal(result.story.scenes[1]?.durationMs, 6000);
+  assert.equal(result.story.scenes[1]?.endMs, 12_000);
+  assert.ok(result.warnings.includes(STORY_DURATION_NARRATION_MISMATCH_WARNING));
+  assert.ok(result.warnings.some((warning) => /extends beyond voiceover/i.test(warning)));
 });
 
-test("prepareStoryForExport preserves proportional manual scene durations", () => {
+test("prepareStoryForExport preserves manual scene durations without voiceover refit", () => {
   const proportionalScript = syncFootieScript({
     ...baseScript,
     voiceoverDurationMs: 30_000,
@@ -114,12 +118,15 @@ test("prepareStoryForExport preserves proportional manual scene durations", () =
 
   const result = prepareStoryForExport(proportionalScript);
 
+  // Manual scene windows are preserved; export span still covers the longer voiceover.
   assert.equal(result.exportDurationMs, 30_000 + TIMELINE_END_BUFFER_MS);
-  assert.equal(result.story.scenes[0]?.duration, 6);
-  assert.equal(result.story.scenes[1]?.duration, 14);
-  assert.equal(result.story.scenes[2]?.duration, 10);
+  assert.equal(result.story.scenes[0]?.duration, 3);
+  assert.equal(result.story.scenes[1]?.duration, 7);
+  assert.equal(result.story.scenes[2]?.duration, 5);
   assert.equal(result.story.scenes[0]?.durationSource, "manual");
   assert.equal(result.story.scenes[1]?.subtitle, "Scene two");
+  assert.equal(result.masterTimeline.diagnostics.exportRefitApplied, false);
+  assert.equal(result.masterTimeline.diagnostics.authority, "editor-scene-timing");
 });
 
 test("prepareStoryForExport uses even scene durations when any timing is invalid", () => {
@@ -169,6 +176,7 @@ test("prepareStoryForExport uses even scene durations when any timing is invalid
   assert.equal(result.story.scenes[0]?.duration, 10);
   assert.equal(result.story.scenes[1]?.duration, 10);
   assert.equal(result.story.scenes[2]?.duration, 10);
+  assert.ok(result.warnings.some((warning) => /refit applied/i.test(warning)));
 });
 
 test("prepareStoryForExport uses scene timeline when voiceover is absent", () => {

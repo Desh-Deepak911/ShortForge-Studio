@@ -6,3 +6,4 @@ export * from "./preview-voice-gain.utils";
 export * from "./preview-master-timeline.utils";
 export * from "./preview-interaction.utils";
 export * from "./preview-interaction-layer.utils";
+export * from "./preview-video-clip.utils";

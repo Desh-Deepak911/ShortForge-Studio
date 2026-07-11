@@ -43,9 +43,25 @@ export interface TimelineSubtitleChunkState {
   chunkDurationMs: number;
 }
 
-/** Stable export frame clock — integer ms from frame index and fps. */
+/** Stable export frame clock — integer ms at the start of the frame interval. */
 export function resolveTimelineFrameTimeMs(frameIndex: number, fps: number): number {
-  return Math.floor((frameIndex * 1000) / fps);
+  if (!(fps > 0) || !Number.isFinite(fps)) {
+    return 0;
+  }
+  const safeIndex = Math.max(0, Math.floor(frameIndex));
+  return Math.floor((safeIndex * 1000) / fps);
+}
+
+/**
+ * Sample time at the center of the frame interval.
+ * Preferred for export so discrete frames align with continuous voiceover/captions.
+ */
+export function resolveTimelineFrameSampleTimeMs(frameIndex: number, fps: number): number {
+  if (!(fps > 0) || !Number.isFinite(fps)) {
+    return 0;
+  }
+  const safeIndex = Math.max(0, Math.floor(frameIndex));
+  return Math.round(((safeIndex + 0.5) * 1000) / fps);
 }
 
 /** Resolves content end — last active visual moment before the final render hold buffer. */

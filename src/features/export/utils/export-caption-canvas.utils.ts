@@ -137,7 +137,9 @@ function drawSubtitleBox(
     return;
   }
 
-  const alpha = backgroundAlpha ?? styleMetrics.backgroundAlpha;
+  // Prefer resolved style alpha (frozen effective opacity). Fall back to layout placement.
+  // Use nullish coalescing so explicit 0 is preserved (never `|| 1`).
+  const alpha = styleMetrics.backgroundAlpha ?? backgroundAlpha ?? 0;
 
   ctx.save();
   ctx.globalAlpha = opacity;
@@ -540,7 +542,13 @@ export function drawExportSubtitlesCaption(options: DrawExportSubtitlesCaptionOp
   let captionYOffset = 0;
 
   if (display.animationState) {
-    captionOpacity = display.animationState.opacity;
+    // Animation opacity composes with full configured opacity (1) for text layer.
+    // Background alpha is applied separately via styleMetrics / placement.
+    captionOpacity =
+      typeof display.animationState.opacity === "number" &&
+      Number.isFinite(display.animationState.opacity)
+        ? display.animationState.opacity
+        : 1;
     captionYOffset = resolveCaptionAnimationTranslateYPx(display.animationState.transform) * scale;
   }
 

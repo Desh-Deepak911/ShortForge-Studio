@@ -44,6 +44,7 @@ export {
   getImageMotionEventForScene,
   getTimelineProgress,
   resolveTimelineFrameCount,
+  resolveTimelineFrameSampleTimeMs,
   resolveTimelineFrameTimeMs,
   resolveTimelineSceneFrame,
   resolveTimelineSubtitleChunkAtTime,

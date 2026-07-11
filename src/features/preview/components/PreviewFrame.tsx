@@ -1,8 +1,7 @@
 "use client";
 
-import SceneFrameImage from "@/features/editor/components/SceneFrameImage";
-import type { TimelineImageMotionInput } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
-import { sceneHasImage } from "@/features/story/utils";
+import SceneFrameMedia from "@/features/editor/components/SceneFrameMedia";
+import { sceneHasMedia } from "@/features/story/utils";
 import {
   studioPreviewDevice,
   studioPreviewScreen,
@@ -27,31 +26,47 @@ export function SceneBackdrop({
   scene,
   sceneIndex,
   style,
-  timelineImageMotion = null,
   hideImage = false,
+  sceneElapsedMs = 0,
+  sceneDurationMs = 0,
+  isPlaying = false,
+  isActive = true,
+  transformOffset,
+  isDragging = false,
 }: {
   scene: FootieScene;
   sceneIndex: number;
   style?: CSSProperties;
-  timelineImageMotion?: TimelineImageMotionInput | null;
-  /** When true, skip rendering the scene image (e.g. edit layer renders it instead). */
+  /** When true, skip rendering the scene media (e.g. edit layer renders it instead). */
   hideImage?: boolean;
+  sceneElapsedMs?: number;
+  sceneDurationMs?: number;
+  isPlaying?: boolean;
+  isActive?: boolean;
+  /** Live framing drag offset (video reposition keeps the same video element). */
+  transformOffset?: { x: number; y: number };
+  isDragging?: boolean;
 }) {
   const sceneTypeMeta =
     scene.sceneType && scene.sceneType !== "transition"
       ? SCENE_TYPE_META[scene.sceneType]
       : null;
-  const hasImage = sceneHasImage(scene);
+  const hasMedia = sceneHasMedia(scene);
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={style}>
-      {hasImage && !hideImage ? (
-        <SceneFrameImage
+      {hasMedia && !hideImage ? (
+        <SceneFrameMedia
           scene={scene}
           alt={`Scene ${sceneIndex + 1}`}
-          timelineImageMotion={timelineImageMotion}
+          sceneElapsedMs={sceneElapsedMs}
+          sceneDurationMs={sceneDurationMs}
+          isPlaying={isPlaying}
+          isActive={isActive}
+          transformOffset={transformOffset}
+          isDragging={isDragging}
         />
-      ) : !hasImage ? (
+      ) : !hasMedia ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-surface via-background to-background px-6 text-center">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.06] ring-1 ring-white/10">
             <Film className="h-5 w-5 text-white/40" />
@@ -91,33 +106,49 @@ interface PreviewFrameProps {
   title: string;
   previewFrame: PreviewSceneFrame;
   transitionOverlay?: PreviewTransitionOverlay | null;
-  sceneTimelineImageMotion?: TimelineImageMotionInput | null;
-  transitionFromTimelineImageMotion?: TimelineImageMotionInput | null;
-  transitionToTimelineImageMotion?: TimelineImageMotionInput | null;
+  /** Transition from-scene local timing (motion + clip sync). */
+  transitionFromSceneElapsedMs?: number;
+  transitionFromSceneDurationMs?: number;
+  /** Transition to-scene local timing (motion + clip sync). */
+  transitionToSceneElapsedMs?: number;
+  transitionToSceneDurationMs?: number;
   overlay?: ReactNode;
   /** Optional direct-manipulation layer mounted over the 9:16 frame (editor canvas edit). */
   editLayer?: ReactNode;
-  /** When true, scene image is rendered by the edit layer instead of the backdrop. */
+  /** When true, scene media is rendered by the edit layer instead of the backdrop. */
   hideSceneImage?: boolean;
+  /** Live framing drag offset applied to the backdrop media (video reposition). */
+  framingDragOffset?: { x: number; y: number } | null;
   /** Presentation-only — dims captions and enables chrome click-to-exit. */
   frameEditActive?: boolean;
   onExitFrameEdit?: () => void;
   footer?: ReactNode;
+  /** Scene-local elapsed ms for video clip sync + media motion. */
+  sceneElapsedMs?: number;
+  /** Scene duration ms for shared media motion. */
+  sceneDurationMs?: number;
+  /** Preview playback active — drives muted video play/pause. */
+  isPlaying?: boolean;
 }
 
 export default function PreviewFrame({
   title,
   previewFrame,
   transitionOverlay = null,
-  sceneTimelineImageMotion = null,
-  transitionFromTimelineImageMotion = null,
-  transitionToTimelineImageMotion = null,
+  transitionFromSceneElapsedMs = 0,
+  transitionFromSceneDurationMs = 0,
+  transitionToSceneElapsedMs = 0,
+  transitionToSceneDurationMs = 0,
   overlay,
   editLayer = null,
   hideSceneImage = false,
+  framingDragOffset = null,
   frameEditActive = false,
   onExitFrameEdit,
   footer,
+  sceneElapsedMs = 0,
+  sceneDurationMs = 0,
+  isPlaying = false,
 }: PreviewFrameProps) {
   const transitionStyles = transitionOverlay
     ? transitionStateToPreviewLayerStyles(
@@ -136,21 +167,32 @@ export default function PreviewFrame({
             scene={transitionOverlay.fromScene}
             sceneIndex={transitionOverlay.fromSceneIndex}
             style={transitionStyles.from}
-            timelineImageMotion={transitionFromTimelineImageMotion}
+            sceneElapsedMs={transitionFromSceneElapsedMs}
+            sceneDurationMs={transitionFromSceneDurationMs}
+            isPlaying={false}
+            isActive={false}
           />
           <SceneBackdrop
             scene={transitionOverlay.toScene}
             sceneIndex={transitionOverlay.toSceneIndex}
             style={transitionStyles.to}
-            timelineImageMotion={transitionToTimelineImageMotion}
+            sceneElapsedMs={transitionToSceneElapsedMs}
+            sceneDurationMs={transitionToSceneDurationMs}
+            isPlaying={false}
+            isActive={false}
           />
         </>
       ) : (
         <SceneBackdrop
           scene={previewFrame.scene}
           sceneIndex={previewFrame.sceneIndex}
-          timelineImageMotion={sceneTimelineImageMotion}
           hideImage={hideSceneImage}
+          sceneElapsedMs={sceneElapsedMs}
+          sceneDurationMs={sceneDurationMs}
+          isPlaying={isPlaying}
+          isActive
+          transformOffset={framingDragOffset ?? undefined}
+          isDragging={Boolean(framingDragOffset)}
         />
       )}
 

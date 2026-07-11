@@ -4,6 +4,10 @@ import type {
   TransitionTimelineItem,
 } from "@/features/story/types";
 import { sceneImagesEqual } from "@/features/story/utils/scene.utils";
+import {
+  resolveSceneMediaMotion,
+  serializeSceneMediaMotionFingerprint,
+} from "@/features/media-motion";
 
 import type { StoryChangeEvent, StoryChangeType } from "./story-evolution.types";
 
@@ -45,19 +49,12 @@ function resolveSceneDurationMs(scene: FootieScene): number {
   return Math.max(1000, Math.round(scene.duration * 1000));
 }
 
-function imageMotionEqual(left: FootieScene, right: FootieScene): boolean {
-  const leftMotion = left.image?.imageMotion;
-  const rightMotion = right.image?.imageMotion;
-
-  if (!leftMotion && !rightMotion) {
-    return true;
-  }
-
-  if (!leftMotion || !rightMotion) {
-    return false;
-  }
-
-  return leftMotion.type === rightMotion.type && leftMotion.intensity === rightMotion.intensity;
+/** Canonical motion equality — media.motion (+ legacy imageMotion via resolveSceneMediaMotion). */
+function sceneMediaMotionEqual(left: FootieScene, right: FootieScene): boolean {
+  return (
+    serializeSceneMediaMotionFingerprint(resolveSceneMediaMotion(left)) ===
+    serializeSceneMediaMotionFingerprint(resolveSceneMediaMotion(right))
+  );
 }
 
 function detectVoiceoverChanges(prev: FootieScript, next: FootieScript): StoryChangeEvent[] {
@@ -195,7 +192,7 @@ function detectPerSceneFieldChanges(
       events.push(createEvent("scene.image", base));
     }
 
-    if (!imageMotionEqual(prevScene, nextScene)) {
+    if (!sceneMediaMotionEqual(prevScene, nextScene)) {
       events.push(createEvent("scene.motion", base));
     }
   }

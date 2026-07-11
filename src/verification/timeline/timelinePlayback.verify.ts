@@ -451,17 +451,20 @@ test("resolveImageMotionTransform pan respects fit/fill base transform", () => {
   assert.equal(atEnd.scale, baseTransform.scale);
 });
 
-test("preview and export image motion use resolveImageMotionTransform via timeline events", () => {
+test("preview uses shared media-motion engine; export uses export motion adapter", () => {
   const previewFrame = readSrc("src/features/preview/components/PreviewFrame.tsx");
   const sceneFrameImage = readSrc("src/features/editor/components/SceneFrameImage.tsx");
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
+  const mediaRenderer = readSrc("src/features/export/utils/export-scene-media-renderer.ts");
 
-  assert.match(sceneFrameImage, /resolveSceneImageMotionTransformState/);
-  assert.match(previewFrame, /timelineImageMotion/);
-  assert.match(videoRender, /resolveSceneImageMotionTransformState/);
-  assert.match(videoRender, /getImageMotionEventForScene/);
+  assert.match(sceneFrameImage, /resolvePreviewMediaMotionStyle/);
+  assert.match(previewFrame, /sceneDurationMs/);
+  assert.match(videoRender, /drawSceneMediaFrame/);
+  assert.match(mediaRenderer, /resolveExportMediaMotionTransform|@\/features\/editor\/export\/motion/);
+  assert.doesNotMatch(mediaRenderer, /resolveSceneImageMotionTransformState/);
   assert.doesNotMatch(previewFrame, /resolveSceneImageMotionScale/);
   assert.doesNotMatch(videoRender, /resolveSceneImageMotionScale/);
+  assert.doesNotMatch(mediaRenderer, /resolveSceneImageMotionScale/);
 });
 
 function buildTransitionStory(): FootieScript {

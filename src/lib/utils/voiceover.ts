@@ -21,6 +21,11 @@ import {
   type SceneImageTransformPatch,
 } from "@/features/story/utils";
 import {
+  buildMediaFramingPatch,
+  buildResetMediaFramingPatch,
+  type SceneMediaFramingPatch,
+} from "@/features/media-framing";
+import {
   ensureTimelineItems,
   mergeManualDurationUpdates,
   normalizeSceneIds,
@@ -441,6 +446,7 @@ export function applyCaptionModeSwitchUpdate(
  * Patches scene image transform metadata (pan/zoom/rotation/fit).
  * Does not change the image URL or trigger AI generation.
  * Editor commits must run through `applyStoryUpdate` / the editor sync boundary.
+ * Dual-writes scene.media.transform for image scenes (preview/export parity).
  */
 export function applySceneImageSettings(
   script: FootieScript,
@@ -456,6 +462,38 @@ export function applySceneImageSettings(
 }
 
 /**
+ * Unified framing commit for images and videos.
+ * Maps legacy SceneImageTransformPatch fields onto buildMediaFramingPatch.
+ * Video: writes media.transform/fitMode only (trim/playback untouched).
+ * Image: dual-writes scene.image + scene.media.
+ */
+export function applyMediaFramingSettings(
+  script: FootieScript,
+  sceneId: string,
+  updates: SceneImageTransformPatch,
+): FootieScript {
+  const scene = script.scenes.find((entry) => entry.id === sceneId);
+  if (!scene) {
+    return script;
+  }
+
+  const framingPatch: SceneMediaFramingPatch = {
+    ...(updates.fitMode !== undefined ? { fitMode: updates.fitMode } : {}),
+    ...(updates.x !== undefined ? { positionX: updates.x } : {}),
+    ...(updates.y !== undefined ? { positionY: updates.y } : {}),
+    ...(updates.scale !== undefined ? { zoom: updates.scale } : {}),
+    ...(updates.rotation !== undefined ? { rotationDeg: updates.rotation } : {}),
+  };
+
+  const result = buildMediaFramingPatch(scene, framingPatch);
+  if (!result) {
+    return applySceneImageSettings(script, sceneId, updates);
+  }
+
+  return applySceneUpdate(script, sceneId, result.patch);
+}
+
+/**
  * Resets pan, zoom, and rotation for one scene image by id.
  * Editor commits must run through `applyStoryUpdate` / the editor sync boundary.
  */
@@ -467,6 +505,24 @@ export function applyResetSceneImageSettings(
     ...script,
     scenes: recalculateSceneTimings(resetSceneImageSettings(script.scenes, sceneId)),
   };
+}
+
+/** Resets framing for image or video via shared framing patch helper. */
+export function applyResetMediaFramingSettings(
+  script: FootieScript,
+  sceneId: string,
+): FootieScript {
+  const scene = script.scenes.find((entry) => entry.id === sceneId);
+  if (!scene) {
+    return script;
+  }
+
+  const result = buildResetMediaFramingPatch(scene);
+  if (!result) {
+    return applyResetSceneImageSettings(script, sceneId);
+  }
+
+  return applySceneUpdate(script, sceneId, result.patch);
 }
 
 /**

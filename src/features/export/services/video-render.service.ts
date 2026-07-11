@@ -1,6 +1,6 @@
 "use client";
 
-import type { FootieScript, SceneType } from "@/features/story/types";
+import type { FootieScript } from "@/features/story/types";
 
 import {
   assertExportPayload,
@@ -10,24 +10,9 @@ import {
   type ExportScene,
   type FootieExportPayload,
 } from "./export-payload.service";
-import { buildAudioMixFromStory, logAudioEngineState } from "@/features/audio";
-import { prepareStoryVoiceoverForExport } from "@/features/drafts";
 import type { ExportAudioInput } from "@/features/export/utils/export-audio-input.utils";
-import {
-  buildExportAudioDiagnostics,
-  logExportAudioDiagnostics,
-  resolveExportVoiceoverAudioInput,
-} from "@/features/export/utils/export-audio-input.utils";
 import { downloadBlob } from "@/features/export/utils/download.utils";
 import {
-  EXPORT_AUDIO_FULL_SUCCESS_MESSAGE,
-  EXPORT_AUDIO_SILENT_FALLBACK_MESSAGE,
-  EXPORT_AUDIO_VOICE_ONLY_FALLBACK_WARNING,
-  EXPORT_BACKGROUND_MUSIC_FALLBACK_WARNING,
-  EXPORT_BACKGROUND_MUSIC_MIXING_ENABLED,
-  isExportBackgroundMusicActiveFromMix,
-  resolveExportBackgroundMusicMixSettingsFromMix,
-  resolveExportVoiceStemGain,
   type ExportBackgroundMusicMixSettings,
 } from "@/features/export/utils/export-background-music.utils";
 import {
@@ -37,19 +22,16 @@ import {
 } from "@/features/export/utils/export-quality.utils";
 import {
   buildExportDownloadFileName,
-  resolveExportRenderPreset,
-  resolveExportSettings,
   type ExportSettings,
 } from "@/features/export/utils/export-settings.utils";
 import {
   isWebmExportPath,
-  resolveExportPath,
-  resolveWebmBackgroundMusicExportNotice,
   type ExportPath,
 } from "@/features/export/utils/export-path.utils";
-import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
-import { EXPORT_NARRATION_UNAVAILABLE_WARNING } from "@/features/export/utils/export-narration-voiceover.utils";
-import { logExportMasterTimelineDiagnostics } from "@/features/timeline-intelligence/export-timeline-diagnostics.dev.utils";
+import {
+  prepareExportRequest,
+  type PrepareExportRequestResult,
+} from "@/features/export/domain";
 import type { ExportAudioMuxOutputFormat } from "@/features/export/utils/ffmpeg.utils";
 import {
   drawExportGeneratedCaption,
@@ -58,16 +40,57 @@ import {
 } from "@/features/export/utils/export-caption-canvas.utils";
 import { drawExportTransitionBackgrounds } from "@/features/export/utils/export-transition-canvas.utils";
 import {
+  createExportMediaCache,
+  disposeExportMediaCache,
+  preloadExportStoryMedia,
+  type ExportMediaCache,
+} from "@/features/export/utils/export-media-cache.utils";
+import {
+  buildExportFrameDiagnosticsSnapshot,
+  logExportFrameDiagnostics,
+} from "@/features/export/utils/export-frame-diagnostics.dev.utils";
+import {
+  createManualCanvasFrameCapture,
+  flushAndStopExportMediaRecorder,
+  probeBlobDurationSec,
+  resolveExpectedSilentVisualDurationSec,
+  startExportMediaRecorder,
+  validateEffectivePlaybackFps,
+  validateSilentVisualDuration,
+  ManualCanvasCaptureError,
+} from "@/features/export/utils/export-manual-canvas-capture.utils";
+import {
+  EXPORT_TIMING_NORMALIZE_USER_ERROR,
+  SILENT_VISUAL_NORMALIZE_STRATEGY,
+  describeRawSilentTiming,
+  resolveNormalizedDurationToleranceSec,
+} from "@/features/export/utils/export-timestamp-normalization.utils";
+import {
+  ExportPipelineError,
+  assessImageSequenceViability,
+  emitExportStageEvent,
+  resetExportStageEvents,
+  captureExportJsHeapSnapshot,
+  toExportPipelineError,
+} from "@/features/export/utils/export-pipeline-forensics.utils";
+import {
+  drawSceneMediaFrame,
+  exportSceneHasDrawableMedia,
+  getExportVideoSamplingState,
+  prepareExportMediaForTimelineFrame,
+  resetExportVideoSamplingState,
+  resolveExportSceneMediaDrawImage,
+  type PrepareExportSceneMediaResult,
+} from "@/features/export/utils/export-scene-media-renderer";
+import {
   resolveExportSubtitleDisplayFromTimeline,
   type ExportSubtitleDisplay,
 } from "@/features/export/utils/export-subtitle.utils";
 import { resolveTimelineTransitionOverlay } from "@/features/timeline-intelligence/resolve-timeline-transition-overlay.utils";
 import type { TimelineTransitionOverlay } from "@/features/timeline-intelligence/resolve-timeline-transition-overlay.utils";
-import { resolveSceneImageMotionTransformState } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
 import {
-  getImageMotionEventForScene,
   resolveTimelineFrameCount,
-  resolveTimelineFrameTimeMs,
+  resolveTimelineFrameSampleTimeMs,
   resolveTimelineSceneFrame,
   resolveTimelineVisualTimeMs,
 } from "@/features/timeline-intelligence/timeline-playback.utils";
@@ -75,10 +98,6 @@ import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.t
 import {
   getExportSceneCaptionLines,
   normalizeCaptionMode,
-  drawSceneImageInFrame,
-  getSceneImageUrl,
-  resolveExportSceneImage,
-  resolveSceneImageTransformForFrame,
 } from "@/features/story/utils";
 
 function assertBrowserExportEnvironment(): void {
@@ -87,30 +106,22 @@ function assertBrowserExportEnvironment(): void {
   }
 }
 
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-function requestCanvasCaptureFrame(stream: MediaStream): void {
-  const track = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
-  track.requestFrame?.();
-}
-
 function getSupportedMimeType(): string {
   const candidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? "video/webm";
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    if (!src.startsWith("blob:") && !src.startsWith("data:")) {
-      img.crossOrigin = "anonymous";
-    }
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to load scene image"));
-    img.src = src;
-  });
+function logExportPerformanceSummary(summary: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+  if (
+    process.env.SHORTFORGE_EXPORT_FRAME_DEBUG !== "1" &&
+    process.env.SHORTFORGE_EXPORT_DEBUG !== "1"
+  ) {
+    return;
+  }
+  console.info("[ExportPerformance]", summary);
 }
 
 function wrapText(
@@ -141,32 +152,6 @@ function wrapText(
 
   if (line) ctx.fillText(line, x, currentY);
   ctx.textAlign = previousAlign;
-}
-
-// Per-scene-type top colour for the placeholder gradient.
-const SCENE_TYPE_TOP_COLOR: Record<SceneType, string> = {
-  intro:      "#0c1a2e", // dark navy
-  context:    "#1a1400", // dark amber-brown
-  match:      "#0a0f18", // near-black blue
-  transition: "#120c1e", // dark violet
-  ending:     "#0f0f0f", // near-black neutral
-};
-
-const DEFAULT_TOP_COLOR = "#0a0f18";
-
-function drawPlaceholderBackground(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  sceneType: SceneType | undefined,
-) {
-  const topColor = sceneType ? SCENE_TYPE_TOP_COLOR[sceneType] : DEFAULT_TOP_COLOR;
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, topColor);
-  gradient.addColorStop(0.5, "#18181b");
-  gradient.addColorStop(1, "#000000");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
 }
 
 export interface ExportFrameTiming {
@@ -247,49 +232,25 @@ function drawSceneBackground(
   width: number,
   height: number,
   scene: ExportScene,
-  image: HTMLImageElement | null,
+  mediaCache: ExportMediaCache,
   masterTimeline: MasterTimeline,
   currentTimeMs: number,
+  sceneElapsedMs: number,
+  sceneDurationMs: number,
+  prepared: PrepareExportSceneMediaResult | undefined,
 ) {
-  if (image) {
-    const sceneImage = resolveExportSceneImage(scene);
-    const imageMotionEvent = getImageMotionEventForScene(masterTimeline, scene.id);
-    const motionState =
-      sceneImage && imageMotionEvent
-        ? resolveSceneImageMotionTransformState(
-            sceneImage,
-            { event: imageMotionEvent, timeMs: currentTimeMs },
-            width,
-            height,
-          )
-        : null;
-
-    if (sceneImage) {
-      const resolvedTransform = resolveSceneImageTransformForFrame(sceneImage, width, height);
-      drawSceneImageInFrame(
-        ctx,
-        image,
-        width,
-        height,
-        sceneImage,
-        image.naturalWidth,
-        image.naturalHeight,
-        1,
-        motionState
-          ? {
-              scale: motionState.scale,
-              translateX: motionState.translateX,
-              translateY: motionState.translateY,
-              rotation: resolvedTransform.rotation ?? 0,
-            }
-          : undefined,
-      );
-    } else {
-      ctx.drawImage(image, 0, 0, width, height);
-    }
-  } else {
-    drawPlaceholderBackground(ctx, width, height, scene.sceneType);
-  }
+  drawSceneMediaFrame({
+    ctx,
+    width,
+    height,
+    scene,
+    cache: mediaCache,
+    masterTimeline,
+    currentTimeMs,
+    sceneElapsedMs,
+    sceneDurationMs,
+    mediaReady: prepared?.ok !== false,
+  });
 }
 
 function drawSceneFrame(
@@ -298,11 +259,11 @@ function drawSceneFrame(
   height: number,
   script: FootieScript,
   scene: ExportScene,
-  image: HTMLImageElement | null,
+  mediaCache: ExportMediaCache,
   timing: ExportFrameTiming,
   subtitleDisplay: ExportSubtitleDisplay | null,
   transitionOverlay: TimelineTransitionOverlay | null,
-  transitionImages: { from: HTMLImageElement | null; to: HTMLImageElement | null } | null,
+  preparedBySceneId: Map<string, PrepareExportSceneMediaResult>,
   masterTimeline: MasterTimeline,
   currentTimeMs: number,
 ) {
@@ -315,7 +276,32 @@ function drawSceneFrame(
   ctx.clearRect(0, 0, width, height);
 
   // ── Background ─────────────────────────────────────────────────────────────
-  if (transitionOverlay && transitionImages) {
+  if (transitionOverlay) {
+    const fromScene = transitionOverlay.fromScene as ExportScene;
+    const toScene = transitionOverlay.toScene as ExportScene;
+    const fromPrepared = preparedBySceneId.get(fromScene.id);
+    const toPrepared = preparedBySceneId.get(toScene.id);
+    const fromTiming = {
+      sceneElapsedMs: Math.max(
+        0,
+        Math.min(
+          visualTimeMs - (fromScene.startMs ?? 0),
+          fromScene.durationMs ?? timing.sceneDurationMs,
+        ),
+      ),
+      sceneDurationMs: fromScene.durationMs ?? timing.sceneDurationMs,
+    };
+    const toTiming = {
+      sceneElapsedMs: Math.max(
+        0,
+        Math.min(
+          visualTimeMs - (toScene.startMs ?? 0),
+          toScene.durationMs ?? timing.sceneDurationMs,
+        ),
+      ),
+      sceneDurationMs: toScene.durationMs ?? timing.sceneDurationMs,
+    };
+
     drawExportTransitionBackgrounds(ctx, width, height, {
       effect: transitionOverlay.effect,
       transitionState: transitionOverlay.transitionState,
@@ -324,10 +310,13 @@ function drawSceneFrame(
           layerCtx,
           layerWidth,
           layerHeight,
-          transitionOverlay.fromScene as ExportScene,
-          transitionImages.from,
+          fromScene,
+          mediaCache,
           masterTimeline,
           visualTimeMs,
+          fromTiming.sceneElapsedMs,
+          fromTiming.sceneDurationMs,
+          fromPrepared,
         );
       },
       drawToBackground: (layerCtx, layerWidth, layerHeight) => {
@@ -335,15 +324,29 @@ function drawSceneFrame(
           layerCtx,
           layerWidth,
           layerHeight,
-          transitionOverlay.toScene as ExportScene,
-          transitionImages.to,
+          toScene,
+          mediaCache,
           masterTimeline,
           visualTimeMs,
+          toTiming.sceneElapsedMs,
+          toTiming.sceneDurationMs,
+          toPrepared,
         );
       },
     });
   } else {
-    drawSceneBackground(ctx, width, height, scene, image, masterTimeline, visualTimeMs);
+    drawSceneBackground(
+      ctx,
+      width,
+      height,
+      scene,
+      mediaCache,
+      masterTimeline,
+      visualTimeMs,
+      timing.sceneElapsedMs,
+      timing.sceneDurationMs,
+      preparedBySceneId.get(scene.id),
+    );
   }
 
   // Gradient overlay for text legibility.
@@ -364,8 +367,12 @@ function drawSceneFrame(
   ctx.font = `600 ${48 * scale}px Arial, Helvetica, sans-serif`;
   wrapText(ctx, script.title, padX, titleY, width - padX * 2, 58 * scale);
 
-  // ── Scene type label on placeholder (no image) ─────────────────────────────
-  if (!image && !transitionOverlay && scene.sceneType) {
+  // ── Scene type label on placeholder (no media) ─────────────────────────────
+  if (
+    !exportSceneHasDrawableMedia(mediaCache, scene) &&
+    !transitionOverlay &&
+    scene.sceneType
+  ) {
     ctx.fillStyle = "rgba(255,255,255,0.30)";
     ctx.font = `bold ${32 * scale}px Arial, Helvetica, sans-serif`;
     ctx.textAlign = "center";
@@ -401,36 +408,6 @@ function drawSceneFrame(
       drawExportGeneratedCaption(ctx, captionLines, width, height, scale, scene, script);
     }
   }
-}
-
-function mapRenderingProgress(
-  progress: ExportProgress,
-  hasVoiceover: boolean,
-): ExportProgress {
-  if (!hasVoiceover) {
-    return progress;
-  }
-
-  if (progress.status === "rendering" || progress.status === "preparing") {
-    return {
-      ...progress,
-      progress: Math.min(70, Math.round(progress.progress * 0.7)),
-      message:
-        progress.status === "preparing"
-          ? progress.message
-          : progress.message.replace(/^Recording video\.\.\.$/, "Drawing your scenes..."),
-    };
-  }
-
-  if (progress.status === "finalizing") {
-    return {
-      status: "rendering",
-      progress: 70,
-      message: "Drawing your scenes...",
-    };
-  }
-
-  return progress;
 }
 
 export async function exportSilentVideoBlob(
@@ -476,109 +453,315 @@ export async function exportSilentVideoBlob(
     throw new Error("Canvas is not supported");
   }
 
-  const imageCache = new Map<string, HTMLImageElement>();
-  for (const scene of scenes) {
-    const imageUrl = getSceneImageUrl(scene);
-    if (imageUrl) {
-      try {
-        const img = await loadImage(imageUrl);
-        imageCache.set(scene.id, img);
-      } catch {
-        // Fall back to gradient placeholder for this scene.
+  const mediaCache = createExportMediaCache();
+  resetExportVideoSamplingState();
+  let capture: ReturnType<typeof createManualCanvasFrameCapture> | null = null;
+  const wallClockStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+  try {
+    await preloadExportStoryMedia(scenes, mediaCache);
+
+    const mimeType = getSupportedMimeType();
+    // Manual capture only — never captureStream(fps), which duplicates frames during seeks.
+    try {
+      capture = createManualCanvasFrameCapture(canvas, { strict: process.env.NODE_ENV !== "production" });
+    } catch (error) {
+      if (error instanceof ManualCanvasCaptureError) {
+        throw error;
       }
+      throw new ManualCanvasCaptureError(
+        "Manual canvas frame capture is required for export and is not supported in this browser.",
+      );
     }
-  }
 
-  const mimeType = getSupportedMimeType();
-  const stream = canvas.captureStream(fps);
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
-  const chunks: Blob[] = [];
+    const stream = capture.stream;
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
+    const chunks: Blob[] = [];
 
-  recorder.ondataavailable = (event) => {
-    if (event.data.size > 0) chunks.push(event.data);
-  };
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    };
 
-  const renderDurationMs = Math.max(
-    exportDurationMs ?? masterTimeline.renderDurationMs,
-    1,
-  );
-  const totalFrames = resolveTimelineFrameCount(renderDurationMs, fps);
-  const frameMs = 1000 / fps;
-  let renderedFrames = 0;
+    const renderDurationMs = Math.max(
+      exportDurationMs ?? masterTimeline.renderDurationMs,
+      1,
+    );
+    const totalFrames = resolveTimelineFrameCount(renderDurationMs, fps);
+    let drawnFrames = 0;
 
-  onProgress?.({ status: "rendering", progress: 2, message: "Drawing your scenes..." });
-  recorder.start(250);
+    onProgress?.({ status: "rendering", progress: 2, message: "Drawing your scenes..." });
+    await startExportMediaRecorder(recorder);
 
-  for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-    const currentTimeMs = resolveTimelineFrameTimeMs(frameIndex, fps);
-    const { scene, sceneIndex, timing, subtitleDisplay } = resolveExportFrameTiming(
-      masterTimeline,
-      scenes,
-      sceneById,
-      currentTimeMs,
-      script.defaultCaptionAnimation,
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+      // Frame-center sample aligns discrete frames with continuous voiceover/captions.
+      const currentTimeMs = resolveTimelineFrameSampleTimeMs(frameIndex, fps);
+      const { scene, sceneIndex, timing, subtitleDisplay } = resolveExportFrameTiming(
+        masterTimeline,
+        scenes,
+        sceneById,
+        currentTimeMs,
+        script.defaultCaptionAnimation,
+      );
+
+      const visualTimeMs = resolveTimelineVisualTimeMs(masterTimeline, currentTimeMs);
+      const transitionOverlay = resolveTimelineTransitionOverlay(
+        masterTimeline,
+        scenes,
+        currentTimeMs,
+      );
+
+      const preparedBySceneId = await prepareExportMediaForTimelineFrame({
+        cache: mediaCache,
+        scene,
+        sceneElapsedMs: timing.sceneElapsedMs,
+        sceneDurationMs: timing.sceneDurationMs,
+        visualTimeMs,
+        transitionFromScene: transitionOverlay?.fromScene ?? null,
+        transitionToScene: transitionOverlay?.toScene ?? null,
+        exportFps: fps,
+      });
+
+      drawSceneFrame(
+        ctx,
+        width,
+        height,
+        script,
+        scene,
+        mediaCache,
+        timing,
+        subtitleDisplay,
+        transitionOverlay,
+        preparedBySceneId,
+        masterTimeline,
+        currentTimeMs,
+      );
+      drawnFrames += 1;
+
+      if (process.env.NODE_ENV !== "production") {
+        const prepared = preparedBySceneId.get(scene.id);
+        logExportFrameDiagnostics(
+          buildExportFrameDiagnosticsSnapshot({
+            frameIndex,
+            fps,
+            exportTimestampMs: currentTimeMs,
+            scene,
+            sceneElapsedMs: timing.sceneElapsedMs,
+            sceneDurationMs: timing.sceneDurationMs,
+            playback: prepared?.playback,
+            subtitleDisplay,
+            drawImage: resolveExportSceneMediaDrawImage(scene),
+          }),
+        );
+      }
+
+      // Exactly one capture after the complete frame is drawn — never during seek waits.
+      await capture.requestFrame(frameIndex);
+
+      const progress = Math.min(99, Math.round(((frameIndex + 1) / totalFrames) * 100));
+      onProgress?.({
+        status: "rendering",
+        progress,
+        message: `Drawing scene ${sceneIndex + 1} of ${scenes.length}...`,
+      });
+    }
+
+    if (capture.capturedFrameCount() !== totalFrames || drawnFrames !== totalFrames) {
+      throw new Error(
+        `Export frame accounting mismatch: drawn=${drawnFrames}, captured=${capture.capturedFrameCount()}, expected=${totalFrames}`,
+      );
+    }
+
+    onProgress?.({ status: "finalizing", progress: 99, message: "Almost done..." });
+
+    await flushAndStopExportMediaRecorder(recorder);
+    capture.cancel();
+    stream.getTracks().forEach((track) => track.stop());
+
+    if (chunks.length === 0) {
+      throw new Error("Export produced no video data");
+    }
+
+    const silentBlobRaw = new Blob(chunks, { type: mimeType.split(";")[0] });
+    const wallClockExportMs =
+      (typeof performance !== "undefined" ? performance.now() : Date.now()) - wallClockStartedAt;
+    const capturedFrameCount = capture.capturedFrameCount();
+    const semanticFrameCount = capturedFrameCount > 0 ? capturedFrameCount : totalFrames;
+    const expectedDurationSec = resolveExpectedSilentVisualDurationSec(
+      semanticFrameCount,
+      fps,
     );
 
-    const image = imageCache.get(scene.id) ?? null;
-    const transitionOverlay = resolveTimelineTransitionOverlay(
-      masterTimeline,
-      scenes,
-      currentTimeMs,
-    );
-    const transitionImages = transitionOverlay
-      ? {
-          from: imageCache.get(transitionOverlay.fromScene.id) ?? null,
-          to: imageCache.get(transitionOverlay.toScene.id) ?? null,
-        }
-      : null;
-
-    drawSceneFrame(
-      ctx,
-      width,
-      height,
-      script,
-      scene,
-      image,
-      timing,
-      subtitleDisplay,
-      transitionOverlay,
-      transitionImages,
-      masterTimeline,
-      currentTimeMs,
-    );
-    requestCanvasCaptureFrame(stream);
-    renderedFrames++;
-    const progress = Math.min(99, Math.round((renderedFrames / totalFrames) * 100));
-    onProgress?.({
-      status: "rendering",
-      progress,
-      message: `Drawing scene ${sceneIndex + 1} of ${scenes.length}...`,
+    emitExportStageEvent({
+      stage: "record-raw-webm",
+      status: "success",
+      startedAtMs: wallClockStartedAt,
+      endedAtMs: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      context: {
+        chunkCount: chunks.length,
+        rawWebmBytes: silentBlobRaw.size,
+        mimeType: silentBlobRaw.type,
+        capturedFrameCount,
+        totalFrames,
+        width,
+        height,
+        fps,
+        heap: captureExportJsHeapSnapshot(),
+      },
     });
-    await sleep(frameMs);
+
+    if (silentBlobRaw.size < 64) {
+      throw new ExportPipelineError({
+        stage: "record-raw-webm",
+        code: "EXPORT_RAW_EMPTY",
+        message: "The visual recording could not be completed. No file was downloaded.",
+        detail: `Raw WebM too small: ${silentBlobRaw.size} bytes`,
+        context: { size: silentBlobRaw.size, capturedFrameCount },
+      });
+    }
+
+    const probedRawDurationSec = await probeBlobDurationSec(silentBlobRaw);
+    const rawTiming = describeRawSilentTiming({
+      capturedFrameCount: semanticFrameCount,
+      rawDurationSec: probedRawDurationSec,
+    });
+
+    emitExportStageEvent({
+      stage: "probe-raw-webm",
+      status: "success",
+      startedAtMs: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      context: {
+        rawTiming,
+        viability: assessImageSequenceViability({
+          width,
+          height,
+          frameCount: semanticFrameCount,
+          rawWebmBytes: silentBlobRaw.size,
+        }),
+      },
+    });
+
+    // Raw MediaRecorder timestamps are never semantic. Always rebuild CFR
+    // via image-sequence encode (frame index / requested FPS).
+    onProgress?.({
+      status: "finalizing",
+      progress: 96,
+      message: "Normalizing export timing...",
+    });
+    const { normalizeSilentVisualFrameTiming } = await import(
+      "@/features/export/utils/ffmpeg.utils"
+    );
+    const normalizeStartedAt =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    const silentBlob = await normalizeSilentVisualFrameTiming(silentBlobRaw, {
+      fps,
+      frameCount: semanticFrameCount,
+      durationSec: expectedDurationSec,
+    });
+    const normalizeWallClockMs = Math.round(
+      (typeof performance !== "undefined" ? performance.now() : Date.now()) -
+        normalizeStartedAt,
+    );
+    const timingNormalized = true;
+    const actualDurationSec = await probeBlobDurationSec(silentBlob);
+
+    emitExportStageEvent({
+      stage: "probe-normalized-visual",
+      status: actualDurationSec == null ? "failure" : "success",
+      startedAtMs: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      context: {
+        actualDurationSec,
+        expectedDurationSec,
+        normalizedBytes: silentBlob.size,
+      },
+    });
+
+    const durationToleranceSec = resolveNormalizedDurationToleranceSec(
+      expectedDurationSec,
+      fps,
+    );
+    const durationValidation = validateSilentVisualDuration({
+      totalFrames: semanticFrameCount,
+      fps,
+      wallClockExportMs,
+      actualDurationSec,
+      toleranceSec: durationToleranceSec,
+    });
+    const fpsValidation =
+      actualDurationSec == null
+        ? null
+        : validateEffectivePlaybackFps({
+            capturedFrameCount: semanticFrameCount,
+            encodedDurationSec: actualDurationSec,
+            targetFps: fps,
+          });
+
+    const sampling = getExportVideoSamplingState();
+    logExportPerformanceSummary({
+      totalWallClockExportMs: Math.round(wallClockExportMs),
+      semanticProjectDurationMs: renderDurationMs,
+      realtimeFactor:
+        renderDurationMs > 0 ? wallClockExportMs / renderDurationMs : null,
+      totalFrames,
+      fps,
+      requestedFps: fps,
+      capturedFrameCount,
+      rawWebmDurationSec: rawTiming.rawDurationSec,
+      rawEffectiveFps: rawTiming.rawEffectiveFps,
+      rawTimingAvailable: rawTiming.rawTimingAvailable,
+      rawTimingLabel: rawTiming.rawTimingLabel,
+      expectedSilentDurationSec: expectedDurationSec,
+      normalizedDurationSec: actualDurationSec,
+      normalizedEffectiveFps: fpsValidation?.effectivePlaybackFps ?? null,
+      actualSilentDurationSec: actualDurationSec,
+      effectivePlaybackFps: fpsValidation?.effectivePlaybackFps ?? null,
+      durationOk: durationValidation.ok,
+      fpsOk: fpsValidation?.ok ?? null,
+      timingNormalized,
+      normalizationStrategy: SILENT_VISUAL_NORMALIZE_STRATEGY,
+      normalizeWallClockMs,
+      seekCount: sampling.seekCount,
+      seekSkipCount: sampling.seekSkipCount,
+      rvfcWaitCount: sampling.rvfcWaitCount,
+      fallbackCount: sampling.fallbackCount,
+      repeatedDecodedFrameWarnings: sampling.repeatedDecodedFrameWarnings,
+    });
+
+    if (actualDurationSec != null && (!durationValidation.ok || fpsValidation?.ok === false)) {
+      const detail =
+        `Unable to normalize silent visual timing: expected ${expectedDurationSec.toFixed(2)}s / ${fps}fps, ` +
+        `received ${actualDurationSec.toFixed(2)}s / ${fpsValidation?.effectivePlaybackFps.toFixed(1) ?? "?"}fps. ` +
+        rawTiming.rawTimingLabel;
+      console.error("[ExportTiming]", detail);
+      throw new ExportPipelineError({
+        stage: "validate-normalized-visual",
+        code: "EXPORT_NORMALIZE_TIMING_INVALID",
+        message: EXPORT_TIMING_NORMALIZE_USER_ERROR,
+        detail,
+        context: {
+          expectedDurationSec,
+          actualDurationSec,
+          fps,
+          effectiveFps: fpsValidation?.effectivePlaybackFps ?? null,
+        },
+      });
+    }
+
+    return silentBlob;
+  } finally {
+    capture?.cancel();
+    capture?.stream.getTracks().forEach((track) => {
+      try {
+        track.stop();
+      } catch {
+        // ignore
+      }
+    });
+    disposeExportMediaCache(mediaCache);
+    resetExportVideoSamplingState();
   }
-
-  onProgress?.({ status: "finalizing", progress: 99, message: "Almost done..." });
-
-  await new Promise<void>((resolve, reject) => {
-    recorder.onstop = () => resolve();
-    recorder.onerror = () => reject(new Error("Recording failed"));
-    recorder.stop();
-  });
-
-  stream.getTracks().forEach((track) => track.stop());
-
-  if (chunks.length === 0) {
-    throw new Error("Export produced no video data");
-  }
-
-  return new Blob(chunks, { type: mimeType.split(";")[0] });
 }
 
 type ExportResultKind = NonNullable<ExportProgress["resultKind"]>;
-
-function resolveMuxOutputFormat(exportPath: ExportPath): ExportAudioMuxOutputFormat {
-  return exportPath === "mp4" ? "mp4" : "webm";
-}
 
 async function transcodeForMp4ExportPath(
   blob: Blob,
@@ -622,7 +805,7 @@ async function finalizeBlobForExportPath(
   return transcodeForMp4ExportPath(blob, hasAudio, onProgress);
 }
 
-async function finishExportDownload(options: {
+export async function finishExportDownload(options: {
   exportPath: ExportPath;
   blob: Blob;
   exportSettings: ExportSettings;
@@ -660,17 +843,19 @@ async function muxExportVideoWithVoiceover(
   outputFormat: ExportAudioMuxOutputFormat,
   voiceGain: number,
   onMuxProgress?: (muxPercent: number) => void,
+  applyPeakProtection?: boolean,
 ): Promise<Blob> {
   const { muxVideoWithAudio } = await import("@/features/export/utils/ffmpeg.utils");
   return muxVideoWithAudio(silentBlob, voiceoverInput, {
     videoDurationSec: exportDurationSec,
     outputFormat,
     voiceGain,
+    applyPeakProtection,
     onProgress: onMuxProgress,
   });
 }
 
-async function muxExportVideoWithAudioMix(options: {
+export async function muxExportVideoWithAudioMix(options: {
   silentBlob: Blob;
   exportDurationSec: number;
   outputFormat: ExportAudioMuxOutputFormat;
@@ -678,6 +863,7 @@ async function muxExportVideoWithAudioMix(options: {
   backgroundMusicInput?: ExportAudioInput;
   backgroundMusicMix?: ExportBackgroundMusicMixSettings;
   voiceGain: number;
+  applyPeakProtection?: boolean;
   onMuxProgress?: (muxPercent: number) => void;
 }): Promise<Blob> {
   const { muxVideoWithExportAudio } = await import("@/features/export/utils/ffmpeg.utils");
@@ -688,6 +874,7 @@ async function muxExportVideoWithAudioMix(options: {
     backgroundMusicInput: options.backgroundMusicInput,
     backgroundMusicMix: options.backgroundMusicMix,
     voiceGain: options.voiceGain,
+    applyPeakProtection: options.applyPeakProtection,
     onProgress: options.onMuxProgress,
   });
 }
@@ -706,7 +893,7 @@ async function muxExportVideoWithStreamCopiedWebmAudio(
   });
 }
 
-async function muxWebmExportWithBrowserMixedAudio(options: {
+export async function muxWebmExportWithBrowserMixedAudio(options: {
   silentBlob: Blob;
   exportDurationSec: number;
   voiceoverInput: ExportAudioInput;
@@ -736,12 +923,13 @@ async function muxWebmExportWithBrowserMixedAudio(options: {
   );
 }
 
-async function runVoiceOnlyExportFallback(options: {
+export async function runVoiceOnlyExportFallback(options: {
   silentBlob: Blob;
   voiceoverInput: ExportAudioInput;
   exportDurationSec: number;
   muxOutputFormat: ExportAudioMuxOutputFormat;
   voiceGain: number;
+  applyPeakProtection?: boolean;
   onProgress: (progress: ExportProgress) => void;
   reportMuxProgress: (muxPercent: number, mixingMusic: boolean) => void;
 }): Promise<Blob> {
@@ -762,291 +950,92 @@ async function runVoiceOnlyExportFallback(options: {
     options.muxOutputFormat,
     options.voiceGain,
     (muxPercent) => options.reportMuxProgress(muxPercent, false),
+    options.applyPeakProtection,
   );
 }
 
+/**
+ * Public export entrypoint.
+ *
+ * Sprint 6B lifecycle: prepareExportRequest (manifest + preflight + renderer)
+ * gates all renderer side effects. Blocked exports never reach preload/canvas/
+ * MediaRecorder/FFmpeg.
+ */
 export async function exportFootieShort(
   script: FootieScript,
   onProgress: (progress: ExportProgress) => void,
   options: FootieExportOptions = {},
 ): Promise<void> {
   assertBrowserExportEnvironment();
+  resetExportStageEvents();
 
-  const voiceoverPreparedScript = prepareStoryVoiceoverForExport(script);
-  const exportSettings = resolveExportSettings(voiceoverPreparedScript, options);
-  const exportPath = resolveExportPath(exportSettings);
-
-  if (exportPath.blocked) {
-    throw new Error(exportPath.blockReason ?? "Selected export format is unavailable.");
-  }
-
-  const preflight = prepareStoryForExport(voiceoverPreparedScript);
-  const exportScript = preflight.story;
-  const exportDurationMs = preflight.exportDurationMs;
-  const exportDurationSec = exportDurationMs / 1000;
-  logExportMasterTimelineDiagnostics(preflight.masterTimeline);
-  const preflightWarning =
-    preflight.warnings.length > 0 ? preflight.warnings.join(" ") : undefined;
-
-  if (preflightWarning) {
+  try {
     onProgress({
       status: "preparing",
-      progress: 2,
-      message: "Prepared export timeline",
-      warning: preflightWarning,
-    });
-  }
-
-  const payload = buildFootieExportPayload(exportScript);
-  const quality = resolveExportRenderPreset(exportScript, options);
-  const audioMix = buildAudioMixFromStory(exportScript);
-  logAudioEngineState(exportScript, "export");
-  const exportAudioMode = options.audioMode ?? "silent";
-  const voiceoverDiagnostics = buildExportAudioDiagnostics(
-    exportScript,
-    exportAudioMode,
-    Boolean(audioMix.voiceover?.src),
-  );
-  logExportAudioDiagnostics(voiceoverDiagnostics, "export");
-  const voiceoverSrc = audioMix.voiceover?.src;
-  const backgroundTrack = audioMix.background;
-  const backgroundMusicSrc =
-    backgroundTrack?.enabled ? backgroundTrack.src : undefined;
-  const includeNarration =
-    exportAudioMode === "with-voice" && Boolean(voiceoverSrc);
-
-  if (exportAudioMode === "with-voice" && !voiceoverSrc) {
-    throw new Error(EXPORT_NARRATION_UNAVAILABLE_WARNING);
-  }
-
-  const silentBlob = await exportSilentVideoBlob(
-    exportScript,
-    quality,
-    preflight.masterTimeline,
-    (update) => {
-      onProgress(mapRenderingProgress(update, includeNarration));
-    },
-    payload,
-    exportDurationMs,
-  );
-
-  let finalBlob = silentBlob;
-  let musicWarning: string | undefined;
-  const backgroundMusicActive = isExportBackgroundMusicActiveFromMix(audioMix);
-  const webmBackgroundMusicNotice = resolveWebmBackgroundMusicExportNotice({
-    exportPath: exportPath.path,
-    backgroundMusicActive,
-  });
-  const musicMixSettings = backgroundMusicActive
-    ? resolveExportBackgroundMusicMixSettingsFromMix(
-        exportScript,
-        audioMix,
-        includeNarration,
-        exportDurationMs,
-      )
-    : null;
-  const exportVoiceGain = resolveExportVoiceStemGain(exportScript);
-  let audioMixed = false;
-  let audioMergeResultKind: ExportResultKind = "default";
-
-  if (backgroundMusicActive && !EXPORT_BACKGROUND_MUSIC_MIXING_ENABLED) {
-    musicWarning =
-      webmBackgroundMusicNotice ?? EXPORT_BACKGROUND_MUSIC_FALLBACK_WARNING;
-  }
-
-  const shouldAttemptMusicMix =
-    Boolean(
-      backgroundMusicActive &&
-        EXPORT_BACKGROUND_MUSIC_MIXING_ENABLED &&
-        musicMixSettings &&
-        backgroundMusicSrc,
-    );
-  const includeBackgroundMusicMix = shouldAttemptMusicMix && Boolean(backgroundTrack);
-
-  const shouldMuxAudio =
-    Boolean(includeNarration && audioMix.voiceover) ||
-    Boolean(includeBackgroundMusicMix);
-  const muxOutputFormat = resolveMuxOutputFormat(exportPath.path);
-
-  const reportMuxProgress = (muxPercent: number, mixingMusic: boolean) => {
-    const mp4Suffix = muxOutputFormat === "mp4" ? " and converting to MP4" : "";
-    onProgress({
-      status: "combining",
-      progress: 78 + Math.round(muxPercent * 0.12),
-      message: mixingMusic
-        ? `Adding narration and background music${mp4Suffix} (${muxPercent}%)`
-        : `Adding audio to your video${mp4Suffix} (${muxPercent}%)`,
-    });
-  };
-
-  if (shouldMuxAudio) {
-    onProgress({
-      status: "loading-voiceover",
-      progress: 72,
-      message: includeNarration ? "Adding narration..." : "Preparing audio...",
+      progress: 1,
+      message: "Checking export...",
     });
 
-    const voiceoverInput = includeNarration
-      ? resolveExportVoiceoverAudioInput(audioMix.voiceover, exportScript)
-      : undefined;
-    const backgroundMusicInput = includeBackgroundMusicMix ? backgroundTrack : undefined;
-    const attemptedVoice = Boolean(voiceoverInput);
-    const attemptedMusic = Boolean(backgroundMusicInput);
-
-    onProgress({
-      status: "combining",
-      progress: 78,
-      message: backgroundMusicInput
-        ? "Adding narration and background music (0%)"
-        : "Adding audio to your video (0%)",
+    const prepared = await prepareExportRequest({
+      story: script,
+      options,
+      throwIfBlocked: true,
     });
 
-    const muxCombined = async () =>
-      muxExportVideoWithAudioMix({
-        silentBlob,
-        exportDurationSec,
-        outputFormat: muxOutputFormat,
-        voiceoverInput,
-        backgroundMusicInput,
-        backgroundMusicMix: musicMixSettings ?? undefined,
-        voiceGain: musicMixSettings?.voiceGain ?? exportVoiceGain,
-        onMuxProgress: (muxPercent) => reportMuxProgress(muxPercent, attemptedMusic),
-      });
-
-    if (attemptedVoice && attemptedMusic) {
-      if (muxOutputFormat === "webm") {
-        try {
-          onProgress({
-            status: "combining",
-            progress: 78,
-            message: "Adding narration and background music...",
-          });
-
-          finalBlob = await muxWebmExportWithBrowserMixedAudio({
-            silentBlob,
-            exportDurationSec,
-            voiceoverInput: voiceoverInput!,
-            backgroundMusicInput: backgroundMusicInput!,
-            backgroundMusicMix: musicMixSettings!,
-            onMuxProgress: (muxPercent) => reportMuxProgress(muxPercent, false),
-          });
-          audioMixed = true;
-          audioMergeResultKind = "audio-full";
-        } catch {
-          try {
-            finalBlob = await runVoiceOnlyExportFallback({
-              silentBlob,
-              voiceoverInput: voiceoverInput!,
-              exportDurationSec,
-              muxOutputFormat,
-              voiceGain: exportVoiceGain,
-              onProgress,
-              reportMuxProgress,
-            });
-            audioMixed = true;
-            audioMergeResultKind = "audio-voice-only";
-          } catch {
-            await finishExportDownload({
-              exportPath: exportPath.path,
-              blob: silentBlob,
-              exportSettings,
-              hasAudio: false,
-              onProgress,
-              message: EXPORT_AUDIO_SILENT_FALLBACK_MESSAGE,
-              warning: musicWarning,
-              resultKind: "audio-silent",
-            });
-            return;
-          }
-        }
-      } else {
-        try {
-          finalBlob = await muxCombined();
-          audioMixed = true;
-          audioMergeResultKind = "audio-full";
-        } catch {
-          try {
-            finalBlob = await runVoiceOnlyExportFallback({
-              silentBlob,
-              voiceoverInput: voiceoverInput!,
-              exportDurationSec,
-              muxOutputFormat,
-              voiceGain: exportVoiceGain,
-              onProgress,
-              reportMuxProgress,
-            });
-            audioMixed = true;
-            audioMergeResultKind = "audio-voice-only";
-          } catch {
-            await finishExportDownload({
-              exportPath: exportPath.path,
-              blob: silentBlob,
-              exportSettings,
-              hasAudio: false,
-              onProgress,
-              message: EXPORT_AUDIO_SILENT_FALLBACK_MESSAGE,
-              warning: musicWarning,
-              resultKind: "audio-silent",
-            });
-            return;
-          }
-        }
-      }
-    } else {
-      try {
-        finalBlob = await muxCombined();
-        audioMixed = true;
-      } catch {
-        await finishExportDownload({
-          exportPath: exportPath.path,
-          blob: silentBlob,
-          exportSettings,
-          hasAudio: false,
-          onProgress,
-          message: EXPORT_AUDIO_SILENT_FALLBACK_MESSAGE,
-          warning: musicWarning,
-          resultKind: "audio-silent",
-        });
-        return;
-      }
+    await exportFootieShortFromManifest(prepared, onProgress, {
+      audioFallback: options.audioFallback,
+    });
+  } catch (cause) {
+    // Keep typed preflight errors distinct from renderer/pipeline failures.
+    const { isExportPreflightError } = await import("@/features/export/domain");
+    if (isExportPreflightError(cause)) {
+      throw cause;
     }
+    const { ExportFinalizationError } = await import("@/features/export/formats");
+    if (cause instanceof ExportFinalizationError) {
+      throw cause;
+    }
+    throw toExportPipelineError(cause, "cleanup");
+  }
+}
+
+/**
+ * Manifest-driven export entry (Sprint 6C).
+ * Creates ExportRenderContext and renders from ExportManifest only.
+ * Does not receive StoryDocument / FootieScript for rendering.
+ */
+export async function exportFootieShortFromManifest(
+  request: PrepareExportRequestResult,
+  onProgress: (progress: ExportProgress) => void,
+  renderOptions: { audioFallback?: "voice-only" | "silent" | "webm" } = {},
+): Promise<void> {
+  if (request.renderer !== "browser") {
+    const { ExportPreflightError } = await import("@/features/export/domain");
+    throw new ExportPreflightError(request.preflight, request.manifest.fingerprint);
   }
 
-  const exportHasAudio = audioMixed && (includeNarration || includeBackgroundMusicMix);
+  const { createExportRenderContext, disposeExportRenderContext, renderExport } =
+    await import("@/features/export/runtime");
 
-  let doneMessage: string;
-  if (audioMergeResultKind === "audio-full") {
-    doneMessage = EXPORT_AUDIO_FULL_SUCCESS_MESSAGE;
-  } else if (audioMergeResultKind === "audio-voice-only") {
-    doneMessage = `Download ready — ${buildExportDownloadFileName(
-      exportSettings,
-      exportPath.path,
-    )}`;
-  } else {
-    doneMessage = `Download ready — ${buildExportDownloadFileName(
-      exportSettings,
-      exportPath.path,
-    )}`;
-  }
-
-  const combinedWarning = [
-    preflightWarning,
-    audioMergeResultKind === "audio-voice-only"
-      ? EXPORT_AUDIO_VOICE_ONLY_FALLBACK_WARNING
-      : musicWarning,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .trim() || undefined;
-
-  await finishExportDownload({
-    exportPath: exportPath.path,
-    blob: finalBlob,
-    exportSettings,
-    hasAudio: exportHasAudio,
-    onProgress,
-    message: doneMessage,
-    warning: combinedWarning,
-    resultKind: audioMergeResultKind,
+  const context = await createExportRenderContext(request.manifest, {
+    width: request.manifest.output.width,
+    height: request.manifest.output.height,
+    environment: {
+      supportsManualCanvasCapture:
+        request.manifest.capabilities.environment.supportsManualCanvasFrameRequest,
+      supportsMediaRecorder:
+        request.manifest.capabilities.environment.supportsMediaRecorder,
+      supportsRequestVideoFrameCallback:
+        request.manifest.capabilities.environment.supportsRequestVideoFrameCallback,
+      browserName: request.manifest.capabilities.environment.browserName,
+    },
   });
+
+  try {
+    await renderExport(request.manifest, context, onProgress, {
+      audioFallback: renderOptions.audioFallback,
+    });
+  } finally {
+    await disposeExportRenderContext(context);
+  }
 }

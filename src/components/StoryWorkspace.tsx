@@ -20,6 +20,8 @@ import { StudioTimeline, TimelinePlaybackPortProvider, useTimelinePlaybackPublis
 import { PreviewMasterTimelineProvider } from "@/features/timeline-intelligence/master-timeline";
 import TimelineDeveloperView from "@/features/timeline-intelligence/TimelineDeveloperView";
 import { VideoPreview } from "@/features/preview/components";
+import { VideoTrimPreviewProvider } from "@/features/preview/video-trim-preview";
+import { buildVideoTrimPatch } from "@/features/media-playback";
 import { buildCaptionLayoutOffsetCommitPatch } from "@/features/caption-layout-drag";
 import { buildResetCaptionLayoutPatch } from "@/features/caption-layout";
 import {
@@ -33,7 +35,13 @@ import {
 import type { SceneImageTransformPatch } from "@/features/story/utils";
 import { getSceneImage } from "@/features/story/utils";
 import { applyPendingSceneCaptionDrafts } from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
-import { applyPresentationSceneUpdate, applyResetSceneImageSettings, applySceneImageSettings, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
+import {
+  applyMediaFramingSettings,
+  applyPresentationSceneUpdate,
+  applyResetMediaFramingSettings,
+  applySceneUpdate,
+  type StoryScriptChangeOptions,
+} from "@/lib/utils/voiceover";
 import {
   studioMobileActionBar,
   studioMobileActionButton,
@@ -80,7 +88,9 @@ export default function StoryWorkspace(props: StoryWorkspaceProps) {
           script={props.script}
           timelineEpoch={props.timelineEpoch}
         >
-          <StoryWorkspaceContent {...props} />
+          <VideoTrimPreviewProvider>
+            <StoryWorkspaceContent {...props} />
+          </VideoTrimPreviewProvider>
         </PreviewMasterTimelineProvider>
       </TimelinePlaybackPortProvider>
     </EditorSelectionProvider>
@@ -165,14 +175,32 @@ function StoryWorkspaceContent({
 
   const handleSceneImageTransformChange = useCallback(
     (sceneId: string, patch: SceneImageTransformPatch) => {
-      onScriptChange(applySceneImageSettings(script, sceneId, patch), { intent: "media" });
+      onScriptChange(applyMediaFramingSettings(script, sceneId, patch), { intent: "media" });
     },
     [onScriptChange, script],
   );
 
   const handleSceneImageReset = useCallback(
     (sceneId: string) => {
-      onScriptChange(applyResetSceneImageSettings(script, sceneId), { intent: "media" });
+      onScriptChange(applyResetMediaFramingSettings(script, sceneId), { intent: "media" });
+    },
+    [onScriptChange, script],
+  );
+
+  const handleApplyVideoTrim = useCallback(
+    (sceneId: string, trim: { trimStartMs: number; trimEndMs: number }): boolean => {
+      const target = script.scenes.find((entry) => entry.id === sceneId);
+      if (!target) {
+        return false;
+      }
+
+      const result = buildVideoTrimPatch(target, trim);
+      if (!result) {
+        return false;
+      }
+
+      onScriptChange(applySceneUpdate(script, sceneId, result.patch), { intent: "media" });
+      return true;
     },
     [onScriptChange, script],
   );
@@ -341,7 +369,12 @@ function StoryWorkspaceContent({
           </InspectorContextProvider>
         }
         timeline={
-          <StudioTimeline id="studio-timeline-rail" script={script} onScriptChange={onScriptChange} />
+          <StudioTimeline
+            id="studio-timeline-rail"
+            script={script}
+            onScriptChange={onScriptChange}
+            onApplyVideoTrim={handleApplyVideoTrim}
+          />
         }
       />
 

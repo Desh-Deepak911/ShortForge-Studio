@@ -113,6 +113,7 @@ Today, preview and export share the same story logic but render differently — 
 
 ### Motion and polish
 
+- **Post–Sprint 5 debt:** opacity as a shared motion channel; timeline image-motion track visualization for the editor; retire legacy `imageMotion` writes entirely once drafts are migrated
 - Richer transition library — whip pans, light leaks, match-cut suggestions
 - Motion presets beyond Ken Burns: slow pan, parallax depth, zoom-to-stat
 - Intro and outro sequences — channel branding, subscribe prompts, next-match hooks

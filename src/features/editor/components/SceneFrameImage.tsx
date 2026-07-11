@@ -1,32 +1,31 @@
 "use client";
 
+import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
 import {
   getSceneImage,
   getSceneImageObjectFit,
-  getSceneImageTransformStyle,
-  withScreenDragOffset,
 } from "@/features/story/utils";
-import { resolveSceneImageMotionTransformState } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
-import type { TimelineImageMotionInput } from "@/features/timeline-intelligence/resolve-image-motion-transform.utils";
 import { useFrameSize } from "@/hooks/useFrameSize";
 import type { FootieScene } from "@/features/story/types";
 
 interface SceneFrameImageProps {
-  scene: Pick<FootieScene, "image" | "uploadedImage">;
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">;
   alt: string;
   className?: string;
   imageClassName?: string;
   /** Live drag offset in screen pixels (preview only). */
   transformOffset?: { x: number; y: number };
-  /** Timeline-driven image motion (preview/export parity). */
-  timelineImageMotion?: TimelineImageMotionInput | null;
+  /** Scene-local elapsed ms — drives shared media motion. */
+  sceneElapsedMs?: number;
+  /** Scene duration ms — motion progress denominator. */
+  sceneDurationMs?: number;
   /** Keeps transforms on the compositor while panning. */
   isDragging?: boolean;
 }
 
 /**
  * Renders a scene image inside a clipped frame with pan/zoom/rotation transform.
- * Uses normalized image metadata; legacy string URLs still work via `getSceneImage`.
+ * Motion is resolved via the shared media-motion engine (preview adapter → CSS).
  */
 export default function SceneFrameImage({
   scene,
@@ -34,7 +33,8 @@ export default function SceneFrameImage({
   className = "absolute inset-0 overflow-hidden",
   imageClassName = "",
   transformOffset,
-  timelineImageMotion = null,
+  sceneElapsedMs = 0,
+  sceneDurationMs = 0,
   isDragging = false,
 }: SceneFrameImageProps) {
   const { ref: containerRef, width: frameWidth, height: frameHeight } =
@@ -45,38 +45,33 @@ export default function SceneFrameImage({
     return null;
   }
 
-  const image = transformOffset
-    ? withScreenDragOffset(baseImage, transformOffset, frameWidth, frameHeight)
-    : baseImage;
-
-  const objectFit = getSceneImageObjectFit(image);
+  const objectFit = getSceneImageObjectFit(baseImage);
   const hasFrameSize = frameWidth > 0 && frameHeight > 0;
-  const motionTransformState =
-    timelineImageMotion && hasFrameSize
-      ? resolveSceneImageMotionTransformState(
-          image,
-          timelineImageMotion,
+
+  // Shared engine composes base framing × motion delta; adapter emits CSS.
+  const transformStyle = hasFrameSize
+    ? {
+        ...resolvePreviewMediaMotionStyle({
+          scene,
+          sceneElapsedMs,
+          sceneDurationMs,
           frameWidth,
           frameHeight,
-        )
-      : null;
-  const transformStyle = motionTransformState
-    ? {
-        transform: motionTransformState.transform,
-        transformOrigin: "center center" as const,
-        ...(isDragging ? { willChange: "transform" } : {}),
+          transformOffset,
+        }),
+        ...(isDragging ? { willChange: "transform" as const } : {}),
       }
     : {
-        ...(hasFrameSize
-          ? getSceneImageTransformStyle(image, frameWidth, frameHeight)
-          : { transform: "none" as const, transformOrigin: "center center" as const }),
-        ...(isDragging ? { willChange: "transform" } : {}),
+        transform: "none" as const,
+        transformOrigin: "center center" as const,
+        ...(isDragging ? { willChange: "transform" as const } : {}),
       };
 
   return (
-    <div ref={containerRef} className={className}>
+    <div ref={containerRef} className={className} data-scene-frame-media="image">
+      {/* MotionLayer + BaseMediaTransformLayer: composition owned by resolveMediaMotionState */}
       <img
-        src={image.url}
+        src={baseImage.url}
         alt={alt}
         draggable={false}
         className={`absolute inset-0 h-full w-full max-w-none ${

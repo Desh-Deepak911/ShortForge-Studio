@@ -450,18 +450,28 @@ UI: **`TransitionCard`** in scene inspector; markers on **`StudioTimeline`**. Lo
 
 **Model:** Transitions render as a **tail overlay** on the outgoing scene only. They do not extend total timeline duration. Captions hide during the overlay window.
 
-### Image Motion (Ken Burns)
+### Shared Media Motion (Sprint 5)
 
-Optional slow zoom during scene playback, on top of manual pan/zoom.
+Canonical media motion for images and videos. Deep dive: [SHARED_MEDIA_MOTION.md](./SHARED_MEDIA_MOTION.md).
+
+| Concern | Authority |
+|---------|-----------|
+| Config | `scene.media.motion` |
+| Resolver | `resolveMediaMotionState()` |
+| Preview / Export | Dedicated adapters only (unit conversion) |
+| Legacy `imageMotion` | Read via compatibility normalization; new writes use `media.motion` |
+| Timeline `image-motion` track | Foundation / QA — not production rendering |
+
+Manual QA checklist: [docs/qa/shared-media-motion-sprint-5.md](./qa/shared-media-motion-sprint-5.md).
+
+### Image Motion (legacy Ken Burns field)
+
+Older drafts may still store `imageMotion` on `scene.image`. Production Preview/Export resolve through `resolveSceneMediaMotion()` rather than the legacy timeline transform utility.
 
 | Field | Values |
 |-------|--------|
-| `imageMotion.type` | `none`, `zoom-in`, `zoom-out` |
-| `imageMotion.intensity` | `subtle` (→1.05×), `medium` (→1.10×), `strong` (→1.16×) |
-
-- Math: **`scene-image-motion.utils.ts`** — driven by Master Timeline image-motion track
-- UI: **`MotionPanel`** / **`SceneImageMotionControl`** in scene inspector
-- Progress is linear from scene start (0) to scene end (1)
+| `imageMotion.type` | `none`, `zoom-in`, `zoom-out`, … (mapped into shared presets) |
+| `imageMotion.intensity` | `subtle` / `medium` / `strong` (mapped to unit intensity) |
 
 ---
 
@@ -608,16 +618,20 @@ Aspect ratio: **9:16** inside a phone-style device frame.
 
 **Entry:** `exportFootieShort()` in `src/features/export/services/video-render.service.ts`
 
+**Contract (accepted after Sprint 6A):** [`docs/EXPORT_CONTRACT.md`](./EXPORT_CONTRACT.md) — immutable `ExportManifest`, preflight before render, Export Never Breaks, Preview/Export shared-domain parity. Sprint 6B implements the contract; current code still reads live story state and must migrate.
+
 Pipeline:
 
 1. **`buildFootieExportPayload()`** — normalize to `ExportScene[]` (`export-payload.service.ts`)
 2. Preload scene images
 3. Create offscreen canvas at chosen resolution (720p–4K)
-4. **`MediaRecorder`** on `canvas.captureStream(30 fps)` → WebM
+4. **`MediaRecorder`** on `canvas.captureStream(0)` + per-frame `requestFrame()` → silent WebM (CFR-normalized when needed)
 5. Per-frame: clear → draw scene → draw transition → draw captions
 6. Optional: **`ffmpeg.utils.ts`** muxes narration MP3 into final WebM
 
 Quality presets: `export-quality.utils.ts` (720p, 1080p, 1440p, 4K vertical @ 30 fps).
+
+Related: [`EXPORT_ARCHITECTURE_AUDIT.md`](./EXPORT_ARCHITECTURE_AUDIT.md), [`EXPORT_RELIABILITY_SPRINT.md`](./EXPORT_RELIABILITY_SPRINT.md).
 
 ### Subtitle renderer
 

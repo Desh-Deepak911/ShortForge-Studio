@@ -138,10 +138,18 @@ test("export filter includes alimiter when peak protection is active", () => {
     join(process.cwd(), "src/features/audio-mixer/audio-mixer.peak-protection.utils.ts"),
     "utf8",
   );
+  const browserMix = readFileSync(
+    join(process.cwd(), "src/features/export/utils/export-browser-audio-mix.utils.ts"),
+    "utf8",
+  );
 
   assert.equal(settings.applyPeakProtection, true);
-  assert.match(ffmpegUtils, /buildExportFfmpegPeakLimiterFilterChain/);
+  // Helper retained for documented peak-protection contract; FFmpeg.wasm mux skips it.
   assert.match(peakProtectionUtils, /alimiter/);
+  assert.match(peakProtectionUtils, /buildExportFfmpegPeakLimiterFilterChain/);
+  assert.match(ffmpegUtils, /buildMuxVideoExportAudioFilterComplex/);
+  assert.doesNotMatch(ffmpegUtils, /buildExportFfmpegPeakLimiterFilterChain\(/);
+  assert.match(browserMix, /configurePreviewPeakProtectionCompressor/);
   assert.doesNotMatch(ffmpegUtils, /loudnorm/);
 });
 

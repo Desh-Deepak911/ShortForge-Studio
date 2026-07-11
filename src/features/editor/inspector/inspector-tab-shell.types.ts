@@ -16,8 +16,8 @@ export const SCENE_INSPECTOR_GROUP_LABELS: Record<
     description: "Timing and narration for this scene.",
   },
   image: {
-    title: "Image",
-    description: "Upload, frame, zoom, motion, and position.",
+    title: "Media",
+    description: "Upload images or clips, frame, zoom, motion, and position.",
   },
   caption: {
     title: "Caption",
