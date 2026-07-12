@@ -157,8 +157,15 @@ interface MuxOutputProfile {
   codecArgs: string[];
 }
 
-function buildMuxOutputProfile(outputFormat: ExportAudioMuxOutputFormat): MuxOutputProfile {
+function buildMuxOutputProfile(
+  outputFormat: ExportAudioMuxOutputFormat,
+  options?: { readonly h264Crf?: number },
+): MuxOutputProfile {
   if (outputFormat === "mp4") {
+    const crf =
+      typeof options?.h264Crf === "number" && Number.isFinite(options.h264Crf)
+        ? Math.min(28, Math.max(15, Math.round(options.h264Crf)))
+        : 23;
     return {
       outputFile: MUXED_OUTPUT_MP4,
       mimeType: "video/mp4",
@@ -170,7 +177,7 @@ function buildMuxOutputProfile(outputFormat: ExportAudioMuxOutputFormat): MuxOut
         "-pix_fmt",
         "yuv420p",
         "-crf",
-        "23",
+        String(crf),
         "-c:a",
         "aac",
         "-b:a",
@@ -228,6 +235,8 @@ export interface MuxVideoWithExportAudioOptions extends MuxVideoWithAudioOptions
   voiceGain?: number;
   /** Frozen peak-protection decision from ExportManifest (voice-only and mixed). */
   applyPeakProtection?: boolean;
+  /** Sprint 6H — H.264 CRF for MP4 mux (from ExportVisualQualityProfile). */
+  h264Crf?: number;
   /**
    * WebM mux stream-copies canvas video (fast path).
    * MP4 mux encodes H.264 + AAC in the same pass — avoids a second transcode exec.
@@ -363,7 +372,9 @@ export async function muxVideoWithExportAudio(
   }
 
   const outputFormat = options.outputFormat ?? "webm";
-  const outputProfile = buildMuxOutputProfile(outputFormat);
+  const outputProfile = buildMuxOutputProfile(outputFormat, {
+    h264Crf: options.h264Crf,
+  });
 
   const writtenFiles = [VIDEO_INPUT, outputProfile.outputFile];
   await ffmpeg.writeFile(VIDEO_INPUT, await fetchFile(videoBlob));
@@ -629,6 +640,8 @@ export interface TranscodeWebmToMp4Options {
   /** Whether the input includes an audio track to preserve. */
   hasAudio?: boolean;
   onProgress?: (progress: number) => void;
+  /** Sprint 6H — H.264 CRF from ExportVisualQualityProfile (default 23). */
+  h264Crf?: number;
 }
 
 /**
@@ -654,6 +667,11 @@ export async function transcodeWebmToMp4(
 
   ffmpeg.on("progress", handleProgress);
 
+  const crf =
+    typeof options.h264Crf === "number" && Number.isFinite(options.h264Crf)
+      ? Math.min(28, Math.max(15, Math.round(options.h264Crf)))
+      : 23;
+
   const args = options.hasAudio
     ? [
         "-i",
@@ -669,7 +687,7 @@ export async function transcodeWebmToMp4(
         "-pix_fmt",
         "yuv420p",
         "-crf",
-        "23",
+        String(crf),
         "-c:a",
         "aac",
         "-b:a",
@@ -690,7 +708,7 @@ export async function transcodeWebmToMp4(
         "-pix_fmt",
         "yuv420p",
         "-crf",
-        "23",
+        String(crf),
         "-an",
         "-movflags",
         "+faststart",

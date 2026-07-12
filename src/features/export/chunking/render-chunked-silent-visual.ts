@@ -8,6 +8,10 @@
 
 import type { ExportManifest } from "@/features/export/domain/export-manifest.types";
 import { markExportFfmpegRuntimePoisoned } from "@/features/export/domain/export-environment.utils";
+import {
+  logExportVisualQualityProfile,
+  resolveExportVisualQualityProfile,
+} from "@/features/export/domain/export-visual-quality-profile";
 import type { ExportRenderContext } from "@/features/export/runtime/export-render-context.types";
 import { prepareExportFromManifest } from "@/features/export/runtime/prepare-export-from-manifest";
 import {
@@ -150,12 +154,20 @@ export async function renderChunkedSilentVisual(
   });
   assertExportChunkPlanCoverage(chunkPlan);
 
+  const qualityProfile = resolveExportVisualQualityProfile(manifest.output);
+  logExportVisualQualityProfile(qualityProfile);
+
   if (isExportDebugEnabled()) {
     console.info("[ExportChunkPlan]", {
       rendererVersion: chunkPlan.rendererVersion,
       totalFrames: chunkPlan.totalFrames,
       chunkSizeFrames: chunkPlan.chunkSizeFrames,
       chunkCount: chunkPlan.chunks.length,
+      canvasWidth: context.width || manifest.output.width,
+      canvasHeight: context.height || manifest.output.height,
+      qualityProfileId: qualityProfile.id,
+      videoBitrateArg: qualityProfile.videoBitrateArg,
+      jpegQuality: qualityProfile.frameIntermediateQuality,
     });
   }
 
@@ -247,6 +259,7 @@ export async function renderChunkedSilentVisual(
           outputFile: descriptor.outputPath,
           fps,
           frameCount: descriptor.frameCount,
+          qualityProfile,
         });
 
         let encodeCode: number;

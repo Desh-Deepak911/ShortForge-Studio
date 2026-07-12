@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 import {
   assertExportSegmentEncodeArgs,
   buildExportSegmentEncodeArgs,
-  EXPORT_SEGMENT_BITRATE,
   EXPORT_SEGMENT_CODEC,
   validateEncodedExportChunk,
 } from "@/features/export/chunking";
@@ -47,22 +46,66 @@ test("exact frame count limit", () => {
 });
 
 test("identical codec settings across chunks", () => {
+  const profile = {
+    videoBitrateArg: "6M" as const,
+    pixelFormat: "yuv420p" as const,
+    libvpxDeadline: "realtime" as const,
+    libvpxCpuUsed: 5,
+    videoCodec: "libvpx" as const,
+  };
   const a = buildExportSegmentEncodeArgs({
     outputFile: "segment-000.webm",
     fps: 30,
     frameCount: 120,
+    qualityProfile: profile,
   });
   const b = buildExportSegmentEncodeArgs({
     outputFile: "segment-001.webm",
     fps: 30,
     frameCount: 80,
+    qualityProfile: profile,
   });
   const profileKeys = ["-c:v", "-b:v", "-pix_fmt", "-deadline", "-cpu-used", "-auto-alt-ref"];
   for (const key of profileKeys) {
     assert.equal(a[a.indexOf(key) + 1], b[b.indexOf(key) + 1], key);
   }
   assert.equal(a[a.indexOf("-c:v") + 1], EXPORT_SEGMENT_CODEC);
-  assert.equal(a[a.indexOf("-b:v") + 1], EXPORT_SEGMENT_BITRATE);
+  assert.equal(a[a.indexOf("-b:v") + 1], "6M");
+});
+
+test("encode args use resolution-aware bitrate from quality profile", () => {
+  const args720 = buildExportSegmentEncodeArgs({
+    outputFile: "segment-000.webm",
+    fps: 30,
+    frameCount: 120,
+    qualityProfile: {
+      videoBitrateArg: "4M",
+      pixelFormat: "yuv420p",
+      libvpxDeadline: "realtime",
+      libvpxCpuUsed: 8,
+      videoCodec: "libvpx",
+    },
+  });
+  const args1080 = buildExportSegmentEncodeArgs({
+    outputFile: "segment-000.webm",
+    fps: 30,
+    frameCount: 90,
+    qualityProfile: {
+      videoBitrateArg: "8M",
+      pixelFormat: "yuv420p",
+      libvpxDeadline: "good",
+      libvpxCpuUsed: 4,
+      videoCodec: "libvpx",
+    },
+  });
+  assert.equal(args720[args720.indexOf("-b:v") + 1], "4M");
+  assert.equal(args1080[args1080.indexOf("-b:v") + 1], "8M");
+  assert.notEqual(
+    args720[args720.indexOf("-b:v") + 1],
+    args1080[args1080.indexOf("-b:v") + 1],
+  );
+  assert.equal(args1080[args1080.indexOf("-deadline") + 1], "good");
+  assert.equal(args1080[args1080.indexOf("-cpu-used") + 1], "4");
 });
 
 test("keyframe policy at segment start", () => {

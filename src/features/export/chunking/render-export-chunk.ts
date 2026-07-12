@@ -1,8 +1,9 @@
 /**
- * Render one export chunk: global-frame prepare/draw → JPEG → MEMFS (Sprint 6D).
+ * Render one export chunk: global-frame prepare/draw → JPEG → MEMFS (Sprint 6D / 6H).
  */
 
 import type { ExportManifest } from "@/features/export/domain/export-manifest.types";
+import { resolveExportVisualQualityProfile } from "@/features/export/domain/export-visual-quality-profile";
 import type { ExportRenderContext } from "@/features/export/runtime/export-render-context.types";
 import { drawPreparedExportFrame } from "@/features/export/runtime/draw-prepared-export-frame";
 import { prepareExportFrame } from "@/features/export/runtime/prepare-export-frame";
@@ -12,11 +13,14 @@ import type { FFmpeg } from "@ffmpeg/ffmpeg";
 import { buildChunkFrameFilename } from "./build-export-chunk-plan";
 import type { ExportChunkDescriptor } from "./export-chunk.types";
 
-const JPEG_QUALITY = 0.92;
-
 function canvasToJpegBytes(
   canvas: HTMLCanvasElement,
+  jpegQuality: number,
 ): Promise<Uint8Array> {
+  const quality =
+    typeof jpegQuality === "number" && Number.isFinite(jpegQuality)
+      ? Math.min(1, Math.max(0.5, jpegQuality))
+      : 0.93;
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       async (blob) => {
@@ -32,7 +36,7 @@ function canvasToJpegBytes(
         }
       },
       "image/jpeg",
-      JPEG_QUALITY,
+      quality,
     );
   });
 }
@@ -60,6 +64,7 @@ export async function renderExportChunkFrames(options: {
   readonly onFrameProgress?: (localIndex: number, globalIndex: number) => void;
 }): Promise<RenderExportChunkResult> {
   const { manifest, plan, context, ffmpeg, descriptor } = options;
+  const qualityProfile = resolveExportVisualQualityProfile(manifest.output);
   const writtenFrameFiles: string[] = [];
   let lastSceneId = "";
   let lastCaptionCount = 0;
@@ -80,11 +85,13 @@ export async function renderExportChunkFrames(options: {
     lastCaptionCount = frame.captions.length;
 
     context.cancellation.throwIfCancelled();
-    const bytes = await canvasToJpegBytes(context.canvas);
+    const bytes = await canvasToJpegBytes(
+      context.canvas,
+      qualityProfile.frameIntermediateQuality,
+    );
     const filename = buildChunkFrameFilename(local);
     await ffmpeg.writeFile(filename, bytes);
     writtenFrameFiles.push(filename);
-    // Release reference promptly — bytes already copied into MEMFS.
     options.onFrameProgress?.(local, globalFrameIndex);
   }
 

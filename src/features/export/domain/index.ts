@@ -28,6 +28,17 @@ export type {
 export { deepFreezeExportManifest } from "./export-manifest-freeze";
 export { buildExportManifestFingerprint } from "./export-manifest-fingerprint";
 export {
+  formatExportVideoBitrateArg,
+  isExportVisualQualityDebugEnabled,
+  logExportVisualQualityProfile,
+  resolveExportFrameIntermediateQuality,
+  resolveExportVisualQualityProfile,
+  summarizeExportVisualQualityProfile,
+  type ExportFrameIntermediateFormat,
+  type ExportVisualQualityProfile,
+  type ExportVisualQualityProfileInput,
+} from "./export-visual-quality-profile";
+export {
   buildExportManifest,
   type BuildExportManifestInput,
 } from "./build-export-manifest";

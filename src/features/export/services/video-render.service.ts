@@ -864,6 +864,7 @@ export async function muxExportVideoWithAudioMix(options: {
   backgroundMusicMix?: ExportBackgroundMusicMixSettings;
   voiceGain: number;
   applyPeakProtection?: boolean;
+  h264Crf?: number;
   onMuxProgress?: (muxPercent: number) => void;
 }): Promise<Blob> {
   const { muxVideoWithExportAudio } = await import("@/features/export/utils/ffmpeg.utils");
@@ -875,6 +876,7 @@ export async function muxExportVideoWithAudioMix(options: {
     backgroundMusicMix: options.backgroundMusicMix,
     voiceGain: options.voiceGain,
     applyPeakProtection: options.applyPeakProtection,
+    h264Crf: options.h264Crf,
     onProgress: options.onMuxProgress,
   });
 }

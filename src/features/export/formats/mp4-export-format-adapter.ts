@@ -10,6 +10,7 @@ import {
   type PreparedExportAudio,
 } from "@/features/export/audio";
 import type { ExportManifest } from "@/features/export/domain/export-manifest.types";
+import { resolveExportVisualQualityProfile } from "@/features/export/domain/export-visual-quality-profile";
 import type { ExportRenderContext } from "@/features/export/runtime/export-render-context.types";
 import { resolveExportRenderEndMs } from "@/features/export/timing";
 import { validateFinalExportArtifact } from "@/features/export/validation";
@@ -130,10 +131,12 @@ export async function muxMp4WithManifestAudio(options: {
     const { transcodeWebmToMp4 } = await import(
       "@/features/export/utils/ffmpeg.utils"
     );
+    const qualityProfile = resolveExportVisualQualityProfile(manifest.output);
     context.cancellation.throwIfCancelled();
     try {
       const blob = await transcodeWebmToMp4(silentVisual, {
         hasAudio: false,
+        h264Crf: qualityProfile.h264Crf,
         onProgress: onMuxProgress,
       });
       if (blob.type.toLowerCase().includes("webm")) {
@@ -191,6 +194,8 @@ export async function muxMp4WithManifestAudio(options: {
 
   context.cancellation.throwIfCancelled();
 
+  const qualityProfile = resolveExportVisualQualityProfile(manifest.output);
+
   try {
     const blob = await muxExportVideoWithAudioMix({
       silentBlob: silentVisual,
@@ -201,6 +206,7 @@ export async function muxMp4WithManifestAudio(options: {
       backgroundMusicMix: musicMix ?? undefined,
       voiceGain: preparedAudio.voiceover?.volume ?? 1,
       applyPeakProtection: manifest.audio.applyPeakProtection,
+      h264Crf: qualityProfile.h264Crf,
       onMuxProgress,
     });
 

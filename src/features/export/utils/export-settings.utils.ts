@@ -174,7 +174,7 @@ export function resolveExportRenderPreset(
   return resolveExportQualityPreset(script, options);
 }
 
-function getExportBitrate(
+export function getExportBitrate(
   resolution: ExportResolution,
   quality: ExportQualityTier,
 ): number {
