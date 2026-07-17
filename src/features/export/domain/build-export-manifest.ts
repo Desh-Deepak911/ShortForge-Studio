@@ -29,7 +29,6 @@ import { clampSceneMediaTrim } from "@/features/media-playback";
 import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 import { resolveSceneMediaFraming } from "@/features/media-framing";
 import type { FootieScene, FootieScript, SceneMedia } from "@/features/story/types";
-import { getSceneMedia } from "@/features/story/utils";
 import { CREATOR_BRAND } from "@/lib/constants/product-brand";
 
 import { resolveExportMediaFitMode } from "@/features/export/utils/export-scene-media-renderer";
@@ -43,27 +42,34 @@ import {
 import type { ExportAudioMode } from "@/features/export/utils/export-quality.utils";
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
+import {
+  projectSceneMediaTimeline,
+  resolveSceneMediaWindows,
+} from "@/features/scene-media-timeline";
 
 import { buildExportEnvironmentSnapshot } from "./export-environment.utils";
 import { buildExportManifestFingerprint } from "./export-manifest-fingerprint";
 import { deepFreezeExportManifest } from "./export-manifest-freeze";
+import { buildExportSceneMediaTransitionTrack } from "./build-export-scene-media-transitions";
 import {
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  type ExportSceneManifestV3,
   type ExportAudioManifest,
   type ExportBrandingManifest,
   type ExportCapabilitySnapshot,
   type ExportCaptionManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifest,
-  type ExportManifestDraft,
+  type ExportManifestV3,
+  type ExportManifestV3Draft,
   type ExportManifestFormat,
   type ExportManifestResolutionLabel,
   type ExportMediaManifest,
   type ExportMediaMotionManifest,
   type ExportOutputManifest,
   type ExportProjectManifest,
-  type ExportSceneManifest,
+  type ExportSceneMediaTimelineItemManifest,
+  type ExportSceneMediaTimelineManifest,
   type ExportTransitionManifest,
 } from "./export-manifest.types";
 
@@ -75,9 +81,16 @@ export interface BuildExportManifestInput {
   readonly environment?: Partial<ExportEnvironmentSnapshot>;
   /** Optional precomputed timeline/story from prepareStoryForExport. */
   readonly prepared?: ReturnType<typeof prepareStoryForExport>;
+  /**
+   * When false, freezes one first-item compatibility timeline per scene
+   * (deterministic regression / migration tests only).
+   * Default true — production multi-image ExportManifest v2.
+   * Must not be derived from process.env inside this module.
+   */
+  readonly multiImageScenesEnabled?: boolean;
 }
 
-export function buildExportManifest(input: BuildExportManifestInput): ExportManifest {
+export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV3 {
   const prepared = input.prepared ?? prepareStoryForExport(input.story);
   const story = prepared.story;
   const timeline = prepared.masterTimeline;
@@ -93,9 +106,11 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   const includeMusic =
     input.includeBackgroundMusic ?? isExportBackgroundMusicActiveFromMix(audioMix);
 
+  const multiImageScenesEnabled = input.multiImageScenesEnabled !== false;
+
   const project = buildProjectManifest(story, timeline, prepared);
   const output = buildOutputManifest(settings, quality);
-  const scenes = buildSceneManifests(story, timeline);
+  const scenes = buildSceneManifests(story, timeline, multiImageScenesEnabled);
   const captions = buildCaptionManifests(story, timeline);
   const audio = buildAudioManifest(story, audioMix, {
     includeNarration,
@@ -104,7 +119,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   const branding = buildBrandingManifest();
   const capabilities = buildCapabilitySnapshot(environment);
 
-  const draft: ExportManifestDraft = {
+  const draft: ExportManifestV3Draft = {
     version: EXPORT_MANIFEST_VERSION,
     manifestId: createManifestId(),
     createdAt: new Date().toISOString(),
@@ -119,7 +134,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   };
 
   const fingerprint = buildExportManifestFingerprint(draft);
-  const manifest: ExportManifest = { ...draft, fingerprint };
+  const manifest: ExportManifestV3 = { ...draft, fingerprint };
   return deepFreezeExportManifest(manifest);
 }
 
@@ -161,10 +176,18 @@ function buildOutputManifest(
   };
 }
 
+function isDrawableMediaManifest(media: ExportMediaManifest): boolean {
+  if (media.type === "placeholder") {
+    return false;
+  }
+  return typeof media.source === "string" && Boolean(media.source.trim());
+}
+
 function buildSceneManifests(
   story: FootieScript,
   timeline: MasterTimeline,
-): readonly ExportSceneManifest[] {
+  multiImageScenesEnabled: boolean,
+): readonly ExportSceneManifestV3[] {
   const transitions = collectTransitions(story, timeline);
   return story.scenes.map((scene, index) => {
     const startMs = Math.max(0, Math.round(scene.startMs ?? (scene.start ?? 0) * 1000));
@@ -173,11 +196,20 @@ function buildSceneManifests(
       Math.round(scene.durationMs ?? (scene.duration ?? 0) * 1000),
     );
     const endMs = startMs + durationMs;
-    const media = buildMediaManifest(scene);
-    const hasSource =
-      media.type !== "placeholder" &&
-      typeof (media as { source?: string }).source === "string" &&
-      Boolean((media as { source: string }).source.trim());
+    const mediaTimeline = buildSceneMediaTimelineManifest(
+      scene,
+      durationMs,
+      multiImageScenesEnabled,
+    );
+    const media =
+      mediaTimeline.items[0]?.media ?? ({ type: "placeholder" } as const);
+    const hasDrawableMedia = mediaTimeline.items.some((item) =>
+      isDrawableMediaManifest(item.media),
+    );
+    const mediaTransitions = buildExportSceneMediaTransitionTrack(
+      scene,
+      mediaTimeline,
+    );
 
     return {
       id: scene.id,
@@ -186,11 +218,58 @@ function buildSceneManifests(
       durationMs,
       endMs,
       media,
+      mediaTimeline,
+      mediaTransitions,
       transitionOut: transitions.get(scene.id) ?? null,
       captionMode: scene.captionMode ?? "generated",
-      hasDrawableMedia: hasSource,
+      hasDrawableMedia,
     };
   });
+}
+
+function buildSceneMediaTimelineManifest(
+  scene: FootieScene,
+  sceneDurationMs: number,
+  multiImageScenesEnabled: boolean,
+): ExportSceneMediaTimelineManifest {
+  const projected = projectSceneMediaTimeline(scene);
+  const sourceItems =
+    multiImageScenesEnabled || projected.items.length === 0
+      ? projected.items
+      : [projected.items[0]!];
+
+  if (sourceItems.length === 0) {
+    return {
+      version: 1,
+      items: [
+        {
+          id: `${scene.id}__placeholder`,
+          index: 0,
+          startOffsetMs: 0,
+          endOffsetMs: sceneDurationMs,
+          durationMs: sceneDurationMs,
+          media: { type: "placeholder" },
+        },
+      ],
+    };
+  }
+
+  const windows = resolveSceneMediaWindows({
+    items: sourceItems,
+    sceneDurationMs,
+    provenance: projected.fromStoredTimeline ? "stored_timeline" : "legacy_virtual",
+  });
+
+  const items: ExportSceneMediaTimelineItemManifest[] = windows.map((window) => ({
+    id: window.itemId,
+    index: window.itemIndex,
+    startOffsetMs: window.startMs,
+    endOffsetMs: window.endMs,
+    durationMs: window.durationMs,
+    media: buildMediaManifestFromSceneMedia(window.media),
+  }));
+
+  return { version: 1, items };
 }
 
 function collectTransitions(
@@ -234,15 +313,19 @@ function collectTransitions(
   return map;
 }
 
-function buildMediaManifest(scene: FootieScene): ExportMediaManifest {
-  const media = getSceneMedia(scene);
+/**
+ * Builds ExportMediaManifest from one item's SceneMedia.
+ * Never resolves later items through the scene's first compatibility slot.
+ */
+function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifest {
   if (!media || media.type === "placeholder") {
     return { type: "placeholder" };
   }
 
-  const framing = resolveSceneMediaFraming(scene, { media });
-  const fitMode = resolveExportMediaFitMode(scene, media);
-  const motion = buildMotionManifest(scene);
+  const framingScene = { media };
+  const framing = resolveSceneMediaFraming(framingScene, { media });
+  const fitMode = resolveExportMediaFitMode(framingScene, media);
+  const motion = buildMotionManifestFromMedia(media);
   const positionX = framing.positionX;
   const positionY = framing.positionY;
   const zoom = framing.zoom;
@@ -280,8 +363,10 @@ function buildMediaManifest(scene: FootieScene): ExportMediaManifest {
   };
 }
 
-function buildMotionManifest(scene: FootieScene): ExportMediaMotionManifest | null {
-  const motion = resolveSceneMediaMotion(scene);
+function buildMotionManifestFromMedia(
+  media: SceneMedia,
+): ExportMediaMotionManifest | null {
+  const motion = resolveSceneMediaMotion({ media });
   if (!motion) return null;
   const enabled = motion.enabled !== false && motion.presetId !== "static";
   if (!enabled && motion.presetId === "static") {

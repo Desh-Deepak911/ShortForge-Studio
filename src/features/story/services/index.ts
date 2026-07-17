@@ -10,6 +10,7 @@ export {
 } from "./story-generation.service";
 export {
   generateStoryScript,
+  generateRawStoryScript,
   type GenerateStoryScriptOptions,
   type StoryScriptGenerationResult,
 } from "./script-generation.service";
@@ -39,6 +40,7 @@ export {
   type GenerateScenesForReviewedScriptInput,
   type ScriptOnlyStoryGenerationResult,
 } from "./audio-first-generation.service";
+export { buildScenesOnlyStoryResponse } from "./scenes-only-response.utils";
 export {
   generateVoiceover,
   generateVoiceoverFromScript,

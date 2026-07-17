@@ -73,13 +73,13 @@ export async function renderExportChunkFrames(options: {
     context.cancellation.throwIfCancelled();
     const globalFrameIndex = descriptor.globalStartFrame + local;
 
-    const { frame, preparedBySceneId } = await prepareExportFrame(
+    const { frame, preparedBySceneId, preparedByMediaKey } = await prepareExportFrame(
       manifest,
       plan,
       globalFrameIndex,
       context,
     );
-    drawPreparedExportFrame(frame, context, preparedBySceneId);
+    drawPreparedExportFrame(frame, context, preparedBySceneId, preparedByMediaKey);
 
     lastSceneId = frame.scene.scene.id;
     lastCaptionCount = frame.captions.length;

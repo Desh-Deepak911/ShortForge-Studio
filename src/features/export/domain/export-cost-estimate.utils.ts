@@ -14,6 +14,7 @@ import { EXPORT_CHUNKED_RENDERER_VERSION } from "@/features/export/chunking/expo
 
 import type { ExportCostEstimate } from "./export-capability.types";
 import type { ExportManifest } from "./export-manifest.types";
+import { isExportManifestV3, isExportSceneManifestV3 } from "./export-manifest.types";
 
 const WASM_OVERHEAD_BYTES = 180 * 1024 * 1024;
 /** Safe peak estimate for Chromium browser path. */
@@ -70,6 +71,8 @@ export function estimateExportCost(manifest: ExportManifest): ExportCostEstimate
     risk = "borderline";
   }
 
+  const layerStats = estimateMediaLayerDrawStats(manifest, estimatedFrames, fps);
+
   return {
     estimatedFrames,
     estimatedRawFrameBytes,
@@ -81,9 +84,65 @@ export function estimateExportCost(manifest: ExportManifest): ExportCostEstimate
     chunkSizeFrames,
     estimatedChunkFrameBytes: chunkFrameBytes,
     estimatedRetainedSegmentBytes: retainedSegmentBytes,
+    estimatedAverageMediaLayersPerFrame: layerStats.averageLayersPerFrame,
+    estimatedMediaLayerDraws: layerStats.totalLayerDraws,
   };
 }
 
+/**
+ * Ordinary frames draw 1 media layer; dual-peer overlays (scene-to-scene or
+ * v3 intra-scene) draw 2. Represented honestly without new codec requirements.
+ */
+function estimateMediaLayerDrawStats(
+  manifest: ExportManifest,
+  estimatedFrames: number,
+  fps: number,
+): { averageLayersPerFrame: number; totalLayerDraws: number } {
+  const msPerFrame = 1000 / Math.max(1, fps);
+  let dualPeerMs = 0;
+
+  for (const scene of manifest.scenes) {
+    if (scene.transitionOut && scene.transitionOut.durationMs > 0) {
+      dualPeerMs += scene.transitionOut.durationMs;
+    }
+    if (isExportManifestV3(manifest) && isExportSceneManifestV3(scene)) {
+      for (const boundary of scene.mediaTransitions.boundaries) {
+        dualPeerMs += Math.max(0, boundary.effectiveDurationMs);
+      }
+    }
+  }
+
+  const dualPeerFrames = Math.min(
+    estimatedFrames,
+    Math.ceil(dualPeerMs / msPerFrame),
+  );
+  const singlePeerFrames = Math.max(0, estimatedFrames - dualPeerFrames);
+  const totalLayerDraws = singlePeerFrames * 1 + dualPeerFrames * 2;
+  const averageLayersPerFrame =
+    estimatedFrames > 0 ? totalLayerDraws / estimatedFrames : 1;
+
+  return {
+    averageLayersPerFrame: Number(averageLayersPerFrame.toFixed(4)),
+    totalLayerDraws,
+  };
+}
+
+/** Counts every video timeline item — later videos cannot hide behind a first image. */
 function countVideoScenes(manifest: ExportManifest): number {
-  return manifest.scenes.filter((scene) => scene.media.type === "video").length;
+  let count = 0;
+  for (const scene of manifest.scenes) {
+    const items = scene.mediaTimeline?.items ?? [];
+    if (items.length === 0) {
+      if (scene.media.type === "video") {
+        count += 1;
+      }
+      continue;
+    }
+    for (const item of items) {
+      if (item.media.type === "video") {
+        count += 1;
+      }
+    }
+  }
+  return count;
 }

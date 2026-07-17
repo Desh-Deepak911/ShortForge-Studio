@@ -11,6 +11,8 @@ import {
   TOP_5_MISSING_RANKINGS_RULES,
   TOP_5_RANKED_DATA_RULES,
 } from "@/lib/ai/top5-script-prompt.utils";
+// Leaf helper only — never import the Hook Engine barrel from prompts (cycle risk).
+import { resolveHookExampleSubjectAnchor } from "@/features/hook-engine/domain/hook-subject-tokens";
 
 /** Word limits passed into script-only narration prompts. */
 export interface StoryScriptWordBudget {
@@ -145,7 +147,7 @@ Tone: ${tone} — ${toneGuide}
 
 Story goals:
 - Write one cohesive narrated short, not a list of facts.
-- Open narration with a strong hook that pulls the viewer in immediately.
+- Open narration with a compelling first spoken line that pulls the viewer in immediately (follow Hook Engine guidance when provided).
 - Explain history, context, rivalry, stakes, or development tied to the brief.
 - If the brief mentions multiple matches, weave them into one unified story arc — do not treat them as separate segments.
 - Make narration rich and descriptive. Use full sentences and vivid language. Never reduce the story to one-liners or slogan-style lines.
@@ -170,6 +172,35 @@ const STORY_SCRIPT_EXAMPLE_JSON = `{
   "narration": "For decades, this rivalry was more than football — it was politics, pride, and proof. Every meeting carried the weight of cities that never needed an excuse to disagree. When form dipped and doubt crept in, neither side could afford to look weak. The stakes were never just three points; they were identity on a knife edge. And in moments like these, history does not stay in the past — it walks onto the pitch with them."
 }`;
 
+/**
+ * Topic-aware Hook output example (Sprint 7E.3A / 7E.6A).
+ * Subject anchor uses the same ≥3-char tokenization as Hook subject validation
+ * (deep import of leaf helper — no Hook Engine ↔ story generation cycle).
+ * Opening is ≤4 words, qualitative, and safe under compatibility_punchy limits.
+ * When the active directive is Provocative Question, use a short question shape.
+ */
+export function buildStoryScriptHookExampleJson(
+  topic: string,
+  options?: { readonly preferQuestionForm?: boolean },
+): string {
+  const { anchor } = resolveHookExampleSubjectAnchor(topic);
+  const opening = options?.preferQuestionForm
+    ? `Can ${anchor} rewrite fate?`
+    : `Nobody saw ${anchor} coming.`;
+  const body =
+    "The spoken piece continues with clear beats and a payoff ending.";
+
+  return JSON.stringify(
+    {
+      title: "Story Title",
+      narration: `${opening} ${body}`,
+      hookClaimRefs: [],
+    },
+    null,
+    2,
+  );
+}
+
 function hasResearchedFootballContext(context?: string): boolean {
   return Boolean(context?.includes(RESEARCHED_FOOTBALL_CONTEXT_HEADER));
 }
@@ -180,6 +211,10 @@ export interface BuildStoryScriptPromptOptions {
   top5RankedDataAvailable?: boolean;
   /** Advisory creator template block — omitted when unset. */
   templatePromptBlock?: string;
+  /** Canonical Hook Engine directive — replaces generic punchy-opening instruction. */
+  hookDirectiveBlock?: string;
+  /** Require ephemeral hookClaimRefs in model JSON. */
+  requireHookClaimRefs?: boolean;
 }
 
 function resolveBuildStoryScriptPromptOptions(
@@ -345,6 +380,29 @@ export function buildStoryScriptPrompt(
     ? `\n${promptOptions.templatePromptBlock.trim()}\n`
     : "";
 
+  const hookDirective = promptOptions.hookDirectiveBlock?.trim();
+  const hookSection = hookDirective ? `\n${hookDirective}\n` : "";
+  const requireClaimRefs = promptOptions.requireHookClaimRefs === true || Boolean(hookDirective);
+  const fieldRule = requireClaimRefs
+    ? "- Output fields: `title`, `narration`, and `hookClaimRefs` (string array of claim IDs used in the opening). Nothing else."
+    : "- Output exactly two fields: `title` and `narration`. Nothing else.";
+  const openingRule = hookDirective
+    ? [
+        "- Follow the HOOK DIRECTIVE for the opening. Do not invent a conflicting generic punchy opener.",
+        "- The first spoken sentence is a hard word limit — count whitespace-separated words and stay at or under the Opening word maximum in the HOOK DIRECTIVE.",
+        "- The first spoken sentence must include a recognizable subject word from the topic.",
+        "- Prefer the example opening length and shape below; longer first sentences fail validation.",
+      ].join("\n")
+    : "- Open with a short, punchy first line (~1–2 spoken seconds when possible). Use full sentences and vivid language suitable for TTS.";
+  const preferQuestionForm = Boolean(
+    hookDirective &&
+      (/provocative_question/i.test(hookDirective) ||
+        /Strategy:\s*Provocative Question/i.test(hookDirective)),
+  );
+  const exampleJson = requireClaimRefs
+    ? buildStoryScriptHookExampleJson(topic, { preferQuestionForm })
+    : STORY_SCRIPT_EXAMPLE_JSON;
+
   return `Generate a voiceover-ready narration script for a YouTube Short.
 
 You are a football storyteller for FootieBitz. Write one continuous spoken script meant to be read aloud as the full voiceover.
@@ -365,13 +423,13 @@ Story structure narration rules:
 ${storyStructureRules}
 
 ${contextRules}
-${templateSection}
+${templateSection}${hookSection}
 Writing rules:
 - Return JSON only. No markdown. No code fences. No commentary before or after the JSON.
-- Output exactly two fields: \`title\` and \`narration\`. Nothing else.
+${fieldRule}
 - Do not output scenes, captions, subtitles, timestamps, image prompts, hashtags, or extra metadata.
 ${structureRule}
-- Open with a short, punchy first line (~1–2 spoken seconds when possible). Use full sentences and vivid language suitable for TTS.
+${openingRule}
 - Do not say planning labels aloud (hook, story, conclusion, payoff, or beat titles).
 - End with a factual or emotional payoff — not generic like/subscribe CTAs.
 - Make the narration unmistakably fit the selected script mode — structure, emphasis, and vocabulary should match the mode voice above.
@@ -379,7 +437,7 @@ ${factualGroundingRule ? `\n${factualGroundingRule}` : ""}
 ${researchedSelectivityRule ? `\n${researchedSelectivityRule}` : ""}
 
 Output shape:
-${STORY_SCRIPT_EXAMPLE_JSON}`;
+${exampleJson}`;
 }
 
 function buildScenePlanExampleJson(sceneCount: number): string {

@@ -477,13 +477,21 @@ export const studioShellEditorCanvasMaxWidth =
 export const studioShellEditorPreviewWrap =
   "flex w-full max-w-full flex-col items-center";
 
-/** Bottom timeline rail — default height. */
+/** Bottom timeline rail — default height (gate OFF / legacy single-media). */
 export const studioShellTimelineHeight =
   "flex h-[7.5rem] shrink-0 flex-col overflow-hidden border-t border-border/50 bg-surface/30 shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.85)] lg:h-[7.5rem]";
 
 /** Bottom timeline rail — compact height. */
 export const studioShellTimelineHeightCompact =
   "flex h-[6.25rem] shrink-0 flex-col overflow-hidden border-t border-border/50 bg-surface/30 shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.85)]";
+
+/**
+ * Bottom timeline rail when multi-image Scene Media is enabled (Sprint 8E.2).
+ * Grows with scene blocks + media lanes so Add image is not clipped by fixed h + overflow-hidden.
+ * Horizontal scrolling stays on the inner timeline rail; vertical overflow only if content exceeds viewport budget.
+ */
+export const studioShellTimelineHeightMultiImage =
+  "flex min-h-[7.5rem] h-auto max-h-[min(45vh,20rem)] shrink-0 flex-col overflow-x-hidden overflow-y-auto border-t border-border/50 bg-surface/30 shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.85)]";
 
 /** Row containing canvas + inspector — fixed editor viewport. */
 export const studioShellBodyRowFixed =

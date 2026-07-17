@@ -77,6 +77,10 @@ export interface ExportParityCheckpoint {
   readonly timestampMs: number;
   readonly sceneId: string;
   readonly sceneElapsedMs: number;
+  /** Active timeline media item id at this checkpoint (null if unresolved). */
+  readonly mediaItemId: string | null;
+  /** Active item-local elapsed ms at this checkpoint (null if unresolved). */
+  readonly mediaItemElapsedMs: number | null;
   readonly mediaType: string;
   readonly videoSourceTimeMs: number | null;
   readonly captionId: string | null;

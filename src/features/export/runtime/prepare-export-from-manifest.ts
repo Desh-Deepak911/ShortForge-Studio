@@ -3,19 +3,22 @@
  * Builds renderer-friendly lookups without changing semantics.
  */
 
-import type {
-  ExportCaptionManifest,
-  ExportManifest,
-  ExportMediaManifest,
-  ExportMediaMotionManifest,
-  ExportSceneManifest,
+import {
+  type ExportCaptionManifest,
+  type ExportManifest,
+  type ExportMediaManifest,
+  type ExportMediaMotionManifest,
+  type ExportSceneManifest,
 } from "@/features/export/domain/export-manifest.types";
+import { assertExportManifest as assertExportManifestAuthority } from "@/features/export/domain/validate-export-manifest";
 import type { SceneImage, SceneMedia, SceneMediaMotion, SceneType } from "@/features/story/types";
 import type { MediaMotionEasing } from "@/features/media-motion";
 
 /**
  * Frozen draw DTO synthesized from ExportManifest only.
  * Not a StoryDocument / live editor object.
+ * Compatibility `media`/`image` mirror the first timeline item; active item is
+ * resolved per-frame from `manifestScene.mediaTimeline`.
  */
 export interface ExportDrawScene {
   readonly id: string;
@@ -44,10 +47,13 @@ export interface ExportRenderPlan {
 /**
  * Prepare renderer indexes from a frozen ExportManifest.
  * Must not recalculate durations, motion, fit, captions, or audio.
+ * Dispatches v2 / v3 integrity — never assumes latest version.
  */
 export function prepareExportFromManifest(
   manifest: ExportManifest,
 ): ExportRenderPlan {
+  assertExportManifest(manifest);
+
   const scenes = manifest.scenes.map((scene) =>
     toExportDrawScene(scene, manifest.captions),
   );
@@ -59,6 +65,16 @@ export function prepareExportFromManifest(
     sceneById,
     captions: manifest.captions,
   };
+}
+
+/** Version-dispatching authority (v2 / 8D and v3 / 9C). */
+export function assertExportManifest(manifest: ExportManifest): void {
+  assertExportManifestAuthority(manifest);
+}
+
+/** @deprecated Prefer assertExportManifest. */
+export function assertExportManifestV2(manifest: ExportManifest): void {
+  assertExportManifest(manifest);
 }
 
 function toExportDrawScene(

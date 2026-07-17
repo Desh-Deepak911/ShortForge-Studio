@@ -4,6 +4,8 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> **Start here for architecture:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) — canonical index, freeze boundaries, Export Reliability ledger (Sprint 6A–6F.1), and Sprint 7+ extension map. This roadmap remains the product milestone checklist.
+
 This roadmap outlines where **ShortForge Studio** is today and where it is heading — from research-backed script creation through timeline editing to browser-side export.
 
 Items marked complete ship in the current product. In-progress and planned work may shift as priorities change. Release notes: [CHANGELOG.md](./CHANGELOG.md).
@@ -20,6 +22,9 @@ Items marked complete ship in the current product. In-progress and planned work 
 - [Asset Search Platform 3.8](#asset-search-platform-38)
 - [Creator Experience 3.9.2 — Audio Mixer v1](#creator-experience-392--audio-mixer-v1)
 - [In Progress](#in-progress)
+- [Sprint 7 — Provocative Hook](#sprint-7--provocative-hook)
+- [Sprint 10 — Retention Story Intelligence v1](#sprint-10--retention-story-intelligence-v1)
+- [Sprint 11 — Headless Renderer](#sprint-11--headless-renderer)
 - [Planned](#planned)
 - [Long Term Vision](#long-term-vision)
 - [Related Documentation](#related-documentation)
@@ -239,10 +244,221 @@ Post-generation validation before voiceover and scene generation.
 
 ---
 
+## Sprint 7 — Provocative Hook
+
+**Architectural sprint** (story-generation upstream of voiceover / timeline / preview / export). Parallel to — not replacing — Creator Templates 3.10, Asset Search 3.8, and Export 6G–6I.
+
+| Phase | Status |
+|-------|--------|
+| **7A** — Hook Architecture Audit and Formal Hook Contract | **Complete — accepted** |
+| **7B** — Hook Strategy Library | **Complete — accepted** (incl. 7B.1 hardening) |
+| **7C** — Hook Validator | **Complete — accepted** (incl. 7C.1 / 7C.2) |
+| **7D** — Hook Integration into all templates | **Complete — accepted** (incl. 7D.1–7D.3) |
+| **7E** — QA and freeze | **Complete — Core Hook system frozen** |
+| **7E.6 / 7E.6A** — Hook Style selector + Core freeze | **Complete** |
+
+```text
+Sprint 7 — Provocative Hook
+7A — Hook Architecture Audit and Formal Hook Contract
+7B — Hook Strategy Library
+7C — Hook Validator
+7D — Hook Integration into all templates
+7E — QA and freeze
+```
+
+**References:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) · [docs/HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) · [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) (Status: **Accepted after Sprint 7A**) · Freeze: [docs/qa/hook-engine-sprint-7-freeze.md](./docs/qa/hook-engine-sprint-7-freeze.md) · Module: `src/features/hook-engine/` · Verify: `npm run test:hook-sprint` · `npm run test:hook-style-selector` · `npm run test:hook-core-live-qa` (gated) · gated research live: `npm run test:hook-live-qa`
+
+**7B (accepted):** strategy library + 7B.1 hardening (`evidence_led_surprise` intent gate; tamper-resistant plans; hardened normalization; coherent opening pairs at 2.4 wps).
+
+**7C (accepted):** opening-span extraction, candidate builder, pure validator (grounding/safety + opening maxima hard limits), selection recomputes validation, diagnostics, bounded one-repair + authoritative `compatibility_punchy` fallback plan (`activePlan` on result). 7C.1 / 7C.2 hardening applied.
+
+**7D (accepted):** canonical Hook adapter on script-only + full audio-first; HookDirective; structured GraphContext/AssembledContext evidence; explicit creator-phrase PI preference (`evidence_fact` / `evidence_statistic`) → `NarrativePlan.openingIntent` → evidence_surprise; claim-map prioritization; sole Hook length enforcement with committed `lengthEnforcement`; legacy `generateFootieScript` retired; semantic research fingerprints. Includes 7D.1–7D.3.
+
+**7E (complete — Core frozen):** Deterministic golden/safety/persistence/streaming QA green. Core non-research live sign-off **ELIGIBLE** (`test:hook-core-live-qa`).
+
+```
+HOOK ENGINE CORE: FROZEN
+SPRINT 7E: COMPLETE — CORE HOOK SYSTEM FROZEN
+EVIDENCE_SURPRISE LIVE PROVIDER PATH: CAPABILITY-GATED — LIVE SIGN-OFF PENDING
+```
+
+**7E.6 / 7E.6A (complete):** Hook Style panel (Auto default; research-aware Auto copy; Write My Own 5-word + 200-char limits; pure compatibility reconciliation; client presentation boundary). Core live: Auto `cold_open`, explicit `provocative_question` / `user_selected`, Write My Own `user_directed` / `user_authored`.
+
+**Rules:** Final spoken hook remains an opening span of `FootieScript.narration`. Hook Engine must not patch MasterTimeline, preview, or ExportManifest. Deterministic Evidence Surprise safety is frozen with Core; only the external live-provider Evidence Surprise path remains capability-gated.
+
+---
+
+## Sprint 8 — Multi-image Scenes
+
+**Architectural sprint** (scene media model / editor / preview / export adapters). Parallel to remaining product debt; does not reopen the frozen Core Hook Engine.
+
+| Phase | Status |
+|-------|--------|
+| **8A** — Multi-image Scene Foundation | **Complete and accepted** |
+| **8B** — Scene Media Timeline UI | **Complete and accepted** |
+| **8C** — Per-media Inspector | **Complete and accepted** |
+| **8D** — Preview + Export Integration | **Complete and accepted** |
+| **8E** — Golden QA and Freeze | **Complete and accepted** |
+
+```text
+Sprint 8 — Multi-image Scenes
+8A — Multi-image Scene Foundation         ← complete and accepted
+8B — Scene Media Timeline UI              ← complete and accepted
+8C — Per-media Inspector                  ← complete and accepted
+8D — Preview + Export Integration         ← complete and accepted
+8E — Golden QA and Freeze                 ← complete and accepted · Sprint 8 frozen
+```
+
+**8A (complete and accepted):** Versioned `FootieScene.mediaTimeline` contract; overflow-safe resolution; legacy adapter; atomic write builder; complete signatures; persistence + patch classification.
+
+**8B (complete and accepted):** Scene Media Timeline UI; ownership-required pointer-up; empty-scene first image; full normalized writes; safe blob lifetime; stale selection reconciliation. Experimental env flag retired in 8E.3.
+
+**8C (complete and accepted):** Per-media Inspector edits selected timeline items by stable ID; command-owned first-item compatibility; honest video thumbnail; trim terminal boolean.
+
+**8D (complete and accepted):** Preview + ExportManifest v2 (`rendererContractVersion: "8D"`) consume the Scene Media Timeline with item-local timing and hard-cut switching; active-item-aware Preview fallback, drawable cache, capability counts, QA diagnostics; total fail-closed v2 scene-media validation before cost/preload/render.
+
+**8E (complete and accepted):** Deterministic golden registry + local Preview / 720p WebM / manual editor **Pass** (operator-confirmed). `NEXT_PUBLIC_SHORTFORGE_MULTI_IMAGE_SCENES` retired; multi-image is the default. See [docs/qa/scene-media-sprint-8-freeze.md](./docs/qa/scene-media-sprint-8-freeze.md).
+
+**Frozen:** `SceneMediaTimeline` v1 · ExportManifest v2 · renderer contract `"8D"` · hard-cut intra-scene switching baseline.
+
+**Deferred from Sprint 8:** Headless Renderer → **Sprint 11** (Retention Story Intelligence is Sprint 10).
+
+**References:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) · [docs/ENV_AND_FEATURE_FLAGS.md](./docs/ENV_AND_FEATURE_FLAGS.md) · [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md) · Verify: `test:scene-media-sprint`
+
+```text
+SPRINT 8 MULTI-IMAGE SCENES: FROZEN
+EXPORTMANIFEST V2 / RENDERER CONTRACT 8D: FROZEN
+NEXT_PUBLIC_SHORTFORGE_MULTI_IMAGE_SCENES: RETIRED
+```
+
+---
+
+## Sprint 9 — Intra-scene Transitions
+
+**Frozen.** Media-to-media transitions inside one scene. Does not reopen frozen Sprint 8 contracts or scene-to-scene transition scope locks.
+
+| Phase | Status |
+|-------|--------|
+| **9A** — Domain + Editor Foundation | **Complete and accepted** |
+| **9B** — Preview Integration | **Complete and accepted** |
+| **9C** — Export Integration | **Complete and accepted** (9C.1 integrity) |
+| **9D** — Golden QA and Freeze | **Frozen** (9D.3 operator sign-off) |
+
+```text
+Sprint 9 — Intra-scene Transitions
+9A — Domain + Editor Foundation           ← complete and accepted
+9B — Preview Integration                  ← complete and accepted
+9C — Export Integration                   ← complete and accepted (9C.1)
+9D — Golden QA and Freeze                 ← frozen (9D.3)
+```
+
+**9A–9C:** Domain/editor, Preview composition, ExportManifest **v3 / `"9C"`** — accepted. See [docs/INTRA_SCENE_TRANSITIONS.md](./docs/INTRA_SCENE_TRANSITIONS.md) · [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md).
+
+**9D–9D.3:** Deterministic goldens, local-evidence truth, editor discoverability, operator Chromium Preview / 720p WebM / editor Pass. Evidence: [docs/qa/intra-scene-transition-sprint-9-freeze.md](./docs/qa/intra-scene-transition-sprint-9-freeze.md).
+
+**Rules:** Sprint 9 is **frozen**. No feature flag. Scene-to-scene `TransitionTimelineItem` authority unchanged. ExportManifest v2 / `"8D"` remains frozen; production is v3 / `"9C"`. Future changes require a new sprint or explicit post-freeze hotfix.
+
+```text
+SPRINT 9 INTRA-SCENE TRANSITIONS: FROZEN
+EXPORTMANIFEST V3 / RENDERER CONTRACT 9C: FROZEN
+```
+
+---
+
+## Sprint 10 — Retention Story Intelligence v1
+
+**Final status — FROZEN (10H.5C, 2026-07-17).** Deterministic Golden/authority QA, the 435-cell Flexible reliability matrix, final Core live-model matrix (**13/13 Pass**), and operator-confirmed local Create/Review/persistence/audio-first checks all passed. Evidence Surprise remains capability-gated. See [the final freeze ledger](./docs/qa/retention-story-sprint-10-freeze.md). **Sprint 11 Headless Renderer is ready to begin.**
+
+```text
+SPRINT 10 RETENTION STORY INTELLIGENCE V1: FROZEN
+SPRINT 11 HEADLESS RENDERER: READY TO BEGIN
+```
+
+**Architectural sprint** — retention-first planning for concise 25–35s Shorts, extensible to future long-form strategies. Does **not** reopen Hook Core, Studio Intelligence v1, Story Sync, Sprint 8/9 freezes, Preview, ExportManifest v3 / `"9C"`, or the browser renderer. **No Headless Renderer work in Sprint 10.**
+
+| Phase | Status |
+|-------|--------|
+| **10A** — Architecture Audit + Formal Contract | **Accepted** |
+| **10A.1** — Contract Authority Hardening | **Accepted** |
+| **10A.2** — Contract Final Coherence | **Accepted** |
+| **10B** — Story Contract + Format Strategy Foundation | **Complete and accepted** (10B.1 / 10B.1A / 10B.1B) |
+| **10C** — Controlling Idea + Emotional Arc | **Complete and accepted** (10C.1 / 10C.1A) |
+| **10D** — Retention Beat + Pacing Intelligence | **Complete and accepted** (unwired; 10D.1 / 10D.1A / 10D.1B included) |
+| **10E / 10E.1 / 10E.1A** — Narrative Composer + Hook Integration | **Complete and accepted** |
+| **10F / 10F.1 / 10F.1A / 10F.1B / 10F.1C / 10F.2 / 10F.2A / 10F.3 / 10F.3A / 10F.3B** — Validator + rewrite + production + hardening | **Accepted** |
+| **10G / 10G.1 / 10G.1A** — Explainability / Strategy UI + persistence authority | **Accepted** |
+| **10H–10H.5C** — Golden QA + universal reliability + final live/local sign-off | **Complete and accepted — Sprint 10 frozen** |
+
+```text
+Sprint 10 — Retention Story Intelligence v1
+10A — Architecture Audit + Formal Contract     ← accepted
+10A.1 — Contract Authority Hardening           ← accepted
+10A.2 — Contract Final Coherence               ← accepted
+10B — Story Contract + Format Strategy Foundation  ← complete and accepted
+10C — Controlling Idea + Emotional Arc             ← complete and accepted (10C.1 / 10C.1A)
+10D — Retention Beat + Pacing Intelligence         ← complete and accepted
+10D.1 / 10D.1A / 10D.1B                            ← complete and accepted
+10E / 10E.1 / 10E.1A — Narrative Composer + Hook Integration ← complete and accepted
+10F / 10F.1 / 10F.1A / 10F.1B / 10F.1C / 10F.2 / 10F.2A / 10F.3 / 10F.3A / 10F.3B — Validator + rewrite + production + hardening ← accepted
+10G / 10G.1 / 10G.1A — Explainability / Strategy UI + persistence authority ← accepted
+10H–10H.5C — Golden QA + universal reliability + live/local sign-off ← complete and accepted
+
+Sprint 11 — Headless Renderer                 ← ready to begin
+```
+
+**Artifacts:** [docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) (accepted) · [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) (**Frozen after Sprint 10H.5C**) · Freeze ledger: [docs/qa/retention-story-sprint-10-freeze.md](./docs/qa/retention-story-sprint-10-freeze.md) · Module: `src/features/retention-story/` (`domain/` · `grounding/` · `strategy/` · `planning/` · `composition/` · `budget/` · `integration/` · `validation/` · `rewrite/` · `production/` · `presentation/`) · Verify: `npm run test:retention-story-sprint` · `npm run test:retention-story-live-qa` (gated) · `/dev/retention-story-qa`.
+
+**10D note (accepted):** Planning layer — deterministic beat plan, pacing budgets, compression goals, hook handoff, plan fingerprint + coherence assertion. Fast path is fully deterministic (**zero planner calls**); Balanced/Studio use an **injected planner, at most one call**, with no silent Fast downgrade. Still unwired from generation.
+
+**10D.1 / 10D.1A / 10D.1B note (accepted):** Planner completeness, creator-context handoff, safe subject anchors, box-constrained pacing, Fast deterministic authority; bare + phrase-complete match-result factual-risk classifier.
+
+**10E / 10E.1 / 10E.1A note:** Structured Retention Narrative Composer with asserted-seed sole controlling-idea claim authority, Hook reconciliation bridge, and shared path-global model-call ledger. **Complete and accepted.**
+
+**10F.3 / 10F.3A / 10F.3B note:** Canonical `runRetentionProductionNarration` owns script-only + audio-first narration; one path-global ledger; commit-gate semantic ledger equality; call-kind-aware output-token budgets; failure envelopes never carry plan/validation snapshots; total fail-closed safe Hook diagnostics terminal coherence; private-data-free exception boundary; scenes-only unchanged. **Accepted.**
+
+**10G / 10G.1 / 10G.1A note:** Create **Story strategy** selector (Auto / Retention-first / Standard) with duration compatibility + reset-to-Auto; Review **Story intelligence** read-only explainability from safe snapshots; selection wires through contract fingerprint; scenes-only ignores strategy. **10G.1** adds total fail-closed persistence validators, plan/validation linkage, rewrite evidence bound to validation summary, and draft-load sanitization. **10G.1A** closes the validator exception boundary (hostile getters/Proxies never throw). **Accepted.**
+
+**10H–10H.5C note:** Golden, structural, safety, persistence, streaming, universal reliability, final live, and local product evidence all passed. Retention Story Intelligence v1 is frozen. Evidence Surprise / live research remains capability-gated.
+
+**10C note:** Strategy layer only — one controlling idea, grounded selection, `EmotionalArcBlueprint` (pre-beat phases; **no fake beat IDs**), Fast deterministic seed, planner-proposal normalizer seam. **10C.1 / 10C.1A:** exact-token subject authority, factual claim-support equality, candidate/seed coherence, terminal per-source seed invariants, deeply frozen canonical asserted seeds. **Complete and accepted.** **No model call in 10C.**
+
+```text
+10A–10A.2 — Complete and accepted
+10B / 10B.1 / 10B.1A / 10B.1B — Complete and accepted
+10C / 10C.1 / 10C.1A — Complete and accepted
+10D — Complete and accepted
+10E / 10E.1 / 10E.1A — Complete and accepted
+10F / 10F.1 / 10F.1A / 10F.1B / 10F.1C — Validator + ledger + ready phase-order authority accepted
+10F.2 — Studio body rewrite + terminal validation implemented
+10F.2A — Terminal Hook authority + length enforcement hardening accepted
+10F.3 — Production activation + commit gate + safe persistence
+10F.3A — Production authority + evidence hardening
+10F.3B — Safe Hook diagnostics terminal coherence accepted
+10G — Explainability + Story Strategy UI
+10G.1 — Persistence + explainability authority hardening
+10G / 10G.1 / 10G.1A — Explainability + Story Strategy UI + persistence authority accepted
+10H–10H.5C — Golden QA, universal reliability, live/local sign-off complete
+Retention Story — Frozen
+CORE RETENTION LIVE-MODEL PATH: APPROVED (13/13)
+LOCAL PRODUCT SIGN-OFF: APPROVED
+EVIDENCE SURPRISE LIVE PROVIDER PATH: CAPABILITY-GATED
+SPRINT 11 HEADLESS RENDERER: READY TO BEGIN
+```
+
+---
+
+## Sprint 11 — Headless Renderer
+
+**Deferred** until after Retention Story Intelligence v1. Do not begin Headless Renderer implementation during Sprint 10.
+
+---
+
 ## Planned
 
 | Initiative | Description |
 |------------|-------------|
+| **Retention Story Intelligence (Sprint 10)** | Retention-first Shorts planning pipeline — 10B foundation ready for review |
+| **Headless Renderer (Sprint 11)** | Deferred native/headless export path |
 | **Scene Intelligence** | Beat-aware scene planning — caption density, transitions, visuals grounded in research |
 | **Media Intelligence** | Asset-aware image, motion, and style recommendations |
 | **Multi-provider research** | Additional backends via Provider Registry beyond API Football and Static Knowledge |
@@ -269,6 +485,11 @@ Architecture detail: [ARCHITECTURE.md](./ARCHITECTURE.md) · Product overview: [
 
 | Document | Description |
 |----------|-------------|
+| [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) | **Start here** — master architecture index |
+| [docs/HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) | Sprint 7A hook evidence audit |
+| [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | Formal Hook Contract (**Accepted after Sprint 7A**) |
+| [docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) | Sprint 10A Retention Story evidence audit |
+| [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) | Formal Retention Story Contract (**Accepted after Sprint 10A.2**) |
 | [README.md](./README.md) | Features, workflows, getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and pipelines |
 | [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |

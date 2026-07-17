@@ -27,9 +27,12 @@ interface SceneFrameVideoProps {
   sceneId?: string;
   /** Full scene — motion config read authority (media.motion + legacy fallbacks). */
   scene?: Pick<FootieScene, "image" | "uploadedImage" | "media">;
-  /** Scene-local elapsed time in ms. */
+  /**
+   * Item-local elapsed time in ms when multi-image Preview is active;
+   * otherwise scene-local elapsed.
+   */
   sceneElapsedMs?: number;
-  /** Scene duration ms — motion progress denominator. */
+  /** Item/scene duration ms — motion progress denominator. */
   sceneDurationMs?: number;
   /** When true, attempt muted playback; otherwise seek and pause. */
   isPlaying?: boolean;
@@ -39,6 +42,8 @@ interface SceneFrameVideoProps {
   transformOffset?: { x: number; y: number };
   /** Keeps transforms on the compositor while panning. */
   isDragging?: boolean;
+  /** Stable timeline item id when rendering a Scene Media Timeline item. */
+  mediaItemId?: string;
 }
 
 function resolveVideoObjectFit(media: SceneMedia): "cover" | "contain" {
@@ -63,6 +68,7 @@ export default function SceneFrameVideo({
   isActive = true,
   transformOffset,
   isDragging = false,
+  mediaItemId,
 }: SceneFrameVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const seekQueueRef = useRef(createTrimPreviewSeekQueue());
@@ -219,7 +225,12 @@ export default function SceneFrameVideo({
       };
 
   return (
-    <div ref={containerRef} className={className} data-scene-frame-media="video">
+    <div
+      ref={containerRef}
+      className={className}
+      data-scene-frame-media="video"
+      data-scene-media-item-id={mediaItemId ?? undefined}
+    >
       {/* PersistentFramingLayer + MediaMotionLayer: CSS transform only */}
       <div className="absolute inset-0" style={motionStyle}>
         <video

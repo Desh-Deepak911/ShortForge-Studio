@@ -86,7 +86,9 @@ test("create flow exposes Football Research Mode", () => {
   const createFlow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
   const briefInspector = readSrc("src/features/create/components/CreateBriefInspector.tsx");
   assert.match(createFlow, /enableResearch/);
-  assert.match(createFlow, /generationContext/);
+  // Creator notes must not be overwritten by assembled generationContext (10H.4A).
+  assert.doesNotMatch(createFlow, /context:\s*data\.generationContext/);
+  assert.match(createFlow, /researchApplied/);
   assert.match(createFlow, /isResearchDefaultEnabledForScriptMode/);
   assert.match(briefInspector, /Smart Research/);
   assert.match(briefInspector, /Use trusted sources when available\./);

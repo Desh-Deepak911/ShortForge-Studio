@@ -15,6 +15,8 @@ export interface EditorSelectionContextValue extends EditorSelectionState {
   isImageEditing: boolean;
   isImageSelected: boolean;
   isSceneSelected: boolean;
+  isSceneMediaItemSelected: boolean;
+  isSceneMediaTransitionSelected: boolean;
   imageSceneId: string | null;
   ribbonVisible: boolean;
   ribbonContextId: RibbonContextId | null;
@@ -22,6 +24,14 @@ export interface EditorSelectionContextValue extends EditorSelectionState {
   inspectorImageEditAvailable: boolean;
   selectScene: (sceneId: string) => void;
   selectImage: (sceneId: string) => void;
+  selectSceneMediaItem: (sceneId: string, mediaItemId: string) => void;
+  selectSceneMediaTransition: (
+    sceneId: string,
+    fromItemId: string,
+    toItemId: string,
+  ) => void;
+  clearSceneMediaItemSelection: () => void;
+  clearSceneMediaTransitionSelection: () => void;
   /** Sole authority for persisted scene index changes (including playback). */
   syncSceneIndex: (index: number) => void;
   clearSelection: () => void;

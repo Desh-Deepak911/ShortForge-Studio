@@ -2,76 +2,88 @@
 
 import SceneFrameImage from "@/features/editor/components/SceneFrameImage";
 import SceneFrameVideo from "@/features/editor/components/SceneFrameVideo";
-import { getSceneMedia, getSceneMediaType, sceneHasImage } from "@/features/story/utils";
+import {
+  resolveActiveSceneMediaRenderView,
+  type ActiveSceneMediaRenderView,
+} from "@/features/scene-media-timeline";
 import type { FootieScene } from "@/features/story/types";
 
 export interface SceneFrameMediaProps {
   scene: FootieScene;
+  /** Pre-resolved active media view from the Preview composition boundary. */
+  activeMediaView: ActiveSceneMediaRenderView;
   alt: string;
   className?: string;
   mediaClassName?: string;
   /** Live drag offset in screen pixels (framing edit — image or video). */
   transformOffset?: { x: number; y: number };
   isDragging?: boolean;
-  /** Scene-local elapsed time for video clip sync + media motion. */
-  sceneElapsedMs?: number;
-  /** Scene duration for shared media motion progress. */
-  sceneDurationMs?: number;
   /** Preview playback active. */
   isPlaying?: boolean;
   /** Only the active scene should play its video. */
   isActive?: boolean;
+  /**
+   * When true, live framing drag is allowed (first timeline item only in multi-image).
+   * Resolved at the composition boundary.
+   */
+  allowFramingDrag?: boolean;
 }
 
 /**
- * Preview media renderer — video clips via SceneFrameVideo, images via SceneFrameImage.
- * Both paths resolve motion through the shared media-motion engine.
+ * Preview media renderer — consumes a pre-resolved active timeline render view.
+ * Does not read process.env; active item resolution happens at the Preview composition boundary.
  */
 export default function SceneFrameMedia({
   scene,
+  activeMediaView,
   alt,
   className,
   mediaClassName,
   transformOffset,
   isDragging = false,
-  sceneElapsedMs = 0,
-  sceneDurationMs = 0,
   isPlaying = false,
   isActive = true,
+  allowFramingDrag = false,
 }: SceneFrameMediaProps) {
-  const media = getSceneMedia(scene);
-  const mediaType = getSceneMediaType(scene);
+  const media = activeMediaView.media;
+  const itemElapsedMs = activeMediaView.itemElapsedMs;
+  const itemDurationMs = activeMediaView.windowDurationMs;
+  const applyDrag = allowFramingDrag && Boolean(transformOffset);
 
-  if (mediaType === "video" && media?.type === "video" && media.url) {
+  if (media?.type === "video" && media.url) {
     return (
       <SceneFrameVideo
+        key={activeMediaView.mediaItemId ?? `video-${activeMediaView.itemIndex}`}
         media={media}
-        scene={scene}
+        scene={activeMediaView.renderScene}
         alt={alt}
         className={className}
         videoClassName={mediaClassName}
         sceneId={scene.id}
-        sceneElapsedMs={sceneElapsedMs}
-        sceneDurationMs={sceneDurationMs}
+        sceneElapsedMs={itemElapsedMs}
+        sceneDurationMs={itemDurationMs}
         isPlaying={isPlaying}
         isActive={isActive}
-        transformOffset={transformOffset}
-        isDragging={isDragging}
+        transformOffset={applyDrag ? transformOffset : undefined}
+        isDragging={applyDrag && isDragging}
+        mediaItemId={activeMediaView.mediaItemId ?? undefined}
       />
     );
   }
 
-  if (sceneHasImage(scene) || mediaType === "image") {
+  if (media?.type === "image" && media.url) {
     return (
       <SceneFrameImage
-        scene={scene}
+        key={activeMediaView.mediaItemId ?? `image-${activeMediaView.itemIndex}`}
+        scene={activeMediaView.renderScene}
         alt={alt}
         className={className}
         imageClassName={mediaClassName}
-        transformOffset={transformOffset}
-        sceneElapsedMs={sceneElapsedMs}
-        sceneDurationMs={sceneDurationMs}
-        isDragging={isDragging}
+        transformOffset={applyDrag ? transformOffset : undefined}
+        sceneElapsedMs={itemElapsedMs}
+        sceneDurationMs={itemDurationMs}
+        isDragging={applyDrag && isDragging}
+        mediaItemId={activeMediaView.mediaItemId ?? undefined}
       />
     );
   }
@@ -79,16 +91,32 @@ export default function SceneFrameMedia({
   return null;
 }
 
-/** Pure helper for tests — which renderer path a scene would use. */
-export function resolveSceneFrameMediaKind(
-  scene: FootieScene,
+/** Pure helper for tests — which renderer path a render view would use. */
+export function resolveSceneFrameMediaKindFromView(
+  view: ActiveSceneMediaRenderView,
 ): "video" | "image" | "placeholder" {
-  const mediaType = getSceneMediaType(scene);
-  if (mediaType === "video") {
+  if (view.media?.type === "video") {
     return "video";
   }
-  if (sceneHasImage(scene) || mediaType === "image") {
+  if (view.media?.type === "image") {
     return "image";
   }
   return "placeholder";
+}
+
+/** Test helper — resolves a view then maps to media kind. */
+export function resolveSceneFrameMediaKind(
+  scene: FootieScene,
+  options?: {
+    /** When false, first-item-only (regression tests). Default true. */
+    multiImageScenesEnabled?: boolean;
+    sceneElapsedMs?: number;
+  },
+): "video" | "image" | "placeholder" {
+  const view = resolveActiveSceneMediaRenderView(
+    scene,
+    options?.sceneElapsedMs ?? 0,
+    { multiImageScenesEnabled: options?.multiImageScenesEnabled !== false },
+  );
+  return resolveSceneFrameMediaKindFromView(view);
 }

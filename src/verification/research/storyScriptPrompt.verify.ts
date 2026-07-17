@@ -3,12 +3,86 @@
  */
 import assert from "node:assert/strict";
 
-import { buildStoryScriptPrompt } from "@/lib/ai/prompts";
+import {
+  buildStoryScriptHookExampleJson,
+  buildStoryScriptPrompt,
+} from "@/lib/ai/prompts";
 import { getNarrationWordBudget } from "@/features/story/utils/narration-duration-budget.utils";
+import {
+  buildCompatibilityFallbackPlan,
+  buildHookCandidate,
+  buildHookPlanFromRequest,
+  extractHookSubjectTokens,
+  HOOK_CONTRACT_VERSION,
+  HOOK_TEMPLATE_STRATEGY_PREFERENCES,
+  normalizeHookRequest,
+  openingPreservesHookSubject,
+  resolveHookExampleSubjectAnchor,
+  validateHookCandidate,
+  type HookStrategyId,
+} from "@/features/hook-engine";
+import { CREATOR_TEMPLATE_IDS } from "@/features/creator-templates";
+import type { CreatorTemplateId } from "@/features/creator-templates/creator-template.types";
+import type { ScriptMode } from "@/types/footiebitz";
 
 function test(name: string, fn: () => void) {
   fn();
   console.log(`  ✓ ${name}`);
+}
+
+function openingFromExample(exampleJson: string): string {
+  const parsed = JSON.parse(exampleJson) as { narration: string };
+  return parsed.narration.split(/(?<=[.!?])\s+/)[0] ?? "";
+}
+
+function assertExamplePassesPlan(
+  topic: string,
+  opening: string,
+  plan: ReturnType<typeof buildHookPlanFromRequest>["plan"],
+  request: ReturnType<typeof normalizeHookRequest>,
+) {
+  const candidate = buildHookCandidate({
+    narration: `${opening} Body continues with clear spoken beats and a payoff.`,
+    request,
+    plan,
+    origin: "model_narration_opening",
+    claimRefs: [],
+  });
+  const validation = validateHookCandidate({ request, plan, candidate });
+  assert.equal(
+    validation.hardGatesPassed.safety,
+    true,
+    `safety gate failed for ${topic} / ${plan.strategyId}: ${validation.reasons.join(",")}`,
+  );
+  assert.equal(
+    validation.openingLimitsPassed.wordLimit,
+    true,
+    `word limit failed for ${topic} / ${plan.strategyId}`,
+  );
+  assert.equal(
+    validation.openingLimitsPassed.spokenDurationLimit,
+    true,
+    `spoken duration failed for ${topic} / ${plan.strategyId}`,
+  );
+  assert.equal(
+    validation.strategyThresholdsPassed.provocativeness,
+    true,
+    `provocativeness failed for ${topic} / ${plan.strategyId}`,
+  );
+  assert.equal(
+    validation.strategyThresholdsPassed.clarity,
+    true,
+    `clarity failed for ${topic} / ${plan.strategyId}`,
+  );
+  assert.ok(
+    !validation.reasons.some((r) => r.startsWith("grounding.")),
+    `grounding risk for ${topic} / ${plan.strategyId}: ${validation.reasons.join(",")}`,
+  );
+  assert.equal(
+    openingPreservesHookSubject(topic, opening),
+    true,
+    `subject gate helper failed for ${topic}`,
+  );
 }
 
 console.log("storyScriptPrompt");
@@ -204,6 +278,199 @@ test("research unavailable uses cautious fallback rules", () => {
   assert.match(prompt, /never describe this as the Qatar World Cup/);
   assert.match(prompt, /stay qualitative and do not backfill facts from general knowledge/);
   assert.doesNotMatch(prompt, /Researched football context rules/);
+});
+
+test("7E.3A Hook example subject anchors align with validator (≥3 chars)", () => {
+  const cases: Array<{
+    topic: string;
+    mode: ScriptMode;
+    expectAnchorIncludes: string;
+    rejectAnchor?: string;
+  }> = [
+    {
+      topic: "FC Barcelona title story",
+      mode: "story",
+      expectAnchorIncludes: "Barcelona",
+      rejectAnchor: "FC",
+    },
+    {
+      topic: "AC Milan tactical review",
+      mode: "tactical_review",
+      expectAnchorIncludes: "Milan",
+      rejectAnchor: "AC",
+    },
+    {
+      topic: "AS Roma match recap",
+      mode: "match_recap",
+      expectAnchorIncludes: "Roma",
+      rejectAnchor: "AS",
+    },
+    {
+      topic: "São Paulo historical explainer",
+      mode: "historical_explainer",
+      expectAnchorIncludes: "Paulo",
+    },
+    {
+      topic: "Real Madrid story",
+      mode: "story",
+      expectAnchorIncludes: "Real",
+    },
+    {
+      topic: "Haaland player analysis",
+      mode: "player_analysis",
+      expectAnchorIncludes: "Haaland",
+    },
+  ];
+
+  const directive =
+    "HOOK DIRECTIVE (follow exactly — do not speak these labels aloud):\n- Strategy: Cold Open (cold_open@1.0.0)\n- Plan fingerprint: hp:test-fp\n- Opening word maximum (hard): 5\n- Opening spoken-seconds maximum (hard): 3";
+
+  for (const row of cases) {
+    const tokens = extractHookSubjectTokens(row.topic);
+    assert.ok(
+      tokens.every((t) => t.length >= 3),
+      `validator tokens must be ≥3 for ${row.topic}`,
+    );
+    if (row.rejectAnchor) {
+      assert.ok(
+        !tokens.includes(row.rejectAnchor.toLowerCase()),
+        `must not treat ${row.rejectAnchor} as subject token`,
+      );
+    }
+
+    const { anchor, usedFallback } = resolveHookExampleSubjectAnchor(row.topic);
+    assert.equal(usedFallback, false);
+    assert.match(anchor, new RegExp(row.expectAnchorIncludes, "i"));
+
+    const example = buildStoryScriptHookExampleJson(row.topic);
+    const parsed = JSON.parse(example) as {
+      title: string;
+      narration: string;
+      hookClaimRefs: string[];
+    };
+    assert.ok(Array.isArray(parsed.hookClaimRefs));
+    assert.equal(parsed.hookClaimRefs.length, 0);
+
+    const opening = openingFromExample(example);
+    const openingWords = opening
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    assert.ok(openingWords.length <= 4, `opening >4 words for ${row.topic}`);
+    assert.doesNotMatch(opening, /\d|€|\$|%|goals?|best|greatest|record|"/i);
+    assert.doesNotMatch(opening, /\b(hook|beat|strategy|directive)\b/i);
+    assert.match(opening, /Nobody saw .+ coming\./i);
+
+    const prompt = buildStoryScriptPrompt(
+      row.topic,
+      "dramatic",
+      30,
+      row.mode,
+      undefined,
+      getNarrationWordBudget(30),
+      { hookDirectiveBlock: directive, requireHookClaimRefs: true },
+    );
+    assert.doesNotMatch(prompt, /For decades, this rivalry/);
+    assert.equal(
+      (prompt.match(/HOOK DIRECTIVE \(follow exactly/g) ?? []).length,
+      1,
+    );
+
+    const request = normalizeHookRequest({
+      contractVersion: HOOK_CONTRACT_VERSION,
+      topic: row.topic,
+      scriptMode: row.mode,
+      tone: "dramatic",
+      durationSeconds: 30,
+      generationPath: "script_only",
+    });
+    const { plan } = buildHookPlanFromRequest(request);
+    assertExamplePassesPlan(row.topic, opening, plan, request);
+
+    const compatPlan = buildCompatibilityFallbackPlan(request);
+    assertExamplePassesPlan(row.topic, opening, compatPlan, request);
+  }
+});
+
+test("7E.3A vacuous / edge topics use fallback anchor; subject gate still holds", () => {
+  for (const topic of ["AI FC", "!!!", "ab", "  ", "FC AC AS"]) {
+    const tokens = extractHookSubjectTokens(topic);
+    const { anchor, usedFallback } = resolveHookExampleSubjectAnchor(topic);
+    if (tokens.length === 0) {
+      assert.equal(usedFallback, true);
+      assert.equal(anchor, "Story");
+    }
+    const opening = openingFromExample(buildStoryScriptHookExampleJson(topic));
+    assert.ok(openingPreservesHookSubject(topic, opening));
+    assert.match(opening, /^Nobody saw .+ coming\.$/);
+    const words = opening
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    assert.ok(words.length <= 4);
+  }
+});
+
+test("7E.3A example passes ordinary mode-default and template strategy thresholds", () => {
+  const modeTopics: Array<{ mode: ScriptMode; topic: string }> = [
+    { mode: "story", topic: "FC Barcelona title story" },
+    { mode: "tactical_review", topic: "AC Milan tactical review" },
+    { mode: "match_recap", topic: "AS Roma match recap" },
+    { mode: "historical_explainer", topic: "São Paulo historical explainer" },
+    { mode: "player_analysis", topic: "Haaland player analysis" },
+    { mode: "match_preview", topic: "Real Madrid story" },
+    { mode: "top_5", topic: "World Cup scorers countdown" },
+    { mode: "opinion_debate", topic: "Real Madrid story" },
+  ];
+
+  for (const { mode, topic } of modeTopics) {
+    const opening = openingFromExample(buildStoryScriptHookExampleJson(topic));
+    const request = normalizeHookRequest({
+      contractVersion: HOOK_CONTRACT_VERSION,
+      topic,
+      scriptMode: mode,
+      tone: "dramatic",
+      durationSeconds: 30,
+      generationPath: "script_only",
+    });
+    const { plan } = buildHookPlanFromRequest(request);
+    assertExamplePassesPlan(topic, opening, plan, request);
+  }
+
+  for (const templateId of CREATOR_TEMPLATE_IDS) {
+    const preferred = HOOK_TEMPLATE_STRATEGY_PREFERENCES[
+      templateId as CreatorTemplateId
+    ] as HookStrategyId | undefined;
+    if (!preferred || preferred === "evidence_surprise") continue;
+    const topic = "Real Madrid story";
+    const opening = openingFromExample(buildStoryScriptHookExampleJson(topic));
+    const request = normalizeHookRequest({
+      contractVersion: HOOK_CONTRACT_VERSION,
+      topic,
+      scriptMode: "story",
+      tone: "dramatic",
+      durationSeconds: 30,
+      generationPath: "script_only",
+      templateId,
+    });
+    const { plan } = buildHookPlanFromRequest(request);
+    assertExamplePassesPlan(topic, opening, plan, request);
+  }
+});
+
+test("non-Hook prompt behavior unchanged — legacy example remains", () => {
+  const nonHook = buildStoryScriptPrompt(
+    "City derby",
+    "dramatic",
+    30,
+    "story",
+    undefined,
+    getNarrationWordBudget(30),
+  );
+  assert.match(nonHook, /For decades, this rivalry/);
+  assert.doesNotMatch(nonHook, /hookClaimRefs/);
 });
 
 console.log("\nAll story script prompt checks passed.");

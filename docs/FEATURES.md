@@ -1,5 +1,7 @@
 # Features
 
+> **Status:** Partially stale in places (limitations and export notes may predate Timeline Intelligence, Audio Mixer v1, and Export Reliability 6B–6F.1). For canonical ownership and freezes, see [MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md).
+
 Complete reference for every implemented ShortForge Studio feature. Each entry covers **purpose**, **current status**, **known limitations**, and **future improvements**.
 
 For architecture and data flow, see [ARCHITECTURE.md](./ARCHITECTURE.md).

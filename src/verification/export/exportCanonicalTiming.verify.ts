@@ -170,14 +170,16 @@ test("transition overlap on outgoing scene tail", () => {
   assert.ok(frame!.progress > 0 && frame!.progress <= 1);
 });
 
-test("video source time uses trim + scene elapsed", () => {
+test("video source time uses trim + item-local elapsed", () => {
   const scene = manifest.scenes.find((s) => s.media.type === "video")!;
   const { sourceTimeMs, holdLastFrame } = resolveExportVideoSourceTimeMs(scene, 0);
   assert.equal(sourceTimeMs, 1000);
   assert.equal(holdLastFrame, false);
 
+  // Scene duration is 4000ms; trim window is 1000–6000. Past scene end holds the
+  // item-local final frame (trimStart + itemDuration), not the unused trimEnd.
   const nearEnd = resolveExportVideoSourceTimeMs(scene, 5000);
-  assert.equal(nearEnd.sourceTimeMs, 6000);
+  assert.equal(nearEnd.sourceTimeMs, 5000);
   assert.equal(nearEnd.holdLastFrame, true);
 });
 

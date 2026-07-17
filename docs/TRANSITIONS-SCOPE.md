@@ -103,6 +103,16 @@ Visual transition state is a **render-layer concern** derived from global time +
 - `TransitionCard` is an editor control; its label is UI-only, never exported as video content.
 - `applyVoiceoverChanges` may preserve transition items but must not retime them into scene slots.
 
+### Intra-scene media transitions (distinct authority)
+
+Sprint 9 introduces **media-to-media** transitions inside one scene (`FootieScene.mediaTransitions` / `SceneMediaTransitionBoundary`). That track is **not** `TransitionTimelineItem` and must not reuse scene-to-scene editor cards as its persistence model.
+
+- Same frozen systems apply: no scene-duration / audio / caption timing changes.
+- Placement for intra-scene overlays is **head-of-incoming** (see [INTRA_SCENE_TRANSITIONS.md](./INTRA_SCENE_TRANSITIONS.md)).
+- Preview (9B): `composeIntraSceneTransitionPreview` renders intra-scene overlays inside one scene; captions stay visible (unlike scene-to-scene `hideCaptionsDuringTransition`).
+- Export (9C): production ExportManifest **v3 / `"9C"`** freezes `mediaTransitions`; v2 / `"8D"` remains frozen hard-cut backward-compatible.
+- Golden QA / freeze (9D–9D.3): deterministic Preview/Export goldens + local evidence; Sprint 9 **frozen** after operator Chromium Preview / 720p WebM / editor Pass.
+
 ---
 
 ## Implementation checklist (future PRs)

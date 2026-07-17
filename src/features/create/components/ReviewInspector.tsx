@@ -4,8 +4,15 @@ import VoiceSettingsCard from "@/components/VoiceSettingsCard";
 import StudioLoadingState from "@/components/StudioLoadingState";
 import { StudioStatus } from "@/components/studio-status";
 import ScenePlanDevBadge from "@/features/create/components/ScenePlanDevBadge";
+import StoryIntelligencePanel from "@/features/create/components/StoryIntelligencePanel";
 import { StudioPanel, StudioSection } from "@/components/studio-shell";
 import type { StoryCreationBrief } from "@/features/drafts";
+import { hookStyleLabel } from "@/features/hook-engine/presentation";
+import { getHookStrategy } from "@/features/hook-engine/strategies";
+import {
+  isStoryStrategySelection,
+  storyStrategyLabel,
+} from "@/features/retention-story/presentation";
 import type { FootieScript } from "@/features/story/types";
 import {
   studioBadge,
@@ -79,8 +86,22 @@ export default function ReviewInspector({
   scenePlanDevDebug,
   onVoiceApplyControlReady,
 }: ReviewInspectorProps) {
+  const selectedHookStyleLabel = creationBrief?.hookStyle
+    ? hookStyleLabel(creationBrief.hookStyle)
+    : "Auto — Recommended";
+  const selectedStoryStrategyLabel =
+    creationBrief?.formatStrategyId &&
+    isStoryStrategySelection(creationBrief.formatStrategyId) &&
+    creationBrief.formatStrategyId !== "auto"
+      ? storyStrategyLabel(creationBrief.formatStrategyId)
+      : "Auto — Recommended";
+  const resolvedStrategyLabel = creationBrief?.hookPlan?.strategyId
+    ? (getHookStrategy(creationBrief.hookPlan.strategyId)?.label ??
+      creationBrief.hookPlan.strategyId)
+    : null;
+
   return (
-    <div className="flex min-h-0 flex-col gap-4">
+    <div className="flex min-h-0 flex-col gap-4 overflow-visible">
       <StudioSection title="Your brief" description="Settings from Create — carried through storyboard.">
         <StudioPanel>
           <dl className="grid gap-3">
@@ -88,6 +109,23 @@ export default function ReviewInspector({
               <dt className={studioFieldLabel}>Content type</dt>
               <dd>
                 <span className={studioBadge}>{scriptModeLabel}</span>
+              </dd>
+            </div>
+            <div className="space-y-1">
+              <dt className={studioFieldLabel}>Story strategy</dt>
+              <dd>
+                <span className={studioBadge}>{selectedStoryStrategyLabel}</span>
+              </dd>
+            </div>
+            <div className="space-y-1">
+              <dt className={studioFieldLabel}>Hook style</dt>
+              <dd>
+                <span className={studioBadge}>{selectedHookStyleLabel}</span>
+                {resolvedStrategyLabel ? (
+                  <p className={`${studioSubtleText} mt-2`}>
+                    Resolved opening strategy: {resolvedStrategyLabel}
+                  </p>
+                ) : null}
               </dd>
             </div>
             <div className="space-y-1">
@@ -144,6 +182,8 @@ export default function ReviewInspector({
           </details>
         </StudioPanel>
       </StudioSection>
+
+      <StoryIntelligencePanel creationBrief={creationBrief} />
 
       <StudioSection
         id="review-narration"

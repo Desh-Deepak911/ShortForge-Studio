@@ -325,11 +325,13 @@ async function runQa() {
 
   await test("QA-8 voiceover still works", () => {
     const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
+    const inspector = readSrc("src/features/create/components/ReviewInspector.tsx");
     const voiceHook = readSrc("src/hooks/useStoryVoiceoverApply.ts");
     const voiceCard = readSrc("src/components/VoiceSettingsCard.tsx");
 
-    assert.match(reviewFlow, /VoiceSettingsCard/);
-    assert.match(reviewFlow, /variant="review"/);
+    assert.match(reviewFlow, /ReviewInspector/);
+    assert.match(inspector, /VoiceSettingsCard/);
+    assert.match(inspector, /variant="review"/);
     assert.match(voiceHook, /\/api\/generate-voiceover/);
     assert.match(voiceHook, /baseline\.narration\.trim\(\)/);
     assert.doesNotMatch(voiceCard, /exceedsTargetScriptDuration/);

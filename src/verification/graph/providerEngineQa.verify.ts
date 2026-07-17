@@ -357,6 +357,22 @@ async function runQa() {
   loadEnvLocal();
   console.log(`  API-Football key configured: ${isApiFootballKeyConfigured() ? "yes" : "no"}`);
 
+  await test("gate — API-Football uses query-scoped execution session across ResearchCalls", () => {
+    const provider = readSrc("src/features/intelligence/providers/api-football.provider.ts");
+    const context = readSrc(
+      "src/features/intelligence/providers/provider-execution-context.server.ts",
+    );
+    const planExec = readSrc(
+      "src/features/intelligence/providers/provider-execute-research-plan.server.ts",
+    );
+    assert.match(provider, /getOrCreateApiFootballExecutionSession\(query\.id\)/);
+    assert.doesNotMatch(provider, /const state: ApiFootballExecutionState = \{ teams: \[\] \}/);
+    assert.match(context, /apiFootballSessions/);
+    assert.match(context, /getOrCreateApiFootballExecutionSession/);
+    assert.match(planExec, /clearProviderExecutionContext\(query\.id\)/);
+    assert.match(planExec, /finally/);
+  });
+
   await test("gate — research service routes through canonical plan → bundle", () => {
     const researchIndex = readSrc("src/features/research/index.ts");
     const canonical = readSrc(

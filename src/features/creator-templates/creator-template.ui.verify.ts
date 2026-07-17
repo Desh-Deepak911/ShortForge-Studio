@@ -97,11 +97,14 @@ test("no template clears selection via handler", () => {
   assert.match(picker, /onTemplateChange\(""\)/);
 });
 
-test("CreateBriefInspector wires picker to existing template handler", () => {
-  const inspector = readRepo("src/features/create/components/CreateBriefInspector.tsx");
-  assert.match(inspector, /CreatorTemplatePicker/);
-  assert.match(inspector, /onTemplateChange=\{onTemplateChange\}/);
-  assert.doesNotMatch(inspector, /<select[\s\S]*creatorTemplate/);
+test("BriefCanvas Advanced controls wire picker to existing template handler", () => {
+  // Sprint 10H.3 Guided Create: template picker lives under Advanced controls
+  // on BriefCanvas (not CreateBriefInspector).
+  const canvas = readRepo("src/features/create/components/BriefCanvas.tsx");
+  assert.match(canvas, /CreatorTemplatePicker/);
+  assert.match(canvas, /onTemplateChange=\{onTemplateChange\}/);
+  assert.match(canvas, /Advanced controls/);
+  assert.doesNotMatch(canvas, /<select[\s\S]*creatorTemplate/);
 });
 
 test("scriptMode override remains available in create canvas", () => {

@@ -163,8 +163,8 @@ test("image preview path unchanged", () => {
   const media = readSrc("src/features/editor/components/SceneFrameMedia.tsx");
   const previewFrame = readSrc("src/features/preview/components/PreviewFrame.tsx");
   assert.match(media, /SceneFrameImage/);
-  assert.match(media, /sceneHasImage\(scene\)/);
-  assert.match(previewFrame, /sceneHasMedia/);
+  assert.match(media, /resolveActiveSceneMediaRenderView/);
+  assert.match(previewFrame, /resolveActiveSceneMediaRenderView|activeViewIsDrawable/);
   assert.doesNotMatch(previewFrame, /video-render|ffmpeg/i);
 
   const imageScene = baseScene({

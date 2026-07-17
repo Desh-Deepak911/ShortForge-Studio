@@ -31,6 +31,15 @@ import {
 import { createDraft } from "@/features/drafts";
 import type { StoryCreationBrief } from "@/features/drafts/types";
 import { seedDraftSession } from "@/features/drafts/session";
+import {
+  reconcileHookStyleSelection,
+  validateWriteMyOwnOpening,
+  type HookStyleSelection,
+} from "@/features/hook-engine/presentation";
+import {
+  reconcileStoryStrategySelection,
+  type StoryStrategySelection,
+} from "@/features/retention-story/presentation";
 import { consumeGenerateScriptStream } from "@/lib/utils/generateScriptStream";
 import { SAMPLE_TOPICS, WORKFLOW_STEPS } from "@/lib/constants/studioConstants";
 import { studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
@@ -60,6 +69,21 @@ export default function CreateStoryFlow() {
   const [qualityMode, setQualityMode] = useState<QualityMode>("cheap");
   const [sceneCount, setSceneCount] = useState<number>(DEFAULT_SCENE_COUNT);
   const [selectedTemplateId, setSelectedTemplateId] = useState<CreatorTemplateId | "">("");
+  const [storyStrategy, setStoryStrategy] = useState<StoryStrategySelection>("auto");
+  const [storyStrategyCompatibilityNotice, setStoryStrategyCompatibilityNotice] =
+    useState<string | null>(null);
+  const [hookStyle, setHookStyle] = useState<HookStyleSelection>("auto");
+  const [userAuthoredHook, setUserAuthoredHook] = useState("");
+  const [hookStyleCompatibilityNotice, setHookStyleCompatibilityNotice] = useState<
+    string | null
+  >(null);
+  const [factHandlingMode, setFactHandlingMode] = useState<
+    "verified_facts_only" | "creative_premise"
+  >("verified_facts_only");
+  const [premiseDetails, setPremiseDetails] = useState("");
+  const [reliabilityMode, setReliabilityMode] = useState<"flexible" | "precise">(
+    "flexible",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [researchPreview, setResearchPreview] = useState<ResearchPreviewState>(IDLE_RESEARCH_PREVIEW);
@@ -74,11 +98,43 @@ export default function CreateStoryFlow() {
     window.setTimeout(() => topicInputRef.current?.focus(), 320);
   }, []);
 
-  const handleScriptModeChange = useCallback((mode: ScriptMode) => {
-    setScriptMode(mode);
-    setEnableResearch(isResearchDefaultEnabledForScriptMode(mode));
-    resetResearchPreview();
-  }, [resetResearchPreview]);
+  const handleScriptModeChange = useCallback(
+    (mode: ScriptMode) => {
+      setScriptMode(mode);
+      setEnableResearch(isResearchDefaultEnabledForScriptMode(mode));
+      const reconciled = reconcileHookStyleSelection(hookStyle, mode);
+      setHookStyle(reconciled.selection);
+      setHookStyleCompatibilityNotice(reconciled.compatibilityNotice);
+      resetResearchPreview();
+    },
+    [hookStyle, resetResearchPreview],
+  );
+
+  const handleDurationChange = useCallback(
+    (nextDuration: number) => {
+      setDuration(nextDuration);
+      const reconciled = reconcileStoryStrategySelection(storyStrategy, nextDuration);
+      setStoryStrategy(reconciled.selection);
+      setStoryStrategyCompatibilityNotice(reconciled.compatibilityNotice);
+    },
+    [storyStrategy],
+  );
+
+  const handleStoryStrategyChange = useCallback(
+    (selection: StoryStrategySelection) => {
+      setStoryStrategy(selection);
+      setStoryStrategyCompatibilityNotice(null);
+    },
+    [],
+  );
+
+  const handleHookStyleChange = useCallback((selection: HookStyleSelection) => {
+    setHookStyle(selection);
+    setHookStyleCompatibilityNotice(null);
+    if (selection !== "user_written") {
+      setUserAuthoredHook("");
+    }
+  }, []);
 
   const buildCurrentCreationBrief = useCallback((): StoryCreationBrief => {
     return {
@@ -90,8 +146,27 @@ export default function CreateStoryFlow() {
       scriptMode,
       enableResearch,
       ...(context.trim() ? { context: context.trim() } : {}),
+      ...(storyStrategy !== "auto" ? { formatStrategyId: storyStrategy } : {}),
+      ...(hookStyle !== "auto" ? { hookStyle } : {}),
+      factHandlingMode,
+      ...(factHandlingMode === "creative_premise" && premiseDetails.trim()
+        ? { premiseDetails: premiseDetails.trim() }
+        : {}),
     };
-  }, [context, duration, enableResearch, qualityMode, sceneCount, scriptMode, tone, topic]);
+  }, [
+    context,
+    duration,
+    enableResearch,
+    factHandlingMode,
+    hookStyle,
+    premiseDetails,
+    qualityMode,
+    sceneCount,
+    scriptMode,
+    storyStrategy,
+    tone,
+    topic,
+  ]);
 
   const handleTemplateChange = useCallback(
     (templateId: CreatorTemplateId | "") => {
@@ -114,9 +189,20 @@ export default function CreateStoryFlow() {
       setEnableResearch(isResearchDefaultEnabledForScriptMode(nextScriptMode));
       setDuration(nextBrief.duration);
       setSceneCount(nextBrief.sceneCount);
+      // Template must not overwrite a compatible explicit Hook Style; reset only if incompatible.
+      const reconciledHook = reconcileHookStyleSelection(hookStyle, nextScriptMode);
+      setHookStyle(reconciledHook.selection);
+      setHookStyleCompatibilityNotice(reconciledHook.compatibilityNotice);
+      // Duration from template may invalidate explicit Story Strategy — reset to Auto.
+      const reconciledStrategy = reconcileStoryStrategySelection(
+        storyStrategy,
+        nextBrief.duration,
+      );
+      setStoryStrategy(reconciledStrategy.selection);
+      setStoryStrategyCompatibilityNotice(reconciledStrategy.compatibilityNotice);
       resetResearchPreview();
     },
-    [buildCurrentCreationBrief, resetResearchPreview],
+    [buildCurrentCreationBrief, hookStyle, resetResearchPreview, storyStrategy],
   );
 
   const runIntelligenceResearch = useCallback(async () => {
@@ -237,6 +323,14 @@ export default function CreateStoryFlow() {
       return;
     }
 
+    if (hookStyle === "user_written") {
+      const opening = validateWriteMyOwnOpening(userAuthoredHook);
+      if (!opening.ok) {
+        setError(opening.message);
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 
@@ -249,6 +343,8 @@ export default function CreateStoryFlow() {
         buildCurrentCreationBrief(),
         selectedTemplate,
       );
+      const writeMyOwn =
+        hookStyle === "user_written" ? validateWriteMyOwnOpening(userAuthoredHook) : null;
 
       const response = await fetch("/api/generate-script", {
         method: "POST",
@@ -268,6 +364,16 @@ export default function CreateStoryFlow() {
           ...(creationBrief.templateId ? { templateId: creationBrief.templateId } : {}),
           ...(creationBrief.templatePromptHints
             ? { templatePromptHints: creationBrief.templatePromptHints }
+            : {}),
+          ...(storyStrategy !== "auto" ? { formatStrategyId: storyStrategy } : {}),
+          ...(hookStyle !== "auto" ? { hookStyle } : {}),
+          ...(writeMyOwn?.ok ? { userAuthoredHook: writeMyOwn.text } : {}),
+          factHandlingMode,
+          ...(factHandlingMode === "creative_premise" && premiseDetails.trim()
+            ? { premiseDetails: premiseDetails.trim() }
+            : {}),
+          ...(reliabilityMode !== "flexible"
+            ? { creationReliabilityMode: reliabilityMode }
             : {}),
         }),
       });
@@ -298,13 +404,27 @@ export default function CreateStoryFlow() {
         script: nextScript,
         creationBrief: {
           ...creationBrief,
-          ...(data.generationContext
-            ? { context: data.generationContext }
-            : context.trim()
-              ? { context: context.trim() }
-              : {}),
+          // Persist original creator notes only — never overwrite with
+          // assembled/generated research prose (Sprint 10H.4A).
+          ...(context.trim() ? { context: context.trim() } : {}),
           ...(data.researchApplied ? { researchApplied: true } : {}),
           ...(data.researchWarning ? { researchWarning: data.researchWarning } : {}),
+          ...(data.hookPlan ? { hookPlan: data.hookPlan } : {}),
+          ...(data.retentionPlan ? { retentionPlan: data.retentionPlan } : {}),
+          ...(data.retentionValidation
+            ? { retentionValidation: data.retentionValidation }
+            : {}),
+          ...(data.generationDisposition
+            ? { generationDisposition: data.generationDisposition }
+            : {}),
+          // Rewrite evidence lives on linked retentionValidation (10G.1) — do not
+          // persist a standalone retentionRewriteUsed boolean as authority.
+          ...(storyStrategy !== "auto" ? { formatStrategyId: storyStrategy } : {}),
+          ...(hookStyle !== "auto" ? { hookStyle } : {}),
+          factHandlingMode,
+          ...(factHandlingMode === "creative_premise" && premiseDetails.trim()
+            ? { premiseDetails: premiseDetails.trim() }
+            : {}),
         },
         prompt: topic.trim(),
         pipelineStage: "script_review",
@@ -376,11 +496,34 @@ export default function CreateStoryFlow() {
               tone={tone}
               onToneChange={setTone}
               duration={duration}
-              onDurationChange={setDuration}
+              onDurationChange={handleDurationChange}
+              storyStrategy={storyStrategy}
+              onStoryStrategyChange={handleStoryStrategyChange}
+              storyStrategyCompatibilityNotice={storyStrategyCompatibilityNotice}
+              hookStyle={hookStyle}
+              onHookStyleChange={handleHookStyleChange}
+              userAuthoredHook={userAuthoredHook}
+              onUserAuthoredHookChange={setUserAuthoredHook}
+              selectedTemplateId={selectedTemplateId}
+              onTemplateChange={handleTemplateChange}
+              sceneCount={sceneCount}
+              enableResearch={enableResearch}
+              factHandlingMode={factHandlingMode}
+              onFactHandlingModeChange={setFactHandlingMode}
+              premiseDetails={premiseDetails}
+              onPremiseDetailsChange={setPremiseDetails}
+              reliabilityMode={reliabilityMode}
+              onReliabilityModeChange={setReliabilityMode}
+              hookStyleCompatibilityNotice={hookStyleCompatibilityNotice}
               sampleTopics={SAMPLE_TOPICS}
               loading={loading}
               error={error}
               onClearError={() => setError(null)}
+              onUseAutoHook={() => {
+                setHookStyle("auto");
+                setUserAuthoredHook("");
+                setHookStyleCompatibilityNotice(null);
+              }}
               onSubmit={() => {
                 void generateScript();
               }}
@@ -407,11 +550,28 @@ export default function CreateStoryFlow() {
             sceneCount={sceneCount}
             onSceneCountChange={setSceneCount}
             duration={duration}
-            selectedTemplateId={selectedTemplateId}
-            onTemplateChange={handleTemplateChange}
             loading={loading}
             topic={topic}
             scriptMode={scriptMode}
+            tone={tone}
+            factHandlingMode={factHandlingMode}
+            premiseDetails={premiseDetails}
+            storyStrategy={storyStrategy}
+            hookStyle={hookStyle}
+            userAuthoredHook={userAuthoredHook}
+            reliabilityMode={reliabilityMode}
+            onApplyRecommendedSettings={(next) => {
+              setQualityMode(next.qualityMode);
+              setStoryStrategy(next.storyStrategy);
+              setStoryStrategyCompatibilityNotice(null);
+              setFactHandlingMode(next.factHandlingMode);
+              setHookStyle(next.hookStyle);
+              setHookStyleCompatibilityNotice(null);
+              if (next.hookStyle !== "user_written") {
+                setUserAuthoredHook("");
+              }
+              setReliabilityMode(next.reliabilityMode);
+            }}
             researchPreview={researchPreview}
             entityPreview={researchPreview.entityPreview}
             onPreviewResearch={() => {

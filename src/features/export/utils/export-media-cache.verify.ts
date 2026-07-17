@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  buildExportMediaCacheKey,
   createExportMediaCache,
   disposeExportMediaCache,
   getExportCachedImage,
@@ -117,8 +118,9 @@ async function run() {
 
     assert.equal(asset?.kind, "image");
     assert.equal(asset?.status, "ready");
-    assert.equal(cache.images.has(scene.id), true);
-    assert.equal(cache.videos.has(scene.id), false);
+    const key = buildExportMediaCacheKey(scene.id, "__scene__");
+    assert.equal(cache.images.has(key), true);
+    assert.equal(cache.videos.has(key), false);
     assert.equal(getExportSceneMediaAsset(cache, scene)?.kind, "image");
     assert.ok(getExportCachedImage(cache, scene.id));
   });
@@ -146,8 +148,9 @@ async function run() {
     }
     assert.equal(asset.durationMs, 5000);
     assert.equal(asset.muted, true);
-    assert.equal(cache.videos.has(scene.id), true);
-    assert.equal(cache.images.has(scene.id), false);
+    const key = buildExportMediaCacheKey(scene.id, "__scene__");
+    assert.equal(cache.videos.has(key), true);
+    assert.equal(cache.images.has(key), false);
     assert.ok(getExportCachedVideo(cache, scene.id));
   });
 
@@ -245,8 +248,9 @@ async function run() {
     });
 
     assert.equal(asset?.kind, "image");
-    assert.equal(cache.images.get(scene.id)?.src, "https://example.com/legacy.jpg");
-    // Legacy Map shape preserved for renderer compatibility.
+    const key = buildExportMediaCacheKey(scene.id, "__scene__");
+    assert.equal(cache.images.get(key)?.src, "https://example.com/legacy.jpg");
+    // Map shape preserved for renderer compatibility (keys are sceneId+mediaItemId).
     assert.equal(cache.images instanceof Map, true);
     assert.equal(typeof cache.images.get, "function");
   });
@@ -273,7 +277,10 @@ async function run() {
 
     assert.equal(asset?.kind, "image");
     assert.equal(asset?.url, "https://example.com/canonical.jpg");
-    assert.equal(cache.images.get(scene.id)?.src, "https://example.com/canonical.jpg");
+    assert.equal(
+      cache.images.get(buildExportMediaCacheKey(scene.id, "__scene__"))?.src,
+      "https://example.com/canonical.jpg",
+    );
   });
 
   await test("scene.media video wins over stale scene.image in cache preload", async () => {
@@ -299,8 +306,9 @@ async function run() {
 
     assert.equal(asset?.kind, "video");
     assert.equal(asset?.url, "blob:canonical");
-    assert.equal(cache.images.has(scene.id), false);
-    assert.equal(cache.videos.has(scene.id), true);
+    const key = buildExportMediaCacheKey(scene.id, "__scene__");
+    assert.equal(cache.images.has(key), false);
+    assert.equal(cache.videos.has(key), true);
   });
 
   await test("Image load failure is soft and does not throw", async () => {

@@ -58,6 +58,18 @@ export interface ApiFootballExecutionState {
   fixture?: FootballResearchFixture;
 }
 
+/**
+ * Optional network doubles for Sprint 7E.4A deterministic QA.
+ * Production callers leave this unset — real @/lib/football clients are used.
+ */
+export interface ApiFootballOperationAdapters {
+  readonly searchTeams?: typeof searchTeams;
+  readonly searchFixturesByTeam?: typeof searchFixturesByTeam;
+  readonly getFixtureStatistics?: typeof getFixtureStatistics;
+  readonly getFixtureEvents?: typeof getFixtureEvents;
+  readonly getFixtureLineups?: typeof getFixtureLineups;
+}
+
 export interface ApiFootballOperationOutput {
   status: IntelligenceResearchResultStatus;
   facts: IntelligenceFact[];
@@ -275,13 +287,15 @@ async function executeTeamSearch(
   params: Record<string, string | number | boolean | null | undefined>,
   state: ApiFootballExecutionState,
   query: ProviderQuery,
+  adapters?: ApiFootballOperationAdapters,
 ): Promise<ApiFootballOperationOutput> {
   const queryText = readStringParam(params, "query");
   if (!queryText) {
     return emptyOutput("failed", ["teamSearch requires a query."]);
   }
 
-  const teamsResult = await searchTeams(queryText);
+  const search = adapters?.searchTeams ?? searchTeams;
+  const teamsResult = await search(queryText);
   const team = teamsResult?.[0]?.team;
   if (!team) {
     return emptyOutput("partial", [`No matching teams found for "${queryText}".`]);
@@ -327,6 +341,7 @@ async function executeTeamSearch(
 async function executeFixtureSearch(
   params: Record<string, string | number | boolean | null | undefined>,
   state: ApiFootballExecutionState,
+  adapters?: ApiFootballOperationAdapters,
 ): Promise<ApiFootballOperationOutput> {
   const direction = readStringParam(params, "direction") === "next" ? "next" : "last";
   const teamIds = state.teams.map((team) => team.id);
@@ -335,8 +350,9 @@ async function executeFixtureSearch(
     return emptyOutput("failed", ["fixtureSearch requires resolved teams from teamSearch."]);
   }
 
+  const searchFixtures = adapters?.searchFixturesByTeam ?? searchFixturesByTeam;
   const fixtures =
-    (await searchFixturesByTeam(teamIds[0]!, {
+    (await searchFixtures(teamIds[0]!, {
       [direction]: direction === "next" ? 3 : 1,
     })) ?? [];
   const selectedFixture = pickBestFixture(fixtures, teamIds);
@@ -366,13 +382,15 @@ async function executeFixtureSearch(
 async function executeFixtureStats(
   params: Record<string, string | number | boolean | null | undefined>,
   state: ApiFootballExecutionState,
+  adapters?: ApiFootballOperationAdapters,
 ): Promise<ApiFootballOperationOutput> {
   const fixtureId = readNumberParam(params, "fixtureId") ?? state.fixtureId;
   if (fixtureId == null) {
     return emptyOutput("failed", ["fixtureStats requires a resolved fixtureId."]);
   }
 
-  const statisticsResult = await getFixtureStatistics(fixtureId);
+  const fetchStats = adapters?.getFixtureStatistics ?? getFixtureStatistics;
+  const statisticsResult = await fetchStats(fixtureId);
   if (!statisticsResult?.length) {
     return emptyOutput("partial", ["Fixture statistics unavailable from API-Football."]);
   }
@@ -398,13 +416,15 @@ async function executeFixtureStats(
 async function executeFixtureEvents(
   params: Record<string, string | number | boolean | null | undefined>,
   state: ApiFootballExecutionState,
+  adapters?: ApiFootballOperationAdapters,
 ): Promise<ApiFootballOperationOutput> {
   const fixtureId = readNumberParam(params, "fixtureId") ?? state.fixtureId;
   if (fixtureId == null) {
     return emptyOutput("failed", ["fixtureEvents requires a resolved fixtureId."]);
   }
 
-  const eventsResult = await getFixtureEvents(fixtureId);
+  const fetchEvents = adapters?.getFixtureEvents ?? getFixtureEvents;
+  const eventsResult = await fetchEvents(fixtureId);
   if (!eventsResult?.length) {
     return emptyOutput("partial", ["Fixture events unavailable from API-Football."]);
   }
@@ -438,13 +458,15 @@ async function executeFixtureEvents(
 async function executeFixtureLineups(
   params: Record<string, string | number | boolean | null | undefined>,
   state: ApiFootballExecutionState,
+  adapters?: ApiFootballOperationAdapters,
 ): Promise<ApiFootballOperationOutput> {
   const fixtureId = readNumberParam(params, "fixtureId") ?? state.fixtureId;
   if (fixtureId == null) {
     return emptyOutput("failed", ["fixtureLineups requires a resolved fixtureId."]);
   }
 
-  const lineupsResult = await getFixtureLineups(fixtureId);
+  const fetchLineups = adapters?.getFixtureLineups ?? getFixtureLineups;
+  const lineupsResult = await fetchLineups(fixtureId);
   if (!lineupsResult?.length) {
     return emptyOutput("partial", ["Fixture lineups unavailable from API-Football."]);
   }
@@ -513,6 +535,7 @@ export async function executeApiFootballOperation(
   params: Record<string, string | number | boolean | null | undefined>,
   query: ProviderQuery,
   state: ApiFootballExecutionState,
+  adapters?: ApiFootballOperationAdapters,
 ): Promise<ApiFootballOperationOutput> {
   switch (operation) {
     case "topScorers":
@@ -520,15 +543,15 @@ export async function executeApiFootballOperation(
     case "playerSearch":
       return executePlayerSearch(params, query);
     case "teamSearch":
-      return executeTeamSearch(params, state, query);
+      return executeTeamSearch(params, state, query, adapters);
     case "fixtureSearch":
-      return executeFixtureSearch(params, state);
+      return executeFixtureSearch(params, state, adapters);
     case "fixtureStats":
-      return executeFixtureStats(params, state);
+      return executeFixtureStats(params, state, adapters);
     case "fixtureEvents":
-      return executeFixtureEvents(params, state);
+      return executeFixtureEvents(params, state, adapters);
     case "fixtureLineups":
-      return executeFixtureLineups(params, state);
+      return executeFixtureLineups(params, state, adapters);
     case "standings":
       return executeStandings(params);
   }

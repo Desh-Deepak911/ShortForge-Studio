@@ -90,6 +90,11 @@ export interface SceneVideoInspectorProps {
   onResetFraming?: () => void;
   onReposition?: () => void;
   repositionActive?: boolean;
+  /**
+   * When true, hides Replace/Remove source controls (per-media Inspector).
+   * Trim, poster, and framing remain available.
+   */
+  hideSourceActions?: boolean;
 }
 
 function InspectorSubsection({
@@ -147,6 +152,7 @@ export default function SceneVideoInspector({
   onResetFraming,
   onReposition,
   repositionActive = false,
+  hideSourceActions = false,
 }: SceneVideoInspectorProps) {
   const trimPreview = useVideoTrimPreviewOptional();
   const framing = resolveSceneMediaFraming({ media }, { media });
@@ -848,33 +854,35 @@ export default function SceneVideoInspector({
         </div>
       </InspectorSubsection>
 
-      <div className="flex flex-wrap gap-2">
-        <label className={studioUploadButton} data-scene-video-replace="true">
-          <ImagePlus className="h-3.5 w-3.5" />
-          Replace media
-          <input
-            type="file"
-            accept={SCENE_MEDIA_FILE_ACCEPT}
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                handleReplaceMedia(file);
-              }
-              event.target.value = "";
-            }}
-          />
-        </label>
-        <button
-          type="button"
-          onClick={handleRemoveMedia}
-          className={studioDestructiveButton}
-          data-scene-video-remove="true"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Remove media
-        </button>
-      </div>
+      {hideSourceActions ? null : (
+        <div className="flex flex-wrap gap-2">
+          <label className={studioUploadButton} data-scene-video-replace="true">
+            <ImagePlus className="h-3.5 w-3.5" />
+            Replace media
+            <input
+              type="file"
+              accept={SCENE_MEDIA_FILE_ACCEPT}
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  handleReplaceMedia(file);
+                }
+                event.target.value = "";
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleRemoveMedia}
+            className={studioDestructiveButton}
+            data-scene-video-remove="true"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Remove media
+          </button>
+        </div>
+      )}
 
       <p className={`${studioSubtleText} text-[11px] leading-snug`}>
         {SCENE_VIDEO_INSPECTOR_SAFETY_COPY}

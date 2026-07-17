@@ -10,9 +10,11 @@ import {
 import {
   executeApiFootballOperation,
   mergeApiFootballOperationOutputs,
-  type ApiFootballExecutionState,
 } from "./api-football-operations.engine";
-import { peekProviderExecutionContext } from "./provider-execution-context.server";
+import {
+  getOrCreateApiFootballExecutionSession,
+  peekProviderExecutionContext,
+} from "./provider-execution-context.server";
 import type { ResearchProvider } from "./provider.interface";
 import { providerRegistry } from "./provider-registry";
 import {
@@ -207,7 +209,8 @@ export class ApiFootballProvider implements ResearchProvider {
         };
       }
 
-      const state: ApiFootballExecutionState = { teams: [] };
+      // Query-scoped session — accumulates teams/fixtureId across per-call executes.
+      const state = getOrCreateApiFootballExecutionSession(query.id);
       const operationOutputs = [];
       const executedOperations: string[] = [];
       const devRaw: Record<string, unknown> = {};

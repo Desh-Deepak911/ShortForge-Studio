@@ -9,6 +9,8 @@ import CaptionWorkspace from "@/features/editor/components/caption-workspace/Cap
 import CreatorAssetStudio from "@/features/editor/components/creator-asset-studio/CreatorAssetStudio";
 import SceneImageInspector from "@/features/editor/components/SceneImageInspector";
 import MediaMotionInspectorPanel from "@/features/editor/components/media/MediaMotionInspectorPanel";
+import SceneMediaItemInspector from "@/features/editor/components/media/SceneMediaItemInspector";
+import SceneMediaTransitionInspector from "@/features/editor/components/media/SceneMediaTransitionInspector";
 import SceneVideoInspector from "@/features/editor/components/media/SceneVideoInspector";
 import TransitionCard from "@/features/editor/components/TransitionCard";
 import SmartEditImageAction, {
@@ -21,6 +23,18 @@ import { writeSceneGroupOpenState } from "@/features/editor/inspector/inspector-
 import { useSceneInspectorGroupAccordion } from "@/features/editor/inspector/useSceneInspectorGroupAccordion";
 import { useEditorSelection } from "@/features/editor/selection";
 import { resolveSafeSceneIndex } from "@/features/editor/selection/selection.utils";
+import {
+  isSelectableSceneMediaItemId,
+  resolveProjectedSceneMediaWindows,
+} from "@/features/scene-media-timeline";
+import { isSelectableSceneMediaTransitionPair } from "@/features/scene-media-transitions";
+import { SelectionPhase } from "@/features/editor/selection/selection.types";
+import {
+  formatSceneMediaItemOrdinal,
+  SceneMediaAddAnotherImageButton,
+} from "@/features/timeline-editor/scene-media/scene-media-append-affordance";
+import { useOptionalSceneMediaImageAppendContext } from "@/features/timeline-editor/scene-media/SceneMediaImageAppendContext";
+import { useTimelineExclusiveInteractionLocked } from "@/features/timeline-editor/scene-media/useTimelineExclusiveInteraction";
 import {
   buildMediaMotionPatch,
   buildResetMediaMotionPatch,
@@ -154,7 +168,16 @@ export default function StudioSceneInspector({
   script,
   onScriptChange,
 }: StudioSceneInspectorProps) {
-  const { selectedSceneIndex, inspectorImageEditing, selectImage } = useEditorSelection();
+  const selection = useEditorSelection();
+  const {
+    selectedSceneIndex,
+    inspectorImageEditing,
+    selectImage,
+    selectedMediaItemId,
+    isSceneMediaItemSelected,
+    selectedMediaTransition,
+    isSceneMediaTransitionSelected,
+  } = selection;
   const { assetPlanning, creatorAssetStudioVisible } = useInspectorContext();
   const generalGroup = useSceneInspectorGroupAccordion("general");
   const { open: imageGroupOpen, onOpenChange: onImageGroupOpenChange, setOpen: setImageGroupOpen } =
@@ -168,6 +191,47 @@ export default function StudioSceneInspector({
   const timelineItems = ensureTimelineItems(scenes, script.timelineItems);
   const safeIndex = resolveSafeSceneIndex(scenes, selectedSceneIndex);
   const scene = safeIndex >= 0 ? scenes[safeIndex] : null;
+  const appendApi = useOptionalSceneMediaImageAppendContext();
+  const showMediaItemInspector = Boolean(
+    scene &&
+      isSceneMediaItemSelected &&
+      selectedMediaItemId &&
+      isSelectableSceneMediaItemId(scene, selectedMediaItemId),
+  );
+  const showMediaTransitionInspector = Boolean(
+    scene &&
+      isSceneMediaTransitionSelected &&
+      selectedMediaTransition &&
+      isSelectableSceneMediaTransitionPair(
+        scene,
+        selectedMediaTransition.fromItemId,
+        selectedMediaTransition.toItemId,
+      ),
+  );
+
+  // Auto-reveal Image/Media when a transition boundary is selected (Sprint 9D.2).
+  useEffect(() => {
+    if (!showMediaTransitionInspector) {
+      return;
+    }
+    onImageGroupOpenChange(true);
+  }, [
+    showMediaTransitionInspector,
+    selectedMediaTransition?.fromItemId,
+    selectedMediaTransition?.toItemId,
+    onImageGroupOpenChange,
+  ]);
+  const mediaWindows = scene ? resolveProjectedSceneMediaWindows(scene) : [];
+  const selectedMediaIndex = selectedMediaItemId
+    ? mediaWindows.findIndex((window) => window.itemId === selectedMediaItemId)
+    : -1;
+  const mediaOrdinalLabel = formatSceneMediaItemOrdinal(
+    selectedMediaIndex >= 0 ? selectedMediaIndex : 0,
+    mediaWindows.length,
+  );
+  const exclusiveInteractionLocked = useTimelineExclusiveInteractionLocked();
+  const appendInteractionLocked =
+    selection.phase === SelectionPhase.PlaybackLocked || exclusiveInteractionLocked;
 
   const commitPresentationPatch = useCallback(
     (targetSceneId: string, patch: ScenePresentationPatch) => {
@@ -516,120 +580,162 @@ export default function StudioSceneInspector({
           defaultOpen
           open={inspectorImageEditing ? true : undefined}
         >
-          {isVideoMedia && sceneMedia?.type === "video" ? (
-            <SceneVideoInspector
-              media={sceneMedia}
-              sceneId={scene.id}
-              sceneDurationMs={
-                scene.durationMs ??
-                (typeof scene.duration === "number" && scene.duration > 0
-                  ? Math.round(scene.duration * 1000)
-                  : 0)
-              }
-              onReplace={(file) => void handleMediaUpload(scene.id, file)}
-              onRemove={() => removeMedia(scene.id)}
-              onSetPoster={(posterTimeMs) => handleSetPoster(scene.id, posterTimeMs)}
-              onResetPoster={() => handleResetPoster(scene.id)}
-              onApplyTrim={(trim) => handleApplyTrim(scene.id, trim)}
-              onResetTrim={() => handleResetTrim(scene.id)}
-              repositionActive={inspectorImageEditing}
-              onReposition={() => selectImage(scene.id)}
-              onResetFraming={() => handleImageReset(scene.id)}
-              onFramingChange={(patch) => {
-                handleImageTransformChange({
-                  ...(patch.fitMode !== undefined ? { fitMode: patch.fitMode } : {}),
-                  ...(patch.positionX !== undefined ? { x: patch.positionX } : {}),
-                  ...(patch.positionY !== undefined ? { y: patch.positionY } : {}),
-                  ...(patch.zoom !== undefined ? { scale: patch.zoom } : {}),
-                  ...(patch.rotationDeg !== undefined ? { rotation: patch.rotationDeg } : {}),
-                });
-              }}
-            />
-          ) : hasImageMedia ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                <SmartEditImageAction hasImage buttonOnly sceneId={scene.id} />
-                <label className={studioUploadButton}>
-                  <ImagePlus className="h-3.5 w-3.5" />
-                  Replace
-                  <input
-                    type="file"
-                    accept={SCENE_MEDIA_FILE_ACCEPT}
-                    className="hidden"
-                    onChange={(event) => {
-                      void handleMediaUpload(scene.id, event.target.files?.[0] ?? null);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => removeMedia(scene.id)}
-                  className={studioDestructiveButton}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Remove
-                </button>
-              </div>
-              <p className={studioSubtleText}>{SMART_EDIT_HAS_IMAGE_COPY}</p>
+          {mediaWindows.length > 0 ? (
+            <div
+              className="mb-2 flex flex-wrap items-center justify-between gap-2"
+              data-scene-media-inspector-context
+            >
+              <p className="text-[11px] font-medium text-foreground/85" data-scene-media-ordinal>
+                Scene {safeIndex + 1} · {mediaOrdinalLabel}
+              </p>
+              {appendApi ? (
+                <SceneMediaAddAnotherImageButton
+                  scene={scene}
+                  appendApi={appendApi}
+                  disabled={appendInteractionLocked}
+                  className={studioUploadButton}
+                  label="Add another image"
+                />
+              ) : null}
             </div>
+          ) : null}
+          {showMediaTransitionInspector && selectedMediaTransition ? (
+            <SceneMediaTransitionInspector
+              script={script}
+              scene={scene}
+              fromItemId={selectedMediaTransition.fromItemId}
+              toItemId={selectedMediaTransition.toItemId}
+              onScriptChange={onScriptChange}
+            />
+          ) : showMediaItemInspector && selectedMediaItemId ? (
+            <SceneMediaItemInspector
+              script={script}
+              scene={scene}
+              mediaItemId={selectedMediaItemId}
+              onScriptChange={onScriptChange}
+            />
           ) : (
-            <div className="space-y-3">
-              <label className={studioUploadZone}>
-                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-surface-elevated/50 ring-1 ring-border/25">
-                  <ImagePlus className="h-4 w-4 text-muted" />
-                </div>
-                <p className="text-sm font-medium text-foreground/85">Upload media</p>
-                <p className="mt-1 text-xs text-muted">
-                  Portrait 9:16 · Images or MP4, WebM, MOV clips
-                </p>
-                <input
-                  type="file"
-                  accept={SCENE_MEDIA_FILE_ACCEPT}
-                  className="hidden"
-                  onChange={(event) => {
-                    void handleMediaUpload(scene.id, event.target.files?.[0] ?? null);
-                    event.target.value = "";
+            <>
+              {isVideoMedia && sceneMedia?.type === "video" ? (
+                <SceneVideoInspector
+                  media={sceneMedia}
+                  sceneId={scene.id}
+                  sceneDurationMs={
+                    scene.durationMs ??
+                    (typeof scene.duration === "number" && scene.duration > 0
+                      ? Math.round(scene.duration * 1000)
+                      : 0)
+                  }
+                  onReplace={(file) => void handleMediaUpload(scene.id, file)}
+                  onRemove={() => removeMedia(scene.id)}
+                  onSetPoster={(posterTimeMs) => handleSetPoster(scene.id, posterTimeMs)}
+                  onResetPoster={() => handleResetPoster(scene.id)}
+                  onApplyTrim={(trim) => handleApplyTrim(scene.id, trim)}
+                  onResetTrim={() => handleResetTrim(scene.id)}
+                  repositionActive={inspectorImageEditing}
+                  onReposition={() => selectImage(scene.id)}
+                  onResetFraming={() => handleImageReset(scene.id)}
+                  onFramingChange={(patch) => {
+                    handleImageTransformChange({
+                      ...(patch.fitMode !== undefined ? { fitMode: patch.fitMode } : {}),
+                      ...(patch.positionX !== undefined ? { x: patch.positionX } : {}),
+                      ...(patch.positionY !== undefined ? { y: patch.positionY } : {}),
+                      ...(patch.zoom !== undefined ? { scale: patch.zoom } : {}),
+                      ...(patch.rotationDeg !== undefined ? { rotation: patch.rotationDeg } : {}),
+                    });
                   }}
                 />
-              </label>
-              <p className={studioSubtleText}>{SCENE_MEDIA_UPLOAD_HELPER_COPY}</p>
-              <SmartEditImageAction hasImage={false} sceneId={scene.id} />
-            </div>
+              ) : hasImageMedia ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <SmartEditImageAction hasImage buttonOnly sceneId={scene.id} />
+                    <label className={studioUploadButton}>
+                      <ImagePlus className="h-3.5 w-3.5" />
+                      Replace current image
+                      <input
+                        type="file"
+                        accept={SCENE_MEDIA_FILE_ACCEPT}
+                        className="hidden"
+                        data-scene-media-replace-current="true"
+                        onChange={(event) => {
+                          void handleMediaUpload(scene.id, event.target.files?.[0] ?? null);
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeMedia(scene.id)}
+                      className={studioDestructiveButton}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </button>
+                  </div>
+                  <p className={studioSubtleText}>
+                    Replace current image changes only this scene’s current media. Add another
+                    image appends a new timeline item. {SMART_EDIT_HAS_IMAGE_COPY}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className={studioUploadZone}>
+                    <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-surface-elevated/50 ring-1 ring-border/25">
+                      <ImagePlus className="h-4 w-4 text-muted" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground/85">Upload media</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Portrait 9:16 · Images or MP4, WebM, MOV clips
+                    </p>
+                    <input
+                      type="file"
+                      accept={SCENE_MEDIA_FILE_ACCEPT}
+                      className="hidden"
+                      onChange={(event) => {
+                        void handleMediaUpload(scene.id, event.target.files?.[0] ?? null);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <p className={studioSubtleText}>{SCENE_MEDIA_UPLOAD_HELPER_COPY}</p>
+                  <SmartEditImageAction hasImage={false} sceneId={scene.id} />
+                </div>
+              )}
+
+              {uploadError ? (
+                <p className="mt-2 text-[11px] leading-snug text-amber-100/90" role="status">
+                  {uploadError}
+                </p>
+              ) : null}
+
+              {!isVideoMedia && sceneImage ? (
+                <SceneImageInspector
+                  variant="standalone"
+                  showHeader={false}
+                  hideMotion
+                  showSmartEdit={false}
+                  sceneId={scene.id}
+                  controlId={`inspector-scene-image-zoom-${scene.id}`}
+                  scale={sceneImage.scale}
+                  positionX={sceneImage.x}
+                  positionY={sceneImage.y}
+                  rotationDeg={sceneImage.rotation ?? 0}
+                  fitMode={sceneImage.fitMode}
+                  imageMotion={sceneImage.imageMotion}
+                  onScaleChange={(scale) => handleImageTransformChange({ scale })}
+                  onFitModeChange={handleFitModeChange}
+                  onPositionChange={(position) => handleImageTransformChange(position)}
+                  onReposition={() => selectImage(scene.id)}
+                  onReset={() => handleImageReset(scene.id)}
+                />
+              ) : !isVideoMedia ? (
+                <p className={studioSubtleText}>Add media to adjust frame, zoom, and position.</p>
+              ) : null}
+            </>
           )}
-
-          {uploadError ? (
-            <p className="mt-2 text-[11px] leading-snug text-amber-100/90" role="status">
-              {uploadError}
-            </p>
-          ) : null}
-
-          {!isVideoMedia && sceneImage ? (
-            <SceneImageInspector
-              variant="standalone"
-              showHeader={false}
-              hideMotion
-              showSmartEdit={false}
-              sceneId={scene.id}
-              controlId={`inspector-scene-image-zoom-${scene.id}`}
-              scale={sceneImage.scale}
-              positionX={sceneImage.x}
-              positionY={sceneImage.y}
-              rotationDeg={sceneImage.rotation ?? 0}
-              fitMode={sceneImage.fitMode}
-              imageMotion={sceneImage.imageMotion}
-              onScaleChange={(scale) => handleImageTransformChange({ scale })}
-              onFitModeChange={handleFitModeChange}
-              onPositionChange={(position) => handleImageTransformChange(position)}
-              onReposition={() => selectImage(scene.id)}
-              onReset={() => handleImageReset(scene.id)}
-            />
-          ) : !isVideoMedia ? (
-            <p className={studioSubtleText}>Add media to adjust frame, zoom, and position.</p>
-          ) : null}
         </InspectorSection>
 
-        {sceneHasMedia(scene) ? (
+        {!showMediaItemInspector && sceneHasMedia(scene) ? (
           <InspectorSection
             icon={MoveHorizontal}
             title="Motion"

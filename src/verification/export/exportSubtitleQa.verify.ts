@@ -585,11 +585,16 @@ test("preview and export subtitle layout stays visually consistent", () => {
 
 test("voiceover, subtitle chunk, and scene timing paths are unchanged by subtitle styling", () => {
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
+  const prepareRequest = readSrc("src/features/export/domain/prepare-export-request.ts");
+  const renderExport = readSrc("src/features/export/runtime/render-export.ts");
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const sceneUtils = readSrc("src/features/story/utils/scene.utils.ts");
 
-  assert.match(videoRender, /buildAudioMixFromStory\(exportScript\)/);
-  assert.match(videoRender, /audioMix\.voiceover/);
+  // Manifest-owned audio lifecycle (retired: buildAudioMixFromStory(exportScript) in video-render).
+  assert.match(prepareRequest, /buildAudioMixFromStory\(preparedStory\.story\)/);
+  assert.match(videoRender, /prepareExportRequest/);
+  assert.match(videoRender, /exportFootieShortFromManifest/);
+  assert.match(renderExport, /manifest\.audio/);
   assert.match(videoRender, /resolveTimelineSceneFrame/);
   assert.match(videoRender, /resolveExportSubtitleDisplayFromTimeline/);
   assert.doesNotMatch(canvasUtils, /voiceover/);

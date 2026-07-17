@@ -39,7 +39,17 @@ export async function consumeGenerateScriptStream(
       }
 
       if (event.type === "error") {
-        throw new Error(event.error);
+        return {
+          success: false,
+          error: event.error,
+          ...(event.hookPlan ? { hookPlan: event.hookPlan } : {}),
+          ...(event.hookDiagnostics
+            ? { hookDiagnostics: event.hookDiagnostics }
+            : {}),
+          ...(event.retentionDiagnostics
+            ? { retentionDiagnostics: event.retentionDiagnostics }
+            : {}),
+        };
       }
 
       if (event.type === "complete") {
@@ -55,6 +65,11 @@ export async function consumeGenerateScriptStream(
           scriptLengthWarning: event.scriptLengthWarning,
           scenePlanDevDebug: event.scenePlanDevDebug,
           assetPlanningSnapshot: event.assetPlanningSnapshot,
+          hookPlan: event.hookPlan,
+          hookDiagnostics: event.hookDiagnostics,
+          retentionPlan: event.retentionPlan,
+          retentionValidation: event.retentionValidation,
+          retentionDiagnostics: event.retentionDiagnostics,
           error: event.error,
           usedFallback: event.usedFallback,
         };

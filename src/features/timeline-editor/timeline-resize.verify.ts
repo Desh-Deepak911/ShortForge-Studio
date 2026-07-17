@@ -346,7 +346,10 @@ test("locked resize disabled", () => {
   const timeline = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
   const block = readSrc("src/features/timeline-editor/TimelineSceneBlock.tsx");
   assert.match(timeline, /const playbackLocked = selection\.phase === SelectionPhase\.PlaybackLocked/);
-  assert.match(timeline, /const resizeDisabled = playbackLocked \|\| dragState != null/);
+  assert.match(
+    timeline,
+    /const resizeDisabled =\s*playbackLocked \|\| dragState != null \|\| trimState != null \|\| mediaInteractionActive/,
+  );
   assert.match(timeline, /resizeDisabled=\{resizeDisabled\}/);
   assert.match(block, /Pause playback to resize scene duration/);
 });

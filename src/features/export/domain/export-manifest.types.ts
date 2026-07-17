@@ -1,10 +1,23 @@
 /**
- * Immutable ExportManifest domain types (Sprint 6B).
+ * Immutable ExportManifest domain types (Sprint 6B / 8D / 9C).
  * Contract: docs/EXPORT_CONTRACT.md
+ *
+ * Frozen backward-compatible pair: v2 / "8D"
+ * Current production pair: v3 / "9C"
  */
 
-export const EXPORT_MANIFEST_VERSION = 1;
-export const EXPORT_RENDERER_CONTRACT_VERSION = "6C.1";
+/** Frozen Sprint 8D contract — never silently upgraded. */
+export const EXPORT_MANIFEST_V2_VERSION = 2;
+export const EXPORT_RENDERER_CONTRACT_V2 = "8D";
+
+/** Current production ExportManifest / renderer contract (Sprint 9C). */
+export const EXPORT_MANIFEST_VERSION = 3;
+export const EXPORT_RENDERER_CONTRACT_VERSION = "9C";
+
+/** @deprecated Prefer EXPORT_MANIFEST_V2_VERSION for frozen-v2 checks. */
+export const EXPORT_MANIFEST_V2 = EXPORT_MANIFEST_V2_VERSION;
+/** @deprecated Prefer EXPORT_RENDERER_CONTRACT_V2 for frozen-v2 checks. */
+export const EXPORT_RENDERER_CONTRACT_8D = EXPORT_RENDERER_CONTRACT_V2;
 
 export type ExportManifestFormat = "webm" | "mp4";
 export type ExportManifestQuality = "standard" | "high";
@@ -79,6 +92,25 @@ export type ExportMediaManifest =
   | ExportVideoMediaManifest
   | ExportPlaceholderMediaManifest;
 
+/**
+ * Frozen per-item media window on a scene (Sprint 8D).
+ * Windows are scene-local half-open [startOffsetMs, endOffsetMs).
+ */
+export interface ExportSceneMediaTimelineItemManifest {
+  readonly id: string;
+  readonly index: number;
+  readonly startOffsetMs: number;
+  readonly endOffsetMs: number;
+  readonly durationMs: number;
+  readonly media: ExportMediaManifest;
+}
+
+/** Canonical per-scene media timeline frozen into the ExportManifest. */
+export interface ExportSceneMediaTimelineManifest {
+  readonly version: 1;
+  readonly items: readonly ExportSceneMediaTimelineItemManifest[];
+}
+
 export interface ExportTransitionManifest {
   readonly type: string;
   readonly durationMs: number;
@@ -86,17 +118,62 @@ export interface ExportTransitionManifest {
   readonly toSceneId: string;
 }
 
-export interface ExportSceneManifest {
+/**
+ * Frozen intra-scene media transition boundary (ExportManifest v3 / 9C).
+ * Cut is absence — never stored. Overlay offsets are scene-local.
+ */
+export interface ExportSceneMediaTransitionBoundaryManifest {
+  readonly fromItemId: string;
+  readonly toItemId: string;
+  readonly fromItemIndex: number;
+  readonly toItemIndex: number;
+  readonly effect:
+    | "fade"
+    | "slide-left"
+    | "slide-right"
+    | "zoom-in"
+    | "zoom-out"
+    | "blur";
+  readonly requestedDurationMs: number;
+  readonly effectiveDurationMs: number;
+  readonly overlayStartOffsetMs: number;
+  readonly overlayEndOffsetMs: number;
+}
+
+/** Always present on v3 scenes; empty boundaries = hard-cut. */
+export interface ExportSceneMediaTransitionTrackManifest {
+  readonly version: 1;
+  readonly boundaries: readonly ExportSceneMediaTransitionBoundaryManifest[];
+}
+
+interface ExportSceneManifestBase {
   readonly id: string;
   readonly index: number;
   readonly startMs: number;
   readonly durationMs: number;
   readonly endMs: number;
+  /**
+   * First-item compatibility media — must equal `mediaTimeline.items[0].media`.
+   * Renderers must resolve active media from `mediaTimeline`, not this field.
+   */
   readonly media: ExportMediaManifest;
+  /** Canonical frozen Scene Media Timeline for this scene. */
+  readonly mediaTimeline: ExportSceneMediaTimelineManifest;
   readonly transitionOut: ExportTransitionManifest | null;
   readonly captionMode: string;
+  /** True when at least one timeline item is drawable. */
   readonly hasDrawableMedia: boolean;
 }
+
+/** Frozen v2 / 8D scene — no intra-scene transition track. */
+export type ExportSceneManifestV2 = ExportSceneManifestBase;
+
+/** Production v3 / 9C scene — always carries mediaTransitions (may be empty). */
+export interface ExportSceneManifestV3 extends ExportSceneManifestBase {
+  readonly mediaTransitions: ExportSceneMediaTransitionTrackManifest;
+}
+
+export type ExportSceneManifest = ExportSceneManifestV2 | ExportSceneManifestV3;
 
 export interface ExportCaptionStyleManifest {
   readonly fontFamily: string;
@@ -216,20 +293,63 @@ export interface ExportCapabilitySnapshot {
   readonly environment: ExportEnvironmentSnapshot;
 }
 
-/** Draft before fingerprint assignment. */
-export type ExportManifestDraft = Omit<ExportManifest, "fingerprint">;
-
-export interface ExportManifest {
-  readonly version: typeof EXPORT_MANIFEST_VERSION;
+interface ExportManifestBase {
   readonly manifestId: string;
   readonly createdAt: string;
-  readonly rendererContractVersion: typeof EXPORT_RENDERER_CONTRACT_VERSION;
   readonly project: ExportProjectManifest;
   readonly output: ExportOutputManifest;
-  readonly scenes: readonly ExportSceneManifest[];
   readonly captions: readonly ExportCaptionManifest[];
   readonly audio: ExportAudioManifest;
   readonly branding: ExportBrandingManifest;
   readonly capabilities: ExportCapabilitySnapshot;
   readonly fingerprint: string;
+}
+
+/** Frozen ExportManifest v2 / renderer "8D". */
+export interface ExportManifestV2 extends ExportManifestBase {
+  readonly version: typeof EXPORT_MANIFEST_V2_VERSION;
+  readonly rendererContractVersion: typeof EXPORT_RENDERER_CONTRACT_V2;
+  readonly scenes: readonly ExportSceneManifestV2[];
+}
+
+/** Production ExportManifest v3 / renderer "9C". */
+export interface ExportManifestV3 extends ExportManifestBase {
+  readonly version: typeof EXPORT_MANIFEST_VERSION;
+  readonly rendererContractVersion: typeof EXPORT_RENDERER_CONTRACT_VERSION;
+  readonly scenes: readonly ExportSceneManifestV3[];
+}
+
+export type ExportManifest = ExportManifestV2 | ExportManifestV3;
+
+/** Draft before fingerprint assignment. */
+export type ExportManifestDraft = Omit<ExportManifest, "fingerprint">;
+export type ExportManifestV2Draft = Omit<ExportManifestV2, "fingerprint">;
+export type ExportManifestV3Draft = Omit<ExportManifestV3, "fingerprint">;
+
+export function isExportManifestV2(
+  manifest: ExportManifest,
+): manifest is ExportManifestV2 {
+  return (
+    manifest.version === EXPORT_MANIFEST_V2_VERSION &&
+    manifest.rendererContractVersion === EXPORT_RENDERER_CONTRACT_V2
+  );
+}
+
+export function isExportManifestV3(
+  manifest: ExportManifest,
+): manifest is ExportManifestV3 {
+  return (
+    manifest.version === EXPORT_MANIFEST_VERSION &&
+    manifest.rendererContractVersion === EXPORT_RENDERER_CONTRACT_VERSION
+  );
+}
+
+export function isExportSceneManifestV3(
+  scene: ExportSceneManifest,
+): scene is ExportSceneManifestV3 {
+  return (
+    "mediaTransitions" in scene &&
+    scene.mediaTransitions != null &&
+    typeof scene.mediaTransitions === "object"
+  );
 }

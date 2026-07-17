@@ -4,10 +4,13 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
+import { isSelectableSceneMediaItemId } from "@/features/scene-media-timeline/editor";
+import { isSelectableSceneMediaTransitionPair } from "@/features/scene-media-transitions";
 import type { FootieScript } from "@/features/story/types";
 
 import { SelectionContext, type EditorSelectionContextValue } from "./SelectionContext";
@@ -19,6 +22,8 @@ import {
   selectInspectorImageEditing,
   selectIsImageEditing,
   selectIsImageSelected,
+  selectIsSceneMediaItemSelected,
+  selectIsSceneMediaTransitionSelected,
   selectIsSceneSelected,
   selectRibbonContextId,
   selectRibbonVisible,
@@ -29,9 +34,12 @@ import {
   SelectionPhase,
   SelectionType,
   type EditorSelectionState,
+  type SelectedMediaTransitionPair,
   type SelectionTarget,
 } from "./selection.types";
 import {
+  reconcileMediaItemSelectionAuthority,
+  reconcileMediaTransitionSelectionAuthority,
   resolveSafeSceneIndex,
   resolveSceneIndexById,
   resolveSelectedScene,
@@ -80,14 +88,30 @@ function deriveSelectionPhase(input: {
   return SelectionPhase.Selected;
 }
 
+type SelectionFocus =
+  | SelectionType.Scene
+  | SelectionType.Image
+  | SelectionType.SceneMediaItem
+  | SelectionType.SceneMediaTransition;
+
 function resolveSelectionTarget(input: {
   selectedScene: FootieScript["scenes"][number] | null;
-  selectionFocus: SelectionType.Scene | SelectionType.Image;
+  selectionFocus: SelectionFocus;
   phase: SelectionPhase;
   editingSceneId: string | null;
   hoverSceneId: string | null;
+  selectedMediaItemId: string | null;
+  selectedMediaTransition: SelectedMediaTransitionPair | null;
 }): SelectionTarget {
-  const { selectedScene, selectionFocus, phase, editingSceneId, hoverSceneId } = input;
+  const {
+    selectedScene,
+    selectionFocus,
+    phase,
+    editingSceneId,
+    hoverSceneId,
+    selectedMediaItemId,
+    selectedMediaTransition,
+  } = input;
 
   if (!selectedScene) {
     return null;
@@ -101,6 +125,31 @@ function resolveSelectionTarget(input: {
     if (phase === SelectionPhase.Hover && hoverSceneId) {
       return { type: SelectionType.Image, sceneId: hoverSceneId };
     }
+  }
+
+  if (
+    selectionFocus === SelectionType.SceneMediaTransition &&
+    selectedMediaTransition &&
+    (phase === SelectionPhase.Selected || phase === SelectionPhase.Hover)
+  ) {
+    return {
+      type: SelectionType.SceneMediaTransition,
+      sceneId: selectedScene.id,
+      fromItemId: selectedMediaTransition.fromItemId,
+      toItemId: selectedMediaTransition.toItemId,
+    };
+  }
+
+  if (
+    selectionFocus === SelectionType.SceneMediaItem &&
+    selectedMediaItemId &&
+    (phase === SelectionPhase.Selected || phase === SelectionPhase.Hover)
+  ) {
+    return {
+      type: SelectionType.SceneMediaItem,
+      sceneId: selectedScene.id,
+      mediaItemId: selectedMediaItemId,
+    };
   }
 
   return { type: SelectionType.Scene, sceneId: selectedScene.id };
@@ -120,9 +169,18 @@ export default function EditorSelectionProvider({
   const [hoverSceneId, setHoverSceneId] = useState<string | null>(null);
   const [imageEditAvailable, setImageEditAvailable] = useState(false);
   const [playbackLocked, setPlaybackLocked] = useState(false);
-  const [selectionFocus, setSelectionFocus] = useState<SelectionType.Scene | SelectionType.Image>(
-    SelectionType.Scene,
-  );
+  const [selectedMediaItemId, setSelectedMediaItemId] = useState<string | null>(null);
+  const [selectedMediaTransition, setSelectedMediaTransition] =
+    useState<SelectedMediaTransitionPair | null>(null);
+  const [selectionFocus, setSelectionFocus] = useState<SelectionFocus>(SelectionType.Scene);
+  const selectedMediaItemIdRef = useRef(selectedMediaItemId);
+  const selectedMediaTransitionRef = useRef(selectedMediaTransition);
+  useEffect(() => {
+    selectedMediaItemIdRef.current = selectedMediaItemId;
+  }, [selectedMediaItemId]);
+  useEffect(() => {
+    selectedMediaTransitionRef.current = selectedMediaTransition;
+  }, [selectedMediaTransition]);
 
   const effectiveEditingSceneId = useMemo(() => {
     if (!selectedSceneId || !editingSceneId || editingSceneId !== selectedSceneId) {
@@ -140,7 +198,30 @@ export default function EditorSelectionProvider({
     return hoverSceneId;
   }, [hoverSceneId, selectedSceneId]);
 
-  const effectiveSelectionFocus = useMemo((): SelectionType.Scene | SelectionType.Image => {
+  // Invalidate stale media-item ids when the script no longer contains them.
+  const validatedMediaItemId = useMemo(() => {
+    if (!selectedMediaItemId || !selectedScene) {
+      return null;
+    }
+    return isSelectableSceneMediaItemId(selectedScene, selectedMediaItemId)
+      ? selectedMediaItemId
+      : null;
+  }, [selectedMediaItemId, selectedScene]);
+
+  const validatedMediaTransition = useMemo(() => {
+    if (!selectedMediaTransition || !selectedScene) {
+      return null;
+    }
+    return isSelectableSceneMediaTransitionPair(
+      selectedScene,
+      selectedMediaTransition.fromItemId,
+      selectedMediaTransition.toItemId,
+    )
+      ? selectedMediaTransition
+      : null;
+  }, [selectedMediaTransition, selectedScene]);
+
+  const effectiveSelectionFocus = useMemo((): SelectionFocus => {
     if (!selectedSceneId) {
       return SelectionType.Scene;
     }
@@ -153,8 +234,26 @@ export default function EditorSelectionProvider({
       return SelectionType.Scene;
     }
 
-    return selectionFocus;
-  }, [effectiveEditingSceneId, effectiveHoverSceneId, selectedSceneId, selectionFocus]);
+    if (
+      selectionFocus === SelectionType.SceneMediaTransition &&
+      validatedMediaTransition
+    ) {
+      return SelectionType.SceneMediaTransition;
+    }
+
+    if (selectionFocus === SelectionType.SceneMediaItem && validatedMediaItemId) {
+      return SelectionType.SceneMediaItem;
+    }
+
+    return SelectionType.Scene;
+  }, [
+    effectiveEditingSceneId,
+    effectiveHoverSceneId,
+    selectedSceneId,
+    selectionFocus,
+    validatedMediaItemId,
+    validatedMediaTransition,
+  ]);
 
   const phase = useMemo(
     () =>
@@ -184,8 +283,18 @@ export default function EditorSelectionProvider({
         phase,
         editingSceneId: effectiveEditingSceneId,
         hoverSceneId: effectiveHoverSceneId,
+        selectedMediaItemId: validatedMediaItemId,
+        selectedMediaTransition: validatedMediaTransition,
       }),
-    [effectiveEditingSceneId, effectiveHoverSceneId, effectiveSelectionFocus, phase, selectedScene],
+    [
+      effectiveEditingSceneId,
+      effectiveHoverSceneId,
+      effectiveSelectionFocus,
+      phase,
+      selectedScene,
+      validatedMediaItemId,
+      validatedMediaTransition,
+    ],
   );
 
   const syncSceneIndex = useCallback(
@@ -210,6 +319,8 @@ export default function EditorSelectionProvider({
       if (playbackLocked) {
         if (sceneChanging) {
           setHoverSceneId(null);
+          setSelectedMediaItemId(null);
+          setSelectedMediaTransition(null);
           if (editingSceneId && editingSceneId !== nextSceneId) {
             setEditingSceneId(null);
             setSelectionFocus(SelectionType.Scene);
@@ -221,6 +332,8 @@ export default function EditorSelectionProvider({
       if (sceneChanging) {
         setEditingSceneId(null);
         setHoverSceneId(null);
+        setSelectedMediaItemId(null);
+        setSelectedMediaTransition(null);
         setSelectionFocus(SelectionType.Scene);
       }
     },
@@ -248,6 +361,8 @@ export default function EditorSelectionProvider({
       syncSceneIndex(index);
       setEditingSceneId(null);
       setHoverSceneId(null);
+      setSelectedMediaItemId(null);
+      setSelectedMediaTransition(null);
       setSelectionFocus(SelectionType.Scene);
     },
     [playbackLocked, script, syncSceneIndex],
@@ -258,6 +373,89 @@ export default function EditorSelectionProvider({
     setHoverSceneId(null);
     setSelectionFocus(SelectionType.Scene);
   }, []);
+
+  const clearSceneMediaItemSelection = useCallback(() => {
+    setSelectedMediaItemId(null);
+    if (selectionFocus === SelectionType.SceneMediaItem) {
+      setSelectionFocus(SelectionType.Scene);
+    }
+  }, [selectionFocus]);
+
+  const clearSceneMediaTransitionSelection = useCallback(() => {
+    setSelectedMediaTransition(null);
+    if (selectionFocus === SelectionType.SceneMediaTransition) {
+      setSelectionFocus(SelectionType.Scene);
+    }
+  }, [selectionFocus]);
+
+  const selectSceneMediaItem = useCallback(
+    (sceneId: string, mediaItemId: string) => {
+      if (playbackLocked) {
+        return;
+      }
+
+      const trimmedId = typeof mediaItemId === "string" ? mediaItemId.trim() : "";
+      if (!trimmedId) {
+        return;
+      }
+
+      const index = resolveSceneIndexById(script, sceneId);
+      if (index < 0) {
+        return;
+      }
+
+      const scene = script.scenes[index];
+      if (!scene || !isSelectableSceneMediaItemId(scene, trimmedId)) {
+        return;
+      }
+
+      if (sceneId !== selectedSceneId) {
+        syncSceneIndex(index);
+      }
+
+      setEditingSceneId(null);
+      setHoverSceneId(null);
+      setSelectedMediaTransition(null);
+      setSelectedMediaItemId(trimmedId);
+      setSelectionFocus(SelectionType.SceneMediaItem);
+    },
+    [playbackLocked, script, selectedSceneId, syncSceneIndex],
+  );
+
+  const selectSceneMediaTransition = useCallback(
+    (sceneId: string, fromItemId: string, toItemId: string) => {
+      if (playbackLocked) {
+        return;
+      }
+
+      const from = typeof fromItemId === "string" ? fromItemId.trim() : "";
+      const to = typeof toItemId === "string" ? toItemId.trim() : "";
+      if (!from || !to) {
+        return;
+      }
+
+      const index = resolveSceneIndexById(script, sceneId);
+      if (index < 0) {
+        return;
+      }
+
+      const scene = script.scenes[index];
+      if (!scene || !isSelectableSceneMediaTransitionPair(scene, from, to)) {
+        return;
+      }
+
+      if (sceneId !== selectedSceneId) {
+        syncSceneIndex(index);
+      }
+
+      setEditingSceneId(null);
+      setHoverSceneId(null);
+      setSelectedMediaItemId(null);
+      setSelectedMediaTransition({ fromItemId: from, toItemId: to });
+      setSelectionFocus(SelectionType.SceneMediaTransition);
+    },
+    [playbackLocked, script, selectedSceneId, syncSceneIndex],
+  );
 
   const selectImage = useCallback(
     (sceneId: string) => {
@@ -274,6 +472,8 @@ export default function EditorSelectionProvider({
         syncSceneIndex(index);
       }
 
+      setSelectedMediaItemId(null);
+      setSelectedMediaTransition(null);
       setSelectionFocus(SelectionType.Image);
       if (imageEditAvailable) {
         setEditingSceneId(sceneId);
@@ -283,6 +483,8 @@ export default function EditorSelectionProvider({
   );
 
   const clearSelection = useCallback(() => {
+    setSelectedMediaItemId(null);
+    setSelectedMediaTransition(null);
     clearImageFocus();
   }, [clearImageFocus]);
 
@@ -302,20 +504,88 @@ export default function EditorSelectionProvider({
   }, []);
 
   useEffect(() => {
-    if (phase !== SelectionPhase.Editing) {
+    if (
+      phase !== SelectionPhase.Editing &&
+      selectionFocus !== SelectionType.SceneMediaItem &&
+      selectionFocus !== SelectionType.SceneMediaTransition
+    ) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        exitImageEdit();
+      if (event.key !== "Escape") {
+        return;
       }
+      event.preventDefault();
+      if (selectionFocus === SelectionType.SceneMediaTransition) {
+        clearSceneMediaTransitionSelection();
+        return;
+      }
+      if (selectionFocus === SelectionType.SceneMediaItem) {
+        clearSceneMediaItemSelection();
+        return;
+      }
+      exitImageEdit();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [exitImageEdit, phase]);
+  }, [
+    clearSceneMediaItemSelection,
+    clearSceneMediaTransitionSelection,
+    exitImageEdit,
+    phase,
+    selectionFocus,
+  ]);
+
+  // Clear stored stale media-item IDs after external script updates remove them.
+  // Microtask + ref check preserves a concurrent command selection of a nearest survivor.
+  useEffect(() => {
+    const reconciled = reconcileMediaItemSelectionAuthority({
+      storedMediaItemId: selectedMediaItemId,
+      selectionFocus,
+      scene: selectedScene,
+    });
+    if (!reconciled.didClear || !selectedMediaItemId) {
+      return;
+    }
+    const staleId = selectedMediaItemId;
+    queueMicrotask(() => {
+      if (selectedMediaItemIdRef.current !== staleId) {
+        return;
+      }
+      setSelectedMediaItemId(null);
+      setSelectionFocus((focus) =>
+        focus === SelectionType.SceneMediaItem ? SelectionType.Scene : focus,
+      );
+    });
+  }, [selectedMediaItemId, selectedScene, selectionFocus]);
+
+  useEffect(() => {
+    const reconciled = reconcileMediaTransitionSelectionAuthority({
+      storedTransition: selectedMediaTransition,
+      selectionFocus,
+      scene: selectedScene,
+    });
+    if (!reconciled.didClear || !selectedMediaTransition) {
+      return;
+    }
+    const stale = selectedMediaTransition;
+    queueMicrotask(() => {
+      const current = selectedMediaTransitionRef.current;
+      if (
+        !current ||
+        current.fromItemId !== stale.fromItemId ||
+        current.toItemId !== stale.toItemId
+      ) {
+        return;
+      }
+      setSelectedMediaTransition(null);
+      setSelectionFocus((focus) =>
+        focus === SelectionType.SceneMediaTransition ? SelectionType.Scene : focus,
+      );
+    });
+  }, [selectedMediaTransition, selectedScene, selectionFocus]);
 
   const state: EditorSelectionState = {
     phase,
@@ -324,6 +594,8 @@ export default function EditorSelectionProvider({
     imageEditAvailable,
     selectedSceneId,
     selectedSceneIndex: safeSceneIndex,
+    selectedMediaItemId: validatedMediaItemId,
+    selectedMediaTransition: validatedMediaTransition,
   };
 
   const value: EditorSelectionContextValue = {
@@ -335,6 +607,8 @@ export default function EditorSelectionProvider({
     isImageEditing: selectIsImageEditing(state),
     isImageSelected: selectIsImageSelected(state),
     isSceneSelected: selectIsSceneSelected(state),
+    isSceneMediaItemSelected: selectIsSceneMediaItemSelected(state),
+    isSceneMediaTransitionSelected: selectIsSceneMediaTransitionSelected(state),
     imageSceneId: selectImageSceneId(state),
     ribbonVisible: selectRibbonVisible(state),
     ribbonContextId: selectRibbonContextId(state),
@@ -342,6 +616,10 @@ export default function EditorSelectionProvider({
     inspectorImageEditAvailable: selectInspectorImageEditAvailable(state),
     selectScene,
     selectImage,
+    selectSceneMediaItem,
+    selectSceneMediaTransition,
+    clearSceneMediaItemSelection,
+    clearSceneMediaTransitionSelection,
     syncSceneIndex,
     clearSelection,
     enterImageEdit,

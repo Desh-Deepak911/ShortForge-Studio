@@ -8,6 +8,8 @@
 
 **AI-powered storytelling platform for creating research-backed short-form videos.**
 
+> **Start here for architecture:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) — canonical project index, source-of-truth ownership, sprint ledger, and documentation authority map.
+
 ShortForge Studio helps creators turn a simple idea into a fully edited, narrated short-form video — without a traditional editing suite. Write a brief, gather supporting research, generate a grounded script, review and refine the narration, build timed scenes, edit on a timeline, preview in the browser, and export production-ready video.
 
 The platform is built around one principle: **the story drives everything else.** Narration is written and spoken before scenes are planned, so timing follows the voice.
@@ -397,6 +399,7 @@ Latest release: **v2.6.0 — Timeline Intelligence Runtime** · **Audio Mixer v1
 
 | Document | Description |
 |----------|-------------|
+| [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) | **Start here** — canonical architecture index and authority map |
 | [README.md](./README.md) | Product overview, features, and getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, pipelines, and design principles |
 | [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |

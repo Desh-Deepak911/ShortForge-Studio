@@ -282,13 +282,15 @@ async function runQa() {
     const editorFlow = readSrc("src/features/drafts/components/DraftEditorFlow.tsx");
 
     assert.match(reviewPage, /ScriptReviewFlow/);
-    assert.match(reviewFlow, /StoryReview/);
-    assert.match(reviewFlow, /VoiceSettingsCard/);
+    assert.match(reviewFlow, /ReviewInspector/);
     assert.match(reviewFlow, /mode:\s*"scenes-only"/);
     assert.match(voiceRoute, /generateVoiceover|voiceover/i);
     assert.match(scriptRoute, /generateScenesForReviewedScript/);
     assert.match(editorFlow, /StoryWorkspace/);
     assert.match(editorFlow, /useEditorStoryDocument/);
+
+    const inspector = readSrc("src/features/create/components/ReviewInspector.tsx");
+    assert.match(inspector, /VoiceSettingsCard/);
   });
 
   console.log("\nResearch Preview + grounding QA checks passed.");

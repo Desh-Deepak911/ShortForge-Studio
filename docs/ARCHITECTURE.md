@@ -1,5 +1,7 @@
 # Architecture
 
+> **Status:** Partially stale on the export production path. Prefer [MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md), [EXPORT_CONTRACT.md](./EXPORT_CONTRACT.md), and [EXPORT_RENDERER_ARCHITECTURE.md](./EXPORT_RENDERER_ARCHITECTURE.md) for Export Reliability (Sprint 6B–6F.1 / `chunked-browser-v1`). Route-level and generation/editing sections remain useful supporting reference.
+
 ShortForge Studio is a multi-route Next.js application for creating vertical football documentary shorts. The product shell exposes four main pages — landing, create, editor, and drafts — while the technical core remains three layers: **Generation**, **Editing**, and **Rendering**, all operating on a shared story model (`FootieScript`).
 
 AI work runs on server API routes. Editing, preview, export, and **draft persistence (MVP)** run in the browser. There is no database and no authentication today. Draft JSON is stored in **localStorage** under a single app key; opening `/editor/[draftId]` hydrates React state from that store without calling generation again.

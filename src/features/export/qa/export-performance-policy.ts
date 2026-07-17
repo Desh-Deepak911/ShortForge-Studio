@@ -59,13 +59,19 @@ export function classifyExportCostAgainstPolicy(input: {
         ? "medium"
         : "long");
 
+  const videoMediaItemCount = input.videoSceneCount;
+  const imageMediaItemCount = imageSceneCount;
+  const mediaItemCount = videoMediaItemCount + imageMediaItemCount;
   const estimate: ExportDeviceCapabilityEstimate = {
     resolution: input.resolution,
     projectDurationMs: input.projectDurationMs,
     estimatedFrames: input.estimatedFrames,
     sceneCount,
-    videoSceneCount: input.videoSceneCount,
-    imageSceneCount,
+    mediaItemCount,
+    videoMediaItemCount,
+    imageMediaItemCount,
+    videoSceneCount: videoMediaItemCount,
+    imageSceneCount: imageMediaItemCount,
     estimatedPeakMemoryBytes: input.estimatedPeakMemoryBytes,
     estimatedChunkCount: Math.max(1, Math.ceil(input.estimatedFrames / 120)),
     chunkSizeFrames: 120,

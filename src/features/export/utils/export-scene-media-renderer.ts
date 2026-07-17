@@ -27,6 +27,7 @@ import type { SceneImageFitMode } from "@/features/story/types";
 import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 
 import {
+  buildExportMediaCacheKey,
   getExportSceneMediaAsset,
   type ExportImageAsset,
   type ExportMediaCache,
@@ -868,27 +869,50 @@ function drawPreparedSceneVideoFrame(
 
 export interface PrepareExportSceneMediaResult {
   sceneId: string;
+  mediaItemId: string;
   ok: boolean;
   path: ExportMediaDrawPath;
   playback: MediaPlaybackState | null;
   seekTimeSec: number | null;
 }
 
+export interface PrepareExportSceneMediaFrameOptions {
+  exportFps?: number;
+  /** Stable timeline item id for cache lookup. */
+  mediaItemId?: string;
+  /** Item-local elapsed — drives video clip + motion when set. */
+  itemElapsedMs?: number;
+  /** Item window duration — motion/clip denominator when set. */
+  itemDurationMs?: number;
+}
+
 /**
  * Seeks video assets to the correct clip time before drawing.
  * Image assets are always ready. Never throws.
+ * Sprint 8D: uses per-item cache keys and item-local elapsed when provided.
  */
 export async function prepareExportSceneMediaFrame(
   cache: ExportMediaCache,
   scene: Pick<FootieScene, "id" | "image" | "uploadedImage" | "media" | "startMs" | "start" | "durationMs" | "duration">,
   sceneElapsedMs: number,
   sceneDurationMs: number,
-  options: { exportFps?: number } = {},
+  options: PrepareExportSceneMediaFrameOptions = {},
 ): Promise<PrepareExportSceneMediaResult> {
-  const asset = getExportSceneMediaAsset(cache, scene);
+  const mediaItemId = options.mediaItemId?.trim() || "__scene__";
+  const itemElapsedMs =
+    typeof options.itemElapsedMs === "number" && Number.isFinite(options.itemElapsedMs)
+      ? options.itemElapsedMs
+      : sceneElapsedMs;
+  const itemDurationMs =
+    typeof options.itemDurationMs === "number" && Number.isFinite(options.itemDurationMs)
+      ? options.itemDurationMs
+      : sceneDurationMs;
+
+  const asset = getExportSceneMediaAsset(cache, scene, mediaItemId);
   if (!asset) {
     return {
       sceneId: scene.id,
+      mediaItemId,
       ok: false,
       path: "placeholder",
       playback: null,
@@ -896,20 +920,23 @@ export async function prepareExportSceneMediaFrame(
     };
   }
 
+  const seekIdentity = buildExportMediaCacheKey(scene.id, mediaItemId);
+
   if (asset.kind === "image") {
-    noteExportPreparedScene(scene.id, "image");
+    noteExportPreparedScene(seekIdentity, "image");
     return {
       sceneId: scene.id,
+      mediaItemId,
       ok: true,
       path: "image",
-      playback: resolveExportSceneMediaPlaybackState(scene, sceneElapsedMs, sceneDurationMs),
+      playback: resolveExportSceneMediaPlaybackState(scene, itemElapsedMs, itemDurationMs),
       seekTimeSec: null,
     };
   }
 
-  const playback = resolveExportSceneMediaPlaybackState(scene, sceneElapsedMs, sceneDurationMs);
+  const playback = resolveExportSceneMediaPlaybackState(scene, itemElapsedMs, itemDurationMs);
   const seekTimeSec = playback.clipTimeMs / 1000;
-  const seekRequestId = beginExportVideoSeekRequest(scene.id);
+  const seekRequestId = beginExportVideoSeekRequest(seekIdentity);
   const seeked = await seekVideoFrame(asset.element, seekTimeSec, {
     epsilonSec: resolveExportSeekEpsilonSec(options.exportFps ?? 30),
     seekRequestId,
@@ -918,6 +945,7 @@ export async function prepareExportSceneMediaFrame(
 
   return {
     sceneId: scene.id,
+    mediaItemId,
     ok: seeked,
     path: "video",
     playback,
@@ -1002,6 +1030,12 @@ export interface DrawSceneMediaFrameOptions {
   sceneDurationMs: number;
   /** When false, force placeholder (e.g. seek failure). */
   mediaReady?: boolean;
+  /** Stable timeline item id for cache lookup (Sprint 8D). */
+  mediaItemId?: string;
+  /** Item-local elapsed override for motion/clip (Sprint 8D). */
+  itemElapsedMs?: number;
+  /** Item duration override for motion/clip (Sprint 8D). */
+  itemDurationMs?: number;
 }
 
 /**
@@ -1019,10 +1053,22 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
     sceneElapsedMs,
     sceneDurationMs,
     mediaReady = true,
+    mediaItemId,
+    itemElapsedMs,
+    itemDurationMs,
   } = options;
 
-  const playback = resolveExportSceneMediaPlaybackState(scene, sceneElapsedMs, sceneDurationMs);
-  const asset = getExportSceneMediaAsset(cache, scene);
+  const elapsed =
+    typeof itemElapsedMs === "number" && Number.isFinite(itemElapsedMs)
+      ? itemElapsedMs
+      : sceneElapsedMs;
+  const duration =
+    typeof itemDurationMs === "number" && Number.isFinite(itemDurationMs)
+      ? itemDurationMs
+      : sceneDurationMs;
+
+  const playback = resolveExportSceneMediaPlaybackState(scene, elapsed, duration);
+  const asset = getExportSceneMediaAsset(cache, scene, mediaItemId);
 
   const finish = (
     path: ExportMediaDrawPath,
@@ -1055,8 +1101,8 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
       height,
       scene,
       asset.element,
-      sceneElapsedMs,
-      sceneDurationMs,
+      elapsed,
+      duration,
     );
     return finish("image", drew);
   }
@@ -1068,8 +1114,8 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
     height,
     scene,
     asset as ExportVideoAsset,
-    sceneElapsedMs,
-    sceneDurationMs,
+    elapsed,
+    duration,
     playback,
   );
 
@@ -1081,12 +1127,16 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
   return finish("video", true, seekTimeSec);
 }
 
-/** True when the cache has a drawable asset for the scene. */
+/**
+ * True when the cache has a drawable asset for the scene media item.
+ * Omit mediaItemId (or pass undefined) for legacy `__scene__` lookup.
+ */
 export function exportSceneHasDrawableMedia(
   cache: ExportMediaCache,
   scene: Pick<FootieScene, "id">,
+  mediaItemId?: string,
 ): boolean {
-  return getExportSceneMediaAsset(cache, scene) != null;
+  return getExportSceneMediaAsset(cache, scene, mediaItemId) != null;
 }
 
 export type { ExportImageAsset, ExportVideoAsset };

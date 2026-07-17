@@ -1,6 +1,11 @@
 /**
- * Draw a PreparedExportFrame onto the export canvas (Sprint 6C).
+ * Draw a PreparedExportFrame onto the export canvas (Sprint 6C / 9C).
  * Captions consume frozen ExportManifest layout + style (Preview/Export parity).
+ *
+ * Composition priority:
+ * 1. Scene-to-scene transition
+ * 2. V3 intra-scene transition
+ * 3. Ordinary active media
  */
 
 import { resolveExportCaptionAnimationFromChunk } from "@/features/caption-animation";
@@ -22,11 +27,13 @@ import type { ExportSubtitleDisplay } from "@/features/export/utils/export-subti
 import { normalizeCaptionMode } from "@/features/story/utils";
 import type { ResolvedExportCaptionFrame } from "@/features/export/timing";
 import type { ExportCaptionManifest } from "@/features/export/domain/export-manifest.types";
+import { resolveExportActiveSceneMediaFrame } from "@/features/export/domain/resolve-export-active-scene-media-frame";
 import { captionLayoutManifestToCaptionLayout } from "@/features/export/domain/resolve-export-caption-layout";
 
 import type { ExportRenderContext } from "./export-render-context.types";
 import type { ExportDrawScene } from "./prepare-export-from-manifest";
 import type { PreparedExportFrame } from "./prepared-export-frame.types";
+import { buildActiveExportDrawScene } from "./active-export-draw-scene";
 
 function wrapText(
   ctx: CanvasRenderingContext2D,
@@ -54,7 +61,7 @@ function wrapText(
   }
 }
 
-function drawSceneBackground(
+function drawExactMediaBackground(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -63,6 +70,9 @@ function drawSceneBackground(
   sceneElapsedMs: number,
   sceneDurationMs: number,
   prepared: PrepareExportSceneMediaResult | undefined,
+  itemElapsedMs: number,
+  itemDurationMs: number,
+  mediaItemId: string,
 ) {
   drawSceneMediaFrame({
     ctx,
@@ -73,6 +83,39 @@ function drawSceneBackground(
     sceneElapsedMs,
     sceneDurationMs,
     mediaReady: prepared?.ok !== false,
+    mediaItemId,
+    itemElapsedMs,
+    itemDurationMs,
+  });
+}
+
+function drawSceneBackground(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  drawScene: ExportDrawScene,
+  context: ExportRenderContext,
+  sceneElapsedMs: number,
+  sceneDurationMs: number,
+  prepared: PrepareExportSceneMediaResult | undefined,
+) {
+  const active = resolveExportActiveSceneMediaFrame(
+    drawScene.manifestScene,
+    sceneElapsedMs,
+  );
+  const activeScene = buildActiveExportDrawScene(drawScene, active);
+  drawSceneMediaFrame({
+    ctx,
+    width,
+    height,
+    scene: activeScene,
+    cache: context.mediaCache,
+    sceneElapsedMs,
+    sceneDurationMs,
+    mediaReady: prepared?.ok !== false,
+    mediaItemId: prepared?.mediaItemId ?? active?.item.id,
+    itemElapsedMs: active?.itemElapsedMs ?? sceneElapsedMs,
+    itemDurationMs: active?.itemDurationMs ?? sceneDurationMs,
   });
 }
 
@@ -142,6 +185,7 @@ export function drawPreparedExportFrame(
   frame: PreparedExportFrame,
   context: ExportRenderContext,
   preparedBySceneId: Map<string, PrepareExportSceneMediaResult>,
+  preparedByMediaKey?: Map<string, PrepareExportSceneMediaResult>,
 ): void {
   const ctx = context.canvasContext;
   const width = context.width;
@@ -154,7 +198,11 @@ export function drawPreparedExportFrame(
   ctx.clearRect(0, 0, width, height);
 
   const transition = frame.transition;
+  const intra = frame.intraSceneTransition;
+  let mediaLayerDraws = 1;
+
   if (transition) {
+    mediaLayerDraws = 2;
     const fromPrepared = preparedBySceneId.get(transition.fromScene.id);
     const toPrepared = preparedBySceneId.get(transition.toScene.id);
     const fromDraw = frame.peerDrawScenes.get(transition.fromScene.id);
@@ -207,6 +255,69 @@ export function drawPreparedExportFrame(
         );
       },
     });
+  } else if (intra) {
+    mediaLayerDraws = 2;
+    const fromPrepared =
+      preparedByMediaKey?.get(intra.fromMediaKey) ??
+      preparedBySceneId.get(frame.drawScene.id);
+    const toPrepared =
+      preparedByMediaKey?.get(intra.toMediaKey) ??
+      preparedBySceneId.get(frame.drawScene.id);
+    const layers = resolveTransitionEffectLayers(intra.effect, intra.progress);
+
+    drawExportTransitionBackgrounds(ctx, width, height, {
+      effect: intra.effect,
+      transitionState: {
+        opacityFrom: layers.opacityFrom,
+        opacityTo: layers.opacityTo,
+        transformFrom: layers.transformFrom,
+        transformTo: layers.transformTo,
+        progress: intra.progress,
+      },
+      drawFromBackground: (layerCtx, layerWidth, layerHeight) => {
+        drawExactMediaBackground(
+          layerCtx,
+          layerWidth,
+          layerHeight,
+          intra.fromDrawScene,
+          context,
+          frame.media.sceneElapsedMs,
+          frame.media.sceneDurationMs,
+          fromPrepared,
+          intra.outgoingItemLocalMs,
+          intra.fromItem.durationMs,
+          intra.fromItem.id,
+        );
+      },
+      drawToBackground: (layerCtx, layerWidth, layerHeight) => {
+        drawExactMediaBackground(
+          layerCtx,
+          layerWidth,
+          layerHeight,
+          intra.toDrawScene,
+          context,
+          frame.media.sceneElapsedMs,
+          frame.media.sceneDurationMs,
+          toPrepared,
+          intra.incomingItemLocalMs,
+          intra.toItem.durationMs,
+          intra.toItem.id,
+        );
+      },
+    });
+
+    context.diagnostics.push({
+      code: "INTRA_SCENE_TRANSITION_DRAW",
+      message: "Composited v3 intra-scene transition layers",
+      detail: {
+        sceneId: intra.sceneId,
+        fromItemId: intra.fromItem.id,
+        toItemId: intra.toItem.id,
+        effect: intra.effect,
+        progress: intra.progress,
+        mediaLayerDraws,
+      },
+    });
   } else {
     drawSceneBackground(
       ctx,
@@ -238,9 +349,20 @@ export function drawPreparedExportFrame(
   ctx.font = `600 ${48 * scale}px Arial, Helvetica, sans-serif`;
   wrapText(ctx, frame.storyTitle, padX, titleY, width - padX * 2, 58 * scale);
 
+  const activeDrawMediaItemId =
+    (intra
+      ? preparedByMediaKey?.get(intra.toMediaKey)?.mediaItemId
+      : preparedBySceneId.get(frame.drawScene.id)?.mediaItemId) ??
+    frame.media.mediaItemId ??
+    undefined;
   if (
-    !exportSceneHasDrawableMedia(context.mediaCache, frame.drawScene) &&
+    !exportSceneHasDrawableMedia(
+      context.mediaCache,
+      frame.drawScene,
+      activeDrawMediaItemId,
+    ) &&
     !transition &&
+    !intra &&
     frame.drawScene.sceneType
   ) {
     ctx.fillStyle = "rgba(255,255,255,0.30)";
@@ -250,6 +372,7 @@ export function drawPreparedExportFrame(
     ctx.textAlign = "left";
   }
 
+  // Scene-to-scene: captions suppressed (unchanged). Intra-scene: captions continue.
   if (transition) {
     return;
   }

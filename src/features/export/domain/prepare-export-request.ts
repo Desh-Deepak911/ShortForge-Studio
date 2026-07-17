@@ -29,6 +29,12 @@ export interface PrepareExportRequestInput {
    * Production export entry uses this.
    */
   readonly throwIfBlocked?: boolean;
+  /**
+   * When false, first-item-only manifest (regression tests only).
+   * Default true — production multi-image ExportManifest v2.
+   * Domain builders never read process.env.
+   */
+  readonly multiImageScenesEnabled?: boolean;
 }
 
 export interface PrepareExportRequestResult extends PreparedExportRequest {
@@ -59,12 +65,15 @@ export async function prepareExportRequest(
   const mp4EncoderAvailable =
     input.environment?.mp4EncoderAvailable ?? mp4Probe?.mp4Available ?? false;
 
+  const multiImageScenesEnabled = input.multiImageScenesEnabled !== false;
+
   const manifest = buildExportManifest({
     story: preparedStory.story,
     prepared: preparedStory,
     exportSettings,
     audioMode: input.options?.audioMode ?? "silent",
     includeBackgroundMusic,
+    multiImageScenesEnabled,
     environment: {
       ...input.environment,
       mp4EncoderAvailable,
@@ -106,9 +115,18 @@ function logExportPreflightDiagnostics(
     return;
   }
 
-  const videoSceneCount = (manifest.scenes as Array<{ media?: { type?: string } }>).filter(
-    (scene) => scene.media?.type === "video",
-  ).length;
+  const videoSceneCount = (
+    manifest.scenes as Array<{
+      media?: { type?: string };
+      mediaTimeline?: { items?: Array<{ media?: { type?: string } }> };
+    }>
+  ).reduce((count, scene) => {
+    const items = scene.mediaTimeline?.items;
+    if (items && items.length > 0) {
+      return count + items.filter((item) => item.media?.type === "video").length;
+    }
+    return count + (scene.media?.type === "video" ? 1 : 0);
+  }, 0);
 
   console.info("[ExportPreflight]", {
     fingerprint,

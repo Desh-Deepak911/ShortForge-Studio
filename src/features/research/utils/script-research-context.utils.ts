@@ -5,6 +5,7 @@ import {
   type ScriptPromptSource,
   usesGraphDerivedPromptSource,
 } from "@/features/intelligence/context/resolve-research-prompt-text";
+import type { NarrativePlan } from "@/features/intelligence/prompts/narrative-plan.types";
 import { isResearchContextTextUseful } from "@/features/research/utils/research-context-pass.utils";
 import { hasRankedPlayerDataInContextText } from "@/lib/ai/top5-script-prompt.utils";
 import type { GenerateScriptResearchPreview, ScriptMode } from "@/types/footiebitz";
@@ -25,6 +26,15 @@ export interface ResolvedScriptResearchContext {
   top5RankedDataAvailable?: boolean;
   /** Dev diagnostics — Prompt Intelligence primary, graph/assembled fallback. */
   promptSource?: ScriptPromptSource;
+  /**
+   * Neutral structured research for Hook grounding (Sprint 7D/7D.1).
+   * Research remains Hook-type-free — consumers map via Hook integration.
+   */
+  assembledContext?: AssembledContext;
+  /** Graph-linked facts when available — preferred Hook evidence source. */
+  graphContext?: GraphContext;
+  /** Prompt Intelligence narrative plan when PI built the prompt. */
+  narrativePlan?: NarrativePlan;
 }
 
 function withSupplementalManualNotes(
@@ -178,10 +188,11 @@ export function applyAssembledResearchContext(input: {
   usedResearchPreview?: boolean;
 }): ResolvedScriptResearchContext {
   const assembled = withSupplementalManualNotes(input.assembled, input.manualContext);
-  const { promptText: resolvedPromptText, promptSource } = resolveResearchPromptText({
+  const resolved = resolveResearchPromptText({
     assembled,
     graphContext: input.graphContext,
   });
+  const { promptText: resolvedPromptText, promptSource, narrativePlan } = resolved;
   const promptText = usesGraphDerivedPromptSource(promptSource)
     ? appendSupplementalManualNotes(resolvedPromptText, input.manualContext)
     : resolvedPromptText;
@@ -206,6 +217,12 @@ export function applyAssembledResearchContext(input: {
     researchApplied,
   });
 
+  const structuredHandoff = {
+    assembledContext: assembled,
+    ...(input.graphContext ? { graphContext: input.graphContext } : {}),
+    ...(narrativePlan ? { narrativePlan } : {}),
+  };
+
   if (researchApplied) {
     return {
       context: promptText,
@@ -214,6 +231,7 @@ export function applyAssembledResearchContext(input: {
       usedResearchPreview: input.usedResearchPreview,
       top5RankedDataAvailable,
       promptSource,
+      ...structuredHandoff,
     };
   }
 
@@ -232,6 +250,7 @@ export function applyAssembledResearchContext(input: {
     usedResearchPreview: input.usedResearchPreview,
     top5RankedDataAvailable: false,
     promptSource,
+    ...structuredHandoff,
   };
 }
 

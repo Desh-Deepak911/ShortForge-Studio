@@ -1,7 +1,11 @@
 "use client";
 
 import SceneFrameMedia from "@/features/editor/components/SceneFrameMedia";
-import { sceneHasMedia } from "@/features/story/utils";
+import {
+  resolveActiveSceneMediaRenderView,
+  type ActiveSceneMediaRenderView,
+} from "@/features/scene-media-timeline";
+import { planPreviewMediaLayers } from "@/features/scene-media-transitions/preview";
 import {
   studioPreviewDevice,
   studioPreviewScreen,
@@ -22,6 +26,14 @@ const SCENE_TYPE_META: Record<SceneType, { label: string; color: string }> = {
   ending: { label: "Ending", color: "text-white/60" },
 };
 
+function activeViewIsDrawable(view: ActiveSceneMediaRenderView): boolean {
+  const media = view.media;
+  if (!media || media.type === "placeholder") {
+    return false;
+  }
+  return typeof media.url === "string" && Boolean(media.url.trim());
+}
+
 export function SceneBackdrop({
   scene,
   sceneIndex,
@@ -33,6 +45,10 @@ export function SceneBackdrop({
   isActive = true,
   transformOffset,
   isDragging = false,
+  multiImageScenesEnabled = true,
+  /** When provided, skip ordinary active-item resolution (exact peer / test injection). */
+  activeMediaView: activeMediaViewOverride,
+  allowFramingDrag: allowFramingDragOverride,
 }: {
   scene: FootieScene;
   sceneIndex: number;
@@ -46,27 +62,43 @@ export function SceneBackdrop({
   /** Live framing drag offset (video reposition keeps the same video element). */
   transformOffset?: { x: number; y: number };
   isDragging?: boolean;
+  /**
+   * When false, first-item-only (regression tests). Default true — production multi-image.
+   */
+  multiImageScenesEnabled?: boolean;
+  activeMediaView?: ActiveSceneMediaRenderView;
+  allowFramingDrag?: boolean;
 }) {
   const sceneTypeMeta =
     scene.sceneType && scene.sceneType !== "transition"
       ? SCENE_TYPE_META[scene.sceneType]
       : null;
-  const hasMedia = sceneHasMedia(scene);
+  const multiEnabled = multiImageScenesEnabled !== false;
+  // Duration is accepted for API parity with callers; active view uses scene timing.
+  void sceneDurationMs;
+  const activeMediaView =
+    activeMediaViewOverride ??
+    resolveActiveSceneMediaRenderView(scene, sceneElapsedMs, {
+      multiImageScenesEnabled: multiEnabled,
+    });
+  const hasDrawableActive = activeViewIsDrawable(activeMediaView);
+  const allowFramingDrag =
+    allowFramingDragOverride ?? (!multiEnabled || activeMediaView.itemIndex === 0);
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={style}>
-      {hasMedia && !hideImage ? (
+      {hasDrawableActive && !hideImage ? (
         <SceneFrameMedia
           scene={scene}
+          activeMediaView={activeMediaView}
           alt={`Scene ${sceneIndex + 1}`}
-          sceneElapsedMs={sceneElapsedMs}
-          sceneDurationMs={sceneDurationMs}
           isPlaying={isPlaying}
           isActive={isActive}
           transformOffset={transformOffset}
           isDragging={isDragging}
+          allowFramingDrag={allowFramingDrag}
         />
-      ) : !hasMedia ? (
+      ) : !hasDrawableActive ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-surface via-background to-background px-6 text-center">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.06] ring-1 ring-white/10">
             <Film className="h-5 w-5 text-white/40" />
@@ -150,12 +182,24 @@ export default function PreviewFrame({
   sceneDurationMs = 0,
   isPlaying = false,
 }: PreviewFrameProps) {
+  void sceneDurationMs;
+
   const transitionStyles = transitionOverlay
     ? transitionStateToPreviewLayerStyles(
         transitionOverlay.effect,
         transitionOverlay.transitionState,
       )
     : null;
+
+  // Scene-to-scene wins. Otherwise one stable media stack (primary + optional outgoing).
+  const mediaLayerPlan =
+    !transitionOverlay
+      ? planPreviewMediaLayers({
+          scene: previewFrame.scene,
+          sceneElapsedMs,
+          isPlaying,
+        })
+      : null;
 
   return (
     <PreviewDeviceFrame>
@@ -182,19 +226,69 @@ export default function PreviewFrame({
             isActive={false}
           />
         </>
-      ) : (
-        <SceneBackdrop
-          scene={previewFrame.scene}
-          sceneIndex={previewFrame.sceneIndex}
-          hideImage={hideSceneImage}
-          sceneElapsedMs={sceneElapsedMs}
-          sceneDurationMs={sceneDurationMs}
-          isPlaying={isPlaying}
-          isActive
-          transformOffset={framingDragOffset ?? undefined}
-          isDragging={Boolean(framingDragOffset)}
-        />
-      )}
+      ) : mediaLayerPlan ? (
+        <div
+          className="absolute inset-0 overflow-hidden"
+          data-preview-stable-media-stack="true"
+          data-intra-scene-transition-active={
+            mediaLayerPlan.intraScene ? "true" : "false"
+          }
+          {...(mediaLayerPlan.intraScene
+            ? {
+                "data-intra-scene-transition-from":
+                  mediaLayerPlan.intraScene.fromMediaItemId,
+                "data-intra-scene-transition-to":
+                  mediaLayerPlan.intraScene.toMediaItemId,
+                "data-intra-scene-transition-effect":
+                  mediaLayerPlan.intraScene.effect,
+                "data-intra-scene-transition-progress":
+                  mediaLayerPlan.intraScene.progress.toFixed(4),
+                "data-intra-scene-transition-checkpoint":
+                  mediaLayerPlan.intraScene.checkpoint,
+                "data-intra-scene-transition-outgoing-paused": "true",
+                "data-intra-scene-transition-incoming-active": isPlaying
+                  ? "true"
+                  : "false",
+              }
+            : {})}
+        >
+          {mediaLayerPlan.outgoing ? (
+            <SceneBackdrop
+              key={mediaLayerPlan.outgoing.stableKey}
+              scene={previewFrame.scene}
+              sceneIndex={previewFrame.sceneIndex}
+              style={mediaLayerPlan.outgoing.style}
+              activeMediaView={mediaLayerPlan.outgoing.view}
+              sceneElapsedMs={sceneElapsedMs}
+              sceneDurationMs={sceneDurationMs}
+              isPlaying={mediaLayerPlan.outgoing.isPlaying}
+              isActive={mediaLayerPlan.outgoing.isActive}
+              allowFramingDrag={false}
+            />
+          ) : null}
+          <SceneBackdrop
+            key={mediaLayerPlan.primary.stableKey}
+            scene={previewFrame.scene}
+            sceneIndex={previewFrame.sceneIndex}
+            style={mediaLayerPlan.primary.style}
+            activeMediaView={mediaLayerPlan.primary.view}
+            hideImage={hideSceneImage}
+            sceneElapsedMs={sceneElapsedMs}
+            sceneDurationMs={sceneDurationMs}
+            isPlaying={mediaLayerPlan.primary.isPlaying}
+            isActive={mediaLayerPlan.primary.isActive}
+            allowFramingDrag={
+              mediaLayerPlan.primary.allowFramingDrag && !mediaLayerPlan.intraScene
+            }
+            transformOffset={
+              mediaLayerPlan.intraScene ? undefined : framingDragOffset ?? undefined
+            }
+            isDragging={
+              !mediaLayerPlan.intraScene && Boolean(framingDragOffset)
+            }
+          />
+        </div>
+      ) : null}
 
       {editLayer}
 

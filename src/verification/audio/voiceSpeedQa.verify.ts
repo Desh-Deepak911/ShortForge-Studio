@@ -324,7 +324,7 @@ test("Apply Changes flow only hits voiceover API and restores on failure", () =>
   assert.doesNotMatch(hook, /\/api\/generate-script/);
   assert.match(hook, /restoreVoiceoverBaseline/);
   assert.match(card, /Updating narration/);
-  assert.match(card, /Couldn&apos;t update narration/);
+  assert.match(card, /Couldn't update narration/);
 });
 
 test("voice speed UI does not auto-regenerate on chip change", () => {
@@ -389,7 +389,8 @@ test("export still muxes raw canonical MP3 without preview playbackRate", () => 
     join(root, "src/features/export/utils/ffmpeg.utils.ts"),
     "utf8",
   );
-  assert.match(ffmpeg, /atrim preserves voiceover playback rate/);
+  // Voiceover is trimmed/padded to project length; speed is not re-applied via atempo.
+  assert.match(ffmpeg, /atrim=0:\$\{duration\}/);
   assert.doesNotMatch(ffmpeg, /atempo=/);
 });
 

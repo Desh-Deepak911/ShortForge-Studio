@@ -3,11 +3,16 @@ import type { ScriptMode, Tone } from "@/types/footiebitz";
 import type { GraphContext, GraphContextFact } from "../context/graph-context.types";
 import { getNarrationWordBudget } from "@/features/story/utils/narration-duration-budget.utils";
 
-import type { NarrativeBeat, NarrativePlan, NarrativeStructure } from "./narrative-plan.types";
+import type { NarrativeBeat, NarrativeOpeningIntent, NarrativePlan, NarrativeStructure } from "./narrative-plan.types";
 import {
   resolveStoryStructureForMode,
   type StoryStructureBeatTemplate,
 } from "./story-structure-intelligence.utils";
+import {
+  hasEvidenceLedSurprisePreference,
+  normalizeEvidenceLedSurprisePreference,
+  type EvidenceLedSurprisePreferenceKind,
+} from "./resolve-evidence-led-surprise-preference";
 
 const DEFAULT_TARGET_DURATION_SECONDS = 30;
 const OPENING_HOOK_MAX_WORDS = 8;
@@ -16,6 +21,12 @@ export interface BuildNarrativePlanInput {
   graphContext: GraphContext;
   /** When set, beat target word counts are derived from narration budget. */
   targetDurationSeconds?: number;
+  /**
+   * Explicit creator preference for evidence-led surprise (Sprint 7D.3 / 7E).
+   * `evidence_statistic` prefers eligible statistic facts on the opening beat.
+   * `evidence_fact` (or legacy `true`) may use other eligible factual classes.
+   */
+  evidenceLedSurprisePreference?: boolean | EvidenceLedSurprisePreferenceKind;
 }
 
 interface FactPool {
@@ -179,6 +190,40 @@ function assignBeatFacts(context: GraphContext, templates: StoryStructureBeatTem
   return assignments;
 }
 
+function isEligibleProviderFact(fact: GraphContextFact): boolean {
+  if (fact.type === "manual_note") {
+    return false;
+  }
+  const source = fact.provenance?.source;
+  return source !== "user" && source !== "inferred";
+}
+
+/**
+ * When creator preference is evidence_statistic, pin the opening beat to eligible
+ * statistic facts only — never fall back to an unrelated fixture/scoreline.
+ */
+function applyEvidenceSurpriseOpeningAssignments(
+  assignments: Map<string, string[]>,
+  templates: StoryStructureBeatTemplate[],
+  graphContext: GraphContext,
+  preference: EvidenceLedSurprisePreferenceKind | undefined,
+): void {
+  if (preference !== "evidence_statistic") {
+    return;
+  }
+
+  const opening = templates.find((template) => template.openingHook === true);
+  if (!opening) {
+    return;
+  }
+
+  const eligibleStats = graphContext.statisticFacts
+    .filter(isEligibleProviderFact)
+    .map((fact) => fact.id);
+
+  assignments.set(opening.id, eligibleStats.slice(0, 1));
+}
+
 function buildForbiddenClaims(context: GraphContext): string[] {
   const claims = new Set<string>();
 
@@ -260,10 +305,91 @@ function allGraphFactIds(context: GraphContext): string[] {
   return [...ids];
 }
 
+function findGraphFact(
+  context: GraphContext,
+  factId: string,
+): GraphContextFact | undefined {
+  for (const collection of [
+    context.rankedFacts,
+    context.statisticFacts,
+    context.fixtureFacts,
+    context.timelineFacts,
+    context.verifiedFacts,
+  ]) {
+    const match = collection.find((fact) => fact.id === factId);
+    if (match) {
+      return match;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Deterministic PI opening-intent resolution (Sprint 7D.2 / 7D.3).
+ * Requires an openingHook beat that **explicitly** requests evidenceLedSurprise
+ * AND has eligible provider-verified evidence-bearing fact IDs.
+ * Mere presence of ranked/fixture/statistic/timeline facts is insufficient.
+ */
+export function resolveNarrativeOpeningIntent(
+  beats: NarrativeBeat[],
+  graphContext: GraphContext,
+): NarrativeOpeningIntent | undefined {
+  const openingFactIds = [
+    ...new Set(
+      beats
+        .filter(
+          (beat) =>
+            beat.openingHook === true && beat.evidenceLedSurprise === true,
+        )
+        .flatMap((beat) => beat.requiredFactIds),
+    ),
+  ];
+
+  if (openingFactIds.length === 0) {
+    return undefined;
+  }
+
+  const evidenceBearingIds = new Set(
+    [
+      ...graphContext.rankedFacts,
+      ...graphContext.statisticFacts,
+      ...graphContext.fixtureFacts,
+      ...graphContext.timelineFacts,
+      ...graphContext.verifiedFacts,
+    ].map((fact) => fact.id),
+  );
+
+  const eligible = openingFactIds
+    .filter((factId) => evidenceBearingIds.has(factId))
+    .filter((factId) => {
+      const fact = findGraphFact(graphContext, factId);
+      if (!fact) {
+        return false;
+      }
+      if (fact.type === "manual_note") {
+        return false;
+      }
+      const source = fact.provenance?.source;
+      return source !== "user" && source !== "inferred";
+    })
+    .sort();
+
+  if (eligible.length === 0) {
+    return undefined;
+  }
+
+  return {
+    kind: "evidence_led_surprise",
+    factIds: eligible,
+  };
+}
+
 /**
  * Builds a mode-aware narrative plan from GraphContext.
  *
  * Uses only facts present in the graph — does not invent missing data.
+ * Evidence-led surprise is marked only when the creator preference is explicit
+ * (Sprint 7D.3); openingIntent is omitted when eligible facts are unavailable.
  */
 export function buildNarrativePlan(input: BuildNarrativePlanInput): NarrativePlan {
   const { graphContext, targetDurationSeconds } = input;
@@ -271,8 +397,18 @@ export function buildNarrativePlan(input: BuildNarrativePlanInput): NarrativePla
   const structure = storyStructure.arc;
   const templates = resolveBeatTemplates(graphContext.selectedMode);
   const wordCounts = allocateBeatWordCounts(templates, targetDurationSeconds);
+  const preference = normalizeEvidenceLedSurprisePreference(
+    input.evidenceLedSurprisePreference,
+  );
   const factAssignments = assignBeatFacts(graphContext, templates);
+  applyEvidenceSurpriseOpeningAssignments(
+    factAssignments,
+    templates,
+    graphContext,
+    preference,
+  );
   const tone = MODE_TONE[graphContext.selectedMode];
+  const requestSurprise = hasEvidenceLedSurprisePreference(preference);
 
   const beats: NarrativeBeat[] = templates.map((template, index) => ({
     id: template.id,
@@ -282,11 +418,15 @@ export function buildNarrativePlan(input: BuildNarrativePlanInput): NarrativePla
     requiredFactIds: factAssignments.get(template.id) ?? [],
     tone,
     ...(template.openingHook ? { openingHook: true } : {}),
+    ...(requestSurprise && template.openingHook
+      ? { evidenceLedSurprise: true }
+      : {}),
   }));
 
   const requiredFacts = [...new Set(beats.flatMap((beat) => beat.requiredFactIds))];
   const availableFacts = allGraphFactIds(graphContext);
   const optionalFacts = availableFacts.filter((factId) => !requiredFacts.includes(factId));
+  const openingIntent = resolveNarrativeOpeningIntent(beats, graphContext);
 
   return {
     structure,
@@ -296,5 +436,6 @@ export function buildNarrativePlan(input: BuildNarrativePlanInput): NarrativePla
     optionalFacts,
     forbiddenClaims: buildForbiddenClaims(graphContext),
     modeSpecificRules: buildModeSpecificRules(graphContext, structure),
+    ...(openingIntent ? { openingIntent } : {}),
   };
 }

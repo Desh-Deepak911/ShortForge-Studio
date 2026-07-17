@@ -7,6 +7,9 @@ export { SelectionPhase, SceneSelectionPhase, SelectionType } from "./selection.
 export type {
   EditorSelectionState,
   ImageSelectionTarget,
+  SceneMediaItemSelectionTarget,
+  SceneMediaTransitionSelectionTarget,
+  SelectedMediaTransitionPair,
   SceneSelectionTarget,
   SelectionTarget,
 } from "./selection.types";
@@ -19,6 +22,8 @@ export {
   selectInspectorImageEditing,
   selectIsImageEditing,
   selectIsImageSelected,
+  selectIsSceneMediaItemSelected,
+  selectIsSceneMediaTransitionSelected,
   selectIsSceneSelected,
   selectRibbonContextId,
   selectRibbonVisible,
@@ -26,6 +31,8 @@ export {
   selectSelectedImageSceneId,
 } from "./selection.selectors";
 export {
+  reconcileMediaItemSelectionAuthority,
+  reconcileMediaTransitionSelectionAuthority,
   resolveSafeSceneIndex,
   resolveSceneIndexById,
   resolveSelectedScene,

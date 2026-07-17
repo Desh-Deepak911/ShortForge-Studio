@@ -5,13 +5,26 @@
 export {
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_MANIFEST_V2_VERSION,
+  EXPORT_RENDERER_CONTRACT_V2,
+  isExportManifestV2,
+  isExportManifestV3,
+  isExportSceneManifestV3,
 } from "./export-manifest.types";
 export type {
   ExportManifest,
+  ExportManifestV2,
+  ExportManifestV3,
   ExportManifestDraft,
   ExportProjectManifest,
   ExportOutputManifest,
   ExportSceneManifest,
+  ExportSceneManifestV2,
+  ExportSceneManifestV3,
+  ExportSceneMediaTimelineManifest,
+  ExportSceneMediaTimelineItemManifest,
+  ExportSceneMediaTransitionTrackManifest,
+  ExportSceneMediaTransitionBoundaryManifest,
   ExportMediaManifest,
   ExportCaptionManifest,
   ExportCaptionLayoutManifest,
@@ -24,9 +37,45 @@ export type {
   ExportManifestQuality,
   ExportManifestResolutionLabel,
 } from "./export-manifest.types";
+export {
+  resolveExportActiveSceneMediaFrame,
+  type ExportActiveSceneMediaFrame,
+} from "./resolve-export-active-scene-media-frame";
+export {
+  resolveExportIntraSceneTransitionAtElapsed,
+  type ResolvedExportIntraSceneTransition,
+} from "./resolve-export-intra-scene-transition";
+export { buildExportSceneMediaTransitionTrack } from "./build-export-scene-media-transitions";
+export {
+  validateExportManifestV2SceneMedia,
+  assertExportManifestV2SceneMedia,
+  exportMediaManifestSemanticallyEqual,
+  validateExportSceneMediaTimelineFields,
+  type ExportManifestV2IntegrityIssue,
+  type ExportManifestV2IntegrityResult,
+} from "./assert-export-manifest-v2-scene-media";
+export {
+  validateExportManifestV3SceneMedia,
+  assertExportManifestV3SceneMedia,
+  type ExportManifestV3IntegrityIssue,
+  type ExportManifestV3IntegrityResult,
+} from "./assert-export-manifest-v3-scene-media";
+export {
+  validateExportManifest,
+  assertExportManifest,
+  type ExportManifestIntegrityIssue,
+  type ExportManifestIntegrityResult,
+} from "./validate-export-manifest";
+export {
+  summarizeExportManifestV3Diagnostics,
+  type ExportManifestV3DiagnosticsSummary,
+} from "./export-manifest-v3-diagnostics";
 
 export { deepFreezeExportManifest } from "./export-manifest-freeze";
-export { buildExportManifestFingerprint } from "./export-manifest-fingerprint";
+export {
+  buildExportManifestFingerprint,
+  verifyExportManifestFingerprintCoherence,
+} from "./export-manifest-fingerprint";
 export {
   formatExportVideoBitrateArg,
   isExportVisualQualityDebugEnabled,
@@ -63,7 +112,10 @@ export {
   isExportFfmpegRuntimePoisoned,
 } from "./export-environment.utils";
 export { estimateExportCost } from "./export-cost-estimate.utils";
-export { runExportCapabilityPreflight } from "./run-export-capability-preflight";
+export {
+  runExportCapabilityPreflight,
+  EXPORT_INVALID_MANIFEST_COST_SENTINEL,
+} from "./run-export-capability-preflight";
 export {
   selectExportRenderer,
   exportRequiresServerRenderer,

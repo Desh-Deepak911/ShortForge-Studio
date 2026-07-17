@@ -171,7 +171,10 @@ test("Playback lock disables trim", () => {
 
 test("Reorder blocks trim", () => {
   const timeline = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
-  assert.match(timeline, /reorderDisabled = playbackLocked \|\| resizeState != null \|\| trimState != null/);
+  assert.match(
+    timeline,
+    /reorderDisabled =\s*playbackLocked \|\| resizeState != null \|\| trimState != null \|\| mediaInteractionActive/,
+  );
   assert.match(
     timeline,
     /if \(playbackLocked \|\| resizeStateRef\.current \|\| trimStateRef\.current\)/,
@@ -180,7 +183,10 @@ test("Reorder blocks trim", () => {
 
 test("Duration resize blocks trim", () => {
   const timeline = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
-  assert.match(timeline, /trimDisabled = playbackLocked \|\| dragState != null \|\| resizeState != null/);
+  assert.match(
+    timeline,
+    /trimDisabled =\s*playbackLocked \|\| dragState != null \|\| resizeState != null \|\| mediaInteractionActive/,
+  );
   assert.match(
     timeline,
     /if \(playbackLocked \|\| dragStateRef\.current \|\| trimStateRef\.current\)/,
@@ -190,12 +196,18 @@ test("Duration resize blocks trim", () => {
 test("Active trim blocks reorder", () => {
   const timeline = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
   assert.match(timeline, /trimState != null/);
-  assert.match(timeline, /reorderDisabled = playbackLocked \|\| resizeState != null \|\| trimState != null/);
+  assert.match(
+    timeline,
+    /reorderDisabled =\s*playbackLocked \|\| resizeState != null \|\| trimState != null \|\| mediaInteractionActive/,
+  );
 });
 
 test("Active trim blocks duration resize", () => {
   const timeline = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
-  assert.match(timeline, /resizeDisabled = playbackLocked \|\| dragState != null \|\| trimState != null/);
+  assert.match(
+    timeline,
+    /resizeDisabled =\s*playbackLocked \|\| dragState != null \|\| trimState != null \|\| mediaInteractionActive/,
+  );
 });
 
 test("Source-time mapping uses source duration", () => {
@@ -575,7 +587,10 @@ test("Playback start cancels trim session", () => {
 test("Context menu cannot open during trim", () => {
   const timeline = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
   assert.match(timeline, /contextMenuDisabled=\{contextMenuDisabled\}/);
-  assert.match(timeline, /if \(trimStateRef\.current\) \{\s*return;/);
+  assert.match(
+    timeline,
+    /if \(trimStateRef\.current \|\| mediaBoundaryOwnerRef\.current\) \{\s*return;/,
+  );
   const block = readSrc("src/features/timeline-editor/TimelineSceneBlock.tsx");
   assert.match(block, /contextMenuDisabled/);
   assert.match(block, /if \(contextMenuDisabled \|\| isTrimming\)/);

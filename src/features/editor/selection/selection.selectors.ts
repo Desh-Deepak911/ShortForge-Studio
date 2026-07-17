@@ -27,8 +27,26 @@ export function selectIsImageSelected(state: EditorSelectionState): boolean {
 
 export function selectIsSceneSelected(state: EditorSelectionState): boolean {
   return (
-    state.target?.type === SelectionType.Scene &&
+    (state.target?.type === SelectionType.Scene ||
+      state.target?.type === SelectionType.SceneMediaItem ||
+      state.target?.type === SelectionType.SceneMediaTransition) &&
     (state.phase === SelectionPhase.Selected || state.phase === SelectionPhase.Hover)
+  );
+}
+
+export function selectIsSceneMediaItemSelected(state: EditorSelectionState): boolean {
+  return (
+    state.target?.type === SelectionType.SceneMediaItem &&
+    (state.phase === SelectionPhase.Selected || state.phase === SelectionPhase.Hover) &&
+    Boolean(state.selectedMediaItemId)
+  );
+}
+
+export function selectIsSceneMediaTransitionSelected(state: EditorSelectionState): boolean {
+  return (
+    state.target?.type === SelectionType.SceneMediaTransition &&
+    (state.phase === SelectionPhase.Selected || state.phase === SelectionPhase.Hover) &&
+    Boolean(state.selectedMediaTransition)
   );
 }
 
@@ -94,6 +112,8 @@ export function selectRibbonContextId(state: EditorSelectionState): RibbonContex
     case SelectionType.Image:
       return "image";
     case SelectionType.Scene:
+    case SelectionType.SceneMediaItem:
+    case SelectionType.SceneMediaTransition:
       return "scene";
     default:
       return "unknown";

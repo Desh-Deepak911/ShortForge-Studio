@@ -1,6 +1,26 @@
-# Export Renderer Architecture (Sprint 6C–6D)
+# Export Renderer Architecture (Sprint 6C–6D / 8D / 9C)
 
 > Production browser export consumes **ExportManifest** (semantic) + **ExportRenderContext** (runtime) only.
+
+## Sprint 9C — Intra-scene transition export *(frozen with Sprint 9)*
+
+- Production manifest version **3**, renderer contract **`"9C"`** — **frozen**.
+- Frozen backward-compatible pair: version **2** / **`"8D"`** (hard-cut intra-scene).
+- V3 scenes always include `mediaTransitions`; empty boundaries = hard-cut parity with v2.
+- Frame composition priority: scene-to-scene → v3 intra-scene → ordinary active media.
+- Peers prepared under `buildExportMediaCacheKey(sceneId, mediaItemId)` (scene-id-only map insufficient).
+- Captions render over intra-scene overlays; scene-to-scene caption early-return unchanged.
+- Sprint 9 golden QA + local harness: `npm run test:intra-scene-transition-golden` · `/dev/intra-scene-transition-qa` · freeze evidence in `docs/qa/intra-scene-transition-sprint-9-freeze.md`.
+
+## Sprint 8D — Multi-media items (frozen)
+
+- Frozen manifest version **2**, renderer contract **`"8D"`**.
+- Canonical per-scene media is `mediaTimeline` (frozen item windows). `scene.media` is first-item compatibility only.
+- Cache keys are collision-safe `sceneId` + `mediaItemId` (`buildExportMediaCacheKey`).
+- Each frame: resolve scene clock → `resolveExportActiveSceneMediaFrame` → seek/draw that item with **item-local** elapsed.
+- Scene-to-scene transitions resolve from/to active items independently.
+- Hard cuts between media items on v2; v3/`9C` adds frozen intra-scene transition overlays.
+- Runtime v1 manifests fail the v2 check honestly.
 
 ## Lifecycle
 

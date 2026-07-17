@@ -15,7 +15,7 @@ import {
   Sparkles,
   VolumeX,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { getSceneImageUrl, sceneHasImage } from "@/features/story/utils";
 import type { FootieScene, SceneType } from "@/features/story/types";
@@ -111,6 +111,11 @@ export interface TimelineSceneBlockProps {
   ) => void;
   blockRef?: (element: HTMLButtonElement | null) => void;
   wrapperRef?: (element: HTMLDivElement | null) => void;
+  /**
+   * Optional sibling media lane (Sprint 8B) — rendered outside the scene button
+   * so interactive controls are never nested inside the scene button.
+   */
+  mediaLane?: ReactNode;
 }
 
 const KEYBOARD_HIGHLIGHT_MS = 220;
@@ -156,6 +161,7 @@ export default function TimelineSceneBlock({
   onTrimHandleKeyDown,
   blockRef,
   wrapperRef,
+  mediaLane,
 }: TimelineSceneBlockProps) {
   const kebabRef = useRef<HTMLButtonElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -754,6 +760,12 @@ export default function TimelineSceneBlock({
           className={`${timelineSceneBlockResizeHandleBar} ${showResizeActive ? timelineSceneBlockResizeHandleBarActive : ""}`}
         />
       </button>
+
+      {mediaLane ? (
+        <div className="relative z-[1] w-full" data-scene-media-lane-slot>
+          {mediaLane}
+        </div>
+      ) : null}
     </div>
   );
 }

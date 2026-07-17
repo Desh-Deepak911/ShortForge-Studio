@@ -1,3 +1,5 @@
+import { sceneMediaTimelineChanged } from "@/features/scene-media-timeline";
+import { sceneMediaTransitionsChanged } from "@/features/scene-media-transitions";
 import type { FootieScene, FootieScript, TimelineItem } from "@/features/story/types";
 import {
   isCaptionModeSwitchOnly,
@@ -357,7 +359,9 @@ function sceneMediaChanged(prev: FootieScene, next: FootieScene): boolean {
     prevMediaType !== nextMediaType ||
     sceneMediaPosterSignature(prev) !== sceneMediaPosterSignature(next) ||
     sceneMediaTrimSignature(prev) !== sceneMediaTrimSignature(next) ||
-    JSON.stringify(prev.assetAttachment ?? null) !== JSON.stringify(next.assetAttachment ?? null)
+    JSON.stringify(prev.assetAttachment ?? null) !== JSON.stringify(next.assetAttachment ?? null) ||
+    sceneMediaTimelineChanged(prev, next) ||
+    sceneMediaTransitionsChanged(prev, next)
   );
 }
 

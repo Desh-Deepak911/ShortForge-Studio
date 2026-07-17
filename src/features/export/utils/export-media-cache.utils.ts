@@ -1,19 +1,39 @@
 /**
- * Export Media Cache foundation (4.2A-5B-1).
+ * Export Media Cache foundation (4.2A-5B-1 / Sprint 8D).
  *
  * Preloads image + video scene media into one cache abstraction.
- * Does not draw frames — renderer wiring lands in 4.2A-5B-2.
+ * Keys are collision-safe composites of sceneId + mediaItemId.
  */
 import type { FootieScene, SceneMedia, SceneMediaType } from "@/features/story/types";
 import { getSceneImageUrl, getSceneMedia } from "@/features/story/utils";
 
 const VIDEO_PRELOAD_TIMEOUT_MS = 20_000;
 
+/**
+ * Collision-safe cache key. Length-prefixed segments avoid delimiter ambiguity
+ * when sceneId or mediaItemId contain separators.
+ */
+export function buildExportMediaCacheKey(
+  sceneId: string,
+  mediaItemId: string,
+): string {
+  const safeSceneId = typeof sceneId === "string" ? sceneId : "";
+  const safeItemId = typeof mediaItemId === "string" ? mediaItemId : "";
+  return `s${safeSceneId.length}:${safeSceneId}|m${safeItemId.length}:${safeItemId}`;
+}
+
+/** Compatibility key when a caller only has a scene id (legacy single-media path). */
+export function buildExportSceneOnlyCacheKey(sceneId: string): string {
+  return buildExportMediaCacheKey(sceneId, "__scene__");
+}
+
 export type ExportMediaAssetStatus = "ready" | "error";
 
 export interface ExportImageAsset {
   kind: "image";
   sceneId: string;
+  mediaItemId: string;
+  cacheKey: string;
   url: string;
   element: HTMLImageElement;
   status: ExportMediaAssetStatus;
@@ -23,6 +43,8 @@ export interface ExportImageAsset {
 export interface ExportVideoAsset {
   kind: "video";
   sceneId: string;
+  mediaItemId: string;
+  cacheKey: string;
   url: string;
   element: HTMLVideoElement;
   /** Source duration in ms when known from element or SceneMedia. */
@@ -38,6 +60,7 @@ export type ExportMediaCacheDiagnosticStatus = "ready" | "skipped" | "error";
 
 export interface ExportMediaCacheDiagnostic {
   sceneId: string;
+  mediaItemId?: string;
   mediaType: SceneMediaType | "none";
   status: ExportMediaCacheDiagnosticStatus;
   message?: string;
@@ -231,10 +254,12 @@ export async function preloadExportSceneMedia(
   const loadImage = options.loaders?.loadImage ?? loadExportImageElement;
   const loadVideo = options.loaders?.loadVideo ?? ((url, sceneMedia) =>
     loadExportVideoElement(url, sceneMedia, options.videoTimeoutMs));
+  const mediaItemId = "__scene__";
 
   if (media?.type === "placeholder") {
     pushDiagnostic(cache, {
       sceneId: scene.id,
+      mediaItemId,
       mediaType: "placeholder",
       status: "skipped",
       message: "Placeholder media skipped",
@@ -243,11 +268,11 @@ export async function preloadExportSceneMedia(
   }
 
   if (!media) {
-    // Legacy image-only scenes without scene.media still resolve via getSceneImageUrl.
     const legacyUrl = getSceneImageUrl(scene);
     if (!legacyUrl) {
       pushDiagnostic(cache, {
         sceneId: scene.id,
+        mediaItemId,
         mediaType: "none",
         status: "skipped",
         message: "No media URL",
@@ -255,7 +280,7 @@ export async function preloadExportSceneMedia(
       return null;
     }
 
-    return preloadImageAsset(scene.id, legacyUrl, cache, loadImage, "image");
+    return preloadImageAsset(scene.id, mediaItemId, legacyUrl, cache, loadImage, "image");
   }
 
   if (media.type === "image") {
@@ -263,6 +288,7 @@ export async function preloadExportSceneMedia(
     if (!url) {
       pushDiagnostic(cache, {
         sceneId: scene.id,
+        mediaItemId,
         mediaType: "image",
         status: "skipped",
         message: "Missing image URL",
@@ -270,7 +296,7 @@ export async function preloadExportSceneMedia(
       return null;
     }
 
-    return preloadImageAsset(scene.id, url, cache, loadImage, "image");
+    return preloadImageAsset(scene.id, mediaItemId, url, cache, loadImage, "image");
   }
 
   if (media.type === "video") {
@@ -278,6 +304,7 @@ export async function preloadExportSceneMedia(
     if (!url) {
       pushDiagnostic(cache, {
         sceneId: scene.id,
+        mediaItemId,
         mediaType: "video",
         status: "skipped",
         message: "Missing video URL",
@@ -289,10 +316,13 @@ export async function preloadExportSceneMedia(
       const { element, durationMs } = await loadVideo(url, media);
       element.muted = true;
       element.volume = 0;
+      const cacheKey = buildExportMediaCacheKey(scene.id, mediaItemId);
 
       const asset: ExportVideoAsset = {
         kind: "video",
         sceneId: scene.id,
+        mediaItemId,
+        cacheKey,
         url,
         element,
         durationMs,
@@ -300,10 +330,11 @@ export async function preloadExportSceneMedia(
         status: "ready",
       };
 
-      cache.videos.set(scene.id, element);
-      cache.assets.set(scene.id, asset);
+      cache.videos.set(cacheKey, element);
+      cache.assets.set(cacheKey, asset);
       pushDiagnostic(cache, {
         sceneId: scene.id,
+        mediaItemId,
         mediaType: "video",
         status: "ready",
       });
@@ -313,6 +344,7 @@ export async function preloadExportSceneMedia(
         error instanceof Error ? error.message : "Failed to load scene video";
       pushDiagnostic(cache, {
         sceneId: scene.id,
+        mediaItemId,
         mediaType: "video",
         status: "error",
         message,
@@ -323,6 +355,7 @@ export async function preloadExportSceneMedia(
 
   pushDiagnostic(cache, {
     sceneId: scene.id,
+    mediaItemId,
     mediaType: "none",
     status: "skipped",
     message: "Unsupported media type",
@@ -332,24 +365,29 @@ export async function preloadExportSceneMedia(
 
 async function preloadImageAsset(
   sceneId: string,
+  mediaItemId: string,
   url: string,
   cache: ExportMediaCache,
   loadImage: (url: string) => Promise<HTMLImageElement>,
   mediaType: SceneMediaType,
 ): Promise<ExportImageAsset | null> {
+  const cacheKey = buildExportMediaCacheKey(sceneId, mediaItemId);
   try {
     const element = await loadImage(url);
     const asset: ExportImageAsset = {
       kind: "image",
       sceneId,
+      mediaItemId,
+      cacheKey,
       url,
       element,
       status: "ready",
     };
-    cache.images.set(sceneId, element);
-    cache.assets.set(sceneId, asset);
+    cache.images.set(cacheKey, element);
+    cache.assets.set(cacheKey, asset);
     pushDiagnostic(cache, {
       sceneId,
+      mediaItemId,
       mediaType,
       status: "ready",
     });
@@ -359,6 +397,7 @@ async function preloadImageAsset(
       error instanceof Error ? error.message : "Failed to load scene image";
     pushDiagnostic(cache, {
       sceneId,
+      mediaItemId,
       mediaType,
       status: "error",
       message,
@@ -379,99 +418,145 @@ export async function preloadExportStoryMedia(
   return cache;
 }
 
+type ManifestPreloadMedia = {
+  type: "image" | "video" | "placeholder";
+  source?: string;
+  sourceDurationMs?: number;
+  trimStartMs?: number;
+  trimEndMs?: number;
+};
+
+type ManifestPreloadScene = {
+  id: string;
+  media: ManifestPreloadMedia;
+  mediaTimeline?: {
+    items: ReadonlyArray<{
+      id: string;
+      media: ManifestPreloadMedia;
+    }>;
+  };
+};
+
 /**
- * Preload from ExportManifest sources only (Sprint 6C).
+ * Preload from ExportManifest sources only (Sprint 6C / 8D).
+ * Prefers mediaTimeline items; falls back to compatibility scene.media.
  * Does not read StoryDocument / getSceneMedia.
  */
 export async function preloadExportManifestMedia(
-  scenes: ReadonlyArray<{
-    id: string;
-    media: {
-      type: "image" | "video" | "placeholder";
-      source?: string;
-      sourceDurationMs?: number;
-      trimStartMs?: number;
-      trimEndMs?: number;
-    };
-  }>,
+  scenes: ReadonlyArray<ManifestPreloadScene>,
   cache: ExportMediaCache = createExportMediaCache(),
   options: PreloadExportMediaOptions = {},
 ): Promise<ExportMediaCache> {
   for (const scene of scenes) {
-    const media = scene.media;
-    if (media.type === "placeholder" || !media.source?.trim()) {
-      pushDiagnostic(cache, {
-        sceneId: scene.id,
-        mediaType: media.type === "placeholder" ? "placeholder" : "none",
-        status: "skipped",
-        message: "No drawable media source",
-      });
-      continue;
-    }
+    const timelineItems = scene.mediaTimeline?.items;
+    const entries =
+      timelineItems && timelineItems.length > 0
+        ? timelineItems.map((item) => ({
+            mediaItemId: item.id,
+            media: item.media,
+          }))
+        : [{ mediaItemId: "__scene__", media: scene.media }];
 
-    if (media.type === "image") {
-      await preloadImageAsset(
-        scene.id,
-        media.source.trim(),
-        cache,
-        options.loaders?.loadImage ?? loadExportImageElement,
-        "image",
-      );
-      continue;
-    }
-
-    const syntheticMedia: SceneMedia = {
-      type: "video",
-      url: media.source.trim(),
-      source: "upload",
-      durationMs: media.sourceDurationMs,
-      trimStartMs: media.trimStartMs,
-      trimEndMs: media.trimEndMs,
-    };
-    const loadVideo =
-      options.loaders?.loadVideo ??
-      ((url, sceneMedia) =>
-        loadExportVideoElement(url, sceneMedia, options.videoTimeoutMs));
-
-    try {
-      const { element, durationMs } = await loadVideo(media.source.trim(), syntheticMedia);
-      element.muted = true;
-      element.volume = 0;
-      const asset: ExportVideoAsset = {
-        kind: "video",
-        sceneId: scene.id,
-        url: media.source.trim(),
-        element,
-        durationMs,
-        muted: true,
-        status: "ready",
-      };
-      cache.videos.set(scene.id, element);
-      cache.assets.set(scene.id, asset);
-      pushDiagnostic(cache, {
-        sceneId: scene.id,
-        mediaType: "video",
-        status: "ready",
-      });
-    } catch (error) {
-      pushDiagnostic(cache, {
-        sceneId: scene.id,
-        mediaType: "video",
-        status: "error",
-        message: error instanceof Error ? error.message : "Failed to load scene video",
-      });
+    for (const entry of entries) {
+      await preloadManifestMediaEntry(scene.id, entry.mediaItemId, entry.media, cache, options);
     }
   }
 
   return cache;
 }
 
-/** Returns the cached asset for a scene, if preloaded successfully. */
+async function preloadManifestMediaEntry(
+  sceneId: string,
+  mediaItemId: string,
+  media: ManifestPreloadMedia,
+  cache: ExportMediaCache,
+  options: PreloadExportMediaOptions,
+): Promise<void> {
+  if (media.type === "placeholder" || !media.source?.trim()) {
+    pushDiagnostic(cache, {
+      sceneId,
+      mediaItemId,
+      mediaType: media.type === "placeholder" ? "placeholder" : "none",
+      status: "skipped",
+      message: "No drawable media source",
+    });
+    return;
+  }
+
+  if (media.type === "image") {
+    await preloadImageAsset(
+      sceneId,
+      mediaItemId,
+      media.source.trim(),
+      cache,
+      options.loaders?.loadImage ?? loadExportImageElement,
+      "image",
+    );
+    return;
+  }
+
+  const syntheticMedia: SceneMedia = {
+    type: "video",
+    url: media.source.trim(),
+    source: "upload",
+    durationMs: media.sourceDurationMs,
+    trimStartMs: media.trimStartMs,
+    trimEndMs: media.trimEndMs,
+  };
+  const loadVideo =
+    options.loaders?.loadVideo ??
+    ((url, sceneMedia) =>
+      loadExportVideoElement(url, sceneMedia, options.videoTimeoutMs));
+
+  try {
+    const { element, durationMs } = await loadVideo(media.source.trim(), syntheticMedia);
+    element.muted = true;
+    element.volume = 0;
+    const cacheKey = buildExportMediaCacheKey(sceneId, mediaItemId);
+    const asset: ExportVideoAsset = {
+      kind: "video",
+      sceneId,
+      mediaItemId,
+      cacheKey,
+      url: media.source.trim(),
+      element,
+      durationMs,
+      muted: true,
+      status: "ready",
+    };
+    cache.videos.set(cacheKey, element);
+    cache.assets.set(cacheKey, asset);
+    pushDiagnostic(cache, {
+      sceneId,
+      mediaItemId,
+      mediaType: "video",
+      status: "ready",
+    });
+  } catch (error) {
+    pushDiagnostic(cache, {
+      sceneId,
+      mediaItemId,
+      mediaType: "video",
+      status: "error",
+      message: error instanceof Error ? error.message : "Failed to load scene video",
+    });
+  }
+}
+
+/** Returns the cached asset for a scene media item, if preloaded successfully. */
 export function getExportSceneMediaAsset(
   cache: ExportMediaCache,
   scene: Pick<FootieScene, "id"> | string,
+  mediaItemId?: string,
 ): ExportMediaAsset | null {
   const sceneId = typeof scene === "string" ? scene : scene.id;
+  const itemId = mediaItemId?.trim() ? mediaItemId.trim() : "__scene__";
+  const key = buildExportMediaCacheKey(sceneId, itemId);
+  const direct = cache.assets.get(key);
+  if (direct) {
+    return direct;
+  }
+  // Legacy fallback: some tests still seed by raw sceneId.
   return cache.assets.get(sceneId) ?? null;
 }
 
@@ -479,15 +564,19 @@ export function getExportSceneMediaAsset(
 export function getExportCachedImage(
   cache: ExportMediaCache,
   sceneId: string,
+  mediaItemId?: string,
 ): HTMLImageElement | null {
-  return cache.images.get(sceneId) ?? null;
+  const key = buildExportMediaCacheKey(sceneId, mediaItemId?.trim() || "__scene__");
+  return cache.images.get(key) ?? cache.images.get(sceneId) ?? null;
 }
 
 export function getExportCachedVideo(
   cache: ExportMediaCache,
   sceneId: string,
+  mediaItemId?: string,
 ): HTMLVideoElement | null {
-  return cache.videos.get(sceneId) ?? null;
+  const key = buildExportMediaCacheKey(sceneId, mediaItemId?.trim() || "__scene__");
+  return cache.videos.get(key) ?? cache.videos.get(sceneId) ?? null;
 }
 
 /**

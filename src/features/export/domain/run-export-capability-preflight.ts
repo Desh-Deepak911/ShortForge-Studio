@@ -1,16 +1,22 @@
 /**
- * Capability preflight for ExportManifest (Sprint 6B).
+ * Capability preflight for ExportManifest (Sprint 6B / 8D.1A).
  * Must run before media preload, canvas, MediaRecorder, FFmpeg, or frame render.
+ *
+ * Fail-closed: version-dispatching integrity (`validateExportManifest`) runs before
+ * cost estimation, environment dereferences, format/timeline/media checks,
+ * resolution approval, and renderer selection. Malformed manifests never reach
+ * those stages.
  */
 
 import type {
   ExportBlocker,
   ExportCapabilityResult,
+  ExportCostEstimate,
   ExportWarning,
 } from "./export-capability.types";
 import { estimateExportCost } from "./export-cost-estimate.utils";
 import type { ExportManifest } from "./export-manifest.types";
-import { EXPORT_MANIFEST_VERSION } from "./export-manifest.types";
+import { validateExportManifest } from "./validate-export-manifest";
 import { approveExportResolutionForManifest } from "@/features/export/capabilities";
 import {
   EXPORT_BLOCKER_MESSAGES,
@@ -26,7 +32,77 @@ import {
   selectExportRenderer,
 } from "./select-export-renderer";
 
+/**
+ * Sentinel cost when integrity fails before estimation runs.
+ * Must not be mistaken for a real export cost estimate.
+ */
+export const EXPORT_INVALID_MANIFEST_COST_SENTINEL: ExportCostEstimate = {
+  estimatedFrames: 0,
+  estimatedRawFrameBytes: 0,
+  estimatedIntermediateBytes: 0,
+  estimatedPeakMemoryBytes: 0,
+  durationClass: "short",
+  risk: "unsafe",
+  rendererVersion: "invalid-manifest-sentinel",
+  chunkSizeFrames: 0,
+  estimatedChunkFrameBytes: 0,
+  estimatedRetainedSegmentBytes: 0,
+};
+
+function safeManifestFingerprint(manifest: unknown): string {
+  if (
+    typeof manifest === "object" &&
+    manifest !== null &&
+    typeof (manifest as { fingerprint?: unknown }).fingerprint === "string"
+  ) {
+    const fingerprint = (manifest as { fingerprint: string }).fingerprint.trim();
+    if (fingerprint) {
+      return fingerprint;
+    }
+  }
+  return "invalid-manifest";
+}
+
+function blockedInvalidManifestResult(
+  manifest: unknown,
+  message: string,
+): ExportCapabilityResult {
+  return {
+    supported: false,
+    renderer: "blocked",
+    warnings: [],
+    blockers: [blocker("INVALID_MANIFEST", message)],
+    estimatedCost: EXPORT_INVALID_MANIFEST_COST_SENTINEL,
+    manifestFingerprint: safeManifestFingerprint(manifest),
+  };
+}
+
 export function runExportCapabilityPreflight(
+  manifest: ExportManifest,
+): ExportCapabilityResult {
+  // 1) Total integrity first — never estimate cost or dereference env on garbage.
+  const integrity = validateExportManifest(manifest);
+  if (!integrity.ok) {
+    const first = integrity.issues[0]!;
+    return blockedInvalidManifestResult(
+      manifest,
+      `${first.message} (${first.code})`,
+    );
+  }
+
+  try {
+    return runPostIntegrityPreflight(manifest);
+  } catch (error) {
+    return blockedInvalidManifestResult(
+      manifest,
+      error instanceof Error
+        ? `Export preflight aborted on malformed manifest: ${error.message}`
+        : "Export preflight aborted on malformed manifest.",
+    );
+  }
+}
+
+function runPostIntegrityPreflight(
   manifest: ExportManifest,
 ): ExportCapabilityResult {
   const blockers: ExportBlocker[] = [];
@@ -34,7 +110,6 @@ export function runExportCapabilityPreflight(
   const estimatedCost = estimateExportCost(manifest);
   const env = manifest.capabilities.environment;
 
-  pushManifestIntegrity(manifest, blockers);
   pushFormatChecks(manifest, blockers);
   pushTimelineChecks(manifest, blockers, warnings);
   pushMediaChecks(manifest, blockers);
@@ -88,7 +163,7 @@ export function runExportCapabilityPreflight(
     warnings,
     blockers,
     estimatedCost,
-    manifestFingerprint: manifest.fingerprint,
+    manifestFingerprint: safeManifestFingerprint(manifest),
   };
 
   const renderer = selectExportRenderer(manifest, draft);
@@ -100,7 +175,7 @@ export function runExportCapabilityPreflight(
     warnings,
     blockers,
     estimatedCost,
-    manifestFingerprint: manifest.fingerprint,
+    manifestFingerprint: safeManifestFingerprint(manifest),
   };
 }
 
@@ -121,18 +196,6 @@ function warning(code: ExportWarning["code"], message?: string): ExportWarning {
     code,
     message: message ?? EXPORT_WARNING_MESSAGES[code],
   };
-}
-
-function pushManifestIntegrity(
-  manifest: ExportManifest,
-  blockers: ExportBlocker[],
-): void {
-  if (manifest.version !== EXPORT_MANIFEST_VERSION) {
-    blockers.push(blocker("INVALID_MANIFEST", "Unsupported export manifest version."));
-  }
-  if (!manifest.fingerprint || !manifest.scenes) {
-    blockers.push(blocker("INVALID_MANIFEST"));
-  }
 }
 
 function pushFormatChecks(
@@ -206,8 +269,8 @@ function pushMediaChecks(
   blockers: ExportBlocker[],
 ): void {
   for (const scene of manifest.scenes) {
-    const media = scene.media;
-    if (media.type === "placeholder") {
+    const items = scene.mediaTimeline?.items ?? [];
+    if (items.length === 0) {
       blockers.push(
         blocker(
           "MISSING_MEDIA",
@@ -217,14 +280,28 @@ function pushMediaChecks(
       );
       continue;
     }
-    if (!media.source.trim()) {
-      blockers.push(
-        blocker(
-          "MISSING_MEDIA",
-          `Scene "${scene.id}" is missing a media source.`,
-          scene.id,
-        ),
-      );
+
+    for (const item of items) {
+      const media = item.media;
+      if (media.type === "placeholder") {
+        blockers.push(
+          blocker(
+            "MISSING_MEDIA",
+            `Scene "${scene.id}" media item has no exportable media.`,
+            scene.id,
+          ),
+        );
+        continue;
+      }
+      if (!media.source.trim()) {
+        blockers.push(
+          blocker(
+            "MISSING_MEDIA",
+            `Scene "${scene.id}" media item is missing a media source.`,
+            scene.id,
+          ),
+        );
+      }
     }
   }
 }
@@ -234,27 +311,30 @@ function pushVideoTrimChecks(
   blockers: ExportBlocker[],
 ): void {
   for (const scene of manifest.scenes) {
-    if (scene.media.type !== "video") continue;
-    const media = scene.media;
-    if (media.trimEndMs < media.trimStartMs) {
-      blockers.push(blocker("INVALID_VIDEO_TRIM", undefined, scene.id));
-      continue;
-    }
-    if (
-      media.sourceDurationMs > 0 &&
-      (media.trimStartMs > media.sourceDurationMs ||
-        media.trimEndMs > media.sourceDurationMs)
-    ) {
-      blockers.push(blocker("INVALID_VIDEO_TRIM", undefined, scene.id));
-    }
-    if (media.trimEndMs === media.trimStartMs && media.sourceDurationMs > 0) {
-      blockers.push(
-        blocker(
-          "INVALID_VIDEO_TRIM",
-          `Video trim window is empty for scene ${scene.id}.`,
-          scene.id,
-        ),
-      );
+    const items = scene.mediaTimeline?.items ?? [];
+    for (const item of items) {
+      if (item.media.type !== "video") continue;
+      const media = item.media;
+      if (media.trimEndMs < media.trimStartMs) {
+        blockers.push(blocker("INVALID_VIDEO_TRIM", undefined, scene.id));
+        continue;
+      }
+      if (
+        media.sourceDurationMs > 0 &&
+        (media.trimStartMs > media.sourceDurationMs ||
+          media.trimEndMs > media.sourceDurationMs)
+      ) {
+        blockers.push(blocker("INVALID_VIDEO_TRIM", undefined, scene.id));
+      }
+      if (media.trimEndMs === media.trimStartMs && media.sourceDurationMs > 0) {
+        blockers.push(
+          blocker(
+            "INVALID_VIDEO_TRIM",
+            `Video trim window is empty for a media item in scene ${scene.id}.`,
+            scene.id,
+          ),
+        );
+      }
     }
   }
 }

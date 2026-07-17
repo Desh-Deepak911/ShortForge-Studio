@@ -334,8 +334,10 @@ test("7. video with image motion", () => {
   assert.equal(motionMeta?.peakScale, 1.1);
 });
 
-test("8. export-mode timeline with voiceover refit", () => {
-  const story = buildStory(
+test("8. export-mode prefers editor timing when scenes are manually authored", () => {
+  // makeScene sets durationSource: "manual". Accepted authority prefers editor
+  // scene windows over voiceover refit in that case (editor-scene-timing-authority).
+  const manualStory = buildStory(
     [
       makeScene("s1", 10, { subtitleText: "Scene one weighted longer in editor." }),
       makeScene("s2", 5, { startSec: 10, subtitleText: "Scene two shorter weight." }),
@@ -343,26 +345,59 @@ test("8. export-mode timeline with voiceover refit", () => {
     { voiceoverDurationMs: 12_000 },
   );
 
-  const timeline = buildMasterTimeline(story, { mode: "export" });
-  assertTimelineBuilds(timeline, "export refit");
-  assert.equal(timeline.authority, "export-refit-timing");
-  assert.equal(timeline.diagnostics.exportRefitApplied, true);
-  assert.equal(timeline.sceneDurationMs, 12_000);
-  assert.equal(timeline.narrationDurationMs, 12_000);
+  const manualTimeline = buildMasterTimeline(manualStory, { mode: "export" });
+  assertTimelineBuilds(manualTimeline, "export manual authority");
+  assert.equal(manualTimeline.authority, "editor-scene-timing");
+  assert.equal(manualTimeline.diagnostics.exportRefitApplied, false);
+  assert.equal(manualTimeline.sceneDurationMs, 15_000);
+  assert.equal(manualTimeline.narrationDurationMs, 12_000);
+
+  // Non-manual scenes whose editor sum is not longer than voiceover still refit on export.
+  // (If editor scenes exceed VO, authority prefers editor-scene-timing even without manual.)
+  const refittableScenes: FootieScene[] = [
+    {
+      ...makeScene("s1", 6, { subtitleText: "Scene one under voiceover length." }),
+      durationSource: undefined,
+    },
+    {
+      ...makeScene("s2", 4, {
+        startSec: 6,
+        subtitleText: "Scene two under voiceover length.",
+      }),
+      durationSource: undefined,
+    },
+  ];
+  const refitStory = buildStory(refittableScenes, { voiceoverDurationMs: 12_000 });
+  const refitTimeline = buildMasterTimeline(refitStory, { mode: "export" });
+  assertTimelineBuilds(refitTimeline, "export refit");
+  assert.equal(refitTimeline.authority, "export-refit-timing");
+  assert.equal(refitTimeline.diagnostics.exportRefitApplied, true);
+  assert.equal(refitTimeline.sceneDurationMs, 12_000);
+  assert.equal(refitTimeline.narrationDurationMs, 12_000);
   assert.ok(
-    timeline.warnings.some((warning) => warning.toLowerCase().includes("refit")),
+    refitTimeline.warnings.some((warning) => warning.toLowerCase().includes("refit")),
     "refit surfaced in warnings",
   );
 });
 
 test("9. preview authority with voiceover refit aligns export timing", () => {
-  const story = buildStory(
-    [
-      makeScene("s1", 10, { subtitleText: "Preview playback uses refitted scene windows." }),
-      makeScene("s2", 5, { startSec: 10, subtitleText: "Second scene matches export timing." }),
-    ],
-    { voiceoverDurationMs: 12_000 },
-  );
+  // Non-manual scenes shorter than voiceover: preview(useVoiceoverRefit) and export share windows.
+  const scenes: FootieScene[] = [
+    {
+      ...makeScene("s1", 6, {
+        subtitleText: "Preview playback uses refitted scene windows.",
+      }),
+      durationSource: undefined,
+    },
+    {
+      ...makeScene("s2", 4, {
+        startSec: 6,
+        subtitleText: "Second scene matches export timing.",
+      }),
+      durationSource: undefined,
+    },
+  ];
+  const story = buildStory(scenes, { voiceoverDurationMs: 12_000 });
 
   const preview = buildMasterTimeline(story, { mode: "preview", useVoiceoverRefit: true });
   const exportTimeline = buildMasterTimeline(story, { mode: "export" });
@@ -468,7 +503,8 @@ test("export render loop uses MasterTimeline playback helpers", () => {
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
   assert.match(videoRender, /resolveExportFrameFromMasterTimeline/);
   assert.match(videoRender, /resolveTimelineSceneFrame/);
-  assert.match(videoRender, /resolveTimelineFrameTimeMs\(frameIndex, fps\)/);
+  // Export samples mid-frame via resolveTimelineFrameSampleTimeMs (authoritative helper).
+  assert.match(videoRender, /resolveTimelineFrameSampleTimeMs\(frameIndex, fps\)/);
   assert.doesNotMatch(videoRender, /getSceneTimingAtGlobalTime/);
   assert.doesNotMatch(videoRender, /getActiveSceneAtTime\(masterTimeline/);
 });
@@ -500,7 +536,8 @@ test("preview playback uses MasterTimeline authority", () => {
   assert.match(videoRender, /resolveTimelineSceneFrame/);
   assert.doesNotMatch(videoRender, /getActiveSceneAtTime\(masterTimeline/);
   assert.match(preflight, /buildOptimizedMasterTimeline/);
-  assert.match(videoRender, /logExportMasterTimelineDiagnostics/);
+  // Export path logs frame/performance diagnostics; MasterTimeline frame resolution remains wired.
+  assert.match(videoRender, /logExportFrameDiagnostics/);
   assert.match(videoRender, /resolveExportFrameFromMasterTimeline/);
   assert.match(devView, /previewDurationSource/);
   assert.match(devView, /optimizerFindings/);
@@ -530,7 +567,8 @@ test("preview timeline supports tail hold through render duration", () => {
 });
 
 test("prepareStoryForExport uses MasterTimeline render duration", () => {
-  const story = buildStory(
+  // Manual scene durations prefer editor-scene-timing; preflight still binds to MasterTimeline.
+  const manualStory = buildStory(
     [
       makeScene("s1", 10, { subtitleText: "Export preflight uses canonical timeline." }),
       makeScene("s2", 5, { startSec: 10, subtitleText: "Second scene." }),
@@ -538,10 +576,31 @@ test("prepareStoryForExport uses MasterTimeline render duration", () => {
     { voiceoverDurationMs: 12_000 },
   );
 
-  const preflight = prepareStoryForExport(story);
+  const manualPreflight = prepareStoryForExport(manualStory);
+  assert.equal(
+    manualPreflight.exportDurationMs,
+    manualPreflight.masterTimeline.renderDurationMs,
+  );
+  assert.equal(manualPreflight.masterTimeline.diagnostics.exportRefitApplied, false);
+  assert.equal(manualPreflight.masterTimeline.authority, "editor-scene-timing");
 
-  assert.equal(preflight.exportDurationMs, preflight.masterTimeline.renderDurationMs);
-  assert.equal(preflight.masterTimeline.diagnostics.exportRefitApplied, true);
+  // Non-manual scenes shorter than voiceover still refit on export preflight.
+  const refitStory = buildStory(
+    [
+      {
+        ...makeScene("s1", 6, { subtitleText: "Export preflight refit path." }),
+        durationSource: undefined,
+      },
+      {
+        ...makeScene("s2", 4, { startSec: 6, subtitleText: "Second scene." }),
+        durationSource: undefined,
+      },
+    ],
+    { voiceoverDurationMs: 12_000 },
+  );
+  const refitPreflight = prepareStoryForExport(refitStory);
+  assert.equal(refitPreflight.exportDurationMs, refitPreflight.masterTimeline.renderDurationMs);
+  assert.equal(refitPreflight.masterTimeline.diagnostics.exportRefitApplied, true);
 });
 
 test("content end and render duration relationship", () => {

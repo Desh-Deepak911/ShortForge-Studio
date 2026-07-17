@@ -1,4 +1,5 @@
 import { getCanonicalVoiceover } from "@/features/audio";
+import { sanitizeCreationBriefRetentionPersistence } from "@/features/retention-story/production/sanitize-creation-brief-retention";
 import type { FootieScript } from "@/features/story/types";
 
 import type {
@@ -129,6 +130,81 @@ export function buildDraftSummaryFields(script: FootieScript) {
  * Normalizes a draft so `script` remains canonical and top-level editor slices match it.
  * Fills defaults for list metadata and lifecycle fields.
  */
+const CREATION_BRIEF_SAFE_KEYS = Object.freeze([
+  "topic",
+  "tone",
+  "duration",
+  "qualityMode",
+  "sceneCount",
+  "scriptMode",
+  "context",
+  "enableResearch",
+  "footballResearch",
+  "researchApplied",
+  "researchWarning",
+  "templateId",
+  "templatePromptHints",
+  "voiceId",
+  "speechStylePreset",
+  "captionPreset",
+  "audioMixer",
+  "hookPlan",
+  "hookStyle",
+] as const);
+
+function safeBriefGet(brief: object, key: string): unknown {
+  try {
+    return Reflect.get(brief, key);
+  } catch {
+    return undefined;
+  }
+}
+
+function sanitizeDraftCreationBrief(
+  brief: StoryCreationBrief | undefined,
+): StoryCreationBrief | undefined {
+  try {
+    if (!brief || typeof brief !== "object") return undefined;
+
+    const retention = sanitizeCreationBriefRetentionPersistence(brief);
+
+    // Materialize non-Retention fields via safe gets — never spread a hostile brief.
+    const rest: Record<string, unknown> = {};
+    for (const key of CREATION_BRIEF_SAFE_KEYS) {
+      const value = safeBriefGet(brief, key);
+      if (value !== undefined) rest[key] = value;
+    }
+
+    const topic = rest.topic;
+    const tone = rest.tone;
+    const duration = rest.duration;
+    const qualityMode = rest.qualityMode;
+    const sceneCount = rest.sceneCount;
+    if (
+      typeof topic !== "string" ||
+      typeof tone !== "string" ||
+      typeof duration !== "number" ||
+      typeof qualityMode !== "string" ||
+      typeof sceneCount !== "number"
+    ) {
+      // Required brief core unreadable — drop brief entirely (narration stays on script).
+      return undefined;
+    }
+
+    return {
+      ...(rest as unknown as StoryCreationBrief),
+      topic,
+      tone: tone as StoryCreationBrief["tone"],
+      duration,
+      qualityMode: qualityMode as StoryCreationBrief["qualityMode"],
+      sceneCount,
+      ...retention,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export function normalizeDraft(
   input: Partial<Draft> & Pick<Draft, "id" | "script">,
 ): Draft {
@@ -137,7 +213,7 @@ export function normalizeDraft(
   const summary = buildDraftSummaryFields(script);
   const createdAt = input.createdAt ?? new Date().toISOString();
   const updatedAt = input.updatedAt ?? createdAt;
-  const creationBrief = input.creationBrief;
+  const creationBrief = sanitizeDraftCreationBrief(input.creationBrief);
 
   return {
     id: input.id,

@@ -39,16 +39,27 @@ export interface GenerateStoryScriptOptions {
   top5RankedDataAvailable?: boolean;
   /** Advisory creator template prompt block for script-only generation. */
   templatePromptBlock?: string;
+  /** Canonical Hook directive prompt block (Sprint 7D). */
+  hookDirectiveBlock?: string;
+  /** When true, model must also return hookClaimRefs. */
+  requireHookClaimRefs?: boolean;
 }
 
 export type StoryScriptGenerationResult =
-  | { success: true; data: StoryScript; lengthWarning?: string }
+  | {
+      success: true;
+      data: StoryScript;
+      lengthWarning?: string;
+      /** Ephemeral claim refs — not part of FootieScript. */
+      hookClaimRefs?: readonly string[];
+    }
   | { success: false; error: string; kind: "empty"; response: unknown }
   | { success: false; error: string; kind: "parse_error"; rawText: string };
 
 type RawStoryScript = {
   title?: string;
   narration?: string;
+  hookClaimRefs?: unknown;
 };
 
 type ParsedStoryScript = StoryScript;
@@ -81,6 +92,8 @@ function buildPrompt(
     researchAttemptedWithoutData?: boolean;
     top5RankedDataAvailable?: boolean;
     templatePromptBlock?: string;
+    hookDirectiveBlock?: string;
+    requireHookClaimRefs?: boolean;
   } = {},
 ): string {
   return [
@@ -134,7 +147,10 @@ function buildScriptCompressionPrompt(input: {
   ].join("\n");
 }
 
-function parseStoryScriptJson(text: string, existingId?: string): ParsedStoryScript {
+function parseStoryScriptJson(
+  text: string,
+  existingId?: string,
+): { script: ParsedStoryScript; hookClaimRefs: readonly string[] } {
   let parsed: RawStoryScript;
 
   try {
@@ -154,11 +170,25 @@ function parseStoryScriptJson(text: string, existingId?: string): ParsedStoryScr
     throw new Error("Story narration is missing");
   }
 
+  const hookClaimRefs = Array.isArray(parsed.hookClaimRefs)
+    ? [
+        ...new Set(
+          parsed.hookClaimRefs
+            .filter((v): v is string => typeof v === "string")
+            .map((v) => v.trim())
+            .filter(Boolean),
+        ),
+      ].sort()
+    : [];
+
   return {
-    id: existingId ?? createStoryScriptId(),
-    title,
-    narration,
-    estimatedDurationMs: estimateNarrationDurationMs(narration),
+    script: {
+      id: existingId ?? createStoryScriptId(),
+      title,
+      narration,
+      estimatedDurationMs: estimateNarrationDurationMs(narration),
+    },
+    hookClaimRefs: Object.freeze(hookClaimRefs),
   };
 }
 
@@ -200,6 +230,8 @@ async function generateStoryScriptAttempt(
     researchAttemptedWithoutData?: boolean;
     top5RankedDataAvailable?: boolean;
     templatePromptBlock?: string;
+    hookDirectiveBlock?: string;
+    requireHookClaimRefs?: boolean;
   } = {},
 ): Promise<{ rawText: string; response: unknown }> {
   const fullPrompt = buildPrompt(
@@ -222,8 +254,18 @@ async function compressStoryScript(input: {
   duration: number;
   scriptMode: ScriptMode;
   wordBudget: NarrationWordBudget;
-}): Promise<{ script: ParsedStoryScript | null; rawText: string }> {
-  const prompt = buildScriptCompressionPrompt(input);
+  requireHookClaimRefs?: boolean;
+}): Promise<{
+  script: ParsedStoryScript | null;
+  hookClaimRefs: readonly string[];
+  rawText: string;
+}> {
+  const prompt = [
+    buildScriptCompressionPrompt(input),
+    input.requireHookClaimRefs
+      ? '\nAlso return hookClaimRefs: string[] for claim IDs still used in the compressed opening.'
+      : "",
+  ].join("");
 
   try {
     const { rawText } = await requestStoryScriptText(
@@ -233,11 +275,13 @@ async function compressStoryScript(input: {
     );
 
     if (!rawText) {
-      return { script: null, rawText: "" };
+      return { script: null, hookClaimRefs: [], rawText: "" };
     }
 
+    const parsed = parseStoryScriptJson(rawText, input.script.id);
     return {
-      script: parseStoryScriptJson(rawText, input.script.id),
+      script: parsed.script,
+      hookClaimRefs: parsed.hookClaimRefs,
       rawText,
     };
   } catch (error) {
@@ -245,7 +289,7 @@ async function compressStoryScript(input: {
       console.warn("script-generation: compression pass failed", error);
     }
 
-    return { script: null, rawText: "" };
+    return { script: null, hookClaimRefs: [], rawText: "" };
   }
 }
 
@@ -283,11 +327,18 @@ async function enforceScriptLengthBudget(input: {
   duration: number;
   scriptMode: ScriptMode;
   wordBudget: NarrationWordBudget;
-}): Promise<{ script: ParsedStoryScript; lengthWarning?: string }> {
+  hookClaimRefs?: readonly string[];
+  requireHookClaimRefs?: boolean;
+}): Promise<{
+  script: ParsedStoryScript;
+  lengthWarning?: string;
+  hookClaimRefs: readonly string[];
+}> {
   const original = withLengthMetrics(input.script);
+  const originalRefs = input.hookClaimRefs ?? [];
 
   if (isWithinNarrationScriptBudget(original.narration, input.wordBudget)) {
-    return { script: original };
+    return { script: original, hookClaimRefs: originalRefs };
   }
 
   const compression = await compressStoryScript({
@@ -298,21 +349,107 @@ async function enforceScriptLengthBudget(input: {
     duration: input.duration,
     scriptMode: input.scriptMode,
     wordBudget: input.wordBudget,
+    requireHookClaimRefs: input.requireHookClaimRefs,
   });
 
   if (!compression.script) {
     return {
       script: original,
       lengthWarning: SCRIPT_LENGTH_COMPRESSION_FAILED_WARNING,
+      hookClaimRefs: originalRefs,
     };
   }
 
-  return finalizeCompressedScript(compression.script, input.wordBudget);
+  const finalized = finalizeCompressedScript(compression.script, input.wordBudget);
+  return {
+    ...finalized,
+    hookClaimRefs:
+      compression.hookClaimRefs.length > 0
+        ? compression.hookClaimRefs
+        : originalRefs,
+  };
+}
+
+/**
+ * Raw narration model generation — parse only, no length enforcement.
+ * Hook-capable paths must use this so generateHookedNarration owns compression.
+ */
+export async function generateRawStoryScript(
+  prompt: string,
+  options: GenerateStoryScriptOptions = {},
+): Promise<StoryScriptGenerationResult> {
+  const topic = prompt.trim();
+  if (!topic) {
+    return {
+      success: false,
+      error: "Prompt is required",
+      kind: "parse_error",
+      rawText: "",
+    };
+  }
+
+  const tone = options.tone ?? "dramatic";
+  const duration = resolveDuration(options.duration);
+  const wordBudget = getNarrationWordBudget(duration);
+  const qualityMode = resolveQualityMode(options.qualityMode);
+  const model = options.model ?? resolveScriptModel(qualityMode);
+  const scriptMode = options.scriptMode ?? "story";
+  const context = options.context?.trim() || undefined;
+  const promptOptions = {
+    researchAttemptedWithoutData: options.researchAttemptedWithoutData === true,
+    top5RankedDataAvailable: options.top5RankedDataAvailable,
+    ...(options.templatePromptBlock?.trim()
+      ? { templatePromptBlock: options.templatePromptBlock.trim() }
+      : {}),
+    ...(options.hookDirectiveBlock?.trim()
+      ? { hookDirectiveBlock: options.hookDirectiveBlock.trim() }
+      : {}),
+    ...(options.requireHookClaimRefs ? { requireHookClaimRefs: true } : {}),
+  };
+
+  const { rawText, response } = await generateStoryScriptAttempt(
+    model,
+    topic,
+    tone,
+    duration,
+    scriptMode,
+    wordBudget,
+    context,
+    promptOptions,
+  );
+
+  if (!rawText) {
+    return {
+      success: false,
+      error: EMPTY_RESPONSE_ERROR,
+      kind: "empty",
+      response,
+    };
+  }
+
+  try {
+    const parsed = parseStoryScriptJson(rawText);
+    return {
+      success: true,
+      data: withLengthMetrics(parsed.script),
+      ...(parsed.hookClaimRefs.length
+        ? { hookClaimRefs: parsed.hookClaimRefs }
+        : {}),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : INVALID_JSON_ERROR,
+      kind: "parse_error",
+      rawText,
+    };
+  }
 }
 
 /**
  * Generates a narration-only story script (title + full voiceover text).
  * Does not generate scenes, captions, or image prompts.
+ * Includes legacy length enforcement — not for Hook-capable paths.
  */
 export async function generateStoryScript(
   prompt: string,
@@ -341,6 +478,10 @@ export async function generateStoryScript(
     ...(options.templatePromptBlock?.trim()
       ? { templatePromptBlock: options.templatePromptBlock.trim() }
       : {}),
+    ...(options.hookDirectiveBlock?.trim()
+      ? { hookDirectiveBlock: options.hookDirectiveBlock.trim() }
+      : {}),
+    ...(options.requireHookClaimRefs ? { requireHookClaimRefs: true } : {}),
   };
 
   const { rawText, response } = await generateStoryScriptAttempt(
@@ -365,20 +506,27 @@ export async function generateStoryScript(
 
   try {
     const parsed = parseStoryScriptJson(rawText);
-    const { script, lengthWarning } = await enforceScriptLengthBudget({
+    const enforced = await enforceScriptLengthBudget({
       model,
-      script: parsed,
+      script: parsed.script,
       topic,
       tone,
       duration,
       scriptMode,
       wordBudget,
+      hookClaimRefs: parsed.hookClaimRefs,
+      requireHookClaimRefs: options.requireHookClaimRefs,
     });
 
     return {
       success: true,
-      data: lengthWarning ? { ...script, lengthWarning } : script,
-      lengthWarning,
+      data: enforced.lengthWarning
+        ? { ...enforced.script, lengthWarning: enforced.lengthWarning }
+        : enforced.script,
+      lengthWarning: enforced.lengthWarning,
+      ...(enforced.hookClaimRefs.length
+        ? { hookClaimRefs: enforced.hookClaimRefs }
+        : {}),
     };
   } catch (error) {
     return {

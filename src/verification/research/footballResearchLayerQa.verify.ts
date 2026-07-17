@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { buildFootballResearchContextText } from "@/features/research/legacy";
+import { buildFootballResearchContextText } from "@/features/research/utils/football-context-builder";
 import type { FootballResearchContext } from "@/features/research/types/football-research.types";
 import { mergeFootballContext } from "@/features/football/utils/football-research.utils";
 import { getNarrationWordBudget } from "@/features/story/utils/narration-duration-budget.utils";
@@ -58,8 +58,8 @@ async function runQa() {
     const fallback = readSrc("src/features/intelligence/planner/intelligence-execution-fallback.server.ts");
     const scriptResolver = readSrc("src/features/research/utils/script-research-context.server.utils.ts");
 
-    assert.match(route, /resolveScriptOnlyGenerationContext/);
-    assert.match(route, /context: manualContext/);
+    assert.match(route, /resolveNarrationGenerationContext/);
+    assert.match(route, /manualContext: params\.context/);
     assert.match(apiProvider, /API_FOOTBALL_KEY is not configured/);
     assert.match(fallback, /source: manualFacts\.length > 0 \? "manual" : "fallback"/);
     assert.match(scriptResolver, /applyAssembledResearchContext/);
@@ -217,7 +217,7 @@ async function runQa() {
       text,
       getNarrationWordBudget(45),
     );
-    assert.match(prompt, /Do NOT invent exact numbers/);
+    assert.match(prompt, /do NOT invent exact numbers/i);
     assert.match(prompt, /evidence-backed/);
   });
 
@@ -244,20 +244,22 @@ async function runQa() {
   await test("QA-9 scenes-only generation still works", () => {
     const route = readSrc("src/app/api/generate-script/route.ts");
     const scenesStart = route.indexOf('if (params.mode === "scenes-only")');
-    const scenesEnd = route.indexOf("const audioFirstResult = await generateAudioFirstStory");
+    const scenesEnd = route.indexOf("const resolvedContext = await resolveNarrationGenerationContext");
     assert.ok(scenesStart >= 0 && scenesEnd > scenesStart);
     const scenesBlock = route.slice(scenesStart, scenesEnd);
 
     assert.match(route, /generateScenesForReviewedScript/);
     assert.doesNotMatch(scenesBlock, /enableResearch/);
     assert.doesNotMatch(scenesBlock, /researchFootballContext/);
+    assert.doesNotMatch(scenesBlock, /buildHookGenerationContext/);
+    assert.doesNotMatch(scenesBlock, /generateHookedNarration/);
   });
 
   await test("QA-10 review page still works", () => {
     const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
     assert.match(reviewFlow, /mode:\s*"scenes-only"/);
-    assert.match(reviewFlow, /StoryReview/);
-    assert.match(reviewFlow, /VoiceSettingsCard/);
+    assert.match(reviewFlow, /ScriptCanvas/);
+    assert.match(reviewFlow, /ReviewInspector/);
     assert.doesNotMatch(reviewFlow, /enableResearch/);
   });
 

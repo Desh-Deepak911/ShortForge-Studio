@@ -61,6 +61,13 @@ export interface ExportCostEstimate {
   readonly chunkSizeFrames?: number;
   readonly estimatedChunkFrameBytes?: number;
   readonly estimatedRetainedSegmentBytes?: number;
+  /**
+   * Average media canvas layers per frame (1 ordinary, 2 during dual-peer overlays).
+   * Does not introduce a new codec/device requirement.
+   */
+  readonly estimatedAverageMediaLayersPerFrame?: number;
+  /** Estimated total media-layer draw operations across the render. */
+  readonly estimatedMediaLayerDraws?: number;
 }
 
 export interface ExportCapabilityResult {

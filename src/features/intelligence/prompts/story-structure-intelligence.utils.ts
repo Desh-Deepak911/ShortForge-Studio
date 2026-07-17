@@ -19,6 +19,12 @@ export interface StoryStructureBeatTemplate {
   weight: number;
   /** When true, allocate fewer words — opening should land in ~1–2 spoken seconds. */
   openingHook?: boolean;
+  /**
+   * Explicit PI policy marker copied onto NarrativeBeat when creator preference
+   * requests evidence-led surprise (Sprint 7D.3). Production templates leave this unset;
+   * buildNarrativePlan marks the openingHook beat from the preference flag instead.
+   */
+  evidenceLedSurprise?: boolean;
 }
 
 export interface StoryStructureDefinition {

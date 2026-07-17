@@ -4,6 +4,8 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?logo=openai&logoColor=white)](https://openai.com/)
 
+> **Start here:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) — canonical navigation index for engines, contracts, freezes, and documentation authority. This file remains a high-level system design overview.
+
 ShortForge Studio is a full-stack storytelling platform for research-backed short-form video. The system is organized around two cooperating ideas: a **Story Creation Pipeline** that moves from brief to export in discrete, reviewable steps, and an **Intelligence Runtime** that transforms a user brief into grounded narration before any visuals are produced.
 
 Creators never interact with the runtime directly. They write a brief, optionally run Research Preview, review a script, generate voiceover, run scene generation, edit on a timeline, preview in the browser, and export — while the server handles intent classification, entity resolution, provider orchestration, knowledge assembly, and Prompt Intelligence.
@@ -273,6 +275,7 @@ Football is the first knowledge domain. The Intelligence Runtime is domain-agnos
 
 | Document | Description |
 |----------|-------------|
+| [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) | **Start here** — master architecture index |
 | [README.md](./README.md) | Product overview, features, getting started |
 | [ROADMAP.md](./ROADMAP.md) | Completed, in-progress, and planned work |
 | [CHANGELOG.md](./CHANGELOG.md) | Release history |

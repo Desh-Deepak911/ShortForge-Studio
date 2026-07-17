@@ -71,7 +71,9 @@ test("generation success creates draft and redirects to script review", () => {
   const flow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
   assert.match(flow, /createDraft\(/);
   assert.match(flow, /router\.replace\(`\/create\/review\/\$\{draft\.id\}`\)/);
-  assert.match(flow, /variant="script-only"/);
+  // Generation request remains script-only; loading UI uses create-story variant (Sprint 7).
+  assert.match(flow, /mode:\s*"script-only"/);
+  assert.match(flow, /variant="create-story"/);
   assert.doesNotMatch(flow, /router\.push\(`\/editor\/\$\{draft\.id\}`\)/);
 });
 

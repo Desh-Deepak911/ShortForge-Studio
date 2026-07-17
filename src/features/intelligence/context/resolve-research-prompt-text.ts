@@ -3,13 +3,21 @@ import { assembledContextToPrompt } from "./assembled-context-to-prompt";
 import type { GraphContext } from "./graph-context.types";
 import { graphContextToPromptText } from "./graph-context-to-prompt";
 import { buildPromptIntelligence } from "../prompts/build-prompt-intelligence";
+import type { NarrativePlan } from "../prompts/narrative-plan.types";
 import { promptIntelligenceToPromptText } from "../prompts/prompt-intelligence-to-prompt";
+import { resolveEvidenceLedSurprisePreference } from "../prompts/resolve-evidence-led-surprise-preference";
+import type { EvidenceLedSurprisePreferenceKind } from "../prompts/resolve-evidence-led-surprise-preference";
 
 export type ScriptPromptSource = "prompt-intelligence" | "graph" | "assembled";
 
 export interface ResolvedResearchPromptText {
   promptText: string;
   promptSource: ScriptPromptSource;
+  /**
+   * Prompt Intelligence narrative plan when PI successfully built the prompt.
+   * Hook-type-free — consumers map via Hook integration.
+   */
+  narrativePlan?: NarrativePlan;
 }
 
 function hasGraphContextContent(context: GraphContext): boolean {
@@ -26,9 +34,17 @@ function hasGraphContextContent(context: GraphContext): boolean {
   );
 }
 
-function tryPromptIntelligencePrompt(context: GraphContext): string | null {
+function tryPromptIntelligence(
+  context: GraphContext,
+  evidenceLedSurprisePreference?: EvidenceLedSurprisePreferenceKind,
+): { promptText: string; narrativePlan: NarrativePlan } | null {
   try {
-    const result = buildPromptIntelligence({ graphContext: context });
+    const result = buildPromptIntelligence({
+      graphContext: context,
+      ...(evidenceLedSurprisePreference
+        ? { evidenceLedSurprisePreference }
+        : {}),
+    });
 
     if (result.narrativePlan.beats.length === 0) {
       return null;
@@ -39,7 +55,14 @@ function tryPromptIntelligencePrompt(context: GraphContext): string | null {
       graphContext: context,
     }).trim();
 
-    return promptText.length > 0 ? promptText : null;
+    if (!promptText) {
+      return null;
+    }
+
+    return {
+      promptText,
+      narrativePlan: result.narrativePlan,
+    };
   } catch {
     return null;
   }
@@ -73,18 +96,28 @@ export function isGraphContextReadyForPrompt(
 /**
  * Primary production prompt resolver — Prompt Intelligence first, graph fallback,
  * assembled fallback when GraphContext is unavailable.
+ * Propagates explicit evidence-led-surprise creator preference into NarrativePlan (Sprint 7D.3).
  */
 export function resolveResearchPromptText(input: {
   assembled: AssembledContext;
   graphContext?: GraphContext;
 }): ResolvedResearchPromptText {
-  if (isGraphContextReadyForPrompt(input.graphContext, input.assembled)) {
-    const promptIntelligencePrompt = tryPromptIntelligencePrompt(input.graphContext);
+  const evidenceLedSurprisePreference = resolveEvidenceLedSurprisePreference({
+    topic: input.graphContext?.topic ?? input.assembled.topic,
+    context: input.assembled.manualNotes,
+  });
 
-    if (promptIntelligencePrompt) {
+  if (isGraphContextReadyForPrompt(input.graphContext, input.assembled)) {
+    const promptIntelligence = tryPromptIntelligence(
+      input.graphContext,
+      evidenceLedSurprisePreference,
+    );
+
+    if (promptIntelligence) {
       return {
-        promptText: promptIntelligencePrompt,
+        promptText: promptIntelligence.promptText,
         promptSource: "prompt-intelligence",
+        narrativePlan: promptIntelligence.narrativePlan,
       };
     }
 

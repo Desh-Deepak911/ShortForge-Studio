@@ -2,14 +2,25 @@ export type { BuiltPrompt, PromptBuildRequest } from "./types";
 
 export type {
   NarrativeBeat,
+  NarrativeOpeningIntent,
+  NarrativeOpeningIntentKind,
   NarrativePlan,
   NarrativeStructure,
 } from "./narrative-plan.types";
 
 export {
   buildNarrativePlan,
+  resolveNarrativeOpeningIntent,
   type BuildNarrativePlanInput,
 } from "./build-narrative-plan";
+
+export {
+  resolveEvidenceLedSurprisePreference,
+  hasEvidenceLedSurprisePreference,
+  normalizeEvidenceLedSurprisePreference,
+  type EvidenceLedSurprisePreferenceKind,
+  type ResolveEvidenceLedSurprisePreferenceInput,
+} from "./resolve-evidence-led-surprise-preference";
 
 export {
   buildPromptIntelligence,

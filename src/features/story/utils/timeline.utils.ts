@@ -7,7 +7,45 @@ import type {
   TransitionTimelineItem,
 } from "@/features/story/types";
 
+import {
+  applyNormalizedMediaTimelineToScene,
+  cloneSceneMedia,
+  cloneSceneMediaTimeline,
+} from "@/features/scene-media-timeline";
+import { cloneSceneMediaTransitionTrack } from "@/features/scene-media-transitions/domain/clone-track";
+import { applyNormalizedSceneMediaTransitionsToScene } from "@/features/scene-media-transitions/domain/normalize-track";
+
 import { cloneSceneImage, getSceneImage, normalizeSceneSettings, resolveSceneDurationMsForTiming } from "./scene.utils";
+import {
+  DEFAULT_TRANSITION_DURATION_MS,
+  DEFAULT_TRANSITION_EFFECT,
+  getTransitionDurationLabel,
+  getTransitionEffectLabel,
+  normalizeTransitionDurationMs,
+  TRANSITION_DURATION_LABELS,
+  TRANSITION_DURATION_OPTIONS,
+  TRANSITION_EFFECT_OPTIONS,
+  type TransitionDurationMs,
+} from "./transition-vocabulary";
+
+export {
+  DEFAULT_TRANSITION_DURATION_MS,
+  DEFAULT_TRANSITION_EFFECT,
+  getTransitionDurationLabel,
+  getTransitionEffectLabel,
+  normalizeTransitionDurationMs,
+  TRANSITION_DURATION_LABELS,
+  TRANSITION_DURATION_OPTIONS,
+  TRANSITION_EFFECT_OPTIONS,
+  type TransitionDurationMs,
+};
+
+/** Caption/image normalize + optional mediaTimeline / mediaTransitions sanitize. */
+function finalizeSceneSettings(scene: FootieScene): FootieScene {
+  return applyNormalizedSceneMediaTransitionsToScene(
+    applyNormalizedMediaTimelineToScene(normalizeSceneSettings(scene)),
+  );
+}
 
 const DEFAULT_SCENE_DURATION = 3;
 /** Default placeholder copy for newly inserted scenes. */
@@ -248,7 +286,7 @@ export function attachEvenVoiceoverTiming(
  * Call recalculateSceneTimings on the full list after inserting to get correct timings.
  */
 export function createEmptyScene(type: SceneType = "transition"): FootieScene {
-  return normalizeSceneSettings({
+  return finalizeSceneSettings({
     id: generateSceneId(),
     start: 0,
     end: DEFAULT_SCENE_DURATION,
@@ -261,14 +299,26 @@ export function createEmptyScene(type: SceneType = "transition"): FootieScene {
 /**
  * Returns a deep copy of a scene with a fresh unique id.
  * Preserves all fields including sceneType and image metadata.
+ * Nested media / mediaTimeline graphs are cloned independently.
  */
 export function duplicateScene(scene: FootieScene): FootieScene {
   const image = getSceneImage(scene);
+  const {
+    media: priorMedia,
+    mediaTimeline: priorTimeline,
+    mediaTransitions: priorTransitions,
+    ...rest
+  } = scene;
 
-  return normalizeSceneSettings({
-    ...scene,
+  return finalizeSceneSettings({
+    ...rest,
     id: generateSceneId(),
     ...(image ? { image: cloneSceneImage(image), uploadedImage: undefined } : {}),
+    ...(priorMedia ? { media: cloneSceneMedia(priorMedia) } : {}),
+    ...(priorTimeline ? { mediaTimeline: cloneSceneMediaTimeline(priorTimeline) } : {}),
+    ...(priorTransitions
+      ? { mediaTransitions: cloneSceneMediaTransitionTrack(priorTransitions) }
+      : {}),
   });
 }
 
@@ -278,50 +328,8 @@ function generateSceneId(): string {
   return `scene-${timestamp}-${random}`;
 }
 
-const DEFAULT_TRANSITION_EFFECT = "fade" as const;
-const DEFAULT_TRANSITION_DURATION_MS = 500;
-
-export const TRANSITION_EFFECT_OPTIONS: { value: TransitionEffect; label: string }[] = [
-  { value: "cut", label: "Cut" },
-  { value: "fade", label: "Fade" },
-  { value: "slide-left", label: "Slide Left" },
-  { value: "slide-right", label: "Slide Right" },
-  { value: "zoom-in", label: "Zoom In" },
-  { value: "zoom-out", label: "Zoom Out" },
-  { value: "blur", label: "Blur" },
-];
-
-export const TRANSITION_DURATION_OPTIONS = [300, 500, 800, 1000] as const;
-
-export type TransitionDurationMs = (typeof TRANSITION_DURATION_OPTIONS)[number];
-
-export const TRANSITION_DURATION_LABELS: Record<TransitionDurationMs, string> = {
-  300: "Fast",
-  500: "Normal",
-  800: "Slow",
-  1000: "Cinematic",
-};
-
 /** User-facing title for transition connector cards in the editor. */
 export const TRANSITION_CARD_TITLE = "Transition to next scene";
-
-export function getTransitionEffectLabel(effect: TransitionEffect | string): string {
-  const match = TRANSITION_EFFECT_OPTIONS.find((option) => option.value === effect);
-  return match?.label ?? "Fade";
-}
-
-export function getTransitionDurationLabel(durationMs: number): string {
-  const normalized = normalizeTransitionDurationMs(durationMs);
-  return TRANSITION_DURATION_LABELS[normalized];
-}
-
-export function normalizeTransitionDurationMs(durationMs: number): TransitionDurationMs {
-  if (TRANSITION_DURATION_OPTIONS.includes(durationMs as TransitionDurationMs)) {
-    return durationMs as TransitionDurationMs;
-  }
-
-  return DEFAULT_TRANSITION_DURATION_MS;
-}
 
 export function normalizeTransitionEffect(effect: string): TransitionEffect {
   const trimmed = effect.trim();
@@ -354,6 +362,8 @@ export type SceneTimelineUpdates = Partial<
     | "image"
     | "uploadedImage"
     | "media"
+    | "mediaTimeline"
+    | "mediaTransitions"
     | "captionMode"
     | "captionPreset"
     | "subtitleEffect"
@@ -448,7 +458,7 @@ export function normalizeSceneIds(scenes: FootieScene[]): FootieScene[] {
 
     usedIds.add(id);
     const normalized = id === scene.id ? scene : { ...scene, id };
-    return normalizeSceneSettings(normalized);
+    return finalizeSceneSettings(normalized);
   });
 }
 
@@ -522,7 +532,7 @@ export function updateSceneInTimeline(
 
     return {
       ...item,
-      scene: normalizeSceneSettings({ ...item.scene, ...updates }),
+      scene: finalizeSceneSettings({ ...item.scene, ...updates }),
     };
   });
 }
@@ -562,7 +572,7 @@ export function updateSceneInScenes(
   updates: SceneTimelineUpdates,
 ): FootieScene[] {
   return scenes.map((scene) =>
-    normalizeSceneSettings(scene.id === sceneId ? { ...scene, ...updates } : scene),
+    finalizeSceneSettings(scene.id === sceneId ? { ...scene, ...updates } : scene),
   );
 }
 

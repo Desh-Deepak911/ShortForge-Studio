@@ -9,10 +9,32 @@ import {
   buildVideoTrimPreviewOverride,
   useVideoTrimPreviewOptional,
 } from "@/features/preview/video-trim-preview";
+import { SCENE_MEDIA_TIMELINE_EXPERIMENTAL_NOTICE } from "@/features/scene-media-timeline/editor";
 import { usePreviewMasterTimelineContext } from "@/features/timeline-intelligence/master-timeline";
 import type { FootieScript } from "@/features/story/types";
 import { getSceneMedia } from "@/features/story/utils";
-import { applySceneUpdate } from "@/lib/utils/voiceover";
+import {
+  applySceneUpdate,
+  type StoryScriptChangeOptions,
+} from "@/lib/utils/voiceover";
+
+import SceneMediaTimelineLane from "./scene-media/SceneMediaTimelineLane";
+import { useOptionalSceneMediaImageAppendContext } from "./scene-media/SceneMediaImageAppendContext";
+import {
+  isMediaBoundaryGlobalLockActive,
+  isMediaBoundaryLaneLocked,
+  releaseMediaBoundaryOwner,
+  tryAcquireMediaBoundaryOwner,
+} from "./scene-media/media-boundary-owner.lock";
+import { sceneMediaLaneNotice } from "./scene-media/scene-media-timeline.ui";
+import {
+  releaseTimelineExclusiveInteraction,
+  setTimelineExclusiveInteraction,
+} from "./scene-media/timeline-exclusive-interaction.lock";
+import {
+  SCENE_MEDIA_IMAGE_ACCEPT,
+  useSceneMediaImageAppend,
+} from "./scene-media/useSceneMediaImageAppend";
 
 import { deriveTimelineLayout } from "./derive-timeline-layout.utils";
 import TimelineContextMenu, {
@@ -64,7 +86,7 @@ import { releaseTimelineTrimPointerCapture } from "./timeline-trim-interaction.u
 
 export interface StudioTimelineProps {
   script: FootieScript;
-  onScriptChange: (script: FootieScript) => void;
+  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
   /**
    * Dedicated media-intent trim commit — must call buildVideoTrimPatch
    * and onScriptChange(..., { intent: "media" }).
@@ -118,13 +140,30 @@ export default function StudioTimeline({
   const [dragState, setDragState] = useState<TimelineDragState | null>(null);
   const [resizeState, setResizeState] = useState<TimelineResizeState | null>(null);
   const [trimState, setTrimState] = useState<TimelineVideoTrimState | null>(null);
+  const [mediaBoundaryOwnerSceneId, setMediaBoundaryOwnerSceneId] = useState<string | null>(
+    null,
+  );
+  const [boundaryCancelEpoch, setBoundaryCancelEpoch] = useState(0);
   const [isFinePointer, setIsFinePointer] = useState(true);
+  const sharedAppend = useOptionalSceneMediaImageAppendContext();
+  const localAppend = useSceneMediaImageAppend({
+    script,
+    onScriptChange,
+    onSelectMediaItem: selection.selectSceneMediaItem,
+    enabled: sharedAppend == null,
+  });
+  const appendApi = sharedAppend ?? {
+    appendImageFile: localAppend.appendImageFile,
+    revokeOwnedUrlIfPresent: localAppend.revokeOwnedUrlIfPresent,
+    accept: localAppend.accept || SCENE_MEDIA_IMAGE_ACCEPT,
+  };
   const dragStateRef = useRef<TimelineDragState | null>(null);
   const resizeStateRef = useRef<TimelineResizeState | null>(null);
   const trimStateRef = useRef<TimelineVideoTrimState | null>(null);
   const trimCaptureTargetRef = useRef<Element | null>(null);
   const trimSettledRef = useRef(false);
   const scriptRef = useRef(script);
+  const mediaBoundaryOwnerRef = useRef<string | null>(null);
   const lastPlayheadScrollAtRef = useRef(0);
 
   useEffect(() => {
@@ -147,10 +186,92 @@ export default function StudioTimeline({
   }, []);
 
   const playbackLocked = selection.phase === SelectionPhase.PlaybackLocked;
-  const reorderDisabled = playbackLocked || resizeState != null || trimState != null;
-  const resizeDisabled = playbackLocked || dragState != null || trimState != null;
-  const trimDisabled = playbackLocked || dragState != null || resizeState != null;
-  const contextMenuDisabled = trimState != null;
+  const mediaInteractionActive = isMediaBoundaryGlobalLockActive(mediaBoundaryOwnerSceneId);
+  const reorderDisabled =
+    playbackLocked || resizeState != null || trimState != null || mediaInteractionActive;
+  const resizeDisabled =
+    playbackLocked || dragState != null || trimState != null || mediaInteractionActive;
+  const trimDisabled =
+    playbackLocked || dragState != null || resizeState != null || mediaInteractionActive;
+  const contextMenuDisabled = trimState != null || mediaInteractionActive;
+  const sceneMediaLaneBaseLocked =
+    playbackLocked || dragState != null || resizeState != null || trimState != null;
+
+  useEffect(() => {
+    const owner =
+      dragState != null
+        ? ("reorder" as const)
+        : resizeState != null
+          ? ("scene-resize" as const)
+          : trimState != null
+            ? ("video-trim" as const)
+            : mediaBoundaryOwnerSceneId != null
+              ? ("media-boundary" as const)
+              : null;
+    if (owner == null) {
+      return;
+    }
+    setTimelineExclusiveInteraction(owner);
+    return () => {
+      releaseTimelineExclusiveInteraction(owner);
+    };
+  }, [dragState, resizeState, trimState, mediaBoundaryOwnerSceneId]);
+
+  const tryAcquireMediaBoundary = useCallback((sceneId: string) => {
+    const result = tryAcquireMediaBoundaryOwner(mediaBoundaryOwnerRef.current, sceneId);
+    if (!result.ok) {
+      return false;
+    }
+    mediaBoundaryOwnerRef.current = result.owner;
+    setMediaBoundaryOwnerSceneId(result.owner);
+    return true;
+  }, []);
+
+  const releaseMediaBoundary = useCallback((sceneId: string) => {
+    const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, sceneId);
+    mediaBoundaryOwnerRef.current = next;
+    setMediaBoundaryOwnerSceneId(next);
+  }, []);
+
+  // Selecting another scene cancels an active boundary interaction without commit.
+  useEffect(() => {
+    const owner = mediaBoundaryOwnerRef.current;
+    if (!owner) {
+      return;
+    }
+    if (selection.selectedSceneId !== owner) {
+      setBoundaryCancelEpoch((epoch) => epoch + 1);
+      const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, owner);
+      mediaBoundaryOwnerRef.current = next;
+      setMediaBoundaryOwnerSceneId(next);
+    }
+  }, [selection.selectedSceneId]);
+
+  // Playback start cancels boundary interaction.
+  useEffect(() => {
+    const owner = mediaBoundaryOwnerRef.current;
+    if (!owner || !playbackLocked) {
+      return;
+    }
+    setBoundaryCancelEpoch((epoch) => epoch + 1);
+    const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, owner);
+    mediaBoundaryOwnerRef.current = next;
+    setMediaBoundaryOwnerSceneId(next);
+  }, [playbackLocked]);
+
+  // Owning scene removed from the document cancels without commit.
+  useEffect(() => {
+    const owner = mediaBoundaryOwnerRef.current;
+    if (!owner) {
+      return;
+    }
+    if (!script.scenes.some((entry) => entry.id === owner)) {
+      setBoundaryCancelEpoch((epoch) => epoch + 1);
+      const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, owner);
+      mediaBoundaryOwnerRef.current = next;
+      setMediaBoundaryOwnerSceneId(next);
+    }
+  }, [script.scenes]);
 
   const layoutScript = useMemo(() => {
     if (!dragState) {
@@ -1006,6 +1127,16 @@ export default function StudioTimeline({
           scene length.
         </p>
 
+        {script.scenes.length > 0 ? (
+          <p
+            className={sceneMediaLaneNotice}
+            role="status"
+            data-scene-media-experimental-notice="true"
+          >
+            {SCENE_MEDIA_TIMELINE_EXPERIMENTAL_NOTICE}
+          </p>
+        ) : null}
+
         <div
           ref={scrollContainerRef}
           className={`${timelineEditorRailScroll} ${playbackLocked ? `cursor-not-allowed ${timelineEditorPlaybackLocked}` : ""} ${resizeState ? timelineEditorRailResizing : ""} ${trimState ? timelineEditorRailTrimming : ""}`.trim()}
@@ -1052,7 +1183,7 @@ export default function StudioTimeline({
                   showInsertBefore={showInsertBefore}
                   onSelect={() => selection.selectScene(segment.block.sceneId)}
                   onMenuOpen={({ x, y }) => {
-                    if (trimStateRef.current) {
+                    if (trimStateRef.current || mediaBoundaryOwnerRef.current) {
                       return;
                     }
                     setMenu({
@@ -1083,6 +1214,38 @@ export default function StudioTimeline({
                   wrapperRef={(element) => {
                     wrapperRefs.current.set(segment.block.sceneId, element);
                   }}
+                  mediaLane={
+                    <SceneMediaTimelineLane
+                      scene={scene}
+                      script={script}
+                      onScriptChange={onScriptChange}
+                      selectedMediaItemId={
+                        selection.selectedSceneId === segment.block.sceneId
+                          ? selection.selectedMediaItemId
+                          : null
+                      }
+                      onSelectMediaItem={selection.selectSceneMediaItem}
+                      selectedMediaTransition={
+                        selection.selectedSceneId === segment.block.sceneId
+                          ? selection.selectedMediaTransition
+                          : null
+                      }
+                      onSelectMediaTransition={selection.selectSceneMediaTransition}
+                      appendApi={appendApi}
+                      playbackLocked={playbackLocked}
+                      interactionLocked={
+                        sceneMediaLaneBaseLocked ||
+                        isMediaBoundaryLaneLocked(
+                          mediaBoundaryOwnerSceneId,
+                          segment.block.sceneId,
+                        )
+                      }
+                      boundaryOwnerSceneId={mediaBoundaryOwnerSceneId}
+                      onTryAcquireBoundary={tryAcquireMediaBoundary}
+                      onReleaseBoundary={releaseMediaBoundary}
+                      boundaryCancelEpoch={boundaryCancelEpoch}
+                    />
+                  }
                 />
               );
             })}

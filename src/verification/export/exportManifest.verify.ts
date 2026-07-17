@@ -152,6 +152,10 @@ test("scene start/duration/end and media mapping", () => {
   const second = manifest.scenes[1]!;
   assert.equal(first.startMs + first.durationMs, first.endMs);
   assert.equal(second.startMs + second.durationMs, second.endMs);
+  assert.ok(first.mediaTimeline);
+  assert.equal(first.mediaTimeline.version, 1);
+  assert.equal(first.mediaTimeline.items.length, 1);
+  assert.deepEqual(first.media, first.mediaTimeline.items[0]!.media);
   assert.equal(second.media.type, "video");
   if (second.media.type === "video") {
     assert.equal(second.media.trimStartMs, 1000);

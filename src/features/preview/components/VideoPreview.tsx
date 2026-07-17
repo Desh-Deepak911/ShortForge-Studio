@@ -29,6 +29,7 @@ import {
 } from "@/features/preview/utils";
 import { resolvePreviewSceneLocalTimeMs } from "@/features/editor/preview/motion";
 import { useVideoTrimPreviewOptional } from "@/features/preview/video-trim-preview";
+import { composeIntraSceneTransitionPreview } from "@/features/scene-media-transitions/preview";
 import {
   getSceneMediaType,
   getSceneTimingMap,
@@ -172,6 +173,16 @@ export default function VideoPreview({
           previewSceneTiming.timelineTimeMs,
         )
       : null;
+  // Intra-scene overlays keep captions; they only block two-layer canvas framing edit.
+  const intraSceneTransitionActive = Boolean(
+    displayScene &&
+      previewSceneTiming &&
+      !transitionOverlay &&
+      composeIntraSceneTransitionPreview(
+        displayScene,
+        previewSceneTiming.sceneElapsedMs,
+      ),
+  );
 
   const playbackActive = isPlaying || isSpeaking;
   const sceneScopePlaybackActive = isPlaying && playbackScope === "scene";
@@ -185,6 +196,7 @@ export default function VideoPreview({
       !playbackActive &&
       !canvasEditBlocked &&
       !transitionOverlay &&
+      !intraSceneTransitionActive &&
       onSceneImageTransformChange,
   );
 
@@ -369,6 +381,7 @@ export default function VideoPreview({
   const transitionToSceneDurationMs = transitionOverlay
     ? resolveSceneDurationMsForTiming(transitionOverlay.toScene)
     : 0;
+  // Scene-to-scene only — intra-scene transitions keep subtitles/captions continuous.
   const hideCaptionsDuringTransition = transitionOverlay != null;
   const subtitleSceneIndex =
     playbackMode === "narration" && previewSceneTiming.activeSceneIndex != null

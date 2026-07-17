@@ -16,6 +16,13 @@ export type ScriptGenerationResult =
   | { success: false; error: string; kind: "empty"; response: unknown }
   | { success: false; error: string; kind: "parse_error"; rawText: string };
 
+/**
+ * Legacy one-shot FootieScript generation (title + narration + scenes).
+ *
+ * Sprint 7D: NON-HOOK-CAPABLE and UNREACHABLE from production `/api/generate-script`.
+ * Retained only for historical tests and offline fixtures. Do not wire into
+ * narration-generating production paths — use Hooked audio-first / script-only instead.
+ */
 function buildPrompt(topic: string, tone: Tone, duration: number): string {
   return [
     "Football documentary writer for FootieBitz. Output JSON only. No markdown or prose.",
@@ -41,6 +48,7 @@ async function requestScriptText(
   return { rawText, response };
 }
 
+/** @deprecated Non-hook-capable. Unreachable from production generate-script route (Sprint 7D). */
 export async function generateFootieScript(
   topic: string,
   tone: Tone,

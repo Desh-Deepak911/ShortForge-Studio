@@ -26,6 +26,11 @@ export interface BuildPromptIntelligenceInput {
   graphContext: GraphContext;
   /** When set, length rules and beat budgets use this narration target. */
   targetDurationSeconds?: number;
+  /**
+   * Explicit creator preference for evidence-led surprise openings (Sprint 7D.3 / 7E).
+   * Hook-type-free — resolved upstream from creator topic/context phrases.
+   */
+  evidenceLedSurprisePreference?: boolean | import("./resolve-evidence-led-surprise-preference").EvidenceLedSurprisePreferenceKind;
 }
 
 const MODE_TONE: Record<ScriptMode, Tone> = {
@@ -458,6 +463,9 @@ export function buildPromptIntelligence(
   const narrativePlan = buildNarrativePlan({
     graphContext,
     targetDurationSeconds,
+    ...(input.evidenceLedSurprisePreference
+      ? { evidenceLedSurprisePreference: input.evidenceLedSurprisePreference }
+      : {}),
   });
 
   const { selectedFactIds, suppressedFactIds } = selectRelevantFactIds(narrativePlan, graphContext);

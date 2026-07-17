@@ -251,13 +251,15 @@ async function runQa() {
     const editorFlow = readSrc("src/features/drafts/components/DraftEditorFlow.tsx");
 
     assert.match(reviewPage, /ScriptReviewFlow/);
-    assert.match(reviewFlow, /StoryReview/);
-    assert.match(reviewFlow, /VoiceSettingsCard/);
+    assert.match(reviewFlow, /ReviewInspector/);
     assert.match(reviewFlow, /mode:\s*"scenes-only"/);
     assert.match(voiceRoute, /generateVoiceover|voiceover/i);
     assert.match(scriptRoute, /generateScenesForReviewedScript/);
     assert.match(editorFlow, /StoryWorkspace/);
     assert.match(editorFlow, /useEditorStoryDocument/);
+
+    const inspector = readSrc("src/features/create/components/ReviewInspector.tsx");
+    assert.match(inspector, /VoiceSettingsCard/);
   });
 
   await test("QA-7 generate-script passes rankings via resolveScriptResearchContext", () => {
@@ -268,7 +270,6 @@ async function runQa() {
     assert.match(route, /top5RankedDataAvailable/);
     assert.match(resolver, /applyAssembledResearchContext/);
     assert.match(resolver, /resolveResearchPromptText/);
-    assert.match(resolver, /assembledContextToPrompt/);
     assert.match(resolver, /isResearchContextTextUseful/);
     assert.match(resolver, /hasRankedPlayerDataInContextText/);
     assert.doesNotMatch(resolver, /buildFootballResearchContextText/);

@@ -15,12 +15,17 @@ interface SceneFrameImageProps {
   imageClassName?: string;
   /** Live drag offset in screen pixels (preview only). */
   transformOffset?: { x: number; y: number };
-  /** Scene-local elapsed ms — drives shared media motion. */
+  /**
+   * Item-local elapsed ms when multi-image Preview is active; otherwise scene-local.
+   * Drives shared media motion progress.
+   */
   sceneElapsedMs?: number;
-  /** Scene duration ms — motion progress denominator. */
+  /** Item/scene duration ms — motion progress denominator. */
   sceneDurationMs?: number;
   /** Keeps transforms on the compositor while panning. */
   isDragging?: boolean;
+  /** Stable timeline item id when rendering a Scene Media Timeline item. */
+  mediaItemId?: string;
 }
 
 /**
@@ -36,6 +41,7 @@ export default function SceneFrameImage({
   sceneElapsedMs = 0,
   sceneDurationMs = 0,
   isDragging = false,
+  mediaItemId,
 }: SceneFrameImageProps) {
   const { ref: containerRef, width: frameWidth, height: frameHeight } =
     useFrameSize<HTMLDivElement>();
@@ -53,6 +59,7 @@ export default function SceneFrameImage({
     ? {
         ...resolvePreviewMediaMotionStyle({
           scene,
+          media: scene.media,
           sceneElapsedMs,
           sceneDurationMs,
           frameWidth,
@@ -68,7 +75,12 @@ export default function SceneFrameImage({
       };
 
   return (
-    <div ref={containerRef} className={className} data-scene-frame-media="image">
+    <div
+      ref={containerRef}
+      className={className}
+      data-scene-frame-media="image"
+      data-scene-media-item-id={mediaItemId ?? undefined}
+    >
       {/* MotionLayer + BaseMediaTransformLayer: composition owned by resolveMediaMotionState */}
       <img
         src={baseImage.url}

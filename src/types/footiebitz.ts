@@ -3,6 +3,8 @@ import type {
   CreatorTemplateId,
   CreatorTemplatePromptHints,
 } from "@/features/creator-templates/creator-template.types";
+import type { HookStyleSelection } from "@/features/hook-engine/presentation/hook-style-selection";
+// type-only import — presentation must not value-import this module
 
 export type Tone = "dramatic" | "funny" | "tactical" | "news" | "emotional";
 
@@ -114,6 +116,29 @@ export interface GenerateScriptRequest {
   /** Creator template metadata — optional until Prompt Intelligence consumes it. */
   templateId?: CreatorTemplateId;
   templatePromptHints?: CreatorTemplatePromptHints;
+  /** Optional user-authored opening — sanitized by Hook Engine when present (Sprint 7D). */
+  userAuthoredHook?: string;
+  /**
+   * Explicit Hook Style from Create brief (Sprint 7E.6).
+   * Omit or `auto` preserves existing resolution. Never send internal-only strategy IDs.
+   */
+  hookStyle?: HookStyleSelection;
+  /**
+   * Explicit Story Strategy from Create brief (Sprint 10G).
+   * Omit or `auto` preserves Auto resolution (legacy default).
+   * Creator-selectable only: `auto` | `short_retention` | `short_standard`.
+   * Never send long-form or Auto-only `extended_short` as an explicit value.
+   */
+  formatStrategyId?: import("@/features/retention-story/presentation").StoryStrategySelection;
+  /** Sprint 10H.3 Fact Handling — verified research vs creator premise. */
+  factHandlingMode?: "verified_facts_only" | "creative_premise";
+  /**
+   * Flexible (default) vs Precise generation policy.
+   * Precise avoids silent Hook Auto adaptation; omit for Flexible.
+   */
+  creationReliabilityMode?: "flexible" | "precise";
+  /** Creative Premise details (one fact per line). */
+  premiseDetails?: string;
 }
 
 export type GenerateScriptMode = "full" | "script-only" | "scenes-only";
@@ -149,6 +174,11 @@ export type GenerateScriptStreamCompleteEvent = GenerateScriptResponse & {
 export type GenerateScriptStreamErrorEvent = {
   type: "error";
   error: string;
+  /** Same optional Hook envelope fields as JSON failure responses (Sprint 7D.1). */
+  hookPlan?: import("@/features/hook-engine").HookPlanSnapshot;
+  hookDiagnostics?: import("@/features/hook-engine").HookDiagnostics;
+  /** Same optional Retention diagnostics as JSON failure responses (Sprint 10F.3). */
+  retentionDiagnostics?: import("@/features/retention-story").RetentionProductionSafeDiagnostics;
 };
 
 export type GenerateScriptStreamEvent =
@@ -177,5 +207,26 @@ export interface GenerateScriptResponse {
   scenePlanDevDebug?: ScenePlanDevDebug;
   /** Optional Asset Intelligence planning snapshot for client cache hydration. */
   assetPlanningSnapshot?: import("@/features/editor/creator-asset-planning/creator-asset-planning.types").CreatorAssetPlanningSnapshot;
+  /**
+   * Accepted Hook plan snapshot when Hook Engine approved narration (Sprint 7D).
+   * Safe metadata only — no candidate text, prompts, or raw research.
+   */
+  hookPlan?: import("@/features/hook-engine").HookPlanSnapshot;
+  /** Safe Hook diagnostics for the generation attempt (not persisted on the brief). */
+  hookDiagnostics?: import("@/features/hook-engine").HookDiagnostics;
+  /**
+   * Safe Retention plan snapshot after successful narration commit (Sprint 10F.3).
+   * Omitted on failure and legacy responses — never overrides narration.
+   */
+  retentionPlan?: import("@/features/retention-story").RetentionStoryPlanSnapshot;
+  /**
+   * Safe Retention validation summary after successful narration commit (Sprint 10F.3).
+   * Omitted on failure and legacy responses.
+   */
+  retentionValidation?: import("@/features/retention-story").RetentionValidationSummary;
+  /** Safe Retention diagnostics for the generation attempt (not persisted on the brief). */
+  retentionDiagnostics?: import("@/features/retention-story").RetentionProductionSafeDiagnostics;
+  /** Sprint 10H.3 — safe generation disposition / adaptations. */
+  generationDisposition?: import("@/features/retention-story").RetentionGenerationDispositionSummary;
   error?: string;
 }

@@ -1,16 +1,67 @@
 /**
  * Deterministic ExportManifest fingerprint (excludes createdAt / manifestId).
+ * Version-aware: uses draft.rendererContractVersion (not a hard-coded latest).
  */
 
-import { EXPORT_RENDERER_CONTRACT_VERSION } from "./export-manifest.types";
-import type { ExportManifestDraft } from "./export-manifest.types";
+import type {
+  ExportManifestDraft,
+  ExportSceneManifest,
+} from "./export-manifest.types";
+import { isExportSceneManifestV3 } from "./export-manifest.types";
+
+function sceneFingerprintPayload(scene: ExportSceneManifest) {
+  const base = {
+    id: scene.id,
+    index: scene.index,
+    startMs: scene.startMs,
+    durationMs: scene.durationMs,
+    endMs: scene.endMs,
+    media: scene.media,
+    mediaTimeline: {
+      version: scene.mediaTimeline.version,
+      items: scene.mediaTimeline.items.map((item) => ({
+        id: item.id,
+        index: item.index,
+        startOffsetMs: item.startOffsetMs,
+        endOffsetMs: item.endOffsetMs,
+        durationMs: item.durationMs,
+        media: item.media,
+      })),
+    },
+    transitionOut: scene.transitionOut,
+    captionMode: scene.captionMode,
+  };
+
+  if (isExportSceneManifestV3(scene)) {
+    return {
+      ...base,
+      mediaTransitions: {
+        version: scene.mediaTransitions.version,
+        boundaries: scene.mediaTransitions.boundaries.map((boundary) => ({
+          fromItemId: boundary.fromItemId,
+          toItemId: boundary.toItemId,
+          fromItemIndex: boundary.fromItemIndex,
+          toItemIndex: boundary.toItemIndex,
+          effect: boundary.effect,
+          requestedDurationMs: boundary.requestedDurationMs,
+          effectiveDurationMs: boundary.effectiveDurationMs,
+          overlayStartOffsetMs: boundary.overlayStartOffsetMs,
+          overlayEndOffsetMs: boundary.overlayEndOffsetMs,
+        })),
+      },
+    };
+  }
+
+  return base;
+}
 
 export function buildExportManifestFingerprint(
   draft: ExportManifestDraft,
 ): string {
   const payload = {
     version: draft.version,
-    rendererContractVersion: EXPORT_RENDERER_CONTRACT_VERSION,
+    // Use draft contract — never hard-code latest (v2 fingerprints must stay stable).
+    rendererContractVersion: draft.rendererContractVersion,
     project: {
       projectId: draft.project.projectId,
       contentDurationMs: draft.project.contentDurationMs,
@@ -28,16 +79,7 @@ export function buildExportManifestFingerprint(
       filename: draft.output.filename,
       bitrate: draft.output.bitrate,
     },
-    scenes: draft.scenes.map((scene) => ({
-      id: scene.id,
-      index: scene.index,
-      startMs: scene.startMs,
-      durationMs: scene.durationMs,
-      endMs: scene.endMs,
-      media: scene.media,
-      transitionOut: scene.transitionOut,
-      captionMode: scene.captionMode,
-    })),
+    scenes: draft.scenes.map((scene) => sceneFingerprintPayload(scene)),
     captions: draft.captions.map((caption) => ({
       id: caption.id,
       sceneId: caption.sceneId,
@@ -56,8 +98,6 @@ export function buildExportManifestFingerprint(
       supportedFps: draft.capabilities.supportedFps,
       browserRendererAvailable: draft.capabilities.browserRendererAvailable,
       serverRendererAvailable: draft.capabilities.serverRendererAvailable,
-      // Environment APIs affect capability but not visual fingerprint of content —
-      // include support flags only (not heap limits / browser name).
       envFlags: {
         supportsCanvasCaptureStream:
           draft.capabilities.environment.supportsCanvasCaptureStream,
@@ -98,4 +138,54 @@ function stableHash(input: string): string {
     hash = Math.imul(hash, 0x01000193);
   }
   return (hash >>> 0).toString(36);
+}
+
+export interface ExportManifestFingerprintCoherenceIssue {
+  readonly code: "INVALID_MANIFEST_FINGERPRINT" | "MANIFEST_FINGERPRINT_MISMATCH";
+  readonly message: string;
+}
+
+/**
+ * Total, version-aware fingerprint coherence check.
+ * Never throws. Does not repair. Uses draft.rendererContractVersion via rebuild.
+ */
+export function verifyExportManifestFingerprintCoherence(
+  manifest: unknown,
+): ExportManifestFingerprintCoherenceIssue | null {
+  try {
+    if (manifest === null || typeof manifest !== "object") {
+      return {
+        code: "INVALID_MANIFEST_FINGERPRINT",
+        message: "ExportManifest.fingerprint must be a non-empty string.",
+      };
+    }
+    const record = manifest as Record<string, unknown>;
+    const fingerprint = record.fingerprint;
+    if (typeof fingerprint !== "string" || !fingerprint.trim()) {
+      return {
+        code: "INVALID_MANIFEST_FINGERPRINT",
+        message: "ExportManifest.fingerprint must be a non-empty string.",
+      };
+    }
+
+    const draft: Record<string, unknown> = { ...record };
+    delete draft.fingerprint;
+    const expected = buildExportManifestFingerprint(
+      draft as unknown as ExportManifestDraft,
+    );
+    if (expected !== fingerprint) {
+      return {
+        code: "MANIFEST_FINGERPRINT_MISMATCH",
+        message:
+          "ExportManifest.fingerprint does not match the canonical fingerprint payload.",
+      };
+    }
+    return null;
+  } catch {
+    return {
+      code: "MANIFEST_FINGERPRINT_MISMATCH",
+      message:
+        "ExportManifest.fingerprint could not be verified against the canonical payload.",
+    };
+  }
 }

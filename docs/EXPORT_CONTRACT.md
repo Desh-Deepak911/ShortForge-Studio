@@ -1,10 +1,44 @@
 # ShortForge Studio Export Contract
 
-Status: Accepted after Sprint 6A · Sprint 6B production gate **implemented**  
+Status: Accepted after Sprint 6A · Sprint 6B production gate **implemented** · Sprint 8D multi-media manifest **complete and accepted** (fail-closed total v2 validation) · Sprint 8 **frozen** (ExportManifest v2 / renderer contract `"8D"`; multi-image default; `NEXT_PUBLIC_SHORTFORGE_MULTI_IMAGE_SCENES` retired in 8E.3) · Sprint 9 **frozen** — ExportManifest **v3 / `"9C"`** (intra-scene transitions) accepted and frozen (9C.1 fingerprint coherence + consecutive-boundary order; 9D.3 operator Preview/WebM/editor Pass); v2 / `"8D"` remains frozen backward-compatible
+
 Applies to: Sprint 6B and all future export work  
 Owner: Export Reliability Architecture
 
 > This contract defines the minimum correctness, parity, timing, capability, and failure guarantees for every ShortForge Studio export path.
+
+### Sprint 9C — ExportManifest v3 + intra-scene transitions *(frozen with Sprint 9)*
+
+| Item | Value |
+|---|---|
+| Production `EXPORT_MANIFEST_VERSION` | **3** (frozen) |
+| Production `EXPORT_RENDERER_CONTRACT_VERSION` | **`"9C"`** (frozen) |
+| Frozen pair | `EXPORT_MANIFEST_V2_VERSION = 2` · `EXPORT_RENDERER_CONTRACT_V2 = "8D"` |
+| Discriminated types | `ExportManifestV2` \| `ExportManifestV3` |
+| Intra-scene track | `ExportSceneManifestV3.mediaTransitions` (always present; empty = hard-cut) |
+| Manifest-only resolver | `resolveExportIntraSceneTransitionAtElapsed` |
+| Integrity authority | `validateExportManifest` / `assertExportManifest` (version-dispatching) |
+| Frozen v2 integrity | `validateExportManifestV2SceneMedia` unchanged (rejects `mediaTransitions`) |
+| Fail-closed preflight | Dispatching integrity before cost/preload/render (unchanged ordering) |
+| Fingerprint | Version-aware via `draft.rendererContractVersion`; v3 includes every transition field; validators recompute and require `MANIFEST_FINGERPRINT_MISMATCH` on drift |
+| Boundary order | Strictly increasing `fromItemIndex` (A→B then B→C valid) |
+
+### Sprint 8D — Multi-media ExportManifest (frozen)
+
+| Item | Value |
+|---|---|
+| Frozen `EXPORT_MANIFEST_V2_VERSION` | **2** |
+| Frozen `EXPORT_RENDERER_CONTRACT_V2` | **`"8D"`** |
+| Canonical per-scene media | `ExportSceneManifest.mediaTimeline` (frozen item windows + media) |
+| Compatibility field | `ExportSceneManifest.media` = first timeline item only |
+| Active-item authority | `resolveExportActiveSceneMediaFrame(sceneManifest, sceneElapsedMs)` |
+| Timing (v2) | Item-local elapsed for motion + video clip; **hard-cut** intra-scene |
+| Integrity | Total `validateExportManifestV2SceneMedia(unknown)` — never throws; no silent repair |
+| Fail-closed preflight | Integrity runs before `estimateExportCost`, env/capability dereferences, format/timeline/media checks, resolution approval, and renderer selection. Integrity failure → `supported: false`, `renderer: "blocked"`, single `INVALID_MANIFEST`, sentinel cost (`invalid-manifest-sentinel`) |
+| Runtime boundary | `prepareExportFromManifest` / `assertExportManifest` reject before draw-scene construction, preload, or render |
+| Capability counts | Canonical `mediaTimeline.items` (`videoMediaItemCount` / `imageMediaItemCount`); legacy scene counts alias item counts |
+| Multi-image default | Production `prepareExportRequest` / `buildExportManifest` default to complete projected `mediaTimeline` (`multiImageScenesEnabled !== false`). Opt-out `false` is tests-only. Domain does not read `process.env`. Flag `NEXT_PUBLIC_SHORTFORGE_MULTI_IMAGE_SCENES` retired in 8E.3. |
+| Runtime unknown versions | Fail closed (manifests are rebuilt every export) |
 
 ### Sprint 6B–6E implementation status
 

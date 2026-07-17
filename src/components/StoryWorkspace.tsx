@@ -16,7 +16,12 @@ import { InspectorContextProvider, InspectorResolver } from "@/features/editor/i
 import { focusInspectorProjectTab } from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import { EditorSelectionProvider, useEditorSelection } from "@/features/editor/selection";
-import { StudioTimeline, TimelinePlaybackPortProvider, useTimelinePlaybackPublisher } from "@/features/timeline-editor";
+import {
+  StudioTimeline,
+  TimelinePlaybackPortProvider,
+  useTimelinePlaybackPublisher,
+} from "@/features/timeline-editor";
+import { SceneMediaImageAppendProvider } from "@/features/timeline-editor/scene-media/SceneMediaImageAppendContext";
 import { PreviewMasterTimelineProvider } from "@/features/timeline-intelligence/master-timeline";
 import TimelineDeveloperView from "@/features/timeline-intelligence/TimelineDeveloperView";
 import { VideoPreview } from "@/features/preview/components";
@@ -281,6 +286,7 @@ function StoryWorkspaceContent({
 
   return (
     <>
+      <SceneMediaImageAppendProvider script={script} onScriptChange={onScriptChange}>
       <StudioShell
         aria-label="Editor"
         viewportMode="fixed"
@@ -377,6 +383,7 @@ function StoryWorkspaceContent({
           />
         }
       />
+      </SceneMediaImageAppendProvider>
 
       <ExportDrawer open={exportDrawerOpen} onOpenChange={setExportDrawerOpen}>
         <ExportPanel

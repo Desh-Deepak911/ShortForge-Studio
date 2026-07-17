@@ -115,6 +115,27 @@ export interface SceneMedia {
   thumbnailCount?: number;
 }
 
+/**
+ * One ordered media slot inside a scene-local media timeline (Sprint 8A).
+ * Array order is the canonical playback order.
+ */
+export interface SceneMediaTimelineItem {
+  /** Stable, persisted, unique within the owning scene. */
+  id: string;
+  media: SceneMedia;
+  /** Finite weight > 0. Windows are proportional across the scene duration. */
+  durationWeight: number;
+}
+
+/**
+ * Versioned per-scene media timeline. Absence means a legacy/single-media scene.
+ * When present with usable items, this is the future multi-media authority.
+ */
+export interface SceneMediaTimeline {
+  version: 1;
+  items: SceneMediaTimelineItem[];
+}
+
 /** Pan/zoom transform for a manually uploaded scene image. */
 export interface SceneImage {
   url: string;
@@ -147,6 +168,18 @@ export interface FootieScene {
    * When absent, legacy `image` / `uploadedImage` remain authoritative.
    */
   media?: SceneMedia;
+  /**
+   * Optional ordered multi-media timeline for the scene (Sprint 8A foundation).
+   * Absence means legacy/single-media. Preview/Export continue using `media` /
+   * `image` / `uploadedImage` throughout the compatibility period.
+   */
+  mediaTimeline?: SceneMediaTimeline;
+  /**
+   * Optional intra-scene media-to-media transition track (Sprint 9A).
+   * Absence means every adjacent pair is Cut. Never stores Cut records.
+   * Does not affect MasterTimeline, scene duration, or ExportManifest v2 in 9A.
+   */
+  mediaTransitions?: SceneMediaTransitionTrack;
   /**
    * @deprecated Legacy string URL — migrated to `image` on sync.
    * Still accepted on load for backward compatibility.
@@ -198,6 +231,27 @@ export type TransitionEffect =
   | "zoom-in"
   | "zoom-out"
   | "blur";
+
+/**
+ * Transition between two adjacent media items inside one scene (Sprint 9A).
+ * Identity is the ordered fromItemId/toItemId pair — no random transition id.
+ * Absence of a record means Cut. Do not persist Cut.
+ */
+export interface SceneMediaTransitionBoundary {
+  fromItemId: string;
+  toItemId: string;
+  effect: TransitionEffect;
+  durationMs: number;
+}
+
+/**
+ * Additive per-scene track for media-to-media transitions.
+ * Distinct from scene-to-scene `TransitionTimelineItem`.
+ */
+export interface SceneMediaTransitionTrack {
+  version: 1;
+  boundaries: SceneMediaTransitionBoundary[];
+}
 
 /** A scene entry in the production timeline. */
 export interface SceneTimelineItem {

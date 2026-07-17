@@ -64,14 +64,26 @@ test("resolveSceneCount clamps user scene count input", () => {
   assert.equal(resolveSceneCount(99), 12);
 });
 
-test("orchestrator runs script → voiceover → scenes in order", () => {
+test("orchestrator runs Retention commit → voiceover → scenes in order", () => {
   const orchestrator = readSrc("src/features/story/services/audio-first-generation.service.ts");
 
-  const scriptIdx = orchestrator.indexOf("await generateStoryScript");
-  const voiceIdx = orchestrator.indexOf("await generateVoiceoverFromScript");
-  const scenesIdx = orchestrator.indexOf("await generateScenesFromScriptAndAudio");
+  const audioFn = orchestrator.slice(
+    orchestrator.indexOf("export async function generateAudioFirstStory"),
+  );
+  const retentionIdx = audioFn.indexOf("await runRetentionProductionNarration");
+  // Optional 7E / 10F.3 doubles: production resolves to generateVoiceoverFromScript /
+  // generateScenesFromScriptAndAudio when unset.
+  const voiceIdx = audioFn.indexOf("await voiceoverFn");
+  const scenesIdx = audioFn.indexOf("await scenesFn");
 
-  assert.ok(scriptIdx >= 0 && voiceIdx > scriptIdx && scenesIdx > voiceIdx);
+  assert.ok(retentionIdx >= 0 && voiceIdx > retentionIdx && scenesIdx > voiceIdx);
+  assert.match(
+    orchestrator,
+    /Voiceover never begins before the Retention commit gate/,
+  );
+  assert.doesNotMatch(audioFn, /generateHookedNarration/);
+  assert.match(audioFn, /voiceoverFromScript \?\? generateVoiceoverFromScript/);
+  assert.match(audioFn, /scenesFromScriptAndAudio \?\? generateScenesFromScriptAndAudio/);
   assert.match(orchestrator, /onProgress\?\.\(1,/);
   assert.match(orchestrator, /onProgress\?\.\(2,/);
   assert.match(orchestrator, /onProgress\?\.\(3,/);
@@ -156,11 +168,14 @@ test("editor workspace and timeline components remain wired", () => {
 });
 
 test("captions and subtitles paths remain intact", () => {
-  const sceneInspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const captionWorkspace = readSrc(
+    "src/features/editor/components/caption-workspace/CaptionWorkspace.tsx",
+  );
   const videoPreview = readSrc("src/features/preview/components/VideoPreview.tsx");
+  const sceneInspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
 
-  assert.match(sceneInspector, /captionMode/);
-  assert.match(sceneInspector, /subtitleText/);
+  assert.match(sceneInspector, /CaptionWorkspace/);
+  assert.match(captionWorkspace, /captionMode|Caption/);
   assert.match(videoPreview, /CaptionOverlay/);
   assert.match(videoPreview, /SubtitleOverlay/);
 });
@@ -187,14 +202,14 @@ test("transition timeline cards are not exported as video scenes", () => {
   assert.equal(payload.renderTransitions, false);
 });
 
-test("API route falls back to legacy generation when audio-first fails", () => {
+test("API route returns explicit failure when audio-first fails — no legacy generateFootieScript", () => {
   const route = readSrc("src/app/api/generate-script/route.ts");
 
   assert.match(route, /generateAudioFirstStory/);
-  assert.match(route, /if \(audioFirstResult\.success\)/);
-  assert.match(route, /generateFootieScript/);
-  assert.match(route, /applyAudioFirstTiming/);
-  assert.match(route, /usedFallback: true/);
+  assert.doesNotMatch(route, /generateFootieScript/);
+  assert.doesNotMatch(route, /applyAudioFirstTiming/);
+  assert.match(route, /usedFallback:\s*false/);
+  assert.match(route, /audio-first pipeline:/);
 });
 
 test("audio-first story populates voiceover fields for preview/export", () => {

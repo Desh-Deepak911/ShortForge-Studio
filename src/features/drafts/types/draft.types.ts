@@ -59,6 +59,48 @@ export interface StoryCreationBrief {
   captionPreset?: CaptionPresetId;
   /** Optional audio mixer defaults suggested by the template for later editor seeding. */
   audioMixer?: ProjectAudioMixerSettings;
+  /**
+   * Accepted Hook plan snapshot from staged script generation (Sprint 7D).
+   * Omitted on legacy briefs — loaders must tolerate absence. Diagnostics are not persisted.
+   */
+  hookPlan?: import("@/features/hook-engine").HookPlanSnapshot;
+  /**
+   * Explicit Hook Style from Create brief (Sprint 7E.6).
+   * Omitted on legacy briefs and when Auto — loaders treat absence as Auto.
+   * Never persist diagnostics, candidates, or grounding text here.
+   */
+  hookStyle?: import("@/features/hook-engine").HookStyleSelection;
+  /**
+   * Explicit Story Strategy from Create brief (Sprint 10G).
+   * Omitted on legacy briefs and when Auto — loaders treat absence as Auto.
+   * Never persist long-form or Auto-only extended_short as explicit values.
+   */
+  formatStrategyId?: import("@/features/retention-story/presentation").StoryStrategySelection;
+  /**
+   * Safe Retention plan snapshot after successful narration commit (Sprint 10F.3).
+   * Omitted on legacy briefs and failed attempts — loaders must tolerate absence.
+   * Never overrides FootieScript.narration.
+   */
+  retentionPlan?: import("@/features/retention-story").RetentionStoryPlanSnapshot;
+  /**
+   * Safe Retention validation summary after successful narration commit (Sprint 10F.3).
+   * Omitted on legacy briefs and failed attempts — loaders must tolerate absence.
+   */
+  retentionValidation?: import("@/features/retention-story").RetentionValidationSummary;
+  /**
+   * @deprecated Sprint 10G.1 — rewrite authority is `retentionValidation.rewriteUsed`.
+   * Standalone values are ignored / stripped on draft load.
+   */
+  retentionRewriteUsed?: boolean;
+  /** Sprint 10H.3 — Fact Handling selection (safe summary only). */
+  factHandlingMode?: "verified_facts_only" | "creative_premise";
+  /**
+   * Creator premise lines (Creative Premise mode). Safe brief text only —
+   * never claim IDs, prompts, or research dumps.
+   */
+  premiseDetails?: string;
+  /** Sprint 10H.3 — safe generation disposition / adaptations. */
+  generationDisposition?: import("@/features/retention-story").RetentionGenerationDispositionSummary;
 }
 
 /** Voiceover audio attached to a draft. Mirrors `FootieScript` voiceover fields. */

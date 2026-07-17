@@ -1,19 +1,33 @@
 /**
- * Video source/clip time from frozen ExportVideoMediaManifest (Sprint 6C).
+ * Video source/clip time from frozen ExportVideoMediaManifest (Sprint 6C / 8D).
+ * Uses active timeline item when present; item-local elapsed for clip mapping.
  */
 
 import { resolveSceneMediaPlayback } from "@/features/media-playback";
-import type { ExportSceneManifest } from "@/features/export/domain/export-manifest.types";
+import { resolveExportActiveSceneMediaFrame } from "@/features/export/domain/resolve-export-active-scene-media-frame";
+import type {
+  ExportMediaManifest,
+  ExportSceneManifest,
+} from "@/features/export/domain/export-manifest.types";
 
 export function resolveExportVideoSourceTimeMs(
   scene: ExportSceneManifest,
   sceneElapsedMs: number,
-): { sourceTimeMs: number; holdLastFrame: boolean } {
-  if (scene.media.type !== "video") {
-    return { sourceTimeMs: 0, holdLastFrame: false };
+): { sourceTimeMs: number; holdLastFrame: boolean; mediaItemId: string | null } {
+  const active = resolveExportActiveSceneMediaFrame(scene, sceneElapsedMs);
+  const media: ExportMediaManifest = active?.item.media ?? scene.media;
+  const mediaItemId = active?.item.id ?? scene.mediaTimeline?.items[0]?.id ?? null;
+  const itemElapsedMs = active?.itemElapsedMs ?? sceneElapsedMs;
+  const itemDurationMs = active?.itemDurationMs ?? scene.durationMs;
+
+  if (media.type !== "video") {
+    return {
+      sourceTimeMs: 0,
+      holdLastFrame: active?.holdingFinalFrame ?? false,
+      mediaItemId,
+    };
   }
 
-  const media = scene.media;
   const playback = resolveSceneMediaPlayback({
     sceneMedia: {
       type: "video",
@@ -22,12 +36,13 @@ export function resolveExportVideoSourceTimeMs(
       trimStartMs: media.trimStartMs,
       trimEndMs: media.trimEndMs,
     },
-    sceneElapsedMs,
-    sceneDurationMs: scene.durationMs,
+    sceneElapsedMs: itemElapsedMs,
+    sceneDurationMs: itemDurationMs,
   });
 
   return {
     sourceTimeMs: playback.clipTimeMs,
-    holdLastFrame: playback.holdLastFrame,
+    holdLastFrame: playback.holdLastFrame || Boolean(active?.holdingFinalFrame),
+    mediaItemId,
   };
 }
