@@ -612,14 +612,24 @@ export function HeadlessExportSection({
           ) : null}
 
           {unavailable ? (
-            <StudioStatus
-              variant="warning"
-              layout="inline"
-              description={
-                model.ctx.safeMessage ??
-                "Server rendering is not configured yet. You can continue with Browser Export."
-              }
-            />
+            <>
+              <StudioStatus
+                variant="warning"
+                layout="inline"
+                description={
+                  model.ctx.safeMessage ??
+                  "Server rendering is not configured yet. You can continue with Browser Export."
+                }
+              />
+              {model.ctx.availability?.state === "authentication_required" ? (
+                <a
+                  href="/staging-access"
+                  className="inline-flex text-sm font-semibold text-emerald-300 underline decoration-emerald-400/50 underline-offset-4 hover:text-emerald-200"
+                >
+                  Enter staging access code
+                </a>
+              ) : null}
+            </>
           ) : null}
 
           {preparingOwnedUpload ? (

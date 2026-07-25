@@ -43,12 +43,12 @@ export const PRODUCTION_HEADLESS_UNAVAILABLE: HeadlessAvailabilityV1 =
     canCreateJob: false,
   });
 
-/** Clerk configured but user signed out / pending — create remains blocked. */
+/** Staging access session absent or expired — create remains blocked. */
 export const HEADLESS_AUTHENTICATION_REQUIRED: HeadlessAvailabilityV1 =
   Object.freeze({
     version: 1 as const,
     state: "authentication_required" as const,
-    message: "Sign in to use server export.",
+    message: "Enter a staging access code to use server export.",
     headlessSelectable: true,
     canCreateJob: false,
   });

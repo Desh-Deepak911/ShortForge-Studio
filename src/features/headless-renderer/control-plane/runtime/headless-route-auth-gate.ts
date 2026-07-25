@@ -51,7 +51,7 @@ const SAFE_AUTH_FAILED_MESSAGE =
   "Authentication is temporarily unavailable.";
 
 /**
- * Evaluate Clerk auth + composition for a headless API request.
+ * Evaluate staging signed-session auth + composition for a headless API request.
  * Inject deps only in tests.
  */
 export async function gateHeadlessRouteAuth(input?: {
@@ -61,8 +61,8 @@ export async function gateHeadlessRouteAuth(input?: {
   const compose = input?.compose ?? composeProductionHeadlessControlPlane;
   const composed = compose();
 
-  // Missing or invalid Clerk keys — do not invoke SDK auth.
-  if (!composed.clerkAuthenticationConfigured) {
+  // Missing or invalid session configuration — do not attempt authentication.
+  if (!composed.stagingSessionConfigured) {
     return {
       kind: "configuration_unavailable",
       code: "CONFIGURATION_UNAVAILABLE",

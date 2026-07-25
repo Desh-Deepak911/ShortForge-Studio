@@ -62,6 +62,7 @@
     "test:headless-render-contract": "tsx src/verification/headless-renderer/headlessRenderContract.verify.ts",
     "test:headless-control-plane": "tsx src/verification/headless-renderer/headlessControlPlane.verify.ts",
     "test:headless-principal-auth": "tsx src/verification/headless-renderer/headlessPrincipalAuth.verify.ts",
+    "test:headless-staging-session-authority-2g4": "tsx src/verification/headless-renderer/headlessStagingSessionAuthority2G4.verify.ts",
     "test:headless-provisional-store": "tsx src/verification/headless-renderer/headlessProvisionalStore.verify.ts",
     "test:headless-project-ownership": "tsx src/verification/headless-renderer/headlessProjectOwnership.verify.ts",
     "test:headless-sql-schema": "tsx src/verification/headless-renderer/headlessSqlSchema.verify.ts",

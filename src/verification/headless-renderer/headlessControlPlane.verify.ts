@@ -330,7 +330,7 @@ async function main() {
     // Durable adapters may be constructed when Clerk+Neon are configured, but
     // create remains blocked — never open a DB connection from this assertion.
     assert.equal(prod.canCreateJob, false);
-    if (!prod.neonDatabaseConfigured || !prod.clerkAuthenticationConfigured) {
+    if (!prod.neonDatabaseConfigured || !prod.stagingSessionConfigured) {
       assert.equal(prod.jobStore, null);
       const denied = await prod.projectAuthorization.assertProjectAccess(
         { ownerId: "user_x", sessionId: null },

@@ -3,7 +3,7 @@
  */
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { NextRequest } from "next/server";
 
@@ -70,8 +70,9 @@ function mockCompose(input: {
       productionAvailable: false as const,
       canCreateJob: false as const,
       reason: "CONFIGURATION_UNAVAILABLE" as const,
-      clerkAuthenticationConfigured: classify() === "configured",
-      clerkEnvironmentStatus: classify(),
+      stagingSessionConfigured: classify() === "configured",
+      stagingSessionEnvironmentStatus:
+        classify() === "configured" ? "configured" : "absent",
       neonDatabaseConfigured: false as const,
       neonEnvironmentStatus: "unconfigured" as const,
       principal,
@@ -493,13 +494,11 @@ async function main() {
     });
     assert.equal(undefinedRes.status, 200);
 
-    const proxySrc = readFileSync(
-      path.join(process.cwd(), "src/proxy.ts"),
-      "utf8",
+    assert.equal(
+      existsSync(path.join(process.cwd(), "src/proxy.ts")),
+      false,
+      "active Clerk proxy must be absent",
     );
-    assert.ok(proxySrc.includes('matcher: ["/api/headless-render/:path*"]'));
-    assert.equal(proxySrc.includes("createRouteMatcher"), false);
-    assert.equal(proxySrc.includes("auth.protect("), false);
   });
 
   // ——— Route behavioral matrix (all families) ———
