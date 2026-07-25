@@ -174,6 +174,21 @@ async function main(): Promise<void> {
     assert.notEqual(a.operationId, b.operationId);
   });
 
+  await test("production-shaped idempotency key fits durable job ID authority", () => {
+    const operationId = "a4567890-e89b-42d3-a456-426614174001";
+    const frozen = freezeHeadlessClickAuthority({
+      draftId: "123e4567-e89b-42d3-a456-426614174000",
+      resolution: "1080p",
+      format: "mp4",
+      manifestFingerprint: "m".repeat(64),
+      assetBundleFingerprint: "a".repeat(64),
+      randomUUID: () => operationId,
+    });
+
+    assert.equal(frozen.idempotencyKey, `h11e:${operationId}`);
+    assert.ok(frozen.idempotencyKey.length <= 128);
+  });
+
   await test("state machine: stale JOB_VIEW ignored; terminal no regress", () => {
     let m = createInitialProductModel("headless");
     m = reduceHeadlessProduct(m, {

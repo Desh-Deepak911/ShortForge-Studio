@@ -39,16 +39,10 @@ export function freezeHeadlessClickAuthority(
   const uuid = input.randomUUID ?? defaultUuid;
   const operationId = uuid();
   const createdAtMs = input.nowMs ?? Date.now();
-  // Idempotency binds identity + fingerprints + profile for this click only.
-  const idempotencyKey = [
-    "h11e",
-    input.draftId,
-    input.resolution,
-    input.format,
-    input.manifestFingerprint.slice(0, 32),
-    input.assetBundleFingerprint.slice(0, 32),
-    operationId,
-  ].join(":");
+  // The operation ID is the one-click replay authority. The server request
+  // fingerprint separately binds the project, profile, manifest, and bundle.
+  // Keep this value within the durable job record's bounded-ID contract.
+  const idempotencyKey = `h11e:${operationId}`;
 
   return Object.freeze({
     operationId,
