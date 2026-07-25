@@ -165,8 +165,11 @@ test("music fade envelope remains available in browser export mix path", () => {
   );
 
   assert.match(browserMix, /applyMusicFadeEnvelope/);
+  assert.match(browserMix, /sampleExportMusicEnvelopeCurve/);
+  assert.match(browserMix, /setValueCurveAtTime/);
+  assert.match(browserMix, /toExportMusicEnvelopeInput/);
   assert.match(browserMix, /configurePreviewPeakProtectionCompressor/);
-  assert.match(browserMix, /fadeOutSec/);
+  assert.match(browserMix, /mixSettings/);
   assert.doesNotMatch(browserMix, /loudnorm/);
 });
 

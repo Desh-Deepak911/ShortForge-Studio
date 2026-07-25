@@ -1,0 +1,91 @@
+/**
+ * Sprint 11E Phase 2E.2D.8K.4.1 — embedded Node sampler script for Machine exec.
+ */
+
+import {
+  HOSTED_4K_NODE_SAMPLER_MECHANISM,
+  HOSTED_4K_SAMPLER_OBSERVATION_WINDOW_STARTUP_EXCLUSION_MS,
+} from "./hosted-render-machine-node-sampler-core";
+
+export function buildHosted4kNodeSamplerEmbeddedScript(): string {
+  return [
+    "'use strict';",
+    "const fs=require('fs');",
+    "const OBS=process.pid;",
+    "const STATE_DIR=process.env.STATE_DIR;",
+    "const INTERVAL_MS=Number(process.env.INTERVAL_MS||250);",
+    `const STARTUP_EXCLUSION_MS=${HOSTED_4K_SAMPLER_OBSERVATION_WINDOW_STARTUP_EXCLUSION_MS};`,
+    "if(!STATE_DIR) process.exit(2);",
+    "const STOP_FILE=STATE_DIR+'/stop.requested';",
+    "function monoMs(){return Math.floor(parseFloat(fs.readFileSync('/proc/uptime','utf8').split(' ')[0])*1000);}",
+    "function listPids(){return fs.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).map(Number);}",
+    "function ppidOf(pid){try{const m=fs.readFileSync('/proc/'+pid+'/status','utf8').match(/^PPid:\\s+(\\d+)/m);return m?Number(m[1]):0;}catch{return 0;}}",
+    "function rssKb(pid){try{const m=fs.readFileSync('/proc/'+pid+'/status','utf8').match(/^VmRSS:\\s+(\\d+)/m);return m?Number(m[1]):0;}catch{return 0;}}",
+    "function cmdline(pid){try{return fs.readFileSync('/proc/'+pid+'/cmdline','utf8').replace(/\\0/g,' ');}catch{return '';}}",
+    "function inObsTree(pid){let p=pid;while(p>0){if(p===OBS)return true;p=ppidOf(p);}return false;}",
+    "function findRoot(){for(const pid of listPids()){if(pid===OBS)continue;const c=cmdline(pid);if(c.includes('hosted-worker')||c.includes('headless-worker'))return pid;}for(const pid of listPids()){if(ppidOf(pid)!==1)continue;if(cmdline(pid).includes('node'))return pid;}return 0;}",
+    "function sumTree(root){const pids=listPids();const pp=new Map(pids.map(p=>[p,ppidOf(p)]));const ch=new Map();for(const [p,pa] of pp){if(!ch.has(pa))ch.set(pa,[]);ch.get(pa).push(p);}let summed=0,count=0;const seen=new Set();const stack=[root];while(stack.length){const pid=stack.pop();if(seen.has(pid))continue;seen.add(pid);if(inObsTree(pid))continue;const kb=rssKb(pid);if(kb>0){summed+=kb;count++;}for(const c of ch.get(pid)||[]){if(!seen.has(c))stack.push(c);}}return {summed,count};}",
+    "function readCgroupPeak(){try{return Number(fs.readFileSync('/sys/fs/cgroup/memory.peak','utf8').trim());}catch{try{const line=fs.readFileSync('/proc/self/cgroup','utf8').split('\\n').find(l=>l.startsWith('0::'));if(!line)return null;const p=line.split(':').pop();return Number(fs.readFileSync('/sys/fs/cgroup'+p+'/memory.peak','utf8').trim());}catch{return null;}}}",
+    "function sleep(ms){return new Promise(r=>setTimeout(r,ms));}",
+    "function pct(sorted,p){if(!sorted.length)return null;const i=Math.min(sorted.length-1,Math.max(0,Math.ceil(p/100*sorted.length)-1));return sorted[i];}",
+    "function emitSummary(state){",
+    "  const end=monoMs();",
+    "  const obs=Math.max(0,end-state.start);",
+    "  const gaps=state.inWindowGaps;",
+    "  const sorted=[...gaps].sort((a,b)=>a-b);",
+    "  const avg=gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):(state.samples>1&&obs>0?Math.round(obs/(state.samples-1)):null);",
+    "  const maxGap=sorted.length?sorted[sorted.length-1]:0;",
+    "  const corr=state.workerMiss>0&&state.samples>0?'temporarily_uncorrelated':(state.workerSeen?'worker_tree_correlated':'worker_root_absent');",
+    "  let comp='complete';",
+    "  if(state.samples<30)comp='insufficient_sample_count';",
+    "  else if(avg!=null&&avg>400)comp='excessive_average_interval';",
+    "  else if(maxGap>1000)comp='excessive_maximum_gap';",
+    "  else if(state.malformed>0)comp='malformed_samples';",
+    "  else if(corr==='worker_root_absent')comp='worker_root_absent';",
+    "  const cgroup=readCgroupPeak();",
+    "  let cgroupRec='unavailable';",
+    "  const peakB=state.peakKb*1024;",
+    "  if(cgroup!=null&&cgroup>0){if(cgroup<peakB||cgroup>peakB*8)cgroupRec='irreconcilable';else cgroupRec='reconciled';}",
+    "  const payload={finalized:true,summary_version:2,measurement_class:'process_tree_memory',completeness_class:comp,requested_interval_ms:INTERVAL_MS,sample_count:state.samples,observation_duration_ms:obs,observation_window_sample_count:gaps.length+1,average_interval_ms:avg,maximum_observed_gap_ms:maxGap||null,interval_p50_ms:pct(sorted,50),interval_p95_ms:pct(sorted,95),interval_p99_ms:pct(sorted,99),gaps_over_400_ms:gaps.filter(g=>g>400).length,gaps_over_1000_ms:gaps.filter(g=>g>1000).length,peak_summed_rss_bytes:peakB,last_summed_rss_bytes:state.lastKb*1024,malformed_sample_count:state.malformed,worker_tree_correlation_class:corr,observer_excluded:true,oom_or_restart_observed:false,worker_root_miss_count:state.workerMiss,max_gap_context_class:maxGap>1000?'in_window_peak_load':'unknown',rss_bytes_before_max_gap:state.rssBeforeMaxGap,rss_bytes_after_max_gap:state.rssAfterMaxGap,cgroup_peak_bytes:cgroup,cgroup_measurement_class:cgroup!=null?'cgroup_v2_memory_peak_corroborating':null,cgroup_reconciliation_class:cgroupRec,sampler_mechanism:'" +
+      HOSTED_4K_NODE_SAMPLER_MECHANISM +
+      "'};",
+    "  const tmp=STATE_DIR+'/summary.json.partial';",
+    "  const fin=STATE_DIR+'/summary.json';",
+    "  fs.writeFileSync(tmp,JSON.stringify(payload)+'\\n');",
+    "  fs.renameSync(tmp,fin);",
+    "}",
+    "(async()=>{",
+    "  const state={start:monoMs(),samples:0,peakKb:0,lastKb:0,malformed:0,workerMiss:0,workerSeen:false,windowOpen:false,lastSample:null,inWindowGaps:[],maxGap:0,rssBeforeMaxGap:null,rssAfterMaxGap:null,lastBeforeGap:null,stopRequested:false};",
+    "  while(!fs.existsSync(STOP_FILE)){",
+    "    const loop=monoMs();",
+    "    if(!state.windowOpen&&loop-state.start>=STARTUP_EXCLUSION_MS)state.windowOpen=true;",
+    "    const root=findRoot();",
+    "    if(!root){state.workerMiss++;await sleep(INTERVAL_MS);continue;}",
+    "    const tree=sumTree(root);",
+    "    if(!tree.count){state.workerMiss++;await sleep(INTERVAL_MS);continue;}",
+    "    state.workerSeen=true;",
+    "    if(!state.windowOpen&&loop-state.start>=STARTUP_EXCLUSION_MS)state.windowOpen=true;",
+    "    if(state.lastSample!=null&&state.windowOpen&&!state.stopRequested){",
+    "      const gap=loop-state.lastSample;",
+    "      state.lastBeforeGap=state.lastKb;",
+    "      state.inWindowGaps.push(gap);",
+    "      if(gap>state.maxGap){state.maxGap=gap;state.rssBeforeMaxGap=state.lastBeforeGap!=null?state.lastBeforeGap*1024:null;state.rssAfterMaxGap=state.lastKb*1024;}",
+    "    }",
+    "    state.lastSample=loop;",
+    "    state.samples++;",
+    "    state.lastKb=tree.summed;",
+    "    if(tree.summed>state.peakKb)state.peakKb=tree.summed;",
+    "    const now=monoMs();",
+    "    const sleepMs=Math.max(0,INTERVAL_MS-(now-loop));",
+    "    if(sleepMs>0)await sleep(sleepMs);",
+    "  }",
+    "  state.stopRequested=true;",
+    "  emitSummary(state);",
+    "  try{fs.unlinkSync(STATE_DIR+'/sampler.pid');}catch{}",
+    "})().catch(()=>process.exit(1));",
+  ].join("\n");
+}
+
+export function buildHosted4kNodeSamplerScriptFileBody(): string {
+  return buildHosted4kNodeSamplerEmbeddedScript();
+}
