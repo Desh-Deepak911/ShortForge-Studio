@@ -15,7 +15,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const gate = await evaluateHeadlessRouteAuth();
+export async function GET(request: Request) {
+  const gate = await evaluateHeadlessRouteAuth(request);
   return NextResponse.json(availabilityFromGate(gate), { status: 200 });
 }

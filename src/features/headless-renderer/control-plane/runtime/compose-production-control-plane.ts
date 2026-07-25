@@ -1,15 +1,14 @@
 /**
  * Production adapter composition for the staging website control plane.
  *
- * Phase 2B.2 / 2C.1A / 2D.1 may wire Clerk + Neon durable adapters and report
+ * Phase 2G.4 wires a staging-only signed session + Neon durable adapters and reports
  * R2 / Upstash producer classification — but R2 AWS adapters, TCP consumers,
  * upload routes, and queue workers remain absent from live product paths.
  * Activation is fail-closed and staging-only. Never constructs memory/test
  * adapters or TCP consumers. Composition itself opens no provider connection.
  */
 
-import { ClerkHeadlessPrincipalAdapter } from "../adapters/clerk-principal.adapter";
-import { createProductionClerkAuthReader } from "../adapters/clerk-principal.adapter";
+import { StagingSessionPrincipalAdapter } from "../adapters/staging-session-principal.adapter";
 import { NeonHeadlessJobStoreAdapter } from "../adapters/neon-job-store.adapter";
 import { NeonHeadlessOwnedObjectStoreAdapter } from "../adapters/neon-owned-object-store.adapter";
 import { NeonHeadlessProjectAuthorizationAdapter } from "../adapters/neon-project-authorization.adapter";
@@ -28,9 +27,10 @@ import { UnavailableHeadlessDownloadCapabilityAdapter } from "../ports/download-
 import type { HeadlessUploadCapabilityPort } from "../ports/upload-capability.port";
 import { UnavailableHeadlessUploadCapabilityAdapter } from "../ports/upload-capability.port";
 import {
-  classifyClerkEnvironment,
-  type ClerkEnvironmentStatus,
-} from "./clerk-environment";
+  classifyStagingSessionEnvironment,
+  readStagingSessionConfiguration,
+  type StagingSessionEnvironmentStatus,
+} from "./staging-session-environment";
 import {
   classifyHeadlessNeonEnvironment,
   readConfiguredHeadlessDatabaseUrl,
@@ -56,9 +56,9 @@ export type ProductionHeadlessControlPlaneComposition = {
   readonly canCreateJob: boolean;
   readonly reason: "CONFIGURATION_UNAVAILABLE";
   readonly activationStatus: StagingHeadlessControlPlaneActivationStatus;
-  /** True only when Clerk env classification is `configured`. */
-  readonly clerkAuthenticationConfigured: boolean;
-  readonly clerkEnvironmentStatus: ClerkEnvironmentStatus;
+  /** True only when the staging session environment is configured. */
+  readonly stagingSessionConfigured: boolean;
+  readonly stagingSessionEnvironmentStatus: StagingSessionEnvironmentStatus;
   /** True only when Neon DATABASE_URL classification is `configured`. */
   readonly neonDatabaseConfigured: boolean;
   readonly neonEnvironmentStatus: HeadlessNeonEnvironmentStatus;
@@ -71,7 +71,7 @@ export type ProductionHeadlessControlPlaneComposition = {
   /** True only when Upstash REST producer classification is `configured`. */
   readonly upstashProducerConfigured: boolean;
   /**
-   * Optional REST producer when Clerk + Neon + Upstash are configured.
+   * Optional REST producer when staging session + Neon + Upstash are configured.
    * Never a TCP consumer. Null when not fully configured.
    * Presence does not flip productionAvailable / canCreateJob.
    */
@@ -82,12 +82,12 @@ export type ProductionHeadlessControlPlaneComposition = {
   readonly principal: HeadlessPrincipalPort;
   readonly projectAuthorization: HeadlessProjectAuthorizationPort;
   /**
-   * Durable job store when Clerk + Neon are both configured.
+   * Durable job store when staging session + Neon are both configured.
    * Null otherwise — never a memory/test adapter.
    */
   readonly jobStore: HeadlessJobStorePort | null;
   /**
-   * Durable owned-object metadata store when Clerk + Neon are both configured.
+   * Durable owned-object metadata store when staging session + Neon are both configured.
    * Null otherwise. Does not imply upload/download routes are enabled.
    */
   readonly ownedObjectStore: HeadlessOwnedObjectStorePort | null;
@@ -97,8 +97,12 @@ export type ProductionHeadlessControlPlaneComposition = {
 
 export function composeProductionHeadlessControlPlane(): ProductionHeadlessControlPlaneComposition {
   const activationStatus = classifyStagingHeadlessControlPlaneActivation();
-  const clerkEnvironmentStatus = classifyClerkEnvironment();
-  const clerkAuthenticationConfigured = clerkEnvironmentStatus === "configured";
+  const stagingSessionEnvironmentStatus =
+    classifyStagingSessionEnvironment();
+  const stagingSessionConfiguration = readStagingSessionConfiguration();
+  const stagingSessionConfigured =
+    stagingSessionEnvironmentStatus === "configured" &&
+    stagingSessionConfiguration != null;
   const neonEnvironmentStatus = classifyHeadlessNeonEnvironment();
   const neonDatabaseConfigured = neonEnvironmentStatus === "configured";
   const r2EnvironmentStatus = classifyHeadlessR2Environment();
@@ -108,8 +112,8 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
   const upstashProducerConfigured =
     upstashProducerEnvironmentStatus === "configured";
 
-  const principal: HeadlessPrincipalPort = clerkAuthenticationConfigured
-    ? new ClerkHeadlessPrincipalAdapter(createProductionClerkAuthReader())
+  const principal: HeadlessPrincipalPort = stagingSessionConfigured
+    ? new StagingSessionPrincipalAdapter(stagingSessionConfiguration!)
     : new UnavailableHeadlessPrincipalAdapter();
 
   // Durable adapters only when both identity and database are configured.
@@ -128,7 +132,7 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
     | UnavailableUpstashRestQueueProducerAdapter
     | null = null;
 
-  if (clerkAuthenticationConfigured && neonDatabaseConfigured) {
+  if (stagingSessionConfigured && neonDatabaseConfigured) {
     const connectionString = readConfiguredHeadlessDatabaseUrl();
     if (connectionString != null) {
       const sql = createNeonSqlExecutor({ connectionString });
@@ -149,7 +153,7 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
   }
 
   if (
-    clerkAuthenticationConfigured &&
+    stagingSessionConfigured &&
     neonDatabaseConfigured &&
     upstashProducerConfigured
   ) {
@@ -165,7 +169,7 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
 
   const productionAvailable =
     activationStatus === "active" &&
-    clerkAuthenticationConfigured &&
+    stagingSessionConfigured &&
     neonDatabaseConfigured &&
     r2Configured &&
     upstashProducerConfigured &&
@@ -178,8 +182,8 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
     canCreateJob: productionAvailable,
     reason: "CONFIGURATION_UNAVAILABLE",
     activationStatus,
-    clerkAuthenticationConfigured,
-    clerkEnvironmentStatus,
+    stagingSessionConfigured,
+    stagingSessionEnvironmentStatus,
     neonDatabaseConfigured,
     neonEnvironmentStatus,
     r2EnvironmentStatus,
