@@ -1,5 +1,5 @@
 import type { FootieScript } from "@/features/story/types";
-import { getStoryBackgroundMusic } from "@/features/story/utils";
+import { getStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
 
 import {
   DEFAULT_DUCKING_STRENGTH,

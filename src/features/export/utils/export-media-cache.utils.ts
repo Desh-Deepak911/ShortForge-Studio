@@ -5,7 +5,7 @@
  * Keys are collision-safe composites of sceneId + mediaItemId.
  */
 import type { FootieScene, SceneMedia, SceneMediaType } from "@/features/story/types";
-import { getSceneImageUrl, getSceneMedia } from "@/features/story/utils";
+import { getSceneImageUrl, getSceneMedia } from "@/features/story/utils/scene.utils";
 
 const VIDEO_PRELOAD_TIMEOUT_MS = 20_000;
 

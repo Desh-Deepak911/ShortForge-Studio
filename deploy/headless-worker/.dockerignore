@@ -1,0 +1,6 @@
+# DEPRECATED for build context.
+# Docker/Fly builds MUST use repository-root context (footiebitz/) with:
+#   docker build -f deploy/headless-worker/Dockerfile .
+#   fly deploy -c deploy/headless-worker/fly.staging.template.toml
+# Root .dockerignore is authoritative. Building with context set to this
+# directory loses dist/headless-worker/ and MUST fail closed in tests.

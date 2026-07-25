@@ -1,0 +1,17 @@
+{
+  "imageClass": "claimed_render_diagnostic",
+  "canStartConsumerLoop": false,
+  "deployable": false,
+  "providerAccess": false,
+  "publicService": false,
+  "entry": "claimed-render-diagnostic-cli.ts",
+  "outfile": "claimed-render-diagnostic.js",
+  "pageArtifact": "page-render.iife.js",
+  "workerArtifactLineage": "hosted-worker.js",
+  "target": "node24",
+  "nodeMajor": 24,
+  "sourcemap": false,
+  "artifactFormat": "headless-claimed-render-diagnostic",
+  "artifactVersion": 2,
+  "note": "2E.2D.8F.6F claimed_render_diagnostic — ephemeral file-captured evidence channel; not deployable_worker; temporary Fly QA only"
+}

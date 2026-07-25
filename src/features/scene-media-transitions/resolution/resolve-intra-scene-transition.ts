@@ -7,7 +7,7 @@ import type { FootieScene, TransitionEffect } from "@/features/story/types";
 import {
   projectSceneMediaTimeline,
   resolveProjectedSceneMediaWindows,
-} from "@/features/scene-media-timeline";
+} from "@/features/scene-media-timeline/adapters/project-scene-media-timeline";
 import { getSceneDurationMs } from "@/features/story/utils/scene.utils";
 
 import { normalizeSceneMediaTransitionTrack } from "../domain/normalize-track";

@@ -19,7 +19,7 @@ import {
   getSceneImage,
   getSceneMedia,
   normalizeSceneImageFitMode,
-} from "@/features/story/utils";
+} from "@/features/story/utils/scene.utils";
 
 import type {
   SceneMediaFraming,

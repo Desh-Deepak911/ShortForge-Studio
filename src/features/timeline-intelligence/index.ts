@@ -2,9 +2,9 @@ export * from "./timeline.types";
 export type { TimelineOptimizerDiagnosticsSummary } from "./timeline.types";
 export * from "./timeline-authority";
 export * from "./timeline-utils";
+export { TIMELINE_END_BUFFER_MS } from "./timeline-end-buffer";
 export {
   buildMasterTimeline,
-  TIMELINE_END_BUFFER_MS,
   TIMELINE_SUBTITLE_FINAL_READABLE_HOLD_MS,
   TIMELINE_VOICEOVER_SYNC_TOLERANCE_MS,
 } from "./build-master-timeline";

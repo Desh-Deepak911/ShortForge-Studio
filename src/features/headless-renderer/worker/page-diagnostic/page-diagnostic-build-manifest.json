@@ -1,0 +1,16 @@
+{
+  "imageClass": "page_diagnostic",
+  "canStartConsumerLoop": false,
+  "deployable": false,
+  "providerAccess": false,
+  "publicService": false,
+  "entry": "page-diagnostic-cli.ts",
+  "outfile": "page-diagnostic.js",
+  "pageArtifact": "page-render.iife.js",
+  "target": "node24",
+  "nodeMajor": 24,
+  "sourcemap": false,
+  "artifactFormat": "headless-page-diagnostic",
+  "artifactVersion": 1,
+  "note": "2E.2D.8F.3 page_diagnostic — provider-free Chromium page contract probe; not deployable_worker; temporary Fly QA only"
+}
