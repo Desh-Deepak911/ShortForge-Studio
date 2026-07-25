@@ -1265,6 +1265,44 @@ async function main() {
     assert.equal(badMime.ok, false);
   });
 
+  await test("provisional locator accepts canonical object keys through 1024 bytes", async () => {
+    const ctx = await buildProvisionalDraftContext();
+    const withObjectKey = (objectKey: string) =>
+      ctx.stagingObjectRefs.map((ref, index) =>
+        index === 0
+          ? {
+              ...ref,
+              locator: {
+                ...ref.locator,
+                objectKey,
+              },
+            }
+          : ref,
+      );
+
+    const productionShaped = createProvisionalMaterializingRecord({
+      ...ctx.materializeInput,
+      stagingObjectRefs: withObjectKey("k".repeat(142)),
+    });
+    assert.equal(
+      productionShaped.ok,
+      true,
+      productionShaped.ok ? "" : productionShaped.message,
+    );
+
+    const atLimit = createProvisionalMaterializingRecord({
+      ...ctx.materializeInput,
+      stagingObjectRefs: withObjectKey("k".repeat(1024)),
+    });
+    assert.equal(atLimit.ok, true, atLimit.ok ? "" : atLimit.message);
+
+    const overLimit = createProvisionalMaterializingRecord({
+      ...ctx.materializeInput,
+      stagingObjectRefs: withObjectKey("k".repeat(1025)),
+    });
+    assert.equal(overLimit.ok, false);
+  });
+
   await test("createProvisionalIfAbsent: initial asset length/MIME mismatch → rejected", async () => {
     const ctx = await buildProvisionalDraftContext({ emptyStaging: true });
     assert.equal(ctx.draftResult.ok, true);

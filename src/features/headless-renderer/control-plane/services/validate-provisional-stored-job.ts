@@ -18,6 +18,7 @@ import {
   HEADLESS_MAX_ASSET_BYTES,
   HEADLESS_MAX_ID_LENGTH,
   HEADLESS_MAX_MIME_LENGTH,
+  HEADLESS_MAX_OBJECT_KEY_LENGTH,
   HEADLESS_PROVISIONAL_PROGRESS_STAGE_IDS,
 } from "../../domain/headless-render-constants";
 import { validateHeadlessRenderJobCoherence } from "../../domain/validate-headless-coherence";
@@ -170,6 +171,19 @@ function boundedId(value: unknown): value is string {
   );
 }
 
+function boundedObjectKey(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= HEADLESS_MAX_OBJECT_KEY_LENGTH &&
+    value === value.trim() &&
+    !/\s/.test(value) &&
+    !value.includes("..") &&
+    !value.startsWith("/") &&
+    !value.endsWith("/")
+  );
+}
+
 function boundedSlotKey(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -238,7 +252,7 @@ function validateOpaqueLocator(
   if (value.kind !== "object_storage") {
     return { ok: false, message: "storageLocator.kind must be object_storage." };
   }
-  if (!boundedId(value.storeId) || !boundedId(value.objectKey)) {
+  if (!boundedId(value.storeId) || !boundedObjectKey(value.objectKey)) {
     return { ok: false, message: "storageLocator ids invalid." };
   }
   if (looksLikeUrl(value.storeId) || looksLikeUrl(value.objectKey)) {
