@@ -22,6 +22,7 @@ Owner: Export Reliability Architecture
 | Fail-closed preflight | Dispatching integrity before cost/preload/render (unchanged ordering) |
 | Fingerprint | Version-aware via `draft.rendererContractVersion`; v3 includes every transition field; validators recompute and require `MANIFEST_FINGERPRINT_MISMATCH` on drift |
 | Boundary order | Strictly increasing `fromItemIndex` (A→B then B→C valid) |
+| Resolution labels | **Frozen** `ExportManifestResolutionLabel = "720p" \| "1080p"` only. Sprint 11D headless **must not** extend this enum for 4K; headless pixel targets use a separate immutable `HeadlessRenderTarget` / output-profile registry. Browser preflight and renderer selection remain unchanged. Phase 3.2 streams native elevated pixels via PNG image2pipe; ExportManifest v2/`"8D"` and v3/`"9C"` remain unchanged. |
 
 ### Sprint 8D — Multi-media ExportManifest (frozen)
 

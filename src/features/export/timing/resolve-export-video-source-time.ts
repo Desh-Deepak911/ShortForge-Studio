@@ -3,7 +3,7 @@
  * Uses active timeline item when present; item-local elapsed for clip mapping.
  */
 
-import { resolveSceneMediaPlayback } from "@/features/media-playback";
+import { resolveSceneMediaPlayback } from "@/features/media-playback/media-playback.engine";
 import { resolveExportActiveSceneMediaFrame } from "@/features/export/domain/resolve-export-active-scene-media-frame";
 import type {
   ExportMediaManifest,

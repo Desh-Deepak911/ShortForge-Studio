@@ -24,7 +24,7 @@ import {
   type PrepareExportSceneMediaResult,
 } from "@/features/export/utils/export-scene-media-renderer";
 import type { ExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
-import { normalizeCaptionMode } from "@/features/story/utils";
+import { normalizeCaptionMode } from "@/features/story/utils/caption.utils";
 import type { ResolvedExportCaptionFrame } from "@/features/export/timing";
 import type { ExportCaptionManifest } from "@/features/export/domain/export-manifest.types";
 import { resolveExportActiveSceneMediaFrame } from "@/features/export/domain/resolve-export-active-scene-media-frame";

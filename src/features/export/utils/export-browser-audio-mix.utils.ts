@@ -7,9 +7,12 @@ import {
 } from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
 import {
   resolveExportBackgroundMusicDurationSec,
-  resolveExportDuckedMusicGain,
   type ExportBackgroundMusicMixSettings,
 } from "./export-background-music.utils";
+import {
+  sampleExportMusicEnvelopeCurve,
+  toExportMusicEnvelopeInput,
+} from "./export-music-envelope.utils";
 
 export const EXPORT_BROWSER_MIX_SAMPLE_RATE = 48000;
 export const EXPORT_BROWSER_MIX_CHANNELS = 2;
@@ -61,40 +64,25 @@ async function decodeExportAudioInput(
   return decodeContext.decodeAudioData(arrayBuffer.slice(0));
 }
 
+/**
+ * Applies the canonical multiplicative music envelope via a sampled curve.
+ * Replaces discrete automation that diverged when fade-out overlapped ducking.
+ */
 function applyMusicFadeEnvelope(
   gain: GainNode,
   durationSec: number,
   settings: ExportBackgroundMusicMixSettings,
 ): void {
-  const fullGain = Math.max(0, settings.musicGain);
-  const duckedGain =
-    settings.applyDucking && settings.duckingEnabled
-      ? resolveExportDuckedMusicGain(fullGain, settings.duckingStrength)
-      : fullGain;
-  const voiceEndSec = Math.min(settings.voiceoverDurationSec, durationSec);
-
-  if (settings.fadeIn && settings.fadeInSec > 0) {
-    gain.gain.setValueAtTime(0, 0);
-    const fadeInTarget =
-      settings.applyDucking && voiceEndSec > 0 ? duckedGain : fullGain;
-    gain.gain.linearRampToValueAtTime(fadeInTarget, settings.fadeInSec);
-  } else {
-    const initialGain =
-      settings.applyDucking && voiceEndSec > 0 ? duckedGain : fullGain;
-    gain.gain.setValueAtTime(initialGain, 0);
-  }
-
-  if (settings.applyDucking && voiceEndSec > 0 && voiceEndSec < durationSec) {
-    const holdUntil = Math.max(settings.fadeInSec, 0);
-    gain.gain.setValueAtTime(duckedGain, Math.max(voiceEndSec - 0.001, holdUntil));
-    gain.gain.setValueAtTime(fullGain, voiceEndSec);
-  }
-
-  if (settings.fadeOut && settings.fadeOutSec > 0 && durationSec > settings.fadeOutSec) {
-    const fadeOutStart = durationSec - settings.fadeOutSec;
-    gain.gain.setValueAtTime(fullGain, fadeOutStart);
-    gain.gain.linearRampToValueAtTime(0, durationSec);
-  }
+  const sampleRateHint = 200;
+  const sampleCount = Math.max(
+    2,
+    Math.ceil(Math.max(0.001, durationSec) * sampleRateHint) + 1,
+  );
+  const curve = sampleExportMusicEnvelopeCurve(
+    toExportMusicEnvelopeInput(settings),
+    sampleCount,
+  );
+  gain.gain.setValueCurveAtTime(curve, 0, Math.max(0.001, durationSec));
 }
 
 function scheduleLoopedBuffer(

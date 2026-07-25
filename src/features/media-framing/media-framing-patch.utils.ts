@@ -11,7 +11,7 @@ import {
   getSceneMedia,
   normalizeSceneImageFitMode,
   normalizeSceneImageMotion,
-} from "@/features/story/utils";
+} from "@/features/story/utils/scene.utils";
 
 import type { SceneMediaFraming, SceneMediaFramingPatch } from "./media-framing.types";
 import {

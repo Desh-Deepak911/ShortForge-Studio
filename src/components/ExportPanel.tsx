@@ -103,6 +103,7 @@ import {
   getExportProfiles,
   resolveExportProfileId,
 } from "@/features/export-profiles";
+import { HeadlessExportSection } from "@/features/headless-renderer/product/ui/HeadlessExportSection";
 import {
   studioBadge,
   studioChecklistItem,
@@ -266,6 +267,7 @@ export default function ExportPanel({
   const [availableFallbacks, setAvailableFallbacks] = useState<
     readonly ExportFallbackChoice[]
   >([]);
+  const [exportRenderer, setExportRenderer] = useState<"browser" | "headless">("browser");
   const [exportSuccessSnapshot, setExportSuccessSnapshot] = useState<ExportSuccessSnapshot | null>(
     null,
   );
@@ -1446,75 +1448,97 @@ export default function ExportPanel({
           </p>
         </ExportSettingsSection>
 
+        <HeadlessExportSection
+          draftId={draftId}
+          story={script}
+          exportSettings={exportSettings}
+          audioMode={exportAudioMode}
+          includeBackgroundMusic={includeBackgroundMusic}
+          contentDurationMs={Math.max(1, Math.round(totalDuration * 1000))}
+          renderDurationMs={Math.max(1, Math.round(totalDuration * 1000) + 400)}
+          browserBusy={isExporting}
+          disabled={disabled}
+          onRendererChange={setExportRenderer}
+        />
+
         <ExportSettingsSection
           title="Download"
           className={compact ? studioStickyMobileFooterAboveBar : undefined}
         >
-          {capabilityPreflightStatus === "checking" ? (
-            <StudioStatus
-              variant="loading"
-              layout="inline"
-              description="Checking export..."
-            />
-          ) : null}
-          {capabilityPreflightStatus === "ready" ? (
-            <StudioStatus variant="success" layout="inline" description="Ready to export." />
-          ) : null}
-          {capabilityPreflightStatus === "ready-with-warnings"
-            ? capabilityWarningMessages.map((message) => (
+          {exportRenderer === "browser" ? (
+            <>
+              {capabilityPreflightStatus === "checking" ? (
                 <StudioStatus
-                  key={message}
-                  variant="warning"
+                  variant="loading"
                   layout="inline"
-                  description={message}
+                  description="Checking export..."
                 />
-              ))
-            : null}
-          {capabilityPreflightStatus === "blocked" ||
-          capabilityPreflightStatus === "server-required"
-            ? capabilityBlockerMessages.map((message) => (
-                <StudioStatus
-                  key={message}
-                  variant="error"
-                  layout="inline"
-                  description={message}
-                />
-              ))
-            : null}
-          <button
-            type="button"
-            onClick={() => void handleExport()}
-            disabled={
-              isBusy ||
-              resolvedExportPath.blocked ||
-              exportBlocked ||
-              capabilityBlocked
-            }
-            title={exportDisabledReason}
-            className={`${studioPrimaryButton} w-full`}
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Exporting...
-              </>
-            ) : capabilityPreflightStatus === "checking" ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Checking export...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" strokeWidth={1.75} />
-                Export Video
-              </>
-            )}
-          </button>
-          <p className="text-center text-[11px] text-muted">
-            {exportWidth}×{exportHeight} · 9:16 vertical
-            {exportWithNarration && " · with narration"}
-            {includeBackgroundMusic && " · with background music"}
-          </p>
+              ) : null}
+              {capabilityPreflightStatus === "ready" ? (
+                <StudioStatus variant="success" layout="inline" description="Ready to export." />
+              ) : null}
+              {capabilityPreflightStatus === "ready-with-warnings"
+                ? capabilityWarningMessages.map((message) => (
+                    <StudioStatus
+                      key={message}
+                      variant="warning"
+                      layout="inline"
+                      description={message}
+                    />
+                  ))
+                : null}
+              {capabilityPreflightStatus === "blocked" ||
+              capabilityPreflightStatus === "server-required"
+                ? capabilityBlockerMessages.map((message) => (
+                    <StudioStatus
+                      key={message}
+                      variant="error"
+                      layout="inline"
+                      description={message}
+                    />
+                  ))
+                : null}
+              <button
+                type="button"
+                onClick={() => void handleExport()}
+                disabled={
+                  isBusy ||
+                  resolvedExportPath.blocked ||
+                  exportBlocked ||
+                  capabilityBlocked
+                }
+                title={exportDisabledReason}
+                className={`${studioPrimaryButton} w-full`}
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Exporting...
+                  </>
+                ) : capabilityPreflightStatus === "checking" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking export...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" strokeWidth={1.75} />
+                    Export Video
+                  </>
+                )}
+              </button>
+              <p className="text-center text-[11px] text-muted">
+                {exportWidth}×{exportHeight} · 9:16 vertical
+                {exportWithNarration && " · with narration"}
+                {includeBackgroundMusic && " · with background music"}
+              </p>
+            </>
+          ) : (
+            <p className={studioSubtleText}>
+              Browser Export stays available when you switch Renderer back to Browser.
+              Headless failure never starts a browser export automatically.
+            </p>
+          )}
         </ExportSettingsSection>
       </div>
         </>

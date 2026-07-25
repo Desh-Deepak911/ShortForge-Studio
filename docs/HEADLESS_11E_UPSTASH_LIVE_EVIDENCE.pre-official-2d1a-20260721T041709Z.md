@@ -1,0 +1,21 @@
+# Sprint 11E Phase 2D.1 — Upstash dual-lease live QA evidence
+
+**Overall:** NOT_TESTED
+**Eligibility:** NOT ELIGIBLE — live Upstash dual-lease matrix has not been executed.
+**Started:** n/a
+**Ended:** n/a
+**Cleanup:** not_run
+**Queue protocol:** `hfq-dual-lease-v1`
+
+## Schema fingerprint
+
+- none
+
+## Cases
+
+- (none recorded)
+
+## Notes
+
+- Gate off — no Neon or Upstash connection attempted.
+- Prior PASS/FAIL evidence must not be overwritten by gate-off runs.

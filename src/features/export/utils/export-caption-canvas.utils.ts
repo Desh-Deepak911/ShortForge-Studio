@@ -40,7 +40,10 @@ import {
   SUBTITLE_MIN_FONT_SCALE,
   wrapSubtitleTextToLines,
 } from "@/features/story/utils/subtitle-layout.utils";
-import { SUBTITLE_MAX_VISIBLE_LINES, SUBTITLE_MAX_WIDTH_RATIO } from "@/features/story/utils";
+import {
+  SUBTITLE_MAX_VISIBLE_LINES,
+  SUBTITLE_MAX_WIDTH_RATIO,
+} from "@/features/story/utils/subtitle.utils";
 import {
   getTypewriterRevealedText,
 } from "@/features/story/utils/subtitle-effect.utils";

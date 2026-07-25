@@ -1,0 +1,31 @@
+# Sprint 11E Phase 2D.1G — Upstash targeted DLQ probe
+
+**Overall:** NOT_TESTED
+**Eligibility:** NOT ELIGIBLE — targeted Upstash DLQ probe has not been executed.
+**Started:** n/a
+**Ended:** n/a
+**Cleanup:** not_run
+**Queue protocol:** `hfq-dual-lease-v1`
+**Queue namespace version:** n/a
+**streamAuthority:** n/a
+**groupAuthority:** n/a
+**Run-scoped cleanup:** n/a
+**enqueueTransport:** n/a
+**consumeTransport:** n/a
+**dlqTransport:** n/a
+**Failure stage:** n/a
+**Failure reasonId:** n/a
+
+## Stages
+
+- (none recorded)
+
+## Schema fingerprint
+
+- none
+
+## Notes
+
+- Gate off — no Neon or Upstash connection attempted.
+- Prior PASS/FAIL DLQ-probe evidence must not be overwritten by gate-off runs.
+- Does not overwrite progressive or official live evidence.

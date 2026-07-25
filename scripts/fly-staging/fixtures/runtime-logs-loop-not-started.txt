@@ -1,0 +1,4 @@
+{"name":"hosted.env.classified","atMs":1,"status":"configured","reasonId":"ok","mode":"verify"}
+{"name":"hosted.binary.preflight","atMs":2,"mode":"verify","status":"ok","reasonId":"binary_preflight_ok"}
+{"name":"hosted.composition.ready","atMs":3,"mode":"verify","status":"ok"}
+{"name":"hosted.schema.preflight","atMs":4,"mode":"verify","status":"ok","reasonId":"schema_preflight_ok"}

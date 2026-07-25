@@ -4,7 +4,7 @@
  */
 
 import type { FootieScene } from "@/features/story/types";
-import { projectSceneMediaTimeline } from "@/features/scene-media-timeline";
+import { projectSceneMediaTimeline } from "@/features/scene-media-timeline/adapters/project-scene-media-timeline";
 
 import { normalizeSceneMediaTransitionTrack } from "./normalize-track";
 

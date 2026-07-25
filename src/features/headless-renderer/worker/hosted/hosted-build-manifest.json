@@ -1,0 +1,16 @@
+{
+  "imageClass": "deployable_worker",
+  "canStartConsumerLoop": true,
+  "deployable": true,
+  "entry": "hosted-worker-cli.ts",
+  "outfile": "hosted-worker.js",
+  "pageArtifact": "page-render.iife.js",
+  "target": "node24",
+  "nodeMajor": 24,
+  "sourcemap": false,
+  "artifactFormat": "headless-hosted-worker",
+  "artifactVersion": 1,
+  "unresolvedDynamicModules": [],
+  "unresolvedCompositionSeams": [],
+  "note": "2E.2C.2 deployable_worker — complete hosted runtime bundled; locally verified packaging; not a remote operational acceptance"
+}

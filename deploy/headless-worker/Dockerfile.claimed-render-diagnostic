@@ -1,0 +1,79 @@
+# syntax=docker/dockerfile:1.7
+# FootieBitz provider-free claimed-render diagnostic image — NOT deployable_worker.
+# Same Debian/Chromium/sandbox runtime as production; separate diagnostic bundle.
+#
+# BUILD CONTEXT: repository root (footiebitz/).
+#
+#   npm run build:headless-worker
+#   npm run build:headless-claimed-render-diagnostic
+#   docker build -f deploy/headless-worker/Dockerfile.claimed-render-diagnostic .
+
+ARG NODE_MAJOR=24
+FROM node:${NODE_MAJOR}-bookworm-slim AS base
+
+ARG NODE_MAJOR=24
+RUN test "$NODE_MAJOR" = "24" \
+  || (echo "CLAIMED_RENDER_DIAGNOSTIC_REQUIRES_NODE_24" >&2; exit 1)
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tini \
+    chromium \
+    chromium-sandbox \
+    fonts-liberation \
+    fonts-dejavu-core \
+    fonts-noto-core \
+    ca-certificates \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxshmfence1 \
+    ffmpeg \
+  && test -e /usr/lib/chromium/chrome-sandbox \
+  && test "$(stat -c '%u:%g' /usr/lib/chromium/chrome-sandbox)" = "0:0" \
+  && test -x /usr/lib/chromium/chrome-sandbox \
+  && test -u /usr/lib/chromium/chrome-sandbox \
+  && test -x /usr/bin/chromium \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production \
+    HEADLESS_CHROME_PATH=/usr/bin/chromium \
+    HEADLESS_FFMPEG_PATH=/usr/bin/ffmpeg \
+    HEADLESS_FFPROBE_PATH=/usr/bin/ffprobe \
+    HEADLESS_WORKER_WORKSPACE_ROOT=/tmp/footiebitz-headless-worker \
+    HEADLESS_HOSTED_IMAGE_CLASS=claimed_render_diagnostic \
+    PUPPETEER_SKIP_DOWNLOAD=1 \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+WORKDIR /app
+
+COPY dist/headless-worker/claimed-render-diagnostic.js /app/claimed-render-diagnostic.js
+COPY dist/headless-worker/page-render.iife.js /app/page-render.iife.js
+COPY dist/headless-worker/claimed-render-probe-fixture.embed.json /app/claimed-render-probe-fixture.embed.json
+COPY dist/headless-worker/CLAIMED_RENDER_DIAGNOSTIC_BUILD_INFO.json /app/CLAIMED_RENDER_DIAGNOSTIC_BUILD_INFO.json
+COPY deploy/headless-worker/docker-claimed-render-diagnostic-entrypoint.sh /app/docker-claimed-render-diagnostic-entrypoint.sh
+
+RUN chmod 755 /app/docker-claimed-render-diagnostic-entrypoint.sh \
+  && useradd --create-home --uid 10001 --shell /usr/sbin/nologin worker \
+  && mkdir -p /tmp/footiebitz-headless-worker /tmp/shortforge-claimed-render-diagnostic \
+  && chown -R worker:worker /tmp/footiebitz-headless-worker /tmp/shortforge-claimed-render-diagnostic /app \
+  && head -1 /app/docker-claimed-render-diagnostic-entrypoint.sh | grep -q '^#!/bin/sh' \
+  && ! grep -q $'\r' /app/docker-claimed-render-diagnostic-entrypoint.sh \
+  && grep -q '"imageClass": "claimed_render_diagnostic"' /app/CLAIMED_RENDER_DIAGNOSTIC_BUILD_INFO.json \
+  && grep -q '"deployable": false' /app/CLAIMED_RENDER_DIAGNOSTIC_BUILD_INFO.json \
+  && grep -q '"canStartConsumerLoop": false' /app/CLAIMED_RENDER_DIAGNOSTIC_BUILD_INFO.json \
+  && grep -q '"providerAccess": false' /app/CLAIMED_RENDER_DIAGNOSTIC_BUILD_INFO.json
+
+USER worker
+
+ENTRYPOINT ["/app/docker-claimed-render-diagnostic-entrypoint.sh"]

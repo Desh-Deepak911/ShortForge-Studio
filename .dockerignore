@@ -1,0 +1,24 @@
+# Repository-root Docker context for the headless deployable_worker.
+# REQUIRED: docker build -f deploy/headless-worker/Dockerfile .
+# (cwd must be footiebitz/ — never deploy/headless-worker/)
+#
+# Exclude everything, then re-include only the worker bundle + entry assets.
+
+**
+!dist/
+!dist/headless-worker/
+!dist/headless-worker/hosted-worker.js
+!dist/headless-worker/page-render.iife.js
+!dist/headless-worker/BUILD_INFO.json
+!deploy/
+!deploy/headless-worker/
+!deploy/headless-worker/Dockerfile
+!dist/headless-worker/page-diagnostic.js
+!dist/headless-worker/PAGE_DIAGNOSTIC_BUILD_INFO.json
+!deploy/headless-worker/Dockerfile.page-diagnostic
+!deploy/headless-worker/docker-page-diagnostic-entrypoint.sh
+!dist/headless-worker/claimed-render-diagnostic.js
+!dist/headless-worker/CLAIMED_RENDER_DIAGNOSTIC_BUILD_INFO.json
+!dist/headless-worker/claimed-render-probe-fixture.embed.json
+!deploy/headless-worker/Dockerfile.claimed-render-diagnostic
+!deploy/headless-worker/docker-claimed-render-diagnostic-entrypoint.sh

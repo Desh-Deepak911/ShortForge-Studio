@@ -39,3 +39,13 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# local headless worker evidence (binaries/metadata; do not commit)
+.tmp/
+
+# ephemeral Fly staging materialization (operator scripts; never commit)
+/fly.staging.materialized.toml
+/fly.staging.verify-first.materialized.toml
+
+# generated worker/diagnostic bundle output (not source authority)
+/dist/

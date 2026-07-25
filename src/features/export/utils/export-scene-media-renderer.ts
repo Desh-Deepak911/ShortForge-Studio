@@ -9,20 +9,20 @@
 import {
   resolveExportMediaMotionTransform,
   toExportDrawTransformOverride,
-} from "@/features/editor/export/motion";
+} from "@/features/editor/export/motion/exportMotionAdapter";
 import {
   resolveSceneMediaFraming,
   resolveSceneMediaFramingAsImage,
-} from "@/features/media-framing";
-import { resolveSceneMediaPlayback } from "@/features/media-playback";
-import type { MediaPlaybackState } from "@/features/media-playback";
+} from "@/features/media-framing/resolve-scene-media-framing";
+import { resolveSceneMediaPlayback } from "@/features/media-playback/media-playback.engine";
+import type { MediaPlaybackState } from "@/features/media-playback/media-playback.types";
 import type { FootieScene, SceneImage, SceneMedia, SceneType } from "@/features/story/types";
 import {
   drawSceneImageInFrame,
   getSceneMedia,
   normalizeSceneImageFitMode,
   resolveSceneImageTransformForFrame,
-} from "@/features/story/utils";
+} from "@/features/story/utils/scene.utils";
 import type { SceneImageFitMode } from "@/features/story/types";
 import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 

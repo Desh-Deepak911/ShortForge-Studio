@@ -449,7 +449,51 @@ SPRINT 11 HEADLESS RENDERER: READY TO BEGIN
 
 ## Sprint 11 — Headless Renderer
 
-**Deferred** until after Retention Story Intelligence v1. Do not begin Headless Renderer implementation during Sprint 10.
+**Status: Sprint 11E Phase 2C.1 R2 owned-object foundation ready for review.** Work is isolated on `feature/sprint-11-headless-renderer`. Neon adapters remain **implemented / configuration-gated** (2B.2–2B.2B). Phase **2C.1** adds R2 env classification, owned-object durable records + `004_headless_owned_objects.sql`, Design B trusted verify, injectable upload/download/storage adapters + FakeS3 tests. **Not live-tested; no remote R2 contact; remote migrations NOT EXECUTED.** Production headless routes remain **configuration-blocked**; Browser Export remains production default. No `.env.local` edits. Upstash / Fly **not started**. Sign-in UI deferred.
+
+ExportManifest v3 / `"9C"` and v2 / `"8D"` remain **frozen and unchanged** (720p/1080p only — no silent `"4k"` label). 4K elevation is headless-target-only. Evidence: `test:headless-worker-limit-authority` · `test:headless-worker-duration-authority` · `test:headless-worker-output-profiles` · `test:headless-worker-resource-evidence` · `test:headless-worker-mp4` · `test:headless-worker-resolution-ladder`. No paid vendor, product UI, or required `.env.local` changes (optional path overrides only).
+
+**11A.1 / 2.1A / 2.1B product authority:** Headless Export is **user-triggered** (not cron). Export returns a stable **jobId immediately** via a **provisional** store record (no `HeadlessRenderJobV1` until Stage B); upload/trusted verify and atomic same-`jobId` promotion may be async; render enqueue only after canonical promotion. See [docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md](./docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md) §1A / §12A and [provider decision](./docs/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md) §8.6.
+
+| Phase | Status |
+|-------|--------|
+| **11A** Architecture + authority audit | **Ready for final acceptance** — [docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md](./docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md) |
+| **11A.1** User-triggered export authority | **Ready for acceptance** — also an **11E** acceptance requirement |
+| **11B** Formal job / asset / artifact contracts | Accepted foundation |
+| **11B.1 / 11B.1A** Authority hardening + request chain | Accepted |
+| **11C / 11C.1 / 11C.1A** Control plane + authority | Accepted |
+| **11D Phase 1–2.1** Isolated worker + audio | Accepted foundation |
+| **11D Phase 3** MP4 + resolution ladder + real 4K | Foundation landed |
+| **11D Phase 3.1** Output authority + resource evidence | Foundation landed |
+| **11D Phase 3.1A** Duration semantics + honest RSS | Accepted foundation |
+| **11D Phase 3.1B** Worker limit precedence | Accepted — `min(profile, provider)`; insufficient capacity rejected before Chromium |
+| **11D Phase 3.2** Duration-scalable streamed 4K | Foundation — image2pipe; 60s operational contract |
+| **11D Phase 3.2A** Streaming evidence + output authority | Accepted foundation — identity `…-phase3.2`; truthful backpressure; pre-write artifact cap |
+| **11D Phase 3.3** Streamed artifact hash + upload | Foundation — incremental SHA-256 + `writeUploadStream`; whole-artifact Node buffer removed |
+| **11D Phase 3.3A** Durable artifact binding + CAS races | Foundation — atomic succeeded binding; post-finalization races |
+| **11D Phase 3.3A.1** Total binding validation + durable cleanup | **Accepted foundation** — hostile-safe validators; durable orphan cleanup intents; test barriers testing-only |
+| **11E Phase 1 / 1A** Product dispatch + QA orchestration | Accepted foundation — capability-gated UI; fake end-to-end QA lifecycle; routes still blocked |
+| **11E Phase 2** Provider + deployment authority audit | Foundation — topology selected; superseded by 2.1 corrections |
+| **11E Phase 2.1** Provider authority correction | Accepted foundation — full-object SHA-256 verify; Streams protocol; Fluid/non-Fluid; Clerk≠project ownership |
+| **11E Phase 2.1A** Job acceptance + post-ack recovery | Accepted foundation — two-stage acceptance; dual-lease Redis/Neon recovery; DLQ classes |
+| **11E Phase 2.1B** Provisional record type authority | Accepted foundation — discriminated provisional/canonical store; docs only |
+| **11E Phase 2A** Clerk principal + route auth gates | Accepted foundation — Clerk identity; project auth port unavailable |
+| **11E Phase 2A.1** Clerk failure + owner authority hardening | Accepted foundation — env classification; proxy containment; AUTHENTICATION_FAILED; owner-bound test project auth |
+| **11E Phase 2B Phase 1** Provider-neutral store + ownership foundation | **Accepted foundation** — provisional/canonical union, validators, lifecycle, promotion contract, job-store port + memory adapter, project ownership contract + memory adapter, SQL + CAS spec in `control-plane/migrations/`; no Neon runtime |
+| **11E Phase 2B.2+** Neon adapter + durable providers | Neon/R2 config-gated (accepted evidence); dual-lease queue 2D.1 foundation; Fly/staging/opt-in remain |
+| **11E Phase 2D.1 / 2D.1H.1** Upstash dual-lease + live evidence | **Staging-accepted** — official LIVE 22/22 PASS SHA `360e059b…`; progressive/concurrency PASS preserved |
+| **11E Phase 2E.1** Fly hosted-worker foundation | **Ready for review (local only)** — env classifier, composition seams, entrypoint, worker bundle, Dockerfile, Fly staging template; Fly deploy NOT STARTED |
+| **11E Phase 2E.1A** Hosted-worker corrections | **Ready for review (local only)** — Node 24; process-specific VMs; repo-root Dockerfile path; deterministic BUILD_INFO; `foundation_image`; Fly deploy NOT STARTED |
+| **11E Phase 2E.2A … 2E.2A.3** Render storage + delete saga + terminal disposition | **Implemented locally** — streamed R2; durable pre-upload; fail-closed delete saga; terminal `protected`/`rejected` cleanup dispositions; Neon `005`; storage+cleanup seams closed; foundation_image; no remote migration / Fly deploy |
+| **11E Phase 2E.2B** Trusted verify → promotion → render enqueue | **Implemented locally** — claimed-verification executor; coverage reconcile; canonical materialize; atomic promote; stable render XADD; `VERIFY_PROMOTION_COMPOSITION_SEAM` closed; packaging still blocks loop; foundation_image / not deployable; no Fly deploy |
+| **11E Phase 2E.2B.1** Hosted execution correction | **Implemented locally** — signal-armed shutdown deadline; incremental asset stream verify; claimed-hook fatal catch + adapter close finally; queued dispatch-pending recovery; foundation_image / not deployable; no Fly deploy |
+| **11E Phase 2E.2B.2** Durable dispatch outbox | **Implemented locally** — Neon `006` outbox; atomic promote+pending intent; outbox claim→XADD→dispatched; unified busy/shutdown drain; no periodic XADD amplification; foundation_image / not deployable; migration 006 not applied remotely; no Fly deploy |
+| **11E Phase 2E.2B.3** Dispatch outbox CAS truthfulness | **Implemented locally** — exhaustive release/reject/dispatched CAS checks; aborted_released/unconfirmed; promotion+outbox rollback proof; foundation_image / not deployable; no packaging / Fly |
+| **11E Phase 2E.2C.2** Deployable worker packaging | **Implemented locally** — `deployable_worker`; bundled hosted runtime; embedded schema fingerprint; page-render artifact; no Fly deploy |
+| **11E Phase 2E.2D.1** Neon staging migrations 005/006 | **Staging schema PASS** — migrations applied; schema preflight PASS; see phase evidence |
+| **11E Phase 2E.2D.3** Fly sandbox Chromium capability | **PASS** — secure Chromium/DOM/FFmpeg/page smoke on temporary no-secret Machine; SHA `083e3d27…` |
+| **11E Phase 2E.2D.4 / 2E.2D.5C / 2E.2D.5E / 2E.2D.6E / 2E.2D.6G** Fly staging deployment authority | **Implemented locally** — canonical verify-first orchestrator; dry-run fixtures; staged-secret activation + corrected rollback; **no** Fly provider contact in 2E.2D.6G |
+| **11F** Parity Golden QA + staging live freeze | Not started — includes long-form 4K / hosted-worker qualification before freeze |
 
 ---
 
@@ -457,8 +501,8 @@ SPRINT 11 HEADLESS RENDERER: READY TO BEGIN
 
 | Initiative | Description |
 |------------|-------------|
-| **Retention Story Intelligence (Sprint 10)** | Retention-first Shorts planning pipeline — 10B foundation ready for review |
-| **Headless Renderer (Sprint 11)** | Deferred native/headless export path |
+| **Retention Story Intelligence (Sprint 10)** | **Frozen** — deterministic, 13/13 Core live, and local product evidence passed |
+| **Headless Renderer (Sprint 11)** | 11E through 2E.2D.6G canonical verify-first orchestrator (local); sandbox Chromium PASS; Neon/R2/Upstash staging-accepted; Fly verify-first remote FAIL preserved (6D/6F); staging app at zero Machines; verify-first rerun NOT RUN; config-blocked create; browser remains production default |
 | **Scene Intelligence** | Beat-aware scene planning — caption density, transitions, visuals grounded in research |
 | **Media Intelligence** | Asset-aware image, motion, and style recommendations |
 | **Multi-provider research** | Additional backends via Provider Registry beyond API Football and Static Knowledge |

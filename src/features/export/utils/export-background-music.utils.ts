@@ -6,10 +6,14 @@ import {
   resolvePeakProtectionFromMixer,
   resolveVoiceStemGain,
   type ResolvedAudioMixSettings,
-} from "@/features/audio-mixer";
+} from "@/features/audio-mixer/headless-safe";
 import type { FootieScript, StoryBackgroundMusic } from "@/features/story/types";
-import { getStoryBackgroundMusic } from "@/features/story/utils";
-import { resolvePreviewBackgroundMusicUrl } from "@/features/preview/utils";
+import { getStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
+import { resolvePreviewBackgroundMusicUrl } from "@/features/preview/utils/preview-background-music.utils";
+import {
+  resolveExportMusicEnvelopeGainAtSec,
+  toExportMusicEnvelopeInput,
+} from "./export-music-envelope.utils";
 
 /** Attempt browser export mixing when background music is enabled. */
 export const EXPORT_BACKGROUND_MUSIC_MIXING_ENABLED = true;
@@ -63,37 +67,18 @@ export function resolveExportDuckedMusicGain(
   return Math.max(0, musicGain * duckingStrength);
 }
 
-/** Resolves music gain at a timeline second for export (ducking step + fade envelope). */
+/**
+ * Resolves music gain at a timeline second for export.
+ * Delegates to the Phase 2.1 canonical multiplicative envelope authority.
+ */
 export function resolveExportMusicGainAtSec(
   settings: ExportBackgroundMusicMixSettings,
   timeSec: number,
 ): number {
-  const durationSec = resolveExportBackgroundMusicDurationSec(settings.exportDurationMs);
-  const clampedTime = Math.min(Math.max(0, timeSec), durationSec);
-  const fullGain = Math.max(0, settings.musicGain);
-
-  let baseGain = fullGain;
-  if (
-    settings.applyDucking &&
-    settings.duckingEnabled &&
-    clampedTime < settings.voiceoverDurationSec
-  ) {
-    baseGain = resolveExportDuckedMusicGain(fullGain, settings.duckingStrength);
-  }
-
-  let fadeMultiplier = 1;
-  if (settings.fadeIn && settings.fadeInSec > 0 && clampedTime < settings.fadeInSec) {
-    fadeMultiplier *= clampedTime / settings.fadeInSec;
-  }
-
-  if (settings.fadeOut && settings.fadeOutSec > 0 && durationSec > settings.fadeOutSec) {
-    const fadeOutStart = durationSec - settings.fadeOutSec;
-    if (clampedTime > fadeOutStart) {
-      fadeMultiplier *= Math.max(0, (durationSec - clampedTime) / settings.fadeOutSec);
-    }
-  }
-
-  return Math.max(0, baseGain * fadeMultiplier);
+  return resolveExportMusicEnvelopeGainAtSec(
+    toExportMusicEnvelopeInput(settings),
+    timeSec,
+  );
 }
 
 /** Preview-aligned ducking multiplier for export when voiceover is present. */

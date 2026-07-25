@@ -2,9 +2,9 @@ import {
   clampHtmlMediaElementVolume,
   resolveAudioMixerSettings,
   resolveMusicStemGain,
-} from "@/features/audio-mixer";
+} from "@/features/audio-mixer/headless-safe";
 import type { FootieScript } from "@/features/story/types";
-import { getStoryBackgroundMusic } from "@/features/story/utils";
+import { getStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
 
 /** @deprecated Use mixer-resolved ducking strength — kept for legacy tests. */
 export const PREVIEW_MUSIC_DUCKING_MULTIPLIER = 0.35;

@@ -1,0 +1,51 @@
+# Staging VERIFY-FIRST activation TEMPLATE — placeholders for app name only.
+# Sprint 11E Phase 2E.2D.5C:
+#   First verify activation uses a verify-only Launch config from an already
+#   accepted immutable image (no rebuild). Render process group is ABSENT here
+#   so a normal first deploy cannot seed a render Machine.
+#
+# Full topology (verify + render) remains in fly.staging.template.toml.
+# Render activation is a separately authorized later transition.
+#
+# Operator deploy shape (authorized verify gate only):
+#   fly deploy -c <materialized-verify-first.toml> \
+#     --app <staging-app> \
+#     --image <immutable-registry-ref@sha256:...> \
+#     --ha=false \
+#     --yes
+
+app = "REPLACE_WITH_STAGING_APP_NAME"
+primary_region = "iad"
+
+# Image is supplied on the CLI (--image). No local rebuild in verify-first.
+[build]
+
+[processes]
+  verify = "verify"
+
+# No public services / HTTP listener.
+# No render process group in this activation config.
+
+[env]
+  HEADLESS_ENV_NAME = "staging"
+  HEADLESS_CHROME_PATH = "/usr/bin/chromium"
+  HEADLESS_FFMPEG_PATH = "/usr/bin/ffmpeg"
+  HEADLESS_FFPROBE_PATH = "/usr/bin/ffprobe"
+  HEADLESS_RENDERER_BUILD_ID = "headless-local-chromium-ffmpeg-11d-phase3.2"
+  HEADLESS_WORKER_CONCURRENCY = "1"
+  HEADLESS_WORKER_GRACEFUL_SHUTDOWN_MS = "25000"
+  HEADLESS_WORKER_WORKSPACE_ROOT = "/tmp/footiebitz-headless-worker"
+  HEADLESS_HOSTED_IMAGE_CLASS = "deployable_worker"
+
+kill_signal = "SIGTERM"
+kill_timeout = 30
+
+[[restart]]
+  policy = "on-failure"
+  retries = 10
+
+[[vm]]
+  processes = ["verify"]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 2048

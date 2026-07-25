@@ -33,6 +33,7 @@ import { authoritiesMayDiverge, resolveTimelineAuthority } from "./timeline-auth
 import { buildCaptionAnimationTrack } from "./build-caption-animation-track";
 import { buildImageMotionTrackFromScenes } from "./build-image-motion-track";
 import { buildTransitionTrackFromScenes } from "./build-transition-track";
+import { TIMELINE_END_BUFFER_MS } from "./timeline-end-buffer";
 import {
   computeTimelineDurationMs,
   createTimelineTrack,
@@ -55,7 +56,7 @@ import type {
 import { TIMELINE_INTELLIGENCE_SCHEMA_VERSION } from "./timeline.types";
 
 /** Padding after the latest timed content — keeps subtitles and audio tails visible. */
-export const TIMELINE_END_BUFFER_MS = 400;
+export { TIMELINE_END_BUFFER_MS } from "./timeline-end-buffer";
 
 /** Readable hold after the final subtitle completes (300–500ms target). */
 export const TIMELINE_SUBTITLE_FINAL_READABLE_HOLD_MS = 400;

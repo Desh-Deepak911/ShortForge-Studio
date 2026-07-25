@@ -3,7 +3,7 @@
  * Mutates only scene.media.motion — never trim, poster, crop, duration, or URL.
  */
 import type { FootieScene, SceneMedia, SceneMediaMotion } from "@/features/story/types";
-import { getSceneMedia } from "@/features/story/utils";
+import { getSceneMedia } from "@/features/story/utils/scene.utils";
 
 import { getMediaMotionPreset } from "./media-motion.presets";
 import { normalizeSceneMediaMotionRecord } from "./media-motion.legacy";

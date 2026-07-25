@@ -1,0 +1,84 @@
+# Staging-only Fly configuration TEMPLATE — placeholders for app name only.
+# Do NOT put real secrets, production app names, or credential literals here.
+#
+# Sprint 11E Phase 2E.2D.4 / 2E.2D.5C authority:
+#   - org: personal (operator)
+#   - primary_region: iad (pinned)
+#   - image class: deployable_worker (immutable for verify + render)
+#   - HEADLESS_WORKER_MODE is NOT set in [env] — process group commands only
+#   - Zero-consumer: build_only_release_then_exact_zero_machine_authority
+#   - Do NOT model persisted verify=0/render=0 Launch scale before first Machine
+#   - First verify activation uses fly.staging.verify-first.template.toml
+#   - No public services / HTTP listener
+#
+# DEPLOY FROM REPOSITORY ROOT (footiebitz/), never from deploy/headless-worker/:
+#   fly deploy -c <materialized-staging.toml> --build-only --push
+# Build context is the cwd (repo root). dockerfile path is repo-relative.
+#
+# Official Fly process-group docs (access date 2026-07-21):
+#   https://fly.io/docs/launch/processes/
+#   https://fly.io/docs/app-guides/multiple-processes/
+#   https://fly.io/docs/reference/configuration/#the-processes-section
+#   https://fly.io/docs/launch/scale-machine/
+#
+# Same immutable deployable_worker image for verify + render.
+# Process group commands supersede image CMD and do not replace ENTRYPOINT.
+
+app = "REPLACE_WITH_STAGING_APP_NAME"
+primary_region = "iad"
+
+[build]
+  # Repository-relative path — requires deploy from footiebitz/ root.
+  dockerfile = "deploy/headless-worker/Dockerfile"
+  # Image architecture must match Machine arch (e.g. amd64 / x86_64).
+
+[processes]
+  # Full topology: one Machine family per mode after separately authorized activation.
+  # Zero-consumer release must leave the Machine list empty (not Launch scale=0).
+  verify = "verify"
+  render = "render"
+
+# No public services block and no http_service — workers are not publicly reachable.
+# No public HTTP render endpoint.
+
+[env]
+  HEADLESS_ENV_NAME = "staging"
+  HEADLESS_CHROME_PATH = "/usr/bin/chromium"
+  HEADLESS_FFMPEG_PATH = "/usr/bin/ffmpeg"
+  HEADLESS_FFPROBE_PATH = "/usr/bin/ffprobe"
+  HEADLESS_RENDERER_BUILD_ID = "headless-local-chromium-ffmpeg-11d-phase3.2"
+  HEADLESS_WORKER_CONCURRENCY = "1"
+  HEADLESS_WORKER_GRACEFUL_SHUTDOWN_MS = "25000"
+  HEADLESS_WORKER_WORKSPACE_ROOT = "/tmp/footiebitz-headless-worker"
+  HEADLESS_HOSTED_IMAGE_CLASS = "deployable_worker"
+  # HEADLESS_WORKER_MODE intentionally omitted — supplied only by [processes] commands.
+  # Chromium sandbox stays enabled by default (no casual no-sandbox escape hatch).
+
+# Graceful shutdown: override default SIGINT with SIGTERM so Node handlers run.
+# Official docs (2026-07-21): https://fly.io/docs/reference/configuration/
+kill_signal = "SIGTERM"
+# Seconds (max 300). Covers graceful drain (25s) with bounded forced-abort margin.
+kill_timeout = 30
+
+[[restart]]
+  policy = "on-failure"
+  retries = 10
+
+# Process-specific capacity — every vm block MUST set processes= (no unscoped block).
+# Verifier: bounded smaller staging capacity (no Chromium encode tree).
+[[vm]]
+  processes = ["verify"]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 2048
+  # Justified: verify is trusted object stream + Neon CAS, not Chrome+FFmpeg.
+  # Still unproven until hosted measurement.
+
+# Renderer: performance-class vCPUs, 8 GB RAM, concurrency 1.
+# Explicitly UNPROVEN until hosted Chrome+FFmpeg+Node process-tree measurement.
+# NOT a hosted 4K readiness claim.
+[[vm]]
+  processes = ["render"]
+  cpu_kind = "performance"
+  cpus = 4
+  memory_mb = 8192

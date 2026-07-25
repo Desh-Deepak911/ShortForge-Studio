@@ -11,12 +11,12 @@ import {
   type SceneMediaMotion,
   type SceneMediaTransform,
 } from "@/features/media-motion";
-import { resolveSceneMediaFramingTransform } from "@/features/media-framing";
+import { resolveSceneMediaFramingTransform } from "@/features/media-framing/resolve-scene-media-framing";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
 import {
   SCENE_IMAGE_REFERENCE_HEIGHT,
   SCENE_IMAGE_REFERENCE_WIDTH,
-} from "@/features/story/utils";
+} from "@/features/story/utils/scene.utils";
 
 /** Canvas-ready motion transform for export media draws. */
 export interface ExportMotionTransform {
