@@ -6,7 +6,7 @@
 
 **Product name:** ShortForge Studio · **Export watermark brand:** FootieBitz
 **Repository root for this index:** `footiebitz/`
-**Last audited:** 2026-07-17 (Sprint 7 Core Hook frozen; Sprint 8 multi-image frozen; Sprint 9 intra-scene transitions frozen — ExportManifest v3 / `"9C"`; Sprint 10 Retention Story Intelligence v1 frozen after deterministic, 13/13 Core live-model, and operator-confirmed local product Pass; Evidence Surprise capability-gated; Sprint 11 Headless Renderer ready to begin)
+**Last audited:** 2026-07-21 (Sprint 7–10 frozen as prior; Sprint 11E Phase 2E.1 hosted-worker foundation local — Upstash staging-accepted; Neon/R2 accepted; Fly deploy NOT STARTED; routes config-blocked; browser remains authority)
 
 ---
 
@@ -96,7 +96,7 @@ See [§9](#9-frozen-systems-and-regression-boundaries) for the full list. Headli
 
 ### Current roadmap entry point — Sprint 11 Headless Renderer
 
-**Sprints 7–10 are frozen.** Sprint 10 Retention Story Intelligence v1 passed deterministic Golden/authority QA, the 435-cell Flexible matrix, the final 13/13 Core live-model matrix, and operator-confirmed local Create/Review/persistence/audio-first sign-off. Production narration paths share `runRetentionProductionNarration`; Evidence Surprise remains capability-gated. See [the Sprint 10 freeze ledger](./docs/qa/retention-story-sprint-10-freeze.md) and [the Retention contract](./docs/RETENTION_STORY_CONTRACT.md). **Current entry point: Sprint 11 — Headless Renderer.**
+**Sprints 7–10 are frozen.** Sprint 10 Retention Story Intelligence v1 passed deterministic Golden/authority QA, the 435-cell Flexible matrix, the final 13/13 Core live-model matrix, and operator-confirmed local Create/Review/persistence/audio-first sign-off. Production narration paths share `runRetentionProductionNarration`; Evidence Surprise remains capability-gated. See [the Sprint 10 freeze ledger](./docs/qa/retention-story-sprint-10-freeze.md) and [the Retention contract](./docs/RETENTION_STORY_CONTRACT.md). **Current entry point: Sprint 11E Phase 2E.1 — Fly hosted-worker foundation implemented locally; Upstash staging-accepted; Neon/R2 accepted; Fly deploy NOT STARTED; production routes configuration-blocked; browser remains production default.**
 
 | Phase | Status |
 |-------|--------|
@@ -116,28 +116,37 @@ EXPORTMANIFEST V2 / RENDERER CONTRACT 8D: FROZEN
 EXPORTMANIFEST V3 / RENDERER CONTRACT 9C: FROZEN
 NEXT_PUBLIC_SHORTFORGE_MULTI_IMAGE_SCENES: RETIRED
 SPRINT 9 INTRA-SCENE TRANSITIONS: FROZEN
-SPRINT 10 — RETENTION STORY INTELLIGENCE V1: IN PROGRESS (Core live APPROVED; local freeze pending)
-SPRINT 10A RETENTION STORY ARCHITECTURE + CONTRACT: ACCEPTED
-10A–10A.2 — Complete and accepted
-10B / 10B.1 / 10B.1A / 10B.1B — Complete and accepted
-10C / 10C.1 / 10C.1A — Complete and accepted
-10D — Complete and accepted
-10E / 10E.1 / 10E.1A — Complete and accepted
-10F / 10F.1 / 10F.1A / 10F.1B / 10F.1C — Validator + ledger + ready phase-order authority accepted
-10F.2 — Studio body rewrite + terminal validation implemented
-10F.2A — Terminal Hook authority + length enforcement hardening accepted
-10F.3 — Production activation + commit gate + safe persistence
-10F.3A — Production authority + evidence hardening
-10F.3B — Safe Hook diagnostics terminal coherence accepted
-10G / 10G.1 / 10G.1A — Explainability + Story Strategy UI + persistence authority accepted
-10H–10H.5C — Golden QA, universal reliability, live/local sign-off complete
-Retention Story — Frozen
+SPRINT 10 RETENTION STORY INTELLIGENCE V1: FROZEN
 CORE RETENTION LIVE-MODEL PATH: APPROVED (13/13)
 LOCAL PRODUCT SIGN-OFF: APPROVED
 EVIDENCE SURPRISE LIVE PROVIDER PATH: CAPABILITY-GATED
-SPRINT 11 HEADLESS RENDERER: READY TO BEGIN
+SPRINT 11A HEADLESS RENDERER ARCHITECTURE/AUTHORITY AUDIT: READY FOR FINAL ACCEPTANCE
+SPRINT 11A.1 USER-TRIGGERED EXPORT AUTHORITY: READY FOR ACCEPTANCE
+SPRINT 11D PHASE 3 OUTPUT PROFILES: READY FOR REVIEW
+4K HEADLESS EXPORT: REAL LOCAL PASS
+HEADLESS RENDERER: NOT PRODUCTION-ACTIVE
+PRODUCTION ROUTES: CONFIGURATION-BLOCKED
+SPRINT 11E PHASE 2B PHASE 1 STORE + OWNERSHIP FOUNDATION: ACCEPTED FOUNDATION
+SPRINT 11E PHASE 2A.1 CLERK AUTHORITY HARDENING: ACCEPTED FOUNDATION
+DEV HEADLESS PRODUCT LIFECYCLE: BEHAVIORALLY VERIFIED
+PRODUCTION HEADLESS ROUTES: CONFIGURATION-BLOCKED
+BROWSER EXPORT: CURRENT PRODUCTION DEFAULT
+NEON RUNTIME ADAPTER: NOT STARTED (PHASE 2B.2)
+R2 FOUNDATION (2C.1): IMPLEMENTED / CONFIGURATION-GATED / NOT LIVE-TESTED
+SPRINT 11E PHASE 2D.1A UPSTASH LIVE-EVIDENCE TRUTH: READY FOR REVIEW
+UPSTASH LIVE HARNESS: REAL RUNNERS / CONFIGURATION-GATED / LIVE NOT RUN
+UPSTASH DUAL-LEASE PROTOCOL: IMPLEMENTED / CONFIGURATION-GATED / NOT LIVE-TESTED
+AUTHORIZED LIVE PASS: REFUSED BEFORE PROVIDER CONTACT (STUB ERA) — EVIDENCE REMAINS NOT_TESTED
+FLY WORKER: NOT STARTED
+PROJECT OWNERSHIP: CONTRACT + SCHEMA IMPLEMENTED / PRODUCTION UNAVAILABLE UNTIL 2B.2
+REAL MANIFEST/OWNED-ASSET/PROVIDER WIRING: NOT STARTED
+EXPORTMANIFEST V3 / RENDERER CONTRACT 9C: UNCHANGED
+HEADLESS EXPORT TRIGGER: USER ACTION — NOT CRON
+REQUEST MODEL: SYNCHRONOUS JOB CREATION + ASYNCHRONOUS EXECUTION
 ```
 
+> The detailed Sprint 10 phase ledger remains in §12 (“Sprint 10 — Retention Story Intelligence v1”). Freeze-time lines that still say `SPRINT 11 HEADLESS RENDERER: READY TO BEGIN` (that Sprint 10 ledger block; [retention freeze ledger](./docs/qa/retention-story-sprint-10-freeze.md)) are preserved as historical evidence and superseded by 11A above.
+>
 > Parallel product debt remains valid: [ROADMAP.md](./ROADMAP.md) Creator Templates 3.10, Asset Search 3.8, Export 6G–6I. Hook Engine stays **upstream of voiceover, timeline, preview, and export**. Final spoken hook text remains part of `FootieScript.narration`.
 
 **Core Hook Engine is frozen after 7E.6A.** Evidence Surprise live provider path remains capability-gated.
@@ -987,7 +996,7 @@ SPRINT 9 INTRA-SCENE TRANSITIONS: FROZEN
 EXPORTMANIFEST V3 / RENDERER CONTRACT 9C: FROZEN
 ```
 
-### Sprint 10 — Retention Story Intelligence v1 *(in progress — 10F validator foundation)*
+### Sprint 10 — Retention Story Intelligence v1 *(frozen — 10H.5C)*
 
 | Phase | Status |
 |-------|--------|
@@ -1026,23 +1035,61 @@ EVIDENCE SURPRISE LIVE PROVIDER PATH: CAPABILITY-GATED
 SPRINT 11 HEADLESS RENDERER: READY TO BEGIN
 ```
 
-### Sprint 11 — Headless Renderer *(ready to begin)*
+### Sprint 11 — Headless Renderer *(11E Phase 2E.1 hosted-worker foundation local; Upstash staging-accepted; Fly deploy NOT STARTED; configuration-blocked; not production-active)*
 
 Intended seam:
 
 ```text
-ExportManifest
+Creator clicks Export (user action — not cron)
     ↓
-Capability preflight
+Export → Stage A provisional store (jobId, no HeadlessRenderJobV1) → upload/verify → Stage B atomic same-jobId canonical promote → queue → worker
+    ↓
+Capability / job acceptance on control plane
     ↓
 Renderer selection
-    ├── Browser renderer (chunked-browser-v1)
-    └── Headless native FFmpeg renderer
+    ├── Browser renderer (chunked-browser-v1)  ← current production authority
+    └── Headless worker renders asynchronously (not started)
+    ↓
+Validate/upload artifact → status / download (survives refresh/tab close)
 ```
 
-The headless renderer **must consume the same frozen `ExportManifest` contract**.
+The headless renderer **must consume the same frozen `ExportManifest` contract** (validated v2 / `"8D"` hard-cut and v3 / `"9C"`). Sprint 11A found that execution needs a separate immutable job + materialized-asset binding contract because current manifest sources may be browser-local `blob:` / `data:` URLs and current capability fingerprints describe browser preparation state.
 
-Implementation concerns (not story semantics): 720p, 1080p, 4K, long-form, native FFmpeg, server/worker storage and execution.
+**11A decision:** Vercel/Next.js is the authenticated control plane, not assumed render compute. The provider-neutral target is deterministic Chromium frame composition plus native FFmpeg in an isolated worker. Browser export remains production authority until parity/staging evidence passes. See [HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md](./docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md).
+
+**11A.1 product authority:** `HEADLESS EXPORT TRIGGER: USER ACTION — NOT CRON` · `REQUEST MODEL: SYNCHRONOUS JOB CREATION + ASYNCHRONOUS EXECUTION`. Editing after Export does not mutate the active job; “Export updated video” creates a fresh manifest and new job. Also an **11E** product acceptance requirement.
+
+**11B–11D:** Domain + control plane + local worker under `src/features/headless-renderer/`. Worker uses system Chrome (`puppeteer-core`) + native ffmpeg/ffprobe; recursively immutable output-profile registry (720p/1080p/4K × WebM/MP4 @ 30fps) with `HeadlessRenderTarget` as pixel/codec authority; **Phase 3.2 PNG image2pipe** streaming (duration-independent / bounded — not one PNG file per frame); initial operational contract **60s / 60.4s / 1812 frames** at all resolutions via profile ∩ provider capacity; **`min(profile, provider)` worker-limit intersection**; private frame API; real SHA-256 artifacts; advisory Node-coordinator RSS metrics (non-identity; not process-tree memory). Test seeding under `control-plane/testing` and `worker/testing`. Production Route Handlers under `/api/headless-render/jobs*` return **503 CONFIGURATION_UNAVAILABLE**. Verify: `test:headless-worker-streaming` · `test:headless-worker-streaming-evidence` · `test:headless-worker-duration-authority` · `test:headless-worker-resource-evidence` · `test:headless-worker-local`. ExportManifest v2/`"8D"` + v3/`"9C"` remain frozen 720p/1080p (no `"4k"` label). See [HEADLESS_11D_PHASE3_2_STREAMING_4K.md](./docs/HEADLESS_11D_PHASE3_2_STREAMING_4K.md).
+
+**11E Phase 2B.2B:** Neon adapters are implemented and configuration-gated; migrate runner (`DATABASE_URL_UNPOOLED` + `HEADLESS_NEON_MIGRATE=1`) and gated live harness (`HEADLESS_NEON_QA=1`) are implemented with ledger/checksum/schema preflight/evidence authority. **Remote migrate NOT EXECUTED; live Neon NOT RUN.** Production routes remain configuration-blocked; Browser Export remains default; no `.env.local` edits. See [HEADLESS_11E_PHASE2_PROVIDER_DECISION.md](./docs/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md) and [HEADLESS_11E_NEON_LIVE_EVIDENCE.md](./docs/HEADLESS_11E_NEON_LIVE_EVIDENCE.md).
+
+**11E Phase 2C.1:** R2 owned-object + upload-capability foundation implemented and configuration-gated. **Staging-accepted** via prior official live matrix. See [HEADLESS_11E_R2_OWNED_OBJECT_FOUNDATION.md](./docs/HEADLESS_11E_R2_OWNED_OBJECT_FOUNDATION.md).
+
+**11E Phase 2D.1H.1:** Upstash dual-lease **staging-accepted** (official LIVE 22/22 PASS). See [HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md](./docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md).
+
+**11E Phase 2E.1:** Hosted worker env classifier, mode composition (honest seams), Node entrypoint, worker-only bundle, Dockerfile, Fly staging template. **Fly deploy NOT STARTED.** See [HEADLESS_11E_PHASE2E1_HOSTED_WORKER_FOUNDATION.md](./docs/HEADLESS_11E_PHASE2E1_HOSTED_WORKER_FOUNDATION.md).
+
+**11E Phase 2E.1A:** Node **24** LTS; process-specific verify/render VM capacity; repo-root Dockerfile path; deterministic `BUILD_INFO`; image class **`foundation_image`**. See [HEADLESS_11E_PHASE2E1A_CORRECTION.md](./docs/HEADLESS_11E_PHASE2E1A_CORRECTION.md).
+
+| Phase | Status |
+|-------|--------|
+| **11A** Architecture + authority audit | **Ready for final acceptance** — documentation |
+| **11A.1** User-triggered export authority | **Ready for acceptance** — docs; also required by **11E** |
+| **11B / 11B.1 / 11B.1A** Domain contracts + authority chain | Accepted |
+| **11C / 11C.1 / 11C.1A** Control plane + authority | Accepted |
+| **11D Phase 3 / 3.1 / 3.1A / 3.1B** Output + duration/RSS + limit precedence | Accepted foundation |
+| **11D Phase 3.2** Duration-scalable streamed 4K | Foundation — image2pipe; 60s operational contract |
+| **11D Phase 3.2A** Streaming evidence + output authority | Foundation — identity `…-phase3.2`; truthful backpressure; pre-write artifact cap |
+| **11D Phase 3.3** Streamed artifact hash + upload | Foundation — incremental SHA-256 + `writeUploadStream`; whole-artifact Node buffer removed |
+| **11D Phase 3.3A** Durable artifact binding + CAS races | Foundation — atomic private object binding |
+| **11D Phase 3.3A.1** Total binding validation + durable cleanup | Accepted foundation — hostile-safe validators; durable orphan cleanup |
+| **11E Phase 1 / 1A** Product dispatch + QA orchestration | Accepted foundation — see [HEADLESS_11E_PRODUCT_DISPATCH.md](./docs/HEADLESS_11E_PRODUCT_DISPATCH.md) |
+| **11E Phase 2 / 2.1 / 2.1A / 2.1B** Provider decision + store type authority | Accepted foundation — [HEADLESS_11E_PHASE2_PROVIDER_DECISION.md](./docs/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md) |
+| **11E Phase 2A / 2A.1** Clerk principal + authority hardening | Accepted foundation — env classification; proxy containment; AUTHENTICATION_FAILED; create blocked |
+| **11E Phase 2B.2B** Neon migration + live-QA authority | **Ready for review** — configuration-gated Neon adapters; migrate runner + ledger/checksum/lock; gated live harness + evidence; remote migrate/live NOT executed; routes still configuration-blocked |
+| **11E Phase 2B.2+ / 11F** Neon adapter, durable providers, staging, parity/freeze | Not started — Neon interactive Pool/Client transactions; R2 + queue + worker; staging evidence |
+
+Implementation concerns (not story semantics): owned asset transport, idempotent user-triggered jobs, authenticated control plane, 720p-first parity, 1080p qualification before freeze, native FFmpeg streaming encode, worker storage/execution, cancellation, artifact validation, and safe cleanup. Hosted-provider memory measurement and production route activation remain later seams.
 
 ---
 
