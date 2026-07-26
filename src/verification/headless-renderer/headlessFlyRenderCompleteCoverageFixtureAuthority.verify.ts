@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 
 import {
+  createProvisionalMaterializingRecord,
   isProvisionalStoredJobRecord,
   verifyAndFinalizeR2OwnedObject,
 } from "@/features/headless-renderer/control-plane";
@@ -17,6 +18,7 @@ import { MemoryHeadlessProjectOwnershipAdapter } from "@/features/headless-rende
 import { reconcileFinalizedOwnedObjectCoverage } from "@/features/headless-renderer/control-plane/services/reconcile-finalized-owned-object-coverage";
 import type { HeadlessConfiguredR2Config } from "@/features/headless-renderer/control-plane/runtime/r2-environment";
 import { FakeS3Client } from "@/features/headless-renderer/control-plane/testing/fake-s3-client";
+import { headlessSourceSlotKey } from "@/features/headless-renderer/domain";
 
 import { buildLiveDraft } from "./neon-live/live-fixtures";
 import {
@@ -266,7 +268,7 @@ async function main() {
     }
   });
 
-  await test("intermediate blocked_incomplete then completion on last object", async () => {
+  await test("one callback recovers all already-finalized fixture coverage", async () => {
     const ctx = buildCtx();
     const draftCtx = await buildLiveDraft({
       runId: ctx.runId,
@@ -283,37 +285,167 @@ async function main() {
     assert.equal(created.ok, true);
     if (!created.ok || created.value.kind !== "created") return;
     const objectIds = await stageAndFinalizeAll({ ctx, draftCtx });
-    assert.ok(objectIds.length >= 2);
-    const partial = await reconcileCompleteLiveCoverage({
+    assert.equal(objectIds.length, 5);
+    const recovered = await reconcileCompleteLiveCoverage({
       jobStore: ctx.jobStore,
       ownedObjectStore: ctx.ownedObjectStore,
       provisional: created.value.record,
-      finalizedObjectIds: objectIds.slice(0, -1),
+      // Production recovery authority: a single later callback must rebuild
+      // coverage from all durable finalized objects.
+      finalizedObjectIds: [objectIds[objectIds.length - 1]!],
       ownerId: ctx.ownerId,
       nowMs: ctx.nowMs,
     });
-    assert.equal(partial.ok, false);
-    if (partial.ok) return;
-    assert.equal(partial.reasonId, "coverage_incomplete");
-    assert.equal(partial.snapshot.intermediateBlockedIncomplete, true);
-    assert.equal(partial.snapshot.finalCoverageComplete, false);
-    const loaded = await ctx.jobStore.getByJobIdAndOwner(
+    assert.equal(recovered.ok, true);
+    if (!recovered.ok) return;
+    assert.equal(recovered.record.verificationCoverage.requiredTargets.length, 5);
+    assert.equal(recovered.record.verificationCoverage.verifiedTargets.length, 5);
+    assert.equal(recovered.record.verificationCoverage.complete, true);
+    assert.equal(recovered.record.stagingObjectRefs.length, 5);
+  });
+
+  await test("website-shaped six-object job recovers 0/6 coverage in one callback", async () => {
+    const ctx = buildCtx();
+    const draftCtx = await buildLiveDraft({
+      runId: ctx.runId,
+      ownerId: ctx.ownerId,
+      projectId: ctx.projectId,
+      emptyStaging: true,
+      creatorKey: `cc-six-${ctx.runId}`,
+      randomUUID: () => randomUUID(),
+    });
+
+    const objectIds = await stageAndFinalizeAll({ ctx, draftCtx });
+    assert.equal(objectIds.length, 5);
+    const baseSlot = draftCtx.draft.snapshotClaim.expectedSlotClaims[0]!;
+    const extraBytes = new TextEncoder().encode("six-object-browser-upload");
+    const extraDigest = `sha256:${createHash("sha256")
+      .update(extraBytes)
+      .digest("hex")}`;
+    const extraSlot = {
+      ...baseSlot,
+      sceneId: "scene-browser-extra",
+      mediaItemId: "media-browser-extra",
+      contentDigestClaim: extraDigest,
+      byteLengthClaim: extraBytes.byteLength,
+      mimeTypeClaim: "image/png",
+    };
+    const extraSlotKey = headlessSourceSlotKey({
+      role: extraSlot.role,
+      sceneId: extraSlot.sceneId,
+      mediaItemId: extraSlot.mediaItemId,
+      sourceDigest: extraSlot.sourceDigestClaim,
+    });
+    const extraStaging = await createStagingObject(ctx, {
+      jobId: draftCtx.jobId,
+      operationId: draftCtx.operationId,
+      purpose: "asset_bytes",
+      slotKey: extraSlotKey,
+      bytes: extraBytes,
+      digest: extraDigest,
+      mime: "image/png",
+      expectedByteLength: extraBytes.byteLength,
+    });
+    assert.equal(extraStaging.ok, true);
+    if (!extraStaging.ok) return;
+    await putObjectBytes(ctx, {
+      storeId: extraStaging.storeId,
+      objectKey: extraStaging.objectKey,
+      bytes: extraBytes,
+      mime: "image/png",
+    });
+    const extraFinalized = await verifyAndFinalizeR2OwnedObject({
+      objectId: extraStaging.objectId,
+      ownerId: ctx.ownerId,
+      nowMs: ctx.nowMs,
+      store: ctx.ownedObjectStore,
+      io: ctx.io,
+    });
+    assert.equal(extraFinalized.ok, true);
+    objectIds.push(extraStaging.objectId);
+
+    const finalized = await ctx.ownedObjectStore.listByJobIdAndOwner({
+      jobId: draftCtx.jobId,
+      ownerId: ctx.ownerId,
+    });
+    assert.equal(finalized.ok, true);
+    if (!finalized.ok) return;
+    assert.equal(finalized.value.length, 6);
+    const stagingObjectRefs = finalized.value.map((stored) => {
+      assert.equal(stored.record.stage, "finalized");
+      if (stored.record.stage !== "finalized") {
+        throw new Error("expected finalized source object");
+      }
+      return {
+        purpose: stored.record.purpose as
+          | "manifest"
+          | "asset_bundle_record"
+          | "asset_bytes",
+        slotKey: stored.record.slotKey,
+        locator: {
+          kind: "object_storage" as const,
+          storeId: stored.record.storeId,
+          objectKey: stored.record.objectKey,
+        },
+        contentDigestClaim: stored.record.contentDigest,
+        byteLengthClaim: stored.record.byteLength,
+        mimeTypeClaim: stored.record.mimeType,
+      };
+    });
+    const sixObjectDraft = createProvisionalMaterializingRecord({
+      jobId: draftCtx.jobId,
+      ownerId: ctx.ownerId,
+      projectId: ctx.projectId,
+      createdAtMs: ctx.nowMs,
+      updatedAtMs: ctx.nowMs,
+      idempotencyAuthorityKey: draftCtx.idempotencyAuthorityKey,
+      operationId: draftCtx.operationId,
+      creatorIdempotencyKey: draftCtx.creatorKey,
+      requestedRendererProfile: draftCtx.draft.requestedRendererProfile,
+      requestedRendererBuildId: draftCtx.draft.requestedRendererBuildId,
+      snapshotClaim: {
+        ...draftCtx.draft.snapshotClaim,
+        expectedSlotClaims: [
+          ...draftCtx.draft.snapshotClaim.expectedSlotClaims,
+          { ...extraSlot, slotKey: extraSlotKey },
+        ],
+      },
+      stagingObjectRefs,
+      expiresAtMs: draftCtx.draft.expiresAtMs,
+    });
+    assert.equal(
+      sixObjectDraft.ok,
+      true,
+      sixObjectDraft.ok ? "" : sixObjectDraft.message,
+    );
+    if (!sixObjectDraft.ok) return;
+    const created = await ctx.jobStore.createProvisionalIfAbsent({
+      idempotencyAuthorityKey: draftCtx.idempotencyAuthorityKey,
+      record: sixObjectDraft.record,
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok || created.value.kind !== "created") return;
+    assert.equal(created.value.record.verificationCoverage.verifiedTargets.length, 0);
+
+    const recovered = await reconcileFinalizedOwnedObjectCoverage({
+      jobStore: ctx.jobStore,
+      ownedObjectStore: ctx.ownedObjectStore,
+      objectId: objectIds[objectIds.length - 1]!,
+      ownerId: ctx.ownerId,
+      nowMs: ctx.nowMs + 1,
+    });
+    assert.equal(recovered.ok, true);
+    if (!recovered.ok) return;
+    assert.equal(recovered.value.coverageComplete, true);
+    const reread = await ctx.jobStore.getByJobIdAndOwner(
       draftCtx.jobId,
       ctx.ownerId,
     );
-    assert.equal(loaded.ok, true);
-    if (!loaded.ok || !isProvisionalStoredJobRecord(loaded.value)) return;
-    const finish = await reconcileCompleteLiveCoverage({
-      jobStore: ctx.jobStore,
-      ownedObjectStore: ctx.ownedObjectStore,
-      provisional: loaded.value,
-      finalizedObjectIds: [objectIds[objectIds.length - 1]!],
-      ownerId: ctx.ownerId,
-      nowMs: ctx.nowMs + 100,
-    });
-    assert.equal(finish.ok, true);
-    if (!finish.ok) return;
-    assert.equal(finish.record.verificationCoverage.complete, true);
+    assert.equal(reread.ok, true);
+    if (!reread.ok || !isProvisionalStoredJobRecord(reread.value)) return;
+    assert.equal(reread.value.verificationCoverage.requiredTargets.length, 6);
+    assert.equal(reread.value.verificationCoverage.verifiedTargets.length, 6);
+    assert.equal(reread.value.verificationCoverage.complete, true);
   });
 
   await test("one missing required object stays terminally incomplete", async () => {

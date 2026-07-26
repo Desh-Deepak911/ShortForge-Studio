@@ -644,10 +644,18 @@ export async function runAttributedFlyRenderJobCreateChain(input: {
         recordChain.stagingAttribution,
       );
     }
+    const finalizedStaged =
+      input.forceIncompleteCoverage === true
+        ? recordChain.staged.slice(0, -1)
+        : recordChain.staged;
+    const finalizedPayloads =
+      input.forceIncompleteCoverage === true
+        ? payloads.slice(0, -1)
+        : payloads;
     const finalizeChain = await runOwnedObjectFinalizeChain({
       ctx,
-      staged: recordChain.staged,
-      payloads,
+      staged: finalizedStaged,
+      payloads: finalizedPayloads,
     });
     if (!finalizeChain.ok) {
       const reasonId = isJobCreateAttributionReasonId(
@@ -700,10 +708,6 @@ export async function runAttributedFlyRenderJobCreateChain(input: {
   // --- coverage_reconcile ---
   try {
     maybeInjectThrow(input.injectThrowAt, "coverage_reconcile");
-    const omitLast =
-      input.forceIncompleteCoverage === true && finalizedObjectIds.length > 0
-        ? finalizedObjectIds.slice(-1)
-        : [];
     const coverage = await reconcileCompleteLiveCoverage({
       jobStore: ctx.jobStore,
       ownedObjectStore: ctx.ownedObjectStore,
@@ -711,7 +715,6 @@ export async function runAttributedFlyRenderJobCreateChain(input: {
       finalizedObjectIds,
       ownerId: ctx.ownerId,
       nowMs: ctx.nowMs,
-      forceOmitObjectIds: omitLast,
     });
     if (!coverage.ok) {
       return failAt(

@@ -856,9 +856,46 @@ async function main(): Promise<void> {
   });
 
   await test("status labels cover product states", () => {
+    assert.equal(
+      statusLabelForProductState("materializing"),
+      "Preparing / Verifying",
+    );
     assert.equal(statusLabelForProductState("queued"), "Queued");
     assert.equal(statusLabelForProductState("uploading_artifact"), "Preparing download");
     assert.equal(statusLabelForProductState("succeeded"), "Complete");
+  });
+
+  await test("provisional server states are not presented as queued", () => {
+    let model = createInitialProductModel("headless");
+    model = reduceHeadlessProduct(model, {
+      type: "START_EXPORT",
+      runId: 7,
+      snapshot: {
+        operationId: "op-preparing",
+        idempotencyKey: "key-preparing",
+        draftId: "draft-preparing",
+        output: { resolution: "720p", format: "webm" },
+        createdAtMs: 1,
+      },
+    });
+    model = reduceHeadlessProduct(model, {
+      type: "CREATE_OK",
+      runId: 7,
+      jobId: "job-preparing",
+      view: validateHeadlessPublicJobView({
+        version: 1,
+        jobId: "job-preparing",
+        state: "materializing",
+        createdAtMs: 1,
+        updatedAtMs: 2,
+        progress: { percent: 5, stage: "verifying" },
+        terminalReason: null,
+        artifactAvailable: false,
+        cancelAccepted: true,
+      })!,
+    });
+    assert.equal(model.state, "materializing");
+    assert.equal(statusLabelForProductState(model.state), "Preparing / Verifying");
   });
 
   await test("source-boundary: product UI/client has no worker/control-plane/testing leaks", () => {

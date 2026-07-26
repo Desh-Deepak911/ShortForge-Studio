@@ -5,6 +5,8 @@
  * coverage is complete (existing promotion preflight).
  */
 
+import { createHash } from "node:crypto";
+
 import type { HeadlessJobStorePort } from "../ports/job-store.port";
 import type { HeadlessOwnedObjectStorePort } from "../ports/owned-object-store.port";
 import {
@@ -67,32 +69,39 @@ function buildStagingRefFromFinalized(
 async function applyOnce(input: {
   jobStore: HeadlessJobStorePort;
   provisional: HeadlessProvisionalStoredJobRecord;
-  ref: HeadlessProvisionalStagingObjectRefV1;
-  objectId: string;
+  refs: readonly HeadlessProvisionalStagingObjectRefV1[];
   nowMs: number;
 }): Promise<
   HeadlessControlPlaneResult<HeadlessReconcileFinalizedCoverageResult>
 > {
-  const { provisional, ref } = input;
+  const { provisional } = input;
   const nextRefs = [...provisional.stagingObjectRefs];
-  const target = stagingRefVerificationTarget(ref);
-  const alreadyBound = nextRefs.some((r) => {
-    const t = stagingRefVerificationTarget(r);
-    return (
-      t === target &&
-      r.locator.storeId === ref.locator.storeId &&
-      r.locator.objectKey === ref.locator.objectKey &&
-      r.contentDigestClaim === ref.contentDigestClaim
-    );
-  });
-  if (!alreadyBound) {
-    nextRefs.push(ref);
+  const finalizedTargets = new Set<string>();
+
+  for (const ref of input.refs) {
+    const target = stagingRefVerificationTarget(ref);
+    if (target != null) finalizedTargets.add(target);
+    const alreadyBound = nextRefs.some((candidate) => {
+      const candidateTarget = stagingRefVerificationTarget(candidate);
+      return (
+        candidateTarget === target &&
+        candidate.locator.storeId === ref.locator.storeId &&
+        candidate.locator.objectKey === ref.locator.objectKey &&
+        candidate.contentDigestClaim === ref.contentDigestClaim &&
+        candidate.byteLengthClaim === ref.byteLengthClaim &&
+        candidate.mimeTypeClaim === ref.mimeTypeClaim
+      );
+    });
+    if (!alreadyBound) {
+      nextRefs.push(ref);
+    }
   }
 
+  const effectiveNowMs = Math.max(input.nowMs, provisional.updatedAtMs);
   const stagingWrite = appendProvisionalStagingObjectRefs(
     provisional,
     nextRefs,
-    input.nowMs,
+    effectiveNowMs,
   );
   if (!stagingWrite.ok) {
     return cpFail("JOB_STORE_COHERENCE_REJECTED", stagingWrite.message);
@@ -104,7 +113,7 @@ async function applyOnce(input: {
   };
 
   const verifiedSet = new Set(provisional.verificationCoverage.verifiedTargets);
-  if (target != null) verifiedSet.add(target);
+  for (const target of finalizedTargets) verifiedSet.add(target);
   const orderedVerified =
     provisional.verificationCoverage.requiredTargets.filter((t) =>
       verifiedSet.has(t),
@@ -121,9 +130,12 @@ async function applyOnce(input: {
       verifiedTargets: orderedVerified,
       complete,
     },
-    provisional.verificationClaimToken ?? `reconcile_${input.objectId}`,
-    provisional.verificationClaimedAtMs ?? input.nowMs,
-    input.nowMs,
+    provisional.verificationClaimToken ??
+      `reconcile_${createHash("sha256")
+        .update(`${provisional.ownerId}:${provisional.jobId}`)
+        .digest("hex")}`,
+    provisional.verificationClaimedAtMs ?? effectiveNowMs,
+    effectiveNowMs,
   );
   if (!coverageWrite.ok) {
     return cpFail("JOB_STORE_COHERENCE_REJECTED", coverageWrite.message);
@@ -227,16 +239,36 @@ export async function reconcileFinalizedOwnedObjectCoverage(input: {
       );
     }
 
-    const refBuilt = buildStagingRefFromFinalized(finalized);
-    if (!refBuilt.ok) {
-      return cpFail("HOSTILE_INPUT", refBuilt.message);
+    const listed = await input.ownedObjectStore.listByJobIdAndOwner({
+      jobId: finalized.jobId,
+      ownerId: input.ownerId,
+    });
+    if (!listed.ok) return listed;
+
+    // Reconstruct from durable finalized authority on every callback. This
+    // closes lost/out-of-order callback gaps for multi-object website exports:
+    // any later finalized object can recover coverage for all earlier objects.
+    const refs: HeadlessProvisionalStagingObjectRefV1[] = [];
+    for (const stored of listed.value) {
+      if (stored.record.stage !== "finalized") continue;
+      if (stored.record.purpose === "artifact") continue;
+      const built = buildStagingRefFromFinalized(stored.record);
+      if (!built.ok) {
+        return cpFail("HOSTILE_INPUT", built.message);
+      }
+      refs.push(built.ref);
+    }
+    if (refs.length === 0) {
+      return cpFail(
+        "JOB_STORE_COHERENCE_REJECTED",
+        "No finalized source objects available for coverage reconcile.",
+      );
     }
 
     const first = await applyOnce({
       jobStore: input.jobStore,
       provisional: current,
-      ref: refBuilt.ref,
-      objectId: input.objectId,
+      refs,
       nowMs: input.nowMs,
     });
     if (
@@ -270,8 +302,7 @@ export async function reconcileFinalizedOwnedObjectCoverage(input: {
     return applyOnce({
       jobStore: input.jobStore,
       provisional: current,
-      ref: refBuilt.ref,
-      objectId: input.objectId,
+      refs,
       nowMs: input.nowMs,
     });
   } catch {
