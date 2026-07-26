@@ -59,6 +59,7 @@
     "test:headless-product-ui": "tsx src/verification/headless-renderer/headlessProductUi.verify.ts",
     "test:headless-product-persistence": "tsx src/verification/headless-renderer/headlessProductPersistence.verify.ts",
     "test:headless-staging-website-integration": "tsx src/verification/headless-renderer/headlessStagingWebsiteIntegration.verify.ts",
+    "test:headless-website-output-profile-coherence": "tsx src/verification/headless-renderer/headlessWebsiteOutputProfileCoherence.verify.ts",
     "test:headless-render-contract": "tsx src/verification/headless-renderer/headlessRenderContract.verify.ts",
     "test:headless-control-plane": "tsx src/verification/headless-renderer/headlessControlPlane.verify.ts",
     "test:headless-principal-auth": "tsx src/verification/headless-renderer/headlessPrincipalAuth.verify.ts",

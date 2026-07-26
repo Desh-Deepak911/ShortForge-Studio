@@ -33,6 +33,7 @@ import { startBoundedJobPoller } from "../polling/bounded-job-poller";
 import {
   evaluateHeadlessOutputCompatibility,
 } from "../snapshot/output-compatibility";
+import { rendererProfileFromFrozenManifest } from "../snapshot/renderer-profile-from-manifest";
 import { freezeHeadlessClickAuthority } from "../snapshot/freeze-export-snapshot";
 import {
   reduceHeadlessProduct,
@@ -383,6 +384,23 @@ export function HeadlessExportSection({
     const assetBundleFingerprint = useTestAuthority
       ? `${HEADLESS_TEST_AUTHORITY_PREFIX}bundle`
       : ownedPreparation!.bundle.fingerprint;
+    const rendererProfile = useTestAuthority
+      ? {
+          resolution,
+          format,
+          fps: 30 as const,
+          quality: "standard" as const,
+        }
+      : rendererProfileFromFrozenManifest(
+          { resolution, format },
+          ownedPreparation!.manifest.output,
+        );
+    if (rendererProfile == null) {
+      setPreparationMessage(
+        "Server export settings changed during preparation. Review the format and resolution, then try again.",
+      );
+      return;
+    }
 
     const authority = freezeHeadlessClickAuthority({
       draftId: draftId.trim(),
@@ -429,12 +447,7 @@ export function HeadlessExportSection({
             contentDigest: source.contentDigest,
             mimeType: source.mimeType,
           })),
-          rendererProfile: {
-            resolution,
-            format,
-            fps: 30,
-            quality: "standard",
-          },
+          rendererProfile,
           ...(useTestAuthority
             ? { rendererBuildId: "test-authority-phase1a" }
             : {}),
@@ -448,12 +461,7 @@ export function HeadlessExportSection({
                   ownerId: `${HEADLESS_TEST_AUTHORITY_PREFIX}owner`,
                   projectId: authority.draftId,
                 },
-                rendererProfile: {
-                  resolution,
-                  format,
-                  fps: 30 as const,
-                  quality: "standard" as const,
-                },
+                rendererProfile,
                 rendererBuildId: "test-authority-phase1a",
                 idempotencyKey: authority.idempotencyKey,
                 requestFingerprint: authority.idempotencyKey,
