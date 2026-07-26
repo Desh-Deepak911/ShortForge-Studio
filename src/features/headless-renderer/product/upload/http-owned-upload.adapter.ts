@@ -39,6 +39,15 @@ export class HttpOwnedUploadAdapter implements OwnedUploadPort {
   constructor(private readonly fetchImpl: typeof fetch = fetch.bind(globalThis)) {}
 
   async uploadOwnedBundle(request: OwnedUploadRequest): Promise<OwnedUploadResult> {
+    const emitProgress = (
+      progress: Parameters<NonNullable<OwnedUploadRequest["onProgress"]>>[0],
+    ) => {
+      try {
+        request.onProgress?.(progress);
+      } catch {
+        // Product progress is observational and must never affect durable upload.
+      }
+    };
     if (request.signal?.aborted) {
       return failed("ABORTED", "Export cancelled.");
     }
@@ -103,9 +112,25 @@ export class HttpOwnedUploadAdapter implements OwnedUploadPort {
       );
     };
 
-    for (const raw of capabilities) {
+    const uploadPlan = capabilities.map((raw) => {
       const capability = raw as UploadCapability;
-      const bytes = bytesFor(capability);
+      return { capability, bytes: bytesFor(capability) };
+    });
+    const totalBytes = uploadPlan.reduce(
+      (sum, item) => sum + (item.bytes?.byteLength ?? 0),
+      0,
+    );
+    let uploadedBytes = 0;
+    let completedObjects = 0;
+    emitProgress({
+      phase: "uploading",
+      completedObjects,
+      totalObjects: uploadPlan.length,
+      uploadedBytes,
+      totalBytes,
+    });
+
+    for (const { capability, bytes } of uploadPlan) {
       if (
         bytes == null ||
         typeof capability.putUrl !== "string" ||
@@ -133,12 +158,29 @@ export class HttpOwnedUploadAdapter implements OwnedUploadPort {
         if (!uploaded.ok) {
           return failed("PARTIAL_FAILURE", "Could not upload server export assets.");
         }
+        completedObjects += 1;
+        uploadedBytes += bytes.byteLength;
+        emitProgress({
+          phase: "uploading",
+          completedObjects,
+          totalObjects: uploadPlan.length,
+          uploadedBytes,
+          totalBytes,
+        });
       } catch {
         return request.signal?.aborted
           ? failed("ABORTED", "Export cancelled.")
           : failed("PARTIAL_FAILURE", "Could not upload server export assets.");
       }
     }
+
+    emitProgress({
+      phase: "finalizing",
+      completedObjects,
+      totalObjects: uploadPlan.length,
+      uploadedBytes,
+      totalBytes,
+    });
 
     let completedResponse: Response;
     try {

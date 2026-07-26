@@ -10,7 +10,10 @@ import {
 } from "@/lib/utils/studioUi";
 
 import { creatorMessageForReasonId } from "../client/creator-messages";
-import { statusLabelForProductState } from "../state/product-dispatch.machine";
+import {
+  statusDescriptionForProductState,
+  statusLabelForProductState,
+} from "../state/product-dispatch.machine";
 import type { HeadlessProductModel } from "../state/product-dispatch.types";
 
 export interface HeadlessJobStatusPanelProps {
@@ -32,13 +35,21 @@ export function HeadlessJobStatusPanel({
   const state = model.state;
   const label = statusLabelForProductState(state);
   const percent = model.ctx.advisoryPercent;
-  const reasonMessage =
-    model.ctx.safeMessage ??
-    creatorMessageForReasonId(model.ctx.jobView?.terminalReason?.reasonId);
 
   const isTerminalSuccess = state === "succeeded";
   const isTerminalError =
     state === "failed" || state === "expired" || state === "cancelled";
+  const reasonMessage = isTerminalError
+    ? model.ctx.safeMessage ??
+      creatorMessageForReasonId(model.ctx.jobView?.terminalReason?.reasonId)
+    : null;
+  const activeMessage =
+    !isTerminalError && !isTerminalSuccess
+      ? model.ctx.safeMessage ?? statusDescriptionForProductState(state)
+      : null;
+  const announcedMessage = isTerminalSuccess
+    ? statusDescriptionForProductState(state)
+    : reasonMessage ?? activeMessage;
   const isCancelling = state === "cancelling";
   const canCancel =
     Boolean(model.ctx.jobId) &&
@@ -93,7 +104,7 @@ export function HeadlessJobStatusPanel({
         className="sr-only"
       >
         {label}
-        {reasonMessage ? `. ${reasonMessage}` : ""}
+        {announcedMessage ? `. ${announcedMessage}` : ""}
       </div>
 
       {model.ctx.busy && percent != null ? (
@@ -116,7 +127,7 @@ export function HeadlessJobStatusPanel({
         <StudioStatus
           variant="success"
           layout="inline"
-          description="Server export complete. Download when ready."
+          description={statusDescriptionForProductState(state) ?? "Export complete."}
         />
       ) : null}
 
@@ -128,8 +139,8 @@ export function HeadlessJobStatusPanel({
         />
       ) : null}
 
-      {!isTerminalSuccess && !isTerminalError && model.ctx.safeMessage ? (
-        <p className="text-xs text-muted">{model.ctx.safeMessage}</p>
+      {!isTerminalSuccess && !isTerminalError && activeMessage ? (
+        <p className="text-xs text-muted">{activeMessage}</p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">

@@ -66,6 +66,9 @@ async function main(): Promise<void> {
       "utf8",
     );
     assert.ok(src.includes('aria-live="polite"'));
+    assert.ok(src.includes("statusDescriptionForProductState"));
+    assert.ok(src.includes("isTerminalError"));
+    assert.ok(src.includes("announcedMessage"));
     assert.ok(src.includes("Cancel"));
     assert.ok(src.includes("Retry"));
     assert.ok(src.includes("Download"));
