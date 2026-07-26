@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   buildHeadlessAssetBundleFingerprint,
+  validateHeadlessAssetBundle,
   verifyHeadlessAssetBundleFingerprintCoherence,
   HEADLESS_ASSET_BUNDLE_VERSION,
   HEADLESS_ASSET_DESCRIPTOR_VERSION,
@@ -311,6 +312,80 @@ async function main() {
       ),
       true,
     );
+  });
+
+  await test("canonical 142-character R2 object keys validate after finalized rebind", async () => {
+    const runId = randomUUID();
+    const draftCtx = await buildLiveDraft({
+      runId,
+      ownerId: `owner-${runId.slice(0, 8)}`,
+    });
+    const longKey = `staging/staging/assets/asset_bytes/${"a".repeat(107)}`;
+    assert.equal(longKey.length, 142);
+    const assets = draftCtx.seeded.bundle.assets.map((asset, index) => ({
+      ...asset,
+      storageLocator: {
+        kind: "object_storage" as const,
+        storeId: "assets",
+        objectKey: `${longKey.slice(0, -2)}${String(index).padStart(2, "0")}`,
+      },
+    }));
+    const fingerprint = buildHeadlessAssetBundleFingerprint(
+      draftCtx.seeded.bundle.bundleId,
+      assets,
+    );
+    assert.equal(fingerprint.ok, true);
+    if (!fingerprint.ok) throw new Error("fingerprint failed");
+    const validated = validateHeadlessAssetBundle(
+      {
+        ...draftCtx.seeded.bundle,
+        assets,
+        fingerprint: fingerprint.fingerprint,
+      },
+      draftCtx.manifest,
+    );
+    assert.equal(validated.ok, true);
+  });
+
+  await test("object-key validator remains fail-closed above 1024 and for unsafe keys", async () => {
+    const runId = randomUUID();
+    const draftCtx = await buildLiveDraft({
+      runId,
+      ownerId: `owner-${runId.slice(0, 8)}`,
+    });
+    const base = draftCtx.seeded.bundle.assets[0]!;
+    for (const objectKey of [
+      `assets/${"k".repeat(1018)}`,
+      "assets/../escape",
+      "assets/has whitespace",
+    ]) {
+      const assets = [
+        {
+          ...base,
+          storageLocator: {
+            kind: "object_storage" as const,
+            storeId: "assets",
+            objectKey,
+          },
+        },
+        ...draftCtx.seeded.bundle.assets.slice(1),
+      ];
+      const fingerprint = buildHeadlessAssetBundleFingerprint(
+        draftCtx.seeded.bundle.bundleId,
+        assets,
+      );
+      assert.equal(fingerprint.ok, true);
+      if (!fingerprint.ok) throw new Error("fingerprint failed");
+      const validated = validateHeadlessAssetBundle(
+        {
+          ...draftCtx.seeded.bundle,
+          assets,
+          fingerprint: fingerprint.fingerprint,
+        },
+        draftCtx.manifest,
+      );
+      assert.equal(validated.ok, false);
+    }
   });
 
   await test("replay stability: same inputs → same fingerprint", () => {
