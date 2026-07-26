@@ -33,6 +33,22 @@ export interface OwnedUploadSuccess {
 
 export type OwnedUploadResult = OwnedUploadSuccess | OwnedUploadFailure;
 
+export type OwnedUploadProgress =
+  | {
+      readonly phase: "uploading";
+      readonly completedObjects: number;
+      readonly totalObjects: number;
+      readonly uploadedBytes: number;
+      readonly totalBytes: number;
+    }
+  | {
+      readonly phase: "finalizing";
+      readonly completedObjects: number;
+      readonly totalObjects: number;
+      readonly uploadedBytes: number;
+      readonly totalBytes: number;
+    };
+
 export interface OwnedUploadRequest {
   readonly operationId: string;
   readonly draftId: string;
@@ -54,6 +70,7 @@ export interface OwnedUploadRequest {
   };
   readonly rendererBuildId?: string;
   readonly idempotencyKey?: string;
+  readonly onProgress?: (progress: OwnedUploadProgress) => void;
   readonly signal?: AbortSignal;
 }
 

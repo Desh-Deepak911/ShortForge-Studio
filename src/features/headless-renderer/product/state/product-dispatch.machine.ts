@@ -59,6 +59,8 @@ function applyJobView(
       jobView: view,
       advisoryPercent: view.progress?.percent ?? model.ctx.advisoryPercent,
       busy: nextState === "cancelling" ? true : busy,
+      safeMessage: null,
+      clientErrorCode: null,
       ...extra,
     },
   };
@@ -173,7 +175,15 @@ export function reduceHeadlessProduct(
     case "PREPARE_OK": {
       if (isStale(model, event.runId)) return model;
       if (model.state !== "preparing") return model;
-      return { state: "materializing", ctx: { ...model.ctx, busy: true } };
+      return {
+        state: "materializing",
+        ctx: {
+          ...model.ctx,
+          busy: true,
+          advisoryPercent: 10,
+          safeMessage: "Verifying the frozen story and media package…",
+        },
+      };
     }
 
     case "MATERIALIZE_PROGRESS": {
@@ -181,7 +191,12 @@ export function reduceHeadlessProduct(
       if (model.state === "cancelling") return model;
       return {
         state: event.phase,
-        ctx: { ...model.ctx, busy: true },
+        ctx: {
+          ...model.ctx,
+          busy: true,
+          advisoryPercent: event.percent ?? model.ctx.advisoryPercent,
+          safeMessage: event.message ?? model.ctx.safeMessage,
+        },
       };
     }
 
@@ -394,25 +409,25 @@ export function statusLabelForProductState(state: HeadlessProductState): string 
     case "unavailable":
       return "Unavailable";
     case "preparing":
-      return "Preparing";
+      return "Preparing project";
     case "materializing":
-      return "Preparing / Verifying";
+      return "Verifying media";
     case "uploading":
-      return "Uploading";
+      return "Uploading source media";
     case "creating_job":
-      return "Starting job";
+      return "Starting secure render";
     case "queued":
-      return "Queued";
+      return "Waiting for render worker";
     case "rendering":
-      return "Rendering";
+      return "Rendering video";
     case "encoding":
-      return "Encoding";
+      return "Encoding video";
     case "validating":
-      return "Validating";
+      return "Checking finished video";
     case "uploading_artifact":
-      return "Preparing download";
+      return "Finalizing download";
     case "succeeded":
-      return "Complete";
+      return "Ready to download";
     case "failed":
       return "Failed";
     case "cancelling":
@@ -425,5 +440,38 @@ export function statusLabelForProductState(state: HeadlessProductState): string 
       return "Expired";
     default:
       return "Ready";
+  }
+}
+
+export function statusDescriptionForProductState(
+  state: HeadlessProductState,
+): string | null {
+  switch (state) {
+    case "preparing":
+      return "Freezing the latest project settings for this export.";
+    case "materializing":
+      return "Checking narration, captions, and source media before upload.";
+    case "uploading":
+      return "Securely uploading the project assets needed by the render worker.";
+    case "creating_job":
+      return "Finalizing asset verification and creating the render job.";
+    case "queued":
+      return "Assets are ready. Waiting for the dedicated worker to accept the job.";
+    case "rendering":
+      return "The dedicated worker is capturing the video frames.";
+    case "encoding":
+      return "Frames are complete. Encoding video and audio.";
+    case "validating":
+      return "Checking the encoded file before it is published for download.";
+    case "uploading_artifact":
+      return "Saving the finished video and preparing the secure download.";
+    case "succeeded":
+      return "Server export complete. Download when ready.";
+    case "cancelling":
+      return "Stopping this export and cleaning its temporary assets.";
+    case "retrying":
+      return "Starting a fresh attempt with the same frozen project.";
+    default:
+      return null;
   }
 }

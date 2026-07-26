@@ -14,6 +14,10 @@ import type { HeadlessConfiguredR2Config } from "@/features/headless-renderer/co
 import { cpFail, cpOk } from "@/features/headless-renderer/control-plane";
 import { HEADLESS_OWNED_OBJECT_RECORD_VERSION } from "@/features/headless-renderer/control-plane";
 import { validateHeadlessOwnedObjectRecord } from "@/features/headless-renderer/control-plane";
+import {
+  contentDispositionForHeadlessDownload,
+  resolveHeadlessDownloadFilename,
+} from "@/features/headless-renderer/control-plane/services/headless-download-filename";
 
 let passed = 0;
 
@@ -56,8 +60,13 @@ function stubJobStore(state: "succeeded" | "failed"): HeadlessJobStorePort {
         operationId: "op_1",
         canonicalJob: {
           state,
+          rendererProfile: { format: "webm" },
         } as never,
-        canonicalRequest: {} as never,
+        canonicalRequest: {
+          manifest: {
+            output: { filename: "my narrated comeback.webm" },
+          },
+        } as never,
         claimToken: null,
         claimedAtMs: null,
         artifactObjectBinding:
@@ -166,6 +175,7 @@ async function main() {
       createPresignedGetUrl: async (input) => {
         assert.equal(input.bucket, "artifacts-bucket");
         assert.equal(input.objectKey, OBJECT_KEY);
+        assert.equal(input.filename, "my-narrated-comeback.webm");
         return "https://signed.example/get-only-at-issuance";
       },
     });
@@ -180,6 +190,51 @@ async function main() {
     assert.equal(issued.value.getUrl, "https://signed.example/get-only-at-issuance");
     assert.equal(JSON.stringify(issued.value).includes("supersecret"), false);
     assert.equal(JSON.stringify(issued.value).includes(OBJECT_KEY), false);
+  });
+
+  await test("normalizes requested filename and rejects traversal syntax", () => {
+    assert.equal(
+      resolveHeadlessDownloadFilename({
+        requestedFilename: "../My narrated comeback.mp4",
+        format: "webm",
+      }),
+      "My-narrated-comeback.webm",
+    );
+    assert.equal(
+      resolveHeadlessDownloadFilename({
+        requestedFilename: "\r\n",
+        format: "mp4",
+      }),
+      "shortforge-export.mp4",
+    );
+    assert.equal(
+      contentDispositionForHeadlessDownload("safe.webm"),
+      'attachment; filename="safe.webm"',
+    );
+  });
+
+  await test("default presigner binds attachment filename into the signed URL", async () => {
+    const store = new MemoryHeadlessOwnedObjectStoreAdapter();
+    await seedFinalizedArtifact(store);
+    const adapter = new R2DownloadCapabilityAdapter({
+      ownedObjectStore: store,
+      jobStore: stubJobStore("succeeded"),
+      configOverride: CONFIG,
+    });
+    const issued = await adapter.issueArtifactGetCapability({
+      ownerId: "owner_1",
+      jobId: "job_dl",
+      nowMs: 2000,
+      ttlMs: 60_000,
+    });
+    assert.equal(issued.ok, true);
+    if (!issued.ok) return;
+    const url = new URL(issued.value.getUrl);
+    assert.equal(
+      url.searchParams.get("response-content-disposition"),
+      'attachment; filename="my-narrated-comeback.webm"',
+    );
+    assert.equal(url.searchParams.get("X-Amz-Content-Sha256"), "UNSIGNED-PAYLOAD");
   });
 
   await test("rejects non-succeeded job", async () => {

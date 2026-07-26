@@ -19,6 +19,10 @@ import type {
   HeadlessIssuedDownloadCapabilityV1,
 } from "../ports/download-capability.port";
 import { cpFail, cpOk } from "../types/control-plane.types";
+import {
+  contentDispositionForHeadlessDownload,
+  resolveHeadlessDownloadFilename,
+} from "../services/headless-download-filename";
 
 export const HEADLESS_DOWNLOAD_CAPABILITY_DEFAULT_TTL_MS = 120_000;
 export const HEADLESS_DOWNLOAD_CAPABILITY_MAX_TTL_MS = 300_000;
@@ -30,6 +34,7 @@ export type CreatePresignedGetUrl = (input: {
   endpoint: string;
   accessKeyId: string;
   secretAccessKey: string;
+  filename: string;
 }) => Promise<string>;
 
 export type R2DownloadCapabilityAdapterOptions = {
@@ -47,6 +52,7 @@ async function defaultCreatePresignedGetUrl(input: {
   endpoint: string;
   accessKeyId: string;
   secretAccessKey: string;
+  filename: string;
 }): Promise<string> {
   const client = new S3Client({
     region: "auto",
@@ -61,6 +67,8 @@ async function defaultCreatePresignedGetUrl(input: {
     const command = new GetObjectCommand({
       Bucket: input.bucket,
       Key: input.objectKey,
+      ResponseContentDisposition:
+        contentDispositionForHeadlessDownload(input.filename),
     });
     return await getSignedUrl(client, command, {
       expiresIn: input.expiresInSeconds,
@@ -184,6 +192,10 @@ export class R2DownloadCapabilityAdapter
       const expiresAtMs = input.nowMs + expiresInSeconds * 1000;
 
       let getUrl: string;
+      const filename = resolveHeadlessDownloadFilename({
+        requestedFilename: job.value.canonicalRequest.manifest.output.filename,
+        format: job.value.canonicalJob.rendererProfile.format,
+      });
       try {
         getUrl = await this.createPresignedGetUrl({
           bucket,
@@ -192,6 +204,7 @@ export class R2DownloadCapabilityAdapter
           endpoint: config.endpoint,
           accessKeyId: config.accessKeyId,
           secretAccessKey: config.secretAccessKey,
+          filename,
         });
       } catch {
         return cpFail(

@@ -858,11 +858,14 @@ async function main(): Promise<void> {
   await test("status labels cover product states", () => {
     assert.equal(
       statusLabelForProductState("materializing"),
-      "Preparing / Verifying",
+      "Verifying media",
     );
-    assert.equal(statusLabelForProductState("queued"), "Queued");
-    assert.equal(statusLabelForProductState("uploading_artifact"), "Preparing download");
-    assert.equal(statusLabelForProductState("succeeded"), "Complete");
+    assert.equal(statusLabelForProductState("queued"), "Waiting for render worker");
+    assert.equal(
+      statusLabelForProductState("uploading_artifact"),
+      "Finalizing download",
+    );
+    assert.equal(statusLabelForProductState("succeeded"), "Ready to download");
   });
 
   await test("provisional server states are not presented as queued", () => {
@@ -895,7 +898,7 @@ async function main(): Promise<void> {
       })!,
     });
     assert.equal(model.state, "materializing");
-    assert.equal(statusLabelForProductState(model.state), "Preparing / Verifying");
+    assert.equal(statusLabelForProductState(model.state), "Verifying media");
   });
 
   await test("source-boundary: product UI/client has no worker/control-plane/testing leaks", () => {

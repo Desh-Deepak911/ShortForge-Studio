@@ -422,7 +422,13 @@ export function HeadlessExportSection({
       },
     });
     dispatch({ type: "PREPARE_OK", runId });
-    dispatch({ type: "MATERIALIZE_PROGRESS", runId, phase: "uploading" });
+    dispatch({
+      type: "MATERIALIZE_PROGRESS",
+      runId,
+      phase: "uploading",
+      percent: 15,
+      message: "Preparing the secure upload plan…",
+    });
 
     let dispatched;
     try {
@@ -448,6 +454,38 @@ export function HeadlessExportSection({
             mimeType: source.mimeType,
           })),
           rendererProfile,
+          onProgress: (progress) => {
+            if (runId !== runIdRef.current || !mountedRef.current) return;
+            if (progress.phase === "finalizing") {
+              dispatch({
+                type: "MATERIALIZE_PROGRESS",
+                runId,
+                phase: "uploading",
+                percent: 92,
+                message: "Uploads complete. Verifying durable asset coverage…",
+              });
+              return;
+            }
+            const objectRatio =
+              progress.totalObjects > 0
+                ? progress.completedObjects / progress.totalObjects
+                : 0;
+            const byteRatio =
+              progress.totalBytes > 0
+                ? progress.uploadedBytes / progress.totalBytes
+                : objectRatio;
+            const ratio = Math.max(objectRatio, byteRatio);
+            dispatch({
+              type: "MATERIALIZE_PROGRESS",
+              runId,
+              phase: "uploading",
+              percent: 15 + Math.round(ratio * 70),
+              message:
+                progress.completedObjects === progress.totalObjects
+                  ? `Uploaded all ${progress.totalObjects} export assets.`
+                  : `Uploading export assets ${progress.completedObjects} of ${progress.totalObjects}…`,
+            });
+          },
           ...(useTestAuthority
             ? { rendererBuildId: "test-authority-phase1a" }
             : {}),

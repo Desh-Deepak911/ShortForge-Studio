@@ -129,6 +129,11 @@ await test("browser owned-upload adapter PUTs then completes without exposing pr
       quality: "standard",
     },
   };
+  const progress: Array<{
+    phase: string;
+    completedObjects: number;
+    totalObjects: number;
+  }> = [];
   const fetchMock: typeof fetch = async (input, init) => {
     const url = String(input);
     const method = init?.method ?? "GET";
@@ -181,6 +186,13 @@ await test("browser owned-upload adapter PUTs then completes without exposing pr
     },
     rendererBuildId: "renderer",
     idempotencyKey: "idempotency",
+    onProgress: (event) => {
+      progress.push({
+        phase: event.phase,
+        completedObjects: event.completedObjects,
+        totalObjects: event.totalObjects,
+      });
+    },
   });
   assert.equal(result.ok, true);
   if (!result.ok) return;
@@ -189,6 +201,12 @@ await test("browser owned-upload adapter PUTs then completes without exposing pr
     calls.map((call) => call.method),
     ["POST", "PUT", "PUT", "POST"],
   );
+  assert.deepEqual(progress, [
+    { phase: "uploading", completedObjects: 0, totalObjects: 2 },
+    { phase: "uploading", completedObjects: 1, totalObjects: 2 },
+    { phase: "uploading", completedObjects: 2, totalObjects: 2 },
+    { phase: "finalizing", completedObjects: 2, totalObjects: 2 },
+  ]);
 });
 
 console.log(`\n${passed} tests passed.`);

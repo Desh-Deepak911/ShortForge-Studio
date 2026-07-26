@@ -11,6 +11,7 @@ import {
   evaluateHeadlessRouteAuth,
   jsonFromHeadlessRouteGate,
 } from "../../../_lib/respond-headless-route-auth";
+import { resolveHeadlessDownloadFilename } from "@/features/headless-renderer/control-plane/services/headless-download-filename";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,11 +57,18 @@ export async function POST(
     stored.value.stage === "canonical"
       ? stored.value.canonicalJob.rendererProfile.format
       : stored.value.requestedRendererProfile.format;
+  const filename = resolveHeadlessDownloadFilename({
+    requestedFilename:
+      stored.value.stage === "canonical"
+        ? stored.value.canonicalRequest.manifest.output.filename
+        : null,
+    format,
+  });
   return NextResponse.json({
     version: 1,
     jobId,
     url: result.value.getUrl,
     expiresAtMs: result.value.expiresAtMs,
-    filename: `shortforge-export.${format}`,
+    filename,
   });
 }

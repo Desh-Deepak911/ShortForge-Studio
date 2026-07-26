@@ -84,6 +84,8 @@ export type HeadlessProductEvent =
       readonly type: "MATERIALIZE_PROGRESS";
       readonly runId: number;
       readonly phase: "materializing" | "uploading";
+      readonly percent?: number;
+      readonly message?: string;
     }
   | { readonly type: "UPLOAD_OK"; readonly runId: number }
   | {
