@@ -52,6 +52,8 @@ async function main(): Promise<void> {
     assert.ok(src.includes("useTestAuthority = allowTestAuthority === true"));
     assert.ok(src.includes("rendererLocked"));
     assert.ok(src.includes("dispatchOwnedHeadlessJob"));
+    assert.ok(src.includes("Export again with Headless"));
+    assert.equal(src.includes('"Export complete"'), false);
     assert.equal(src.includes("usesInjectedTestPorts"), false);
     assert.equal(src.includes("process.env"), false);
     assert.equal(src.includes("control-plane/testing"), false);
