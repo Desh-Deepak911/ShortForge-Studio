@@ -325,7 +325,6 @@ export function HeadlessExportSection({
   const handleHeadlessExport = async () => {
     if (!draftId?.trim()) return;
     if (!activeCompat.allowed) return;
-    if (model.ctx.availability?.canCreateJob !== true) return;
 
     const runId = nextRunId();
     exportAbortRef.current?.abort();
@@ -333,6 +332,29 @@ export function HeadlessExportSection({
     exportAbortRef.current = ac;
     setPreparationMessage(null);
     setPreparingOwnedUpload(true);
+
+    // A recovered terminal job intentionally skips the selection-time availability
+    // request because it still owns a jobId. Refresh here so "Export again" never
+    // becomes an enabled no-op after a page reload.
+    if (model.ctx.availability?.canCreateJob !== true) {
+      const availability = await clientRef.current.getAvailability(ac.signal);
+      if (
+        runId !== runIdRef.current ||
+        !mountedRef.current ||
+        ac.signal.aborted
+      ) {
+        return;
+      }
+      if (!availability.ok || availability.value.canCreateJob !== true) {
+        setPreparationMessage(
+          availability.ok
+            ? "Server rendering is not available right now."
+            : availability.message,
+        );
+        setPreparingOwnedUpload(false);
+        return;
+      }
+    }
 
     let ownedPreparation: Awaited<ReturnType<typeof prepareOwnedHeadlessUpload>> | null =
       null;

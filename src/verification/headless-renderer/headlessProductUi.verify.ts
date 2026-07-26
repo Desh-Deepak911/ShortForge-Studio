@@ -53,6 +53,14 @@ async function main(): Promise<void> {
     assert.ok(src.includes("rendererLocked"));
     assert.ok(src.includes("dispatchOwnedHeadlessJob"));
     assert.ok(src.includes("Export again with Headless"));
+    assert.ok(src.includes("A recovered terminal job intentionally skips"));
+    assert.ok(src.includes("clientRef.current.getAvailability(ac.signal)"));
+    assert.equal(
+      src.includes(
+        "if (model.ctx.availability?.canCreateJob !== true) return;",
+      ),
+      false,
+    );
     assert.equal(src.includes('"Export complete"'), false);
     assert.equal(src.includes("usesInjectedTestPorts"), false);
     assert.equal(src.includes("process.env"), false);
