@@ -780,8 +780,7 @@ export function HeadlessExportSection({
                 busy ||
                 unavailable ||
                 !activeCompat.allowed ||
-                !draftId?.trim() ||
-                model.state === "succeeded"
+                !draftId?.trim()
               }
               aria-busy={model.ctx.busy}
               onClick={() => void handleHeadlessExport()}
@@ -798,7 +797,7 @@ export function HeadlessExportSection({
                 : model.ctx.busy
                   ? statusLabelForProductState(model.state)
                 : model.state === "succeeded"
-                  ? "Export complete"
+                  ? "Export again with Headless"
                   : "Export with Headless"}
             </button>
           ) : null}
