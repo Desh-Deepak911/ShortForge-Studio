@@ -304,7 +304,7 @@ async function main() {
     assert.equal(recovered.record.stagingObjectRefs.length, 5);
   });
 
-  await test("website-shaped six-object job recovers 0/6 coverage in one callback", async () => {
+  await test("website-shaped six-object job survives a concurrent stale-write burst", async () => {
     const ctx = buildCtx();
     const draftCtx = await buildLiveDraft({
       runId: ctx.runId,
@@ -427,8 +427,33 @@ async function main() {
     if (!created.ok || created.value.kind !== "created") return;
     assert.equal(created.value.record.verificationCoverage.verifiedTargets.length, 0);
 
+    const authoritativeJobStore = ctx.jobStore;
+    let compareAndSetAttempts = 0;
+    const contendedJobStore = new Proxy(authoritativeJobStore, {
+      get(target, property, receiver) {
+        if (property === "compareAndSetProvisional") {
+          return async (
+            input: Parameters<
+              typeof authoritativeJobStore.compareAndSetProvisional
+            >[0],
+          ) => {
+            compareAndSetAttempts += 1;
+            if (compareAndSetAttempts <= 8) {
+              return {
+                ok: true as const,
+                value: { kind: "stale" as const },
+              };
+            }
+            return target.compareAndSetProvisional(input);
+          };
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
     const recovered = await reconcileFinalizedOwnedObjectCoverage({
-      jobStore: ctx.jobStore,
+      jobStore: contendedJobStore,
       ownedObjectStore: ctx.ownedObjectStore,
       objectId: objectIds[objectIds.length - 1]!,
       ownerId: ctx.ownerId,
@@ -437,7 +462,8 @@ async function main() {
     assert.equal(recovered.ok, true);
     if (!recovered.ok) return;
     assert.equal(recovered.value.coverageComplete, true);
-    const reread = await ctx.jobStore.getByJobIdAndOwner(
+    assert.equal(compareAndSetAttempts, 9);
+    const reread = await authoritativeJobStore.getByJobIdAndOwner(
       draftCtx.jobId,
       ctx.ownerId,
     );

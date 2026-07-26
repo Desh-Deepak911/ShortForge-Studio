@@ -35,6 +35,8 @@ export type HeadlessReconcileFinalizedCoverageResult = {
   readonly coverageComplete: boolean;
 };
 
+const MAX_COVERAGE_RECONCILE_ATTEMPTS = 32;
+
 function buildStagingRefFromFinalized(
   record: HeadlessFinalizedOwnedObjectRecordV1,
 ):
@@ -217,94 +219,76 @@ export async function reconcileFinalizedOwnedObjectCoverage(input: {
     }
     const finalized = owned.value.record;
 
-    const jobLoaded = await input.jobStore.getByJobIdAndOwner(
-      finalized.jobId,
-      input.ownerId,
-    );
-    if (!jobLoaded.ok) return jobLoaded;
-    if (jobLoaded.value.stage !== "provisional") {
-      return cpFail(
-        "JOB_STORE_COHERENCE_REJECTED",
-        "Provisional job required for coverage reconcile.",
-      );
-    }
-
-    let current = jobLoaded.value;
-    if (current.verificationCoverage.complete) {
-      return cpOk(
-        Object.freeze({
-          status: "already_complete" as const,
-          coverageComplete: true,
-        }),
-      );
-    }
-
-    const listed = await input.ownedObjectStore.listByJobIdAndOwner({
-      jobId: finalized.jobId,
-      ownerId: input.ownerId,
-    });
-    if (!listed.ok) return listed;
-
-    // Reconstruct from durable finalized authority on every callback. This
-    // closes lost/out-of-order callback gaps for multi-object website exports:
-    // any later finalized object can recover coverage for all earlier objects.
-    const refs: HeadlessProvisionalStagingObjectRefV1[] = [];
-    for (const stored of listed.value) {
-      if (stored.record.stage !== "finalized") continue;
-      if (stored.record.purpose === "artifact") continue;
-      const built = buildStagingRefFromFinalized(stored.record);
-      if (!built.ok) {
-        return cpFail("HOSTILE_INPUT", built.message);
-      }
-      refs.push(built.ref);
-    }
-    if (refs.length === 0) {
-      return cpFail(
-        "JOB_STORE_COHERENCE_REJECTED",
-        "No finalized source objects available for coverage reconcile.",
-      );
-    }
-
-    const first = await applyOnce({
-      jobStore: input.jobStore,
-      provisional: current,
-      refs,
-      nowMs: input.nowMs,
-    });
-    if (
-      first.ok ||
-      (!first.ok && first.issues[0]?.code !== "STALE_TRANSITION")
+    // Browser uploads finalize several owned objects concurrently. Every CAS
+    // retry must reread both the provisional record and durable finalized
+    // objects: a one-retry snapshot can lose the last callback to a burst of
+    // legitimate store-version advances and strand a fully verified job.
+    for (
+      let attempt = 0;
+      attempt < MAX_COVERAGE_RECONCILE_ATTEMPTS;
+      attempt += 1
     ) {
-      return first;
+      const jobLoaded = await input.jobStore.getByJobIdAndOwner(
+        finalized.jobId,
+        input.ownerId,
+      );
+      if (!jobLoaded.ok) return jobLoaded;
+      if (jobLoaded.value.stage !== "provisional") {
+        return cpFail(
+          "JOB_STORE_COHERENCE_REJECTED",
+          "Provisional job required for coverage reconcile.",
+        );
+      }
+      if (jobLoaded.value.verificationCoverage.complete) {
+        return cpOk(
+          Object.freeze({
+            status: "already_complete" as const,
+            coverageComplete: true,
+          }),
+        );
+      }
+
+      const listed = await input.ownedObjectStore.listByJobIdAndOwner({
+        jobId: finalized.jobId,
+        ownerId: input.ownerId,
+      });
+      if (!listed.ok) return listed;
+
+      const refs: HeadlessProvisionalStagingObjectRefV1[] = [];
+      for (const stored of listed.value) {
+        if (stored.record.stage !== "finalized") continue;
+        if (stored.record.purpose === "artifact") continue;
+        const built = buildStagingRefFromFinalized(stored.record);
+        if (!built.ok) {
+          return cpFail("HOSTILE_INPUT", built.message);
+        }
+        refs.push(built.ref);
+      }
+      if (refs.length === 0) {
+        return cpFail(
+          "JOB_STORE_COHERENCE_REJECTED",
+          "No finalized source objects available for coverage reconcile.",
+        );
+      }
+
+      const applied = await applyOnce({
+        jobStore: input.jobStore,
+        provisional: jobLoaded.value,
+        refs,
+        nowMs: input.nowMs,
+      });
+      if (
+        applied.ok ||
+        applied.issues[0]?.code !== "STALE_TRANSITION"
+      ) {
+        return applied;
+      }
     }
 
-    // One stale retry
-    const reread = await input.jobStore.getByJobIdAndOwner(
-      finalized.jobId,
-      input.ownerId,
+    return cpFail(
+      "STALE_TRANSITION",
+      "Provisional coverage reconcile exceeded bounded CAS retries.",
     );
-    if (!reread.ok) return reread;
-    if (reread.value.stage !== "provisional") {
-      return cpFail(
-        "JOB_STORE_COHERENCE_REJECTED",
-        "Provisional job required for coverage reconcile.",
-      );
-    }
-    current = reread.value;
-    if (current.verificationCoverage.complete) {
-      return cpOk(
-        Object.freeze({
-          status: "already_complete" as const,
-          coverageComplete: true,
-        }),
-      );
-    }
-    return applyOnce({
-      jobStore: input.jobStore,
-      provisional: current,
-      refs,
-      nowMs: input.nowMs,
-    });
   } catch {
     return cpFail("INTERNAL_ERROR", "Finalized coverage reconcile failed.");
   }
