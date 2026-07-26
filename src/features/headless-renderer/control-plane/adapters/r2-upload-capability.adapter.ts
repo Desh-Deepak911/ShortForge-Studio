@@ -94,6 +94,10 @@ async function defaultCreatePresignedPutUrl(input: {
       secretAccessKey: input.secretAccessKey,
     },
     forcePathStyle: true,
+    // PutObject is presigned before the browser body exists. The SDK's
+    // WHEN_SUPPORTED default otherwise adds an empty-body CRC32 query claim,
+    // which R2 rejects when the browser uploads the real non-empty bytes.
+    requestChecksumCalculation: "WHEN_REQUIRED",
   });
   try {
     const command = new PutObjectCommand({

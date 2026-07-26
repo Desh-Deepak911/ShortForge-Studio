@@ -142,6 +142,52 @@ async function main() {
     assert.equal(serialized.includes("sig="), false);
   });
 
+  await test("browser-compatible URL omits automatic empty-body checksum claims", async () => {
+    const store = new MemoryHeadlessOwnedObjectStoreAdapter();
+    await store.createStagingRecord({
+      objectId: "obj_browser_checksum",
+      ownerId: "owner_1",
+      projectId: "project_1",
+      jobId: "job_1",
+      operationId: "op_1",
+      purpose: "manifest",
+      slotKey: null,
+      storeId: "assets",
+      objectKey: OBJECT_KEY + "_browser_checksum",
+      expectedContentDigestClaim: DIGEST,
+      expectedByteLength: 42,
+      expectedMimeType: "application/json",
+      uploadCapabilityIssuedAtMs: 1000,
+      uploadCapabilityExpiresAtMs: 1_000_000,
+      expiresAtMs: 9_000_000,
+      createdAtMs: 1000,
+    });
+    const adapter = new R2UploadCapabilityAdapter({
+      ownedObjectStore: store,
+      configOverride: CONFIG,
+      browserCompatible: true,
+    });
+    const issued = await adapter.issueDirectPutCapability({
+      ownerId: "owner_1",
+      projectId: "project_1",
+      jobId: "job_1",
+      operationId: "op_1",
+      objectId: "obj_browser_checksum",
+      expectedByteLength: 42,
+      expectedMimeType: "application/json",
+      allowedOrigin: "https://app.example.com",
+      nowMs: 2000,
+    });
+    assert.equal(issued.ok, true);
+    if (!issued.ok) return;
+
+    const query = new URL(issued.value.putUrl).searchParams;
+    assert.equal(query.has("X-Amz-Signature"), true);
+    assert.equal(query.has("x-amz-checksum-crc32"), false);
+    assert.equal(query.has("x-amz-sdk-checksum-algorithm"), false);
+    assert.equal(issued.value.requiredHeaders["Content-Length"], undefined);
+  });
+
   await test("policy: content-type claim; length revalidated from stream; digest never trusted", () => {
     // Documentary fixture assertions — wiring contracts used by verify path.
     const policy = Object.freeze({
