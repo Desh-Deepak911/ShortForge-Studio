@@ -347,7 +347,7 @@ export async function runHostedWorkerEntrypoint(
             name: "hosted.loop.delivery",
             atMs: nowMs(),
             mode: "verify",
-            reasonId: result.kind,
+            reasonId: result.reasonId,
             action: result.kind,
           });
         }

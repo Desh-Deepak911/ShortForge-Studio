@@ -20,6 +20,7 @@ function mapJobStateToProduct(state: HeadlessPublicJobState): HeadlessProductSta
   switch (state) {
     case "created":
     case "materializing":
+      return "materializing";
     case "queued":
       return "queued";
     case "rendering":
@@ -356,7 +357,7 @@ export function reduceHeadlessProduct(
 
     case "RESTORE_JOB": {
       return {
-        state: "queued",
+        state: "materializing",
         ctx: {
           ...model.ctx,
           runId: event.runId,
@@ -395,7 +396,7 @@ export function statusLabelForProductState(state: HeadlessProductState): string 
     case "preparing":
       return "Preparing";
     case "materializing":
-      return "Preparing assets";
+      return "Preparing / Verifying";
     case "uploading":
       return "Uploading";
     case "creating_job":
