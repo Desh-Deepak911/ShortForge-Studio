@@ -12,6 +12,7 @@ import {
   HEADLESS_MAX_ASSET_BYTES,
   HEADLESS_MAX_ID_LENGTH,
   HEADLESS_MAX_MIME_LENGTH,
+  HEADLESS_MAX_OBJECT_KEY_LENGTH,
   HEADLESS_MAX_TOTAL_ASSET_BYTES,
 } from "./headless-render-constants";
 import {
@@ -70,6 +71,19 @@ function isNonEmptyId(value: unknown): value is string {
     value.trim().length > 0 &&
     value.trim().length <= HEADLESS_MAX_ID_LENGTH &&
     value === value.trim()
+  );
+}
+
+function isBoundedObjectKey(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= HEADLESS_MAX_OBJECT_KEY_LENGTH &&
+    value === value.trim() &&
+    !/\s/.test(value) &&
+    !value.includes("..") &&
+    !value.startsWith("/") &&
+    !value.endsWith("/")
   );
 }
 
@@ -367,7 +381,7 @@ function validateDescriptor(
   }
   if (
     !isNonEmptyId(value.storageLocator.storeId) ||
-    !isNonEmptyId(value.storageLocator.objectKey)
+    !isBoundedObjectKey(value.storageLocator.objectKey)
   ) {
     return {
       ok: false,
