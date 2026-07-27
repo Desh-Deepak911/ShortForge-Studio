@@ -11,12 +11,15 @@ import {
   buildExportManifest,
   buildExportManifestFingerprint,
   EXPORT_MANIFEST_V2_VERSION,
+  EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
+  EXPORT_RENDERER_CONTRACT_VERSION,
   type ExportEnvironmentSnapshot,
   type ExportManifest,
   type ExportManifestV2,
-  type ExportManifestV3,
-  isExportManifestV3,
+  type ExportManifestV4,
+  isExportManifestV4,
+  isExportSceneManifestV3,
   validateExportManifest,
 } from "@/features/export/domain";
 import * as headlessDomain from "@/features/headless-renderer/domain";
@@ -126,18 +129,38 @@ function fixStory(imageUrl = "https://example.com/a.jpg"): FootieScript {
   });
 }
 
-function buildV3Manifest(story?: FootieScript): ExportManifestV3 {
+function buildV3Manifest(story?: FootieScript): ExportManifestV4 {
   const manifest = buildExportManifest({
     story: story ?? fixStory(),
     environment: CAPABLE_ENV,
     audioMode: "with-voice",
     multiImageScenesEnabled: true,
   });
-  assert.ok(isExportManifestV3(manifest));
+  assert.ok(
+    isExportManifestV4(manifest),
+    "buildExportManifest must emit production ExportManifest v4 / renderer 9D",
+  );
+  assert.equal(manifest.version, EXPORT_MANIFEST_VERSION);
+  assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+  const validation = validateExportManifest(manifest);
+  assert.equal(
+    validation.ok,
+    true,
+    validation.ok ? "" : validation.issues.map((issue) => issue.code).join(", "),
+  );
+  assert.ok(
+    manifest.scenes.every(
+      (scene) =>
+        isExportSceneManifestV3(scene) && scene.mediaTimeline.items.length >= 1,
+    ),
+    "production v4 manifests must carry v3-shaped scene mediaTimeline and mediaTransitions authority",
+  );
+  assert.ok(manifest.fingerprint.length > 0);
+  assert.ok(manifest.audio.voiceover != null);
   return manifest;
 }
 
-function freezeAsV2(manifest: ExportManifestV3): ExportManifestV2 {
+function freezeAsV2(manifest: ExportManifestV4): ExportManifestV2 {
   const scenes = manifest.scenes.map((scene) => {
     const rest = { ...scene };
     delete (rest as { mediaTransitions?: unknown }).mediaTransitions;
@@ -361,7 +384,7 @@ test("authority prefixes are distinct SHA-256 forms", () => {
   assert.match(src, /^hsrc:sha256:[a-f0-9]{64}$/);
 });
 
-test("valid v3 request accepts, detaches, and freezes result only", () => {
+test("valid v4 request accepts, detaches, and freezes result only", () => {
   const manifest = buildV3Manifest();
   const mutableMarker = { touched: false };
   const { request } = buildValidRequest(manifest);
@@ -1034,13 +1057,13 @@ test("11B.1A positive: canonical request → lifecycle → coherent artifact", (
   assert.equal(chain.ok, true);
 });
 
-test("11B.1A positive: v2/8D and v3/9C through canonical chain", () => {
-  const v3 = buildValidRequest(buildV3Manifest());
+test("11B.1A positive: v2/8D and v4/9D through canonical chain", () => {
+  const v4 = buildValidRequest(buildV3Manifest());
   const v2 = buildValidRequest(freezeAsV2(buildV3Manifest()));
   assert.equal(
     createAcceptedHeadlessRenderJob({
-      jobId: "v3",
-      requestValue: v3.request,
+      jobId: "v4",
+      requestValue: v4.request,
       createdAtMs: 1,
     }).ok,
     true,
