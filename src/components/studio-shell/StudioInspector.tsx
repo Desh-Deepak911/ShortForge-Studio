@@ -112,6 +112,7 @@ export default function StudioInspector({
             <button
               type="button"
               onClick={onToggle}
+              data-editor-inspector-toggle="open"
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-elevated/45 text-muted ring-1 ring-border/35 transition hover:text-foreground"
               aria-label="Open inspector"
               title="Open inspector (Ctrl/⌘ Shift I)"
@@ -125,7 +126,8 @@ export default function StudioInspector({
               <button
                 type="button"
                 onClick={onToggle}
-                className="absolute right-5 top-4 z-20 hidden h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-surface-elevated/60 hover:text-foreground lg:flex"
+                data-editor-inspector-toggle="collapse"
+                className="absolute right-4 top-3 z-30 hidden h-8 w-8 items-center justify-center rounded-lg bg-background/80 text-muted ring-1 ring-border/30 transition hover:bg-surface-elevated hover:text-foreground lg:flex"
                 aria-label="Collapse inspector"
                 title="Collapse inspector (Ctrl/⌘ Shift I)"
               >

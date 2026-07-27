@@ -389,10 +389,13 @@ export const studioShellMaxWidth = "mx-auto w-full min-w-0 max-w-[100rem]";
 
 /** Wide editor-only shell — uses large desktop space without changing document routes. */
 export const studioShellEditorMaxWidth =
-  "mx-auto w-full min-w-0 max-w-[120rem]";
+  "mx-auto w-full min-w-0 max-w-[128rem]";
 
 /** Gap between shell regions (sidebar, canvas, inspector). */
 export const studioShellPanelGap = "gap-3 lg:gap-5";
+
+/** Tighter editor-only gutters leave more room for the preview and tools. */
+export const studioShellEditorPanelGap = "gap-2 lg:gap-3";
 
 /** Horizontal padding inside shell regions. */
 export const studioShellRegionPadding =
@@ -461,7 +464,7 @@ export const studioShellCanvasMaxWidth =
 
 /** Editor canvas — larger preview focus area without changing VideoPreview internals. */
 export const studioShellEditorCanvasMaxWidth =
-  "w-full max-w-[min(100%,22rem)] sm:max-w-[min(100%,26rem)] lg:max-w-[min(100%,32rem)] xl:max-w-[min(100%,36rem)]";
+  "w-full max-w-[min(100%,24rem)] sm:max-w-[min(100%,28rem)] lg:max-w-[min(100%,36rem)] xl:max-w-[min(100%,40rem)]";
 
 /** Preview column inside the editor stage. */
 export const studioShellEditorPreviewWrap =

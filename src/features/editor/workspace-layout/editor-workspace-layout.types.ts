@@ -12,14 +12,14 @@ export interface EditorWorkspaceLayoutState {
 }
 
 export const EDITOR_INSPECTOR_MIN_WIDTH_PX = 336;
-export const EDITOR_INSPECTOR_MAX_WIDTH_PX = 520;
+export const EDITOR_INSPECTOR_MAX_WIDTH_PX = 460;
 export const EDITOR_TIMELINE_MIN_HEIGHT_PX = 112;
 export const EDITOR_TIMELINE_MAX_HEIGHT_PX = 360;
 
 export const DEFAULT_EDITOR_WORKSPACE_LAYOUT: EditorWorkspaceLayoutState = {
   sidebarCollapsed: false,
   inspectorCollapsed: false,
-  inspectorWidthPx: 384,
+  inspectorWidthPx: 368,
   timelineDensity: "comfortable",
   timelineHeightPx: 224,
   previewSize: "fit",

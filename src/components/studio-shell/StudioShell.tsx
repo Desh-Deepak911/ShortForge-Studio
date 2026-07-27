@@ -4,6 +4,7 @@ import {
   studioShellBodyRowDocument,
   studioShellBodyRowFixed,
   studioShellEditorMaxWidth,
+  studioShellEditorPanelGap,
   studioShellMainColumnDocument,
   studioShellMainColumnFixed,
   studioShellMaxWidth,
@@ -47,9 +48,12 @@ export default function StudioShell({
   const showSidebar = Boolean(sidebar) && !focusMode;
   const showInspector = Boolean(inspector || inspectorBanner) && !focusMode;
   const showFooter = Boolean(footer) && !(focusMode && hideFooterInFocusMode);
+  const panelGapClass = editorLayout
+    ? studioShellEditorPanelGap
+    : studioShellPanelGap;
   const bodyRowClass = sidebarVisibleBelowLg
-    ? `flex flex-1 flex-col ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} lg:flex-row ${studioShellPanelGap}`
-    : `flex flex-1 ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} ${studioShellPanelGap}`;
+    ? `flex flex-1 flex-col ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} lg:flex-row ${panelGapClass}`
+    : `flex flex-1 ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} ${panelGapClass}`;
   const mainColumnClass = isFixedViewport
     ? studioShellMainColumnFixed
     : studioShellMainColumnDocument;
@@ -75,7 +79,7 @@ export default function StudioShell({
       {header}
 
       <div
-        className={`${maxWidthClass} flex flex-1 flex-col ${isFixedViewport ? "min-h-0" : ""} ${studioShellPanelGap}`}
+        className={`${maxWidthClass} flex flex-1 flex-col ${isFixedViewport ? "min-h-0" : ""} ${panelGapClass}`}
       >
         <div className={bodyRowClass}>
           {showSidebar ? (

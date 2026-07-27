@@ -170,10 +170,10 @@ function StoryWorkspaceContent({
     exportDisabled || missingMediaScenes.length > 0;
   const previewMaxWidth =
     workspaceLayout.previewSize === "125"
-      ? "325px"
+      ? "360px"
       : workspaceLayout.previewSize === "100"
-        ? "260px"
-        : "min(100%, calc((100dvh - 28rem) * 0.5625))";
+        ? "288px"
+        : "min(100%, calc((100dvh - 24rem) * 0.5625))";
 
   const storySync = useOptionalStorySync();
 
@@ -357,6 +357,19 @@ function StoryWorkspaceContent({
     setMobileSidebarOpen(true);
   };
 
+  const openMobileInspector = useCallback(() => {
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setMobileInspectorOpen(true);
+    }
+  }, []);
+
+  const handleInspectorToggle = useCallback(() => {
+    // Desktop actions may previously have opened the mobile drawer state.
+    // Clear it before toggling so it cannot suppress the collapsed rail.
+    setMobileInspectorOpen(false);
+    workspaceLayout.toggleInspector();
+  }, [workspaceLayout]);
+
   const focusSceneMedia = useCallback(() => {
     if (firstMissingScene) {
       document
@@ -368,9 +381,9 @@ function StoryWorkspaceContent({
     if (workspaceLayout.inspectorCollapsed) {
       workspaceLayout.toggleInspector();
     }
-    setMobileInspectorOpen(true);
+    openMobileInspector();
     focusInspectorSceneWorkspace("media");
-  }, [firstMissingScene, workspaceLayout]);
+  }, [firstMissingScene, openMobileInspector, workspaceLayout]);
 
   return (
     <>
@@ -427,7 +440,7 @@ function StoryWorkspaceContent({
                 if (workspaceLayout.inspectorCollapsed) {
                   workspaceLayout.toggleInspector();
                 }
-                setMobileInspectorOpen(true);
+                openMobileInspector();
                 focusInspectorSceneWorkspace("media");
               }}
             />
@@ -511,11 +524,9 @@ function StoryWorkspaceContent({
             inspectorWidthPx: workspaceLayout.inspectorWidthPx,
             timelineDensity: workspaceLayout.timelineDensity,
             timelineHeightPx: workspaceLayout.timelineHeightPx,
-            sidebarNarrow:
-              !workspaceLayout.inspectorCollapsed &&
-              workspaceLayout.inspectorWidthPx >= 440,
+            sidebarNarrow: !workspaceLayout.inspectorCollapsed,
             onSidebarToggle: workspaceLayout.toggleSidebar,
-            onInspectorToggle: workspaceLayout.toggleInspector,
+            onInspectorToggle: handleInspectorToggle,
             onInspectorResizePointerDown: workspaceLayout.beginInspectorResize,
             onTimelineDensityChange: workspaceLayout.setTimelineDensity,
             onTimelineResizePointerDown: workspaceLayout.beginTimelineResize,

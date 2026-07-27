@@ -78,7 +78,7 @@ export function runEditorWorkspaceRedesignTests(): void {
       }),
       {
         ...DEFAULT_EDITOR_WORKSPACE_LAYOUT,
-        inspectorWidthPx: 520,
+        inspectorWidthPx: 460,
         timelineHeightPx: 112,
       },
     );
@@ -153,6 +153,10 @@ export function runEditorWorkspaceRedesignTests(): void {
     assert.match(projectSidebar, /onCollapsedToggle/);
     assert.match(inspector, /onResizePointerDown/);
     assert.match(inspector, /mobileOpen/);
+    assert.match(inspector, /data-editor-inspector-toggle="collapse"/);
+    assert.match(workspace, /handleInspectorToggle/);
+    assert.match(workspace, /setMobileInspectorOpen\(false\)/);
+    assert.match(workspace, /max-width: 1023px/);
     assert.match(layoutStorage, /localStorage/);
     assert.match(layoutHook, /keydown/);
     assert.match(layoutHook, /beginInspectorResize/);
@@ -161,7 +165,8 @@ export function runEditorWorkspaceRedesignTests(): void {
 
   test("editor uses a wider desktop boundary without changing document shells", () => {
     assert.match(studioUi, /studioShellEditorMaxWidth/);
-    assert.match(studioUi, /max-w-\[120rem\]/);
+    assert.match(studioUi, /max-w-\[128rem\]/);
+    assert.match(studioUi, /studioShellEditorPanelGap/);
     assert.match(shell, /editorLayout[\s\S]*studioShellEditorMaxWidth/);
     assert.match(
       timelineShell,
