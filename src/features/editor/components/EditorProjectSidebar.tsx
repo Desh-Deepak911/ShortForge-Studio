@@ -4,7 +4,6 @@ import {
   ArrowLeftRight,
   Clapperboard,
   Clock,
-  Film,
   Flag,
   ImageIcon,
   ImagePlus,
@@ -30,7 +29,6 @@ import {
 } from "@/lib/utils/formatDisplayDuration.utils";
 import {
   studioBadge,
-  studioFieldLabel,
   studioShellSectionDesc,
   studioShellSectionTitle,
   studioSidebarSceneItem,
@@ -269,15 +267,6 @@ export default function EditorProjectSidebar({
         id="studio-sidebar-scenes"
         className="min-w-0 flex-1 scroll-mt-24"
       >
-        {!compact ? (
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Film className="h-3.5 w-3.5 text-muted" strokeWidth={1.75} />
-              <p className={`${studioFieldLabel} mb-0`}>Project timeline</p>
-            </div>
-            <span className="text-[10px] text-muted">⋮ for actions</span>
-          </div>
-        ) : null}
         {scenes.length === 0 ? (
           <p className={studioSubtleText}>No scenes yet.</p>
         ) : (

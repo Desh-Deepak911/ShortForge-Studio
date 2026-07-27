@@ -74,7 +74,10 @@ export default function BriefCanvas({
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
-    <section id="studio-brief" className="min-w-0 w-full">
+    <section
+      id="studio-brief"
+      className="mx-auto w-full max-w-[68rem] min-w-0"
+    >
       <div className="mb-1 min-w-0">
         <p className={studioStepLabel}>Brief</p>
         <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground sm:text-xl">

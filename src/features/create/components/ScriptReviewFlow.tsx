@@ -24,6 +24,7 @@ import { useReviewStoryDocument } from "@/features/drafts/hooks/useReviewStoryDo
 import { useDraftPersistFeedback } from "@/features/drafts/hooks/useDraftPersistFeedback";
 import type { Draft, DraftPersistedScript } from "@/features/drafts";
 import type { FootieScript } from "@/features/story/types";
+import { normalizeNarrationForEditing } from "@/features/story/utils/narration-editing.utils";
 import {
   resolveBriefQualityLabel,
   resolveBriefResearchConfidenceLabel,
@@ -172,6 +173,8 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
   const scriptAutosaveReadyRef = useRef(false);
   const persistedVoiceoverUrlRef = useRef<string | undefined>(undefined);
   const isCreatingScenesRef = useRef(false);
+  const initialEditorRedirectCheckedRef = useRef(false);
+  const normalizedNarrationDraftRef = useRef<string | null>(null);
   const {
     isLoading,
     isNotFound,
@@ -296,10 +299,54 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
       return;
     }
 
+    if (initialEditorRedirectCheckedRef.current) {
+      return;
+    }
+
+    initialEditorRedirectCheckedRef.current = true;
     if (isEditorReadyDraft(loadedDraft)) {
       router.replace(`/editor/${draftId}`);
     }
   }, [draftId, isLoading, loadedDraft, router]);
+
+  useEffect(() => {
+    if (
+      isLoading ||
+      !script ||
+      !loadedDraft ||
+      normalizedNarrationDraftRef.current === draftId
+    ) {
+      return;
+    }
+
+    normalizedNarrationDraftRef.current = draftId;
+    const narration = normalizeNarrationForEditing(script.narration);
+    const voiceoverNarration = script.voiceoverNarration
+      ? normalizeNarrationForEditing(script.voiceoverNarration)
+      : undefined;
+
+    if (
+      narration === script.narration &&
+      voiceoverNarration === script.voiceoverNarration
+    ) {
+      return;
+    }
+
+    updateScript((current) => ({
+      ...current,
+      narration,
+      ...(voiceoverNarration ? { voiceoverNarration } : {}),
+    }));
+    schedulePersist(pipelineStage);
+  }, [
+    draftId,
+    isLoading,
+    loadedDraft,
+    pipelineStage,
+    schedulePersist,
+    script,
+    updateScript,
+  ]);
 
   useEffect(() => {
     const currentScript = scriptRef.current;
@@ -410,7 +457,7 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
       const updated = await flushPersist("editor_ready", script);
       if (!updated) {
         setCreateScenesError(
-          "Could not save narration before opening the editor. Try again.",
+          "Could not confirm the saved storyboard. You are still on Review—try opening the editor again.",
         );
         return;
       }
@@ -436,14 +483,24 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
       return;
     }
 
-    isCreatingScenesRef.current = true;
-    setIsCreatingScenes(true);
     setCreateScenesError(null);
     setScenesCreatedSuccessfully(false);
     setScenePlanDevDebug(null);
-    setStoryboardStep(3);
+    setIsPersistingForEditor(true);
 
     try {
+      const savedNarration = await flushPersist("voiceover_ready", script);
+      if (!savedNarration) {
+        throw new Error(
+          "Could not save your latest narration. Storyboard was not built.",
+        );
+      }
+
+      setIsPersistingForEditor(false);
+      isCreatingScenesRef.current = true;
+      setIsCreatingScenes(true);
+      setStoryboardStep(3);
+
       const response = await fetch("/api/generate-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -493,41 +550,33 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
       }
       scriptAutosaveReadyRef.current = true;
 
-      applyEditorReadyScript(nextScriptWithScenes);
-      setScenesCreatedSuccessfully(true);
-      isCreatingScenesRef.current = false;
-      setIsCreatingScenes(false);
       setIsPersistingForEditor(true);
 
-      try {
-        const updated = await flushPersist(
-          "editor_ready",
-          nextScriptWithScenes,
+      const updated = await flushPersist("editor_ready", nextScriptWithScenes);
+      if (!updated) {
+        throw new Error(
+          "Storyboard was created, but could not be saved. You are still on Review so you can try again safely.",
         );
-        if (!updated) {
-          throw new Error(
-            "Could not save narration before opening the editor. Try again.",
-          );
-        }
-
-        router.push(`/editor/${draftId}`);
-      } finally {
-        setIsPersistingForEditor(false);
       }
+
+      applyEditorReadyScript(nextScriptWithScenes);
+      setScenesCreatedSuccessfully(true);
+      setSaveMessage("Storyboard saved. Open the editor when you are ready.");
     } catch (error) {
-      isCreatingScenesRef.current = false;
-      setIsCreatingScenes(false);
       setScenesCreatedSuccessfully(false);
       setCreateScenesError(
         error instanceof Error ? error.message : "Failed to build storyboard",
       );
+    } finally {
+      isCreatingScenesRef.current = false;
+      setIsCreatingScenes(false);
+      setIsPersistingForEditor(false);
     }
   }, [
     applyEditorReadyScript,
     creationBrief,
     draftId,
     flushPersist,
-    router,
     sceneCount,
     script,
     scriptMode,
@@ -567,7 +616,7 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     };
   } else if (isPersistingForEditor) {
     primaryAction = {
-      label: "Saving narration",
+      label: "Saving changes",
       onClick: handlePrimaryAction,
       disabled: true,
       loading: true,
@@ -645,6 +694,7 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     <StudioShell
       aria-label="Script review"
       viewportMode="document"
+      compactMode
       canvasCenterContent={false}
       header={
         <ReviewStudioHeader

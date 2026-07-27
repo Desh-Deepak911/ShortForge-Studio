@@ -38,6 +38,7 @@ import {
   reconcileStoryStrategySelection,
   type StoryStrategySelection,
 } from "@/features/retention-story/presentation";
+import { normalizeNarrationForEditing } from "@/features/story/utils/narration-editing.utils";
 import { consumeGenerateScriptStream } from "@/lib/utils/generateScriptStream";
 import { SAMPLE_TOPICS, WORKFLOW_STEPS } from "@/lib/constants/studioConstants";
 import { studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
@@ -437,7 +438,10 @@ export default function CreateStoryFlow() {
         throw new Error(data.error ?? "Failed to create story");
       }
 
-      const nextScript = syncFootieScript(data.data);
+      const nextScript = syncFootieScript({
+        ...data.data,
+        narration: normalizeNarrationForEditing(data.data.narration),
+      });
 
       const draft = createDraft({
         script: nextScript,
@@ -496,7 +500,7 @@ export default function CreateStoryFlow() {
     <StudioShell
       aria-label="Create story brief"
       viewportMode="document"
-      compactMode={false}
+      compactMode
       focusMode={false}
       canvasCenterContent={false}
       header={

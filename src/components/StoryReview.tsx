@@ -11,6 +11,9 @@ import {
   SCRIPT_LENGTH_OVER_TARGET_WARNING,
 } from "@/features/story/utils/narration-duration-budget.utils";
 import type { FootieScript } from "@/features/story/types";
+import {
+  keepNarrationInSingleParagraph,
+} from "@/features/story/utils/narration-editing.utils";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
 import {
   studioBadge,
@@ -109,7 +112,12 @@ function StoryReviewStoryboardVariant({
         <textarea
           id="story-narration"
           value={story.narration}
-          onChange={(e) => onStoryChange({ ...story, narration: e.target.value })}
+          onChange={(e) =>
+            onStoryChange({
+              ...story,
+              narration: keepNarrationInSingleParagraph(e.target.value),
+            })
+          }
           rows={6}
           placeholder="Full spoken narration for your short"
           className={studioTextarea}
@@ -158,14 +166,16 @@ export default function StoryReview({
           <textarea
             id="story-narration"
             value={story.narration}
-            onChange={(e) => onStoryChange({ ...story, narration: e.target.value })}
-            rows={10}
+            onChange={(e) =>
+              onStoryChange({
+                ...story,
+                narration: keepNarrationInSingleParagraph(e.target.value),
+              })
+            }
+            rows={8}
             placeholder="Full spoken narration for your short"
-            className={studioTextarea}
+            className={`${studioTextarea} min-h-[15rem]`}
           />
-          <p className={`${studioSubtleText} mt-2`}>
-            Edit your script before creating narration — changes save automatically.
-          </p>
         </div>
       </div>
     );
@@ -220,7 +230,12 @@ export default function StoryReview({
         <textarea
           id="story-narration"
           value={story.narration}
-          onChange={(e) => onStoryChange({ ...story, narration: e.target.value })}
+          onChange={(e) =>
+            onStoryChange({
+              ...story,
+              narration: keepNarrationInSingleParagraph(e.target.value),
+            })
+          }
           rows={8}
           placeholder="Full spoken narration for your short"
           className={studioTextarea}

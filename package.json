@@ -427,6 +427,7 @@
     "test:smart-edit-image-action-qa": "tsx src/verification/editor/smartEditImageActionQa.verify.ts",
     "test:editor-workspace-redesign": "tsx src/verification/editor/editorWorkspaceRedesign.verify.ts",
     "test:editor-information-architecture": "tsx src/verification/editor/editorInformationArchitecture.verify.ts",
+    "test:three-route-ui-stabilization": "tsx src/verification/editor/threeRouteUiStabilization.verify.ts",
     "test:audio-engine": "tsx src/verification/audio/audioEngine.verify.ts",
     "test:audio-engine-qa": "tsx src/verification/audio/audioEngineQa.verify.ts",
     "test:timeline-foundation-qa": "tsx src/verification/timeline/timelineFoundationQa.verify.ts",
