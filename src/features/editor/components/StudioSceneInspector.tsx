@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import InspectorEmptyState from "@/components/studio-shell/InspectorEmptyState";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
+import { StudioNumberStepper } from "@/components/ui";
 import CaptionWorkspace from "@/features/editor/components/caption-workspace/CaptionWorkspace";
 import CreatorAssetStudio from "@/features/editor/components/creator-asset-studio/CreatorAssetStudio";
 import SceneImageInspector from "@/features/editor/components/SceneImageInspector";
@@ -95,7 +96,6 @@ import {
   studioBadge,
   studioDestructiveButton,
   studioFieldLabel,
-  studioInputCompact,
   studioInspectorStack,
   studioInspectorSummaryStrip,
   studioSelectChevronCompact,
@@ -651,11 +651,11 @@ export default function StudioSceneInspector({
                 >
                   Duration
                 </label>
-                <input
+                <StudioNumberStepper
                   id={`inspector-duration-${scene.id}`}
-                  type="number"
                   min={1}
                   max={20}
+                  step={1}
                   value={scene.duration}
                   onChange={(event) => {
                     const raw = Number(event.target.value);
@@ -667,9 +667,13 @@ export default function StudioSceneInspector({
                           : scene.duration,
                     });
                   }}
-                  className={`${studioInputCompact} w-14 min-h-[2rem]`}
+                  onStepValue={(duration) =>
+                    updateScene(scene.id, { duration })
+                  }
+                  aria-label="Scene duration"
+                  suffix="sec"
+                  compact
                 />
-                <span className="text-[11px] text-muted">sec</span>
               </div>
               <p className={`${studioSubtleText} text-[11px] leading-snug`}>
                 Drag scene edges on the timeline for faster timing edits.

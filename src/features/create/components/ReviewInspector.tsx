@@ -5,6 +5,7 @@ import { useState } from "react";
 import VoiceSettingsCard from "@/components/VoiceSettingsCard";
 import StudioLoadingState from "@/components/StudioLoadingState";
 import { StudioStatus } from "@/components/studio-status";
+import { StudioNumberStepper, StudioSwitch } from "@/components/ui";
 import ScenePlanDevBadge from "@/features/create/components/ScenePlanDevBadge";
 import StoryIntelligencePanel from "@/features/create/components/StoryIntelligencePanel";
 import { StudioPanel, StudioSection } from "@/components/studio-shell";
@@ -19,7 +20,6 @@ import type { FootieScript } from "@/features/story/types";
 import {
   studioBadge,
   studioFieldLabel,
-  studioInput,
   studioSubtleText,
 } from "@/lib/utils/studioUi";
 import type {
@@ -263,9 +263,8 @@ export default function ReviewInspector({
               <label htmlFor="review-scene-count" className={studioFieldLabel}>
                 Number of scenes
               </label>
-              <input
+              <StudioNumberStepper
                 id="review-scene-count"
-                type="number"
                 min={MIN_SCENE_COUNT}
                 max={MAX_SCENE_COUNT}
                 step={1}
@@ -273,41 +272,30 @@ export default function ReviewInspector({
                 onChange={(event) =>
                   onSceneCountChange(Number(event.target.value))
                 }
+                onStepValue={onSceneCountChange}
                 disabled={
                   isCreatingScenes || hasStoryboard || scenesCreatedSuccessfully
                 }
-                className={`${studioInput} mt-1.5 max-w-[8rem]`}
+                aria-label="Number of scenes"
+                className="mt-1.5"
               />
             </div>
 
             {showStudioIntelligenceScenePlanToggle ? (
-              <label className="mt-4 flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={useStudioIntelligenceScenes}
-                  onChange={(event) =>
-                    onUseStudioIntelligenceScenesChange(event.target.checked)
-                  }
-                  disabled={
-                    isCreatingScenes ||
-                    hasStoryboard ||
-                    scenesCreatedSuccessfully
-                  }
-                  className="mt-1 h-4 w-4 rounded border-border/40 bg-background text-accent focus:ring-accent/40"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-foreground/90">
-                    Use Studio Intelligence scene planning
-                  </span>
-                  <span className={`${studioSubtleText} mt-1 block`}>
-                    Dev/staging only. Requires server env{" "}
-                    <code className="text-xs">
-                      STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED=true
-                    </code>
-                    .
-                  </span>
-                </span>
-              </label>
+              <StudioSwitch
+                checked={useStudioIntelligenceScenes}
+                onChange={(event) =>
+                  onUseStudioIntelligenceScenesChange(event.target.checked)
+                }
+                disabled={
+                  isCreatingScenes ||
+                  hasStoryboard ||
+                  scenesCreatedSuccessfully
+                }
+                label="Studio Intelligence scene planning"
+                description="Use assisted scene planning in this staging workspace."
+                className="mt-4"
+              />
             ) : null}
 
             {hasVoiceover && voiceoverDurationMs ? (

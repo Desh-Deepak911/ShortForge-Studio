@@ -3,6 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { StudioNumberStepper, StudioSwitch } from "@/components/ui";
 import ResearchPreviewPanel from "@/features/create/components/ResearchPreviewPanel";
 import { StudioPanel, StudioSection } from "@/components/studio-shell";
 import type { EntityPreviewDisplay } from "@/features/create/types/entity-preview.types";
@@ -250,31 +251,20 @@ export default function CreateBriefInspector({
       <div hidden={activeSection !== "research"} className="space-y-4">
         <StudioSection title="Smart Research">
           <StudioPanel>
-            <div className="flex items-start gap-3">
-              <input
-                id="enableResearch"
-                type="checkbox"
-                checked={enableResearch}
-                onChange={(event) =>
-                  onEnableResearchChange(event.target.checked)
-                }
-                disabled={loading}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-              />
-              <div className="min-w-0 flex-1">
-                <label
-                  htmlFor="enableResearch"
-                  className="text-sm font-medium text-foreground/90"
-                >
-                  Enable Smart Research
-                </label>
-                <p className={`${studioSubtleText} mt-1`}>
-                  {factHandlingMode === "creative_premise"
-                    ? "Research may enrich or cross-check the story. Premise facts stay creator-supplied and unverified — research never overwrites them."
-                    : "Supporting facts are gathered automatically when you write your story. Research absence does not block a qualitative draft."}
-                </p>
-              </div>
-            </div>
+            <StudioSwitch
+              id="enableResearch"
+              checked={enableResearch}
+              onChange={(event) =>
+                onEnableResearchChange(event.target.checked)
+              }
+              disabled={loading}
+              label="Smart Research"
+              description={
+                factHandlingMode === "creative_premise"
+                  ? "Research may enrich or cross-check the story. Premise facts stay creator-supplied and unverified — research never overwrites them."
+                  : "Supporting facts are gathered automatically when you write your story. Research absence does not block a qualitative draft."
+              }
+            />
 
             <div className="mt-4 border-t border-border/20 pt-4">
               <ResearchPreviewPanel
@@ -370,9 +360,8 @@ export default function CreateBriefInspector({
                 <label htmlFor="sceneCount" className={studioFieldLabel}>
                   Number of scenes
                 </label>
-                <input
+                <StudioNumberStepper
                   id="sceneCount"
-                  type="number"
                   min={MIN_SCENE_COUNT}
                   max={MAX_SCENE_COUNT}
                   step={1}
@@ -389,8 +378,10 @@ export default function CreateBriefInspector({
                       ),
                     );
                   }}
+                  onStepValue={onSceneCountChange}
                   disabled={loading}
-                  className={`${studioComposerSelect} mt-1.5`}
+                  aria-label="Number of scenes"
+                  className="mt-1.5"
                 />
               </div>
             </div>
