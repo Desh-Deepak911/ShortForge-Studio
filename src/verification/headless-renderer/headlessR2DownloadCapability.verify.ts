@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { MemoryHeadlessOwnedObjectStoreAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-owned-object-store.adapter";
 import { R2DownloadCapabilityAdapter } from "@/features/headless-renderer/control-plane/adapters/r2-download-capability.adapter";
 import { UnavailableHeadlessDownloadCapabilityAdapter } from "@/features/headless-renderer/control-plane";
+import type { HeadlessDownloadCapabilityPort } from "@/features/headless-renderer/control-plane/ports/download-capability.port";
 import type { HeadlessJobStorePort } from "@/features/headless-renderer/control-plane/ports/job-store.port";
 import type { HeadlessConfiguredR2Config } from "@/features/headless-renderer/control-plane/runtime/r2-environment";
 import { cpFail, cpOk } from "@/features/headless-renderer/control-plane";
@@ -153,7 +154,8 @@ async function main() {
   console.log("\nSprint 11E Phase 2C.1 — R2 download capability\n");
 
   await test("unavailable adapter", async () => {
-    const adapter = new UnavailableHeadlessDownloadCapabilityAdapter();
+    const adapter: HeadlessDownloadCapabilityPort =
+      new UnavailableHeadlessDownloadCapabilityAdapter();
     const result = await adapter.issueArtifactGetCapability({
       ownerId: "owner_1",
       jobId: "job_dl",

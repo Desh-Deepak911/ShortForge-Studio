@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { MemoryHeadlessOwnedObjectStoreAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-owned-object-store.adapter";
 import { R2UploadCapabilityAdapter } from "@/features/headless-renderer/control-plane/adapters/r2-upload-capability.adapter";
 import { UnavailableHeadlessUploadCapabilityAdapter } from "@/features/headless-renderer/control-plane";
+import type { HeadlessUploadCapabilityPort } from "@/features/headless-renderer/control-plane/ports/upload-capability.port";
 import type { HeadlessConfiguredR2Config } from "@/features/headless-renderer/control-plane/runtime/r2-environment";
 
 let passed = 0;
@@ -56,7 +57,8 @@ async function main() {
   console.log("\nSprint 11E Phase 2C.1 — R2 upload capability\n");
 
   await test("unavailable adapter returns CONFIGURATION_UNAVAILABLE", async () => {
-    const adapter = new UnavailableHeadlessUploadCapabilityAdapter();
+    const adapter: HeadlessUploadCapabilityPort =
+      new UnavailableHeadlessUploadCapabilityAdapter();
     const result = await adapter.issueDirectPutCapability({
       ownerId: "o",
       projectId: "p",

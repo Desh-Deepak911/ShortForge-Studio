@@ -134,12 +134,16 @@ async function main() {
     assert.equal(fake.testingLength("hfq:render-dlq:local"), 1);
   });
 
-  await test("TCP consumer refuses enqueue", async () => {
-    const consumer = new UpstashTcpStreamConsumerAdapter({
-      client: createFakeIoredisLike(new FakeRedisStreams()),
-      envName: "local",
+  await test("TCP consumer refuses enqueue when unconfigured", async () => {
+    const consumer = new UpstashTcpStreamConsumerAdapter();
+    const enq = await consumer.enqueueRender({
+      deliveryId: "dlv:job_d:1",
+      jobId: "job_d",
+      ownerId: "owner_1",
+      attempt: 1,
+      enqueuedAtMs: 1000,
+      deliveryKind: "render",
     });
-    const enq = await consumer.enqueueRender();
     assert.equal(enq.ok, false);
     if (enq.ok) return;
     assert.equal(enq.issues[0]?.code, "CONFIGURATION_UNAVAILABLE");
