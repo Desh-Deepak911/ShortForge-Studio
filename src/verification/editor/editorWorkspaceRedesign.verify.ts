@@ -78,7 +78,7 @@ export function runEditorWorkspaceRedesignTests(): void {
       }),
       {
         ...DEFAULT_EDITOR_WORKSPACE_LAYOUT,
-        inspectorWidthPx: 460,
+        inspectorWidthPx: 520,
         timelineHeightPx: 112,
       },
     );
@@ -141,6 +141,9 @@ export function runEditorWorkspaceRedesignTests(): void {
       "onApplyVideoTrim",
       "TimelineTransitionMarker",
       "SceneMediaTimelineLane",
+      "data-selected-scene-media-editor",
+      "timelineEditorSelectedMediaLane",
+      "Detailed controls",
     ]) {
       assert.match(timeline, new RegExp(marker));
     }
@@ -158,6 +161,8 @@ export function runEditorWorkspaceRedesignTests(): void {
     assert.match(workspace, /setMobileInspectorOpen\(false\)/);
     assert.match(workspace, /max-width: 1023px/);
     assert.match(layoutStorage, /localStorage/);
+    assert.match(layoutStorage, /workspace-layout\.v2/);
+    assert.match(workspace, /sidebarNarrow: false/);
     assert.match(layoutHook, /keydown/);
     assert.match(layoutHook, /beginInspectorResize/);
     assert.match(layoutHook, /beginTimelineResize/);

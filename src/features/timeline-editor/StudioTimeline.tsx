@@ -52,6 +52,7 @@ import {
   timelineEditorPlaybackLocked,
   timelineEditorRailResizing,
   timelineEditorRailScroll,
+  timelineEditorSelectedMediaLane,
   timelineEditorRailTrimming,
   timelineEditorSegmentRow,
   timelineEditorTrackSurface,
@@ -361,6 +362,10 @@ export default function StudioTimeline({
   const sceneById = useMemo(() => {
     return new Map(script.scenes.map((scene) => [scene.id, scene]));
   }, [script.scenes]);
+  const selectedScene =
+    sceneById.get(selection.selectedSceneId ?? "") ??
+    script.scenes[selection.selectedSceneIndex] ??
+    null;
 
   const sceneIndexById = useMemo(() => {
     const orderIds =
@@ -1359,8 +1364,7 @@ export default function StudioTimeline({
                       wrapperRefs.current.set(segment.block.sceneId, element);
                     }}
                     mediaLane={
-                      (!selectedSceneDetailOnly || isSelected) &&
-                      showSelectedSceneMedia ? (
+                      !selectedSceneDetailOnly && showSelectedSceneMedia ? (
                         <SceneMediaTimelineLane
                           scene={scene}
                           script={script}
@@ -1399,6 +1403,48 @@ export default function StudioTimeline({
                 );
               })}
             </div>
+            {selectedSceneDetailOnly &&
+            showSelectedSceneMedia &&
+            selectedScene ? (
+              <section
+                className={timelineEditorSelectedMediaLane}
+                data-selected-scene-media-editor={selectedScene.id}
+                aria-label={`Selected scene ${selection.selectedSceneIndex + 1} media`}
+              >
+                <div className="mb-2 flex min-w-0 items-center justify-between gap-3 px-1">
+                  <p className="truncate text-[11px] font-semibold text-foreground/90">
+                    Scene {selection.selectedSceneIndex + 1} media
+                  </p>
+                  <p className="shrink-0 text-[10px] text-muted">
+                    Detailed controls
+                  </p>
+                </div>
+                <SceneMediaTimelineLane
+                  scene={selectedScene}
+                  script={script}
+                  onScriptChange={onScriptChange}
+                  selectedMediaItemId={selection.selectedMediaItemId}
+                  onSelectMediaItem={selection.selectSceneMediaItem}
+                  selectedMediaTransition={selection.selectedMediaTransition}
+                  onSelectMediaTransition={
+                    selection.selectSceneMediaTransition
+                  }
+                  appendApi={appendApi}
+                  playbackLocked={playbackLocked}
+                  interactionLocked={
+                    sceneMediaLaneBaseLocked ||
+                    isMediaBoundaryLaneLocked(
+                      mediaBoundaryOwnerSceneId,
+                      selectedScene.id,
+                    )
+                  }
+                  boundaryOwnerSceneId={mediaBoundaryOwnerSceneId}
+                  onTryAcquireBoundary={tryAcquireMediaBoundary}
+                  onReleaseBoundary={releaseMediaBoundary}
+                  boundaryCancelEpoch={boundaryCancelEpoch}
+                />
+              </section>
+            ) : null}
             {showPlaybackHead ? (
               <TimelinePlaybackHead
                 progress={playbackProgress}

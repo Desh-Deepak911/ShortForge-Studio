@@ -10,7 +10,7 @@ import {
 } from "./editor-workspace-layout.types";
 
 export const EDITOR_WORKSPACE_LAYOUT_STORAGE_KEY =
-  "shortforge.editor.workspace-layout.v1";
+  "shortforge.editor.workspace-layout.v2";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(value)));

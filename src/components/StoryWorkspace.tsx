@@ -524,7 +524,7 @@ function StoryWorkspaceContent({
             inspectorWidthPx: workspaceLayout.inspectorWidthPx,
             timelineDensity: workspaceLayout.timelineDensity,
             timelineHeightPx: workspaceLayout.timelineHeightPx,
-            sidebarNarrow: !workspaceLayout.inspectorCollapsed,
+            sidebarNarrow: false,
             onSidebarToggle: workspaceLayout.toggleSidebar,
             onInspectorToggle: handleInspectorToggle,
             onInspectorResizePointerDown: workspaceLayout.beginInspectorResize,
