@@ -1,21 +1,37 @@
 "use client";
 
-import { Download, Film, Play } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Download, Film, Play, SlidersHorizontal } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 
 import ExportPanel from "@/components/ExportPanel";
-import { ExportDrawer, StudioShell, StudioContextRibbon } from "@/components/studio-shell";
+import {
+  ExportDrawer,
+  StudioShell,
+  StudioContextRibbon,
+} from "@/components/studio-shell";
 import EditorProjectSidebar from "@/features/editor/components/EditorProjectSidebar";
+import EditorCanvasToolbar from "@/features/editor/components/EditorCanvasToolbar";
 import ImageRibbonContext from "@/features/editor/components/ImageRibbonContext";
 import EditorStudioHeader from "@/features/editor/components/EditorStudioHeader";
+import EditorWorkflowStatus from "@/features/editor/components/EditorWorkflowStatus";
 import {
   useCreatorAssetPlanningCache,
   useCreatorAssetStudioVisible,
 } from "@/features/editor/creator-asset-planning/useCreatorAssetPlanningCache";
-import { InspectorContextProvider, InspectorResolver } from "@/features/editor/inspector";
-import { focusInspectorProjectTab } from "@/features/editor/inspector/inspector-tab-shell.session";
+import {
+  InspectorContextProvider,
+  InspectorResolver,
+} from "@/features/editor/inspector";
+import {
+  focusInspectorProjectTab,
+  focusInspectorSceneWorkspace,
+} from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
-import { EditorSelectionProvider, useEditorSelection } from "@/features/editor/selection";
+import {
+  EditorSelectionProvider,
+  useEditorSelection,
+} from "@/features/editor/selection";
+import { useEditorWorkspaceLayout } from "@/features/editor/workspace-layout";
 import {
   StudioTimeline,
   TimelinePlaybackPortProvider,
@@ -33,12 +49,10 @@ import {
   NO_USABLE_NARRATION_WARNING,
   formatUnsafeNarrationRebuildWarning,
   rebuildNarrationFromScenes,
-  StorySynchronizationBanner,
-  SynchronizationStatusCard,
   useOptionalStorySync,
 } from "@/features/story-sync";
 import type { SceneImageTransformPatch } from "@/features/story/utils";
-import { getSceneImage } from "@/features/story/utils";
+import { getSceneImage, sceneHasMedia } from "@/features/story/utils";
 import { applyPendingSceneCaptionDrafts } from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
 import {
   applyMediaFramingSettings,
@@ -57,7 +71,11 @@ import {
   studioShellEditorPreviewStage,
   studioShellEditorPreviewWrap,
 } from "@/lib/utils/studioUi";
-import type { ExportSettings, FootieScript, SceneImage } from "@/features/story/types";
+import type {
+  ExportSettings,
+  FootieScript,
+  SceneImage,
+} from "@/features/story/types";
 import type { StoryCreationBrief } from "@/features/drafts/types";
 import type { ScriptMode } from "@/types/footiebitz";
 
@@ -65,7 +83,10 @@ interface StoryWorkspaceProps {
   script: FootieScript;
   /** Bumped by DraftEditorFlow when preview master timeline must rebuild. */
   timelineEpoch?: number;
-  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
+  onScriptChange: (
+    script: FootieScript,
+    options?: StoryScriptChangeOptions,
+  ) => void;
   selectedSceneIndex: number;
   onSelectedSceneChange: (index: number) => void;
   onExportSettingsChange?: (settings: ExportSettings) => void;
@@ -119,13 +140,40 @@ function StoryWorkspaceContent({
 }: StoryWorkspaceProps) {
   const [exportDrawerOpen, setExportDrawerOpen] = useState(false);
   const [exportActive, setExportActive] = useState(false);
-  const [narrationRebuildWarning, setNarrationRebuildWarning] = useState<string | null>(null);
+  const [narrationRebuildWarning, setNarrationRebuildWarning] = useState<
+    string | null
+  >(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const workspaceLayout = useEditorWorkspaceLayout();
   const publishTimelinePlayback = useTimelinePlaybackPublisher();
   const creatorAssetStudioVisible = useCreatorAssetStudioVisible();
-  const assetPlanning = useCreatorAssetPlanningCache(draftId, script, scriptMode);
-  const {
-    selectedSceneId,
-  } = useEditorSelection();
+  const assetPlanning = useCreatorAssetPlanningCache(
+    draftId,
+    script,
+    scriptMode,
+  );
+  const { selectedSceneId } = useEditorSelection();
+  const missingMediaScenes = useMemo(
+    () => script.scenes.filter((scene) => !sceneHasMedia(scene)),
+    [script.scenes],
+  );
+  const firstMissingScene = missingMediaScenes[0] ?? null;
+  const missingMediaWarning =
+    missingMediaScenes.length > 0
+      ? `${missingMediaScenes.length === 1 ? "One scene has" : `${missingMediaScenes.length} scenes have`} no media. Add media before saving or exporting.`
+      : null;
+  const effectivePersistWarning = persistWarning ?? missingMediaWarning;
+  const effectiveSaveDisabled =
+    saveDraftDisabled || missingMediaScenes.length > 0;
+  const effectiveExportDisabled =
+    exportDisabled || missingMediaScenes.length > 0;
+  const previewMaxWidth =
+    workspaceLayout.previewSize === "125"
+      ? "360px"
+      : workspaceLayout.previewSize === "100"
+        ? "288px"
+        : "min(100%, calc((100dvh - 24rem) * 0.5625))";
 
   const storySync = useOptionalStorySync();
 
@@ -151,7 +199,9 @@ function StoryWorkspaceContent({
     const result = rebuildNarrationFromScenes(scriptWithDrafts);
     if (!result.ok) {
       if (result.reason === "unsafe_partial_rebuild") {
-        setNarrationRebuildWarning(formatUnsafeNarrationRebuildWarning(result.blockedSceneNumbers));
+        setNarrationRebuildWarning(
+          formatUnsafeNarrationRebuildWarning(result.blockedSceneNumbers),
+        );
       } else {
         setNarrationRebuildWarning(NO_USABLE_NARRATION_WARNING);
       }
@@ -180,20 +230,27 @@ function StoryWorkspaceContent({
 
   const handleSceneImageTransformChange = useCallback(
     (sceneId: string, patch: SceneImageTransformPatch) => {
-      onScriptChange(applyMediaFramingSettings(script, sceneId, patch), { intent: "media" });
+      onScriptChange(applyMediaFramingSettings(script, sceneId, patch), {
+        intent: "media",
+      });
     },
     [onScriptChange, script],
   );
 
   const handleSceneImageReset = useCallback(
     (sceneId: string) => {
-      onScriptChange(applyResetMediaFramingSettings(script, sceneId), { intent: "media" });
+      onScriptChange(applyResetMediaFramingSettings(script, sceneId), {
+        intent: "media",
+      });
     },
     [onScriptChange, script],
   );
 
   const handleApplyVideoTrim = useCallback(
-    (sceneId: string, trim: { trimStartMs: number; trimEndMs: number }): boolean => {
+    (
+      sceneId: string,
+      trim: { trimStartMs: number; trimEndMs: number },
+    ): boolean => {
       const target = script.scenes.find((entry) => entry.id === sceneId);
       if (!target) {
         return false;
@@ -204,7 +261,9 @@ function StoryWorkspaceContent({
         return false;
       }
 
-      onScriptChange(applySceneUpdate(script, sceneId, result.patch), { intent: "media" });
+      onScriptChange(applySceneUpdate(script, sceneId, result.patch), {
+        intent: "media",
+      });
       return true;
     },
     [onScriptChange, script],
@@ -231,9 +290,16 @@ function StoryWorkspaceContent({
 
   const handleCaptionLayoutReset = useCallback(
     (sceneId: string) => {
-      onScriptChange(applyPresentationSceneUpdate(script, sceneId, buildResetCaptionLayoutPatch()), {
-        intent: "presentation",
-      });
+      onScriptChange(
+        applyPresentationSceneUpdate(
+          script,
+          sceneId,
+          buildResetCaptionLayoutPatch(),
+        ),
+        {
+          intent: "presentation",
+        },
+      );
     },
     [onScriptChange, script],
   );
@@ -244,7 +310,9 @@ function StoryWorkspaceContent({
     selectedSceneId != null
       ? (script.scenes.find((scene) => scene.id === selectedSceneId) ?? null)
       : null;
-  const selectedSceneImage = selectedScene ? getSceneImage(selectedScene) : undefined;
+  const selectedSceneImage = selectedScene
+    ? getSceneImage(selectedScene)
+    : undefined;
 
   const handleRibbonFitModeChange = useCallback(
     (fitMode: NonNullable<SceneImage["fitMode"]>) => {
@@ -277,112 +345,197 @@ function StoryWorkspaceContent({
   );
 
   const scrollToPreview = () => {
-    document.getElementById("studio-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setMobileSidebarOpen(false);
+    setMobileInspectorOpen(false);
+    document
+      .getElementById("studio-preview")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const scrollToScenes = () => {
-    document.getElementById("studio-sidebar-scenes")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    setMobileInspectorOpen(false);
+    setMobileSidebarOpen(true);
   };
+
+  const openMobileInspector = useCallback(() => {
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setMobileInspectorOpen(true);
+    }
+  }, []);
+
+  const handleInspectorToggle = useCallback(() => {
+    // Desktop actions may previously have opened the mobile drawer state.
+    // Clear it before toggling so it cannot suppress the collapsed rail.
+    setMobileInspectorOpen(false);
+    workspaceLayout.toggleInspector();
+  }, [workspaceLayout]);
+
+  const focusSceneMedia = useCallback(() => {
+    if (firstMissingScene) {
+      document
+        .querySelector<HTMLElement>(
+          `[data-scene-sidebar-id="${CSS.escape(firstMissingScene.id)}"]`,
+        )
+        ?.click();
+    }
+    if (workspaceLayout.inspectorCollapsed) {
+      workspaceLayout.toggleInspector();
+    }
+    openMobileInspector();
+    focusInspectorSceneWorkspace("media");
+  }, [firstMissingScene, openMobileInspector, workspaceLayout]);
 
   return (
     <>
-      <SceneMediaImageAppendProvider script={script} onScriptChange={onScriptChange}>
-      <StudioShell
-        aria-label="Editor"
-        viewportMode="fixed"
-        canvasCenterContent={false}
-        canvasLayout="editor"
-        sidebarVisibleBelowLg
-        className="h-full min-h-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
-        header={
-          <EditorStudioHeader
-            projectTitle={projectTitle}
-            projectMeta={projectMeta}
-            onSaveDraft={onSaveDraft}
-            saveDraftDisabled={saveDraftDisabled}
-            saveDraftConfirmation={saveDraftConfirmation}
-            onExport={openExportDrawer}
-            exportDisabled={exportDisabled}
-            persistWarning={persistWarning}
-          />
-        }
-        sidebar={
-          <EditorProjectSidebar script={script} projectTitle={projectTitle} />
-        }
-        canvas={
-          <div
-            id="studio-preview"
-            className={`${studioShellEditorCanvasMaxWidth} ${studioShellEditorCanvasColumn} ${studioShellEditorCanvasInset} scroll-mt-24`}
-          >
-            <StudioContextRibbon
-              renderers={{
-                image: selectedSceneImage ? (
-                  <ImageRibbonContext
-                    fitMode={selectedSceneImage.fitMode}
-                    scale={selectedSceneImage.scale}
-                    onReplaceImage={handleRibbonReplace}
-                    onFitModeChange={handleRibbonFitModeChange}
-                    onReset={handleRibbonReset}
-                  />
-                ) : null,
+      <SceneMediaImageAppendProvider
+        script={script}
+        onScriptChange={onScriptChange}
+      >
+        <StudioShell
+          aria-label="Editor"
+          viewportMode="fixed"
+          canvasCenterContent={false}
+          canvasLayout="editor"
+          focusMode={workspaceLayout.focusMode}
+          className="h-full min-h-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
+          header={
+            <EditorStudioHeader
+              projectTitle={projectTitle}
+              projectMeta={projectMeta}
+              onSaveDraft={onSaveDraft}
+              saveDraftDisabled={effectiveSaveDisabled}
+              saveDraftConfirmation={saveDraftConfirmation}
+              onExport={openExportDrawer}
+              exportDisabled={effectiveExportDisabled}
+              persistWarning={effectivePersistWarning}
+              workflowStatus={
+                <EditorWorkflowStatus
+                  script={script}
+                  persistWarning={effectivePersistWarning}
+                  saveDraftConfirmation={saveDraftConfirmation}
+                  warning={narrationRebuildWarning}
+                  onUpdateNarration={handleUpdateNarration}
+                  onGenerateVoice={focusVoiceoverSection}
+                  onExportUpdated={openExportDrawer}
+                  persistActionLabel={
+                    missingMediaScenes.length > 0 ? "Add media" : "Retry save"
+                  }
+                  onPersistAction={
+                    missingMediaScenes.length > 0
+                      ? focusSceneMedia
+                      : onSaveDraft
+                  }
+                />
+              }
+            />
+          }
+          sidebar={
+            <EditorProjectSidebar
+              script={script}
+              projectTitle={projectTitle}
+              collapsed={workspaceLayout.sidebarCollapsed}
+              mobileOpen={mobileSidebarOpen}
+              onCollapsedToggle={workspaceLayout.toggleSidebar}
+              onRequestMediaForScene={() => {
+                if (workspaceLayout.inspectorCollapsed) {
+                  workspaceLayout.toggleInspector();
+                }
+                openMobileInspector();
+                focusInspectorSceneWorkspace("media");
               }}
             />
-            <div className={studioShellEditorPreviewStage}>
-              <div className={studioShellEditorPreviewWrap}>
-                <VideoPreview
-                  script={script}
-                  enableCanvasEdit
-                  canvasEditBlocked={exportActive}
-                  onSceneImageTransformChange={handleSceneImageTransformChange}
-                  onSceneImageReset={handleSceneImageReset}
-                  onCaptionLayoutOffsetCommit={handleCaptionLayoutOffsetCommit}
-                  onCaptionLayoutReset={handleCaptionLayoutReset}
-                  onClockUpdate={publishTimelinePlayback}
-                  onPreviewStart={handlePreviewStart}
-                />
+          }
+          canvas={
+            <div
+              id="studio-preview"
+              className={`${studioShellEditorCanvasMaxWidth} ${studioShellEditorCanvasColumn} ${studioShellEditorCanvasInset} scroll-mt-24`}
+            >
+              <EditorCanvasToolbar
+                previewSize={workspaceLayout.previewSize}
+                focusMode={workspaceLayout.focusMode}
+                onPreviewSizeChange={workspaceLayout.setPreviewSize}
+                onFocusModeToggle={workspaceLayout.toggleFocusMode}
+                onResetLayout={workspaceLayout.resetLayout}
+              />
+              <StudioContextRibbon
+                renderers={{
+                  image: selectedSceneImage ? (
+                    <ImageRibbonContext
+                      fitMode={selectedSceneImage.fitMode}
+                      scale={selectedSceneImage.scale}
+                      onReplaceImage={handleRibbonReplace}
+                      onFitModeChange={handleRibbonFitModeChange}
+                      onReset={handleRibbonReset}
+                    />
+                  ) : null,
+                }}
+              />
+              <div className={studioShellEditorPreviewStage}>
+                <div className={studioShellEditorPreviewWrap}>
+                  <VideoPreview
+                    script={script}
+                    previewMaxWidth={previewMaxWidth}
+                    enableCanvasEdit
+                    canvasEditBlocked={exportActive}
+                    onSceneImageTransformChange={
+                      handleSceneImageTransformChange
+                    }
+                    onSceneImageReset={handleSceneImageReset}
+                    onCaptionLayoutOffsetCommit={
+                      handleCaptionLayoutOffsetCommit
+                    }
+                    onCaptionLayoutReset={handleCaptionLayoutReset}
+                    onClockUpdate={publishTimelinePlayback}
+                    onPreviewStart={handlePreviewStart}
+                  />
+                </div>
               </div>
+              <TimelineDeveloperView script={script} />
             </div>
-            <TimelineDeveloperView script={script} />
-          </div>
-        }
-        inspectorBanner={
-          <StorySynchronizationBanner
-            script={script}
-            onUpdateNarration={handleUpdateNarration}
-            onGenerateVoice={focusVoiceoverSection}
-            onExportUpdated={openExportDrawer}
-          />
-        }
-        inspector={
-          <InspectorContextProvider
-            script={script}
-            onScriptChange={onScriptChange}
-            storyId={draftId}
-            assetPlanning={assetPlanning}
-            creatorAssetStudioVisible={creatorAssetStudioVisible}
-          >
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-              <div className="mb-3 shrink-0">
-                <SynchronizationStatusCard
-                  script={script}
-                  onUpdateNarration={handleUpdateNarration}
-                  onRegenerateVoice={focusVoiceoverSection}
-                  warning={narrationRebuildWarning}
-                />
+          }
+          inspector={
+            <InspectorContextProvider
+              script={script}
+              onScriptChange={onScriptChange}
+              storyId={draftId}
+              assetPlanning={assetPlanning}
+              creatorAssetStudioVisible={creatorAssetStudioVisible}
+            >
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <InspectorResolver />
               </div>
-              <InspectorResolver />
-            </div>
-          </InspectorContextProvider>
-        }
-        timeline={
-          <StudioTimeline
-            id="studio-timeline-rail"
-            script={script}
-            onScriptChange={onScriptChange}
-            onApplyVideoTrim={handleApplyVideoTrim}
-          />
-        }
-      />
+            </InspectorContextProvider>
+          }
+          timeline={
+            <StudioTimeline
+              id="studio-timeline-rail"
+              script={script}
+              onScriptChange={onScriptChange}
+              onApplyVideoTrim={handleApplyVideoTrim}
+              selectedSceneDetailOnly
+              showSelectedSceneMedia={
+                workspaceLayout.timelineDensity !== "compact"
+              }
+            />
+          }
+          editorLayout={{
+            sidebarCollapsed: workspaceLayout.sidebarCollapsed,
+            inspectorCollapsed: workspaceLayout.inspectorCollapsed,
+            inspectorWidthPx: workspaceLayout.inspectorWidthPx,
+            timelineDensity: workspaceLayout.timelineDensity,
+            timelineHeightPx: workspaceLayout.timelineHeightPx,
+            sidebarNarrow: false,
+            onSidebarToggle: workspaceLayout.toggleSidebar,
+            onInspectorToggle: handleInspectorToggle,
+            onInspectorResizePointerDown: workspaceLayout.beginInspectorResize,
+            onTimelineDensityChange: workspaceLayout.setTimelineDensity,
+            onTimelineResizePointerDown: workspaceLayout.beginTimelineResize,
+            mobileSidebarOpen,
+            mobileInspectorOpen,
+            onMobileSidebarOpenChange: setMobileSidebarOpen,
+            onMobileInspectorOpenChange: setMobileInspectorOpen,
+          }}
+        />
       </SceneMediaImageAppendProvider>
 
       <ExportDrawer open={exportDrawerOpen} onOpenChange={setExportDrawerOpen}>
@@ -400,20 +553,43 @@ function StoryWorkspaceContent({
         />
       </ExportDrawer>
 
-      <div className={studioMobileActionBar} role="toolbar" aria-label="Storyboard actions">
+      <div
+        className={studioMobileActionBar}
+        role="toolbar"
+        aria-label="Storyboard actions"
+      >
         <div className="mx-auto flex min-w-0 max-w-lg gap-1.5 px-3.5 sm:gap-2 sm:px-4">
-          <button type="button" onClick={scrollToScenes} className={studioMobileActionButton}>
+          <button
+            type="button"
+            onClick={scrollToScenes}
+            className={studioMobileActionButton}
+          >
             <Film className="h-3.5 w-3.5" />
             Scenes
           </button>
-          <button type="button" onClick={scrollToPreview} className={studioMobileActionButton}>
+          <button
+            type="button"
+            onClick={scrollToPreview}
+            className={studioMobileActionButton}
+          >
             <Play className="h-3.5 w-3.5" />
             Preview
           </button>
           <button
             type="button"
+            onClick={() => {
+              setMobileSidebarOpen(false);
+              setMobileInspectorOpen(true);
+            }}
+            className={studioMobileActionButton}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Tools
+          </button>
+          <button
+            type="button"
             onClick={openExportDrawer}
-            disabled={exportDisabled}
+            disabled={effectiveExportDisabled}
             className={studioMobileActionButtonPrimary}
           >
             <Download className="h-3.5 w-3.5" />

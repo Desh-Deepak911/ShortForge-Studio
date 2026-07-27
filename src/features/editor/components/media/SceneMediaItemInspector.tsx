@@ -46,19 +46,28 @@ import {
   updateSceneMediaItemMedia,
   type SceneMediaItemTempScene,
 } from "@/features/scene-media-timeline";
-import type { FootieScene, FootieScript, SceneMedia } from "@/features/story/types";
+import type {
+  FootieScene,
+  FootieScript,
+  SceneMedia,
+} from "@/features/story/types";
 import { getSceneDurationMs } from "@/features/story/utils/scene.utils";
+import { studioFieldLabel, studioSubtleText } from "@/lib/utils/studioUi";
 import {
-  studioFieldLabel,
-  studioSubtleText,
-} from "@/lib/utils/studioUi";
-import { applySceneUpdate, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
+  applySceneUpdate,
+  type StoryScriptChangeOptions,
+} from "@/lib/utils/voiceover";
 
 export interface SceneMediaItemInspectorProps {
   script: FootieScript;
   scene: FootieScene;
   mediaItemId: string;
-  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
+  onScriptChange: (
+    script: FootieScript,
+    options?: StoryScriptChangeOptions,
+  ) => void;
+  /** UI-only grouping; edit and commit paths remain identical. */
+  section?: "all" | "media" | "adjust";
 }
 
 type SafeInspectorError = "rejected_edit" | "playback_locked";
@@ -81,6 +90,7 @@ export default function SceneMediaItemInspector({
   scene,
   mediaItemId,
   onScriptChange,
+  section = "all",
 }: SceneMediaItemInspectorProps) {
   const selection = useEditorSelection();
   const playbackLocked = selection.phase === SelectionPhase.PlaybackLocked;
@@ -88,7 +98,9 @@ export default function SceneMediaItemInspector({
 
   const projected = projectSceneMediaTimeline(scene);
   const windows = resolveProjectedSceneMediaWindows(scene);
-  const itemIndex = projected.items.findIndex((item) => item.id === mediaItemId);
+  const itemIndex = projected.items.findIndex(
+    (item) => item.id === mediaItemId,
+  );
   const item = itemIndex >= 0 ? projected.items[itemIndex] : null;
   const window = itemIndex >= 0 ? windows[itemIndex] : null;
   const itemCount = projected.items.length;
@@ -149,7 +161,12 @@ export default function SceneMediaItemInspector({
 
   const framing = resolveSceneMediaFraming({ media }, { media });
   const motion = resolveSceneMediaMotion({ media });
-  const typeLabel = media.type === "video" ? "Video" : media.type === "image" ? "Image" : "Media";
+  const typeLabel =
+    media.type === "video"
+      ? "Video"
+      : media.type === "image"
+        ? "Image"
+        : "Media";
   const controlsDisabled = playbackLocked;
   const thumbLabel = `Selected ${typeLabel.toLowerCase()} thumbnail`;
   const imageThumbUrl =
@@ -161,7 +178,9 @@ export default function SceneMediaItemInspector({
       ? media.url.trim()
       : null;
   const videoPosterUrl =
-    media.type === "video" && typeof media.posterUrl === "string" && media.posterUrl.trim()
+    media.type === "video" &&
+    typeof media.posterUrl === "string" &&
+    media.posterUrl.trim()
       ? media.posterUrl.trim()
       : undefined;
 
@@ -224,7 +243,7 @@ export default function SceneMediaItemInspector({
         </p>
       ) : null}
 
-      {media.type === "video" ? (
+      {section !== "adjust" && media.type === "video" ? (
         <SceneVideoInspector
           media={media}
           sceneId={scene.id}
@@ -262,7 +281,10 @@ export default function SceneMediaItemInspector({
           }
           onFramingChange={(patch) => {
             runWithTempScene((temp) => {
-              const result = buildMediaFramingPatch(temp, patch as SceneMediaFramingPatch);
+              const result = buildMediaFramingPatch(
+                temp,
+                patch as SceneMediaFramingPatch,
+              );
               return result?.media ? { media: result.media } : null;
             });
           }}
@@ -273,7 +295,7 @@ export default function SceneMediaItemInspector({
             });
           }}
         />
-      ) : media.type === "image" ? (
+      ) : section !== "adjust" && media.type === "image" ? (
         <SceneImageInspector
           variant="standalone"
           showHeader={false}
@@ -318,11 +340,14 @@ export default function SceneMediaItemInspector({
             });
           }}
         />
-      ) : (
-        <p className={studioSubtleText}>This media type cannot be edited here yet.</p>
-      )}
+      ) : section !== "adjust" ? (
+        <p className={studioSubtleText}>
+          This media type cannot be edited here yet.
+        </p>
+      ) : null}
 
-      {media.type === "image" || media.type === "video" ? (
+      {section !== "media" &&
+      (media.type === "image" || media.type === "video") ? (
         <>
           <MediaMotionInspectorPanel
             controlId={`inspector-media-item-motion-${scene.id}-${mediaItemId}`}
@@ -344,8 +369,12 @@ export default function SceneMediaItemInspector({
           <MediaVisualAdjustmentsPanel
             media={media}
             disabled={controlsDisabled}
-            onChange={(patch) => commitItemMedia(patchSceneMediaVisualAdjustments(media, patch))}
-            onReset={() => commitItemMedia(resetSceneMediaVisualAdjustments(media))}
+            onChange={(patch) =>
+              commitItemMedia(patchSceneMediaVisualAdjustments(media, patch))
+            }
+            onReset={() =>
+              commitItemMedia(resetSceneMediaVisualAdjustments(media))
+            }
           />
         </>
       ) : null}

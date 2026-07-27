@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 
 import { StudioConfirmDialog } from "@/components/studio-overlay";
 import { deleteDraft, getDraft, listDrafts, resolveDraftHref, toDraftSummary } from "@/features/drafts";
+import { hydrateDraftWithAudioAssets } from "@/features/drafts/services/draft-audio-storage.service";
 import { clearDraftSession, seedDraftSession } from "@/features/drafts/session";
 import type { DraftWorkflowStatus, StoryDraftSummary } from "@/features/drafts";
 import {
@@ -154,8 +155,12 @@ export default function DraftsDashboard() {
                       onClick={() => {
                         const storedDraft = getDraft(draft.id);
                         if (storedDraft) {
-                          seedDraftSession(storedDraft);
-                          router.push(resolveDraftHref(storedDraft));
+                          void hydrateDraftWithAudioAssets(storedDraft).then(
+                            (hydratedDraft) => {
+                              seedDraftSession(hydratedDraft);
+                              router.push(resolveDraftHref(hydratedDraft));
+                            },
+                          );
                           return;
                         }
 

@@ -106,14 +106,17 @@ export default function ProjectAudioVoiceoverSection({
   const selectedStylePreset = voiceSettings.stylePreset;
   const expressiveDelivery = voiceSettings.expressiveDelivery;
   const hasNarration = script.narration.trim().length > 0;
-  const isBusy = regenerateLoading || uploadLoading || persistStatus === "pending";
+  const isBusy =
+    regenerateLoading || uploadLoading || persistStatus === "pending";
   const durationLabel =
     status.durationMs != null && status.durationMs > 0
       ? formatDisplayDurationMs(status.durationMs)
       : "—";
   const primaryCtaLabel = resolvePrimaryCtaLabel(status.kind);
   const usePrimaryStyle =
-    status.kind === "missing" || status.kind === "unplayable" || status.kind === "stale";
+    status.kind === "missing" ||
+    status.kind === "unplayable" ||
+    status.kind === "stale";
   const voiceoverDisabledReason = isBusy
     ? regenerateLoading
       ? "Voiceover is generating"
@@ -229,11 +232,17 @@ export default function ProjectAudioVoiceoverSection({
       </div>
 
       {status.kind === "stale" ? (
-        <StudioStatus variant="warning" layout="panel" description={status.detail} />
+        <StudioStatus
+          variant="warning"
+          layout="panel"
+          description={status.detail}
+        />
       ) : null}
 
       {status.kind === "unplayable" ? (
-        <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>{status.detail}</p>
+        <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>
+          {status.detail}
+        </p>
       ) : null}
 
       {voiceOutOfSync ? (
@@ -242,13 +251,8 @@ export default function ProjectAudioVoiceoverSection({
           data-story-sync-voice-guidance
           className={`${studioSubtleText} text-[11px] leading-relaxed text-amber-100/90`}
         >
-          Your narration changed. Regenerate voiceover to sync preview and export.
-        </p>
-      ) : null}
-
-      {status.hasPlayableAudio ? (
-        <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>
-          Use the canvas Play button to preview voiceover with video.
+          Your narration changed. Regenerate voiceover to sync preview and
+          export.
         </p>
       ) : null}
 
@@ -264,7 +268,9 @@ export default function ProjectAudioVoiceoverSection({
           {regenerateLoading ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {status.kind === "missing" ? "Generating voiceover…" : "Regenerating…"}
+              {status.kind === "missing"
+                ? "Generating voiceover…"
+                : "Regenerating…"}
             </>
           ) : (
             <>
@@ -304,8 +310,8 @@ export default function ProjectAudioVoiceoverSection({
 
         {!hasNarration ? (
           <p className={`${studioSubtleText} text-[11px] leading-relaxed`}>
-            Add narration text in the project section below to generate TTS voiceover. You can still
-            upload your own audio file.
+            Add narration text in the project section below to generate TTS
+            voiceover. You can still upload your own audio file.
           </p>
         ) : null}
       </div>

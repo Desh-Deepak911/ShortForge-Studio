@@ -68,8 +68,12 @@ function baseDraft(overrides: Partial<Draft> = {}): Draft {
 console.log("scriptReviewWorkflow");
 
 test("create flow requests script-only generation", () => {
-  const createFlow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
-  const briefInspector = readSrc("src/features/create/components/CreateBriefInspector.tsx");
+  const createFlow = readSrc(
+    "src/features/create/components/CreateStoryFlow.tsx",
+  );
+  const briefInspector = readSrc(
+    "src/features/create/components/CreateBriefInspector.tsx",
+  );
   assert.match(createFlow, /mode:\s*"script-only"/);
   assert.match(createFlow, /\/create\/review\//);
   assert.match(createFlow, /scriptMode/);
@@ -77,23 +81,39 @@ test("create flow requests script-only generation", () => {
   assert.doesNotMatch(createFlow, /attachVoiceoverToScript/);
   assert.doesNotMatch(createFlow, /\/editor\//);
   assert.match(briefInspector, /scriptMode/);
-  assert.match(briefInspector, /Stats, formations, or anything else to include/);
+  assert.match(
+    briefInspector,
+    /Stats, formations, or anything else to include/,
+  );
 });
 
 test("review route and editor redirect are wired", () => {
   const reviewPage = readSrc("src/app/create/review/[draftId]/page.tsx");
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
-  const editorFlow = readSrc("src/features/drafts/components/DraftEditorFlow.tsx");
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
+  const scriptCanvas = readSrc(
+    "src/features/create/components/ScriptCanvas.tsx",
+  );
+  const reviewInspector = readSrc(
+    "src/features/create/components/ReviewInspector.tsx",
+  );
+  const editorFlow = readSrc(
+    "src/features/drafts/components/DraftEditorFlow.tsx",
+  );
 
   assert.match(reviewPage, /ScriptReviewFlow/);
   assert.match(reviewFlow, /mode:\s*"scenes-only"/);
-  assert.match(reviewFlow, /StoryReview/);
-  assert.match(reviewFlow, /VoiceSettingsCard/);
+  assert.match(scriptCanvas, /StoryReview/);
+  assert.match(reviewInspector, /VoiceSettingsCard/);
   assert.match(reviewFlow, /Build Storyboard/);
-  assert.match(reviewFlow, /Additional Notes/);
-  assert.match(reviewFlow, /Content type/);
-  assert.match(reviewFlow, /variant="review"/);
-  assert.match(readSrc("src/features/drafts/hooks/useEditorStoryDocument.ts"), /shouldOpenScriptReview/);
+  assert.match(reviewInspector, /Additional notes/i);
+  assert.match(reviewInspector, /Content type/);
+  assert.match(reviewInspector, /variant="review"/);
+  assert.match(
+    readSrc("src/features/drafts/hooks/useEditorStoryDocument.ts"),
+    /shouldOpenScriptReview/,
+  );
   assert.match(editorFlow, /useEditorStoryDocument/);
   assert.match(reviewFlow, /useReviewStoryDocument/);
   assert.match(editorFlow, /router\.replace/);
@@ -105,7 +125,9 @@ test("review route and editor redirect are wired", () => {
 
 test("generate-script route supports staged modes", () => {
   const route = readSrc("src/app/api/generate-script/route.ts");
-  const resolver = readSrc("src/features/research/utils/script-research-context.utils.ts");
+  const resolver = readSrc(
+    "src/features/research/utils/script-research-context.utils.ts",
+  );
   const prompts = readSrc("src/lib/ai/prompts.ts");
   assert.match(route, /generateScriptOnlyStory/);
   assert.match(route, /generateScenesForReviewedScript/);
@@ -127,7 +149,10 @@ test("generate-script route supports staged modes", () => {
 test("pipeline helpers route incomplete drafts to review", () => {
   const scriptReview = baseDraft();
   assert.equal(shouldOpenScriptReview(scriptReview), true);
-  assert.equal(resolveDraftHref(scriptReview), "/create/review/draft-review-qa");
+  assert.equal(
+    resolveDraftHref(scriptReview),
+    "/create/review/draft-review-qa",
+  );
   assert.equal(resolveDraftWorkflowStatus(scriptReview), "script_review");
   assert.equal(resolveDraftStatusLabel(scriptReview), "Story");
 
@@ -185,7 +210,10 @@ test("pipeline helpers route incomplete drafts to review", () => {
     sceneCount: 1,
   });
   assert.equal(resolveDraftHref(legacyWithScenes), "/editor/draft-review-qa");
-  assert.equal(resolveDraftWorkflowStatus(legacyWithScenes), "storyboard_ready");
+  assert.equal(
+    resolveDraftWorkflowStatus(legacyWithScenes),
+    "storyboard_ready",
+  );
 
   const exported = baseDraft({ status: "exported" });
   assert.equal(resolveDraftWorkflowStatus(exported), "exported");
@@ -215,7 +243,9 @@ test("editor guard blocks incomplete drafts before StoryWorkspace", () => {
 });
 
 test("drafts dashboard shows workflow status labels", () => {
-  const dashboard = readSrc("src/features/drafts/components/DraftsDashboard.tsx");
+  const dashboard = readSrc(
+    "src/features/drafts/components/DraftsDashboard.tsx",
+  );
   assert.match(dashboard, /workflowStatusLabel/);
   assert.match(dashboard, /resolveDraftHref/);
 });
@@ -246,7 +276,9 @@ test("resolvePipelineStageFromScript follows voiceover and scenes", () => {
 console.log("\nscriptReviewWorkflow QA checklist");
 
 test("QA-1 /create generates script only", () => {
-  const createFlow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
+  const createFlow = readSrc(
+    "src/features/create/components/CreateStoryFlow.tsx",
+  );
   assert.match(createFlow, /mode:\s*"script-only"/);
   assert.doesNotMatch(createFlow, /mode:\s*"full"/);
   assert.doesNotMatch(createFlow, /mode:\s*"scenes-only"/);
@@ -254,7 +286,9 @@ test("QA-1 /create generates script only", () => {
 });
 
 test("QA-2 scriptMode and context are saved in creationBrief", () => {
-  const createFlow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
+  const createFlow = readSrc(
+    "src/features/create/components/CreateStoryFlow.tsx",
+  );
   assert.match(createFlow, /scriptMode,/);
   assert.match(createFlow, /context: context\.trim\(\)/);
 
@@ -283,45 +317,71 @@ test("QA-2 scriptMode and context are saved in creationBrief", () => {
 
   const loaded = getDraft(draft.id, { adapter });
   assert.equal(loaded?.creationBrief?.scriptMode, "tactical_review");
-  assert.equal(loaded?.creationBrief?.context, "4-3-3 vs 4-2-3-1, 58% possession");
+  assert.equal(
+    loaded?.creationBrief?.context,
+    "4-3-3 vs 4-2-3-1, 58% possession",
+  );
 });
 
 test("QA-3 review page opens after script generation", () => {
-  const createFlow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
-  assert.match(createFlow, /router\.replace\(`\/create\/review\/\$\{draft\.id\}`\)/);
+  const createFlow = readSrc(
+    "src/features/create/components/CreateStoryFlow.tsx",
+  );
+  assert.match(
+    createFlow,
+    /router\.replace\(`\/create\/review\/\$\{draft\.id\}`\)/,
+  );
   assert.match(createFlow, /seedDraftSession/);
-  assert.match(createFlow, /variant="script-only"/);
+  assert.match(createFlow, /mode:\s*"script-only"/);
+  assert.match(createFlow, /BriefCanvas/);
   assert.doesNotMatch(createFlow, /router\.push\(`\/editor\//);
 });
 
 test("QA-4 script can be edited and auto-saved on review page", () => {
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
+  const scriptCanvas = readSrc(
+    "src/features/create/components/ScriptCanvas.tsx",
+  );
   const storyReview = readSrc("src/components/StoryReview.tsx");
-  assert.match(reviewFlow, /StoryReview/);
-  assert.match(reviewFlow, /onStoryChange/);
+  assert.match(reviewFlow, /ScriptCanvas/);
+  assert.match(scriptCanvas, /StoryReview/);
+  assert.match(scriptCanvas, /onStoryChange/);
   assert.match(reviewFlow, /schedulePersist/);
-  assert.match(reviewFlow, /script\?\.title, script\?\.narration/);
+  assert.match(
+    reviewFlow,
+    /script\?\.title,\s*script\?\.narration/,
+  );
   assert.match(storyReview, /story-narration/);
   assert.match(storyReview, /story-title/);
   assert.match(storyReview, /getEstimatedScriptDurationSeconds/);
   assert.match(storyReview, /Target:/);
   assert.match(storyReview, /Estimated script:/);
   assert.match(storyReview, /SCRIPT_LENGTH_OVER_TARGET_WARNING/);
-  assert.match(reviewFlow, /variant="embedded"/);
+  assert.match(scriptCanvas, /variant="embedded"/);
 });
 
 test("QA-5 voiceover generates from current edited script", () => {
   const hook = readSrc("src/hooks/useStoryVoiceoverApply.ts");
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
+  const reviewInspector = readSrc(
+    "src/features/create/components/ReviewInspector.tsx",
+  );
   assert.match(hook, /const baseline = scriptRef\.current/);
   assert.match(hook, /narration: narrationText/);
   assert.match(hook, /baseline\.narration\.trim\(\)/);
-  assert.match(reviewFlow, /variant="review"/);
-  assert.match(reviewFlow, /VoiceSettingsCard/);
+  assert.match(reviewFlow, /ReviewInspector/);
+  assert.match(reviewInspector, /variant="review"/);
+  assert.match(reviewInspector, /VoiceSettingsCard/);
 });
 
 test("QA-6 scene count is respected when creating scenes", () => {
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
   const route = readSrc("src/app/api/generate-script/route.ts");
   assert.match(reviewFlow, /handleSceneCountChange/);
   assert.match(reviewFlow, /sceneCount,/);
@@ -331,7 +391,9 @@ test("QA-6 scene count is respected when creating scenes", () => {
 });
 
 test("QA-7 Build Storyboard builds storyboard from reviewed script + voiceover", () => {
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
   assert.match(reviewFlow, /Build Storyboard/);
   assert.match(reviewFlow, /mode:\s*"scenes-only"/);
   assert.match(reviewFlow, /title: script\.title/);
@@ -343,13 +405,21 @@ test("QA-7 Build Storyboard builds storyboard from reviewed script + voiceover",
   assert.match(reviewFlow, /resolveReviewHasVoiceover/);
   assert.match(reviewFlow, /voiceoverAudioBase64/);
   assert.match(reviewFlow, /useReviewStoryDocument/);
-  assert.match(readSrc("src/features/drafts/hooks/useRouteStoryDocument.ts"), /hydrateFromDraft/);
-  assert.match(readSrc("src/features/drafts/store/story-document.store.tsx"), /applyEditorReadyStoryDocument/);
+  assert.match(
+    readSrc("src/features/drafts/hooks/useRouteStoryDocument.ts"),
+    /hydrateFromDraft/,
+  );
+  assert.match(
+    readSrc("src/features/drafts/store/story-document.store.tsx"),
+    /applyEditorReadyStoryDocument/,
+  );
   assert.match(reviewFlow, /hasNarration/);
 });
 
 test("QA-8 editor opens after storyboard creation", () => {
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
   assert.match(reviewFlow, /router\.push\(`\/editor\/\$\{draftId\}`\)/);
 });
 
@@ -375,8 +445,11 @@ test("QA-9 legacy drafts with scenes still open in editor", () => {
 });
 
 test("QA-10 draft dashboard routes correctly by workflow status", () => {
-  const dashboard = readSrc("src/features/drafts/components/DraftsDashboard.tsx");
-  assert.match(dashboard, /resolveDraftHref\(storedDraft\)/);
+  const dashboard = readSrc(
+    "src/features/drafts/components/DraftsDashboard.tsx",
+  );
+  assert.match(dashboard, /hydrateDraftWithAudioAssets\(storedDraft\)/);
+  assert.match(dashboard, /resolveDraftHref\(hydratedDraft\)/);
   assert.match(dashboard, /workflowStatusLabel/);
 
   assert.equal(resolveDraftHref(baseDraft()), "/create/review/draft-review-qa");
@@ -388,7 +461,9 @@ test("QA-10 draft dashboard routes correctly by workflow status", () => {
           title: "Ready",
           narration: "Scenes exist.",
           totalDuration: 30,
-          scenes: [{ id: "1", start: 0, end: 30, duration: 30, subtitle: "Scene" }],
+          scenes: [
+            { id: "1", start: 0, end: 30, duration: 30, subtitle: "Scene" },
+          ],
         }),
         sceneCount: 1,
       }),
@@ -398,9 +473,18 @@ test("QA-10 draft dashboard routes correctly by workflow status", () => {
 });
 
 test("QA-11 no unnecessary API calls on editor or review load", () => {
-  const editorFlow = readSrc("src/features/drafts/components/DraftEditorFlow.tsx");
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
-  const createFlow = readSrc("src/features/create/components/CreateStoryFlow.tsx");
+  const editorFlow = readSrc(
+    "src/features/drafts/components/DraftEditorFlow.tsx",
+  );
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
+  const createFlow = readSrc(
+    "src/features/create/components/CreateStoryFlow.tsx",
+  );
+  const researchClient = readSrc(
+    "src/features/create/utils/research-preview-intelligence.client.utils.ts",
+  );
   const voiceHook = readSrc("src/hooks/useStoryVoiceoverApply.ts");
 
   assert.doesNotMatch(editorFlow, /fetch\(/);
@@ -408,11 +492,21 @@ test("QA-11 no unnecessary API calls on editor or review load", () => {
   assert.doesNotMatch(editorFlow, /generate-voiceover/);
 
   const reviewFetchCount = (reviewFlow.match(/fetch\(/g) ?? []).length;
-  assert.equal(reviewFetchCount, 1, "review page should only fetch on Build Storyboard");
+  assert.equal(
+    reviewFetchCount,
+    1,
+    "review page should only fetch on Build Storyboard",
+  );
 
-  const createFetchCount = (createFlow.match(/fetch\(/g) ?? []).length;
-  assert.equal(createFetchCount, 2, "create page fetches on Research Preview and Write Story");
-  assert.match(createFlow, /\/api\/research-football/);
+  const createFetchCount =
+    (createFlow.match(/fetch\(/g) ?? []).length +
+    (researchClient.match(/fetch\(/g) ?? []).length;
+  assert.equal(
+    createFetchCount,
+    2,
+    "create page fetches on Research Preview and Write Story",
+  );
+  assert.match(researchClient, /\/api\/research-football/);
   assert.match(createFlow, /\/api\/generate-script/);
 
   assert.match(
@@ -424,11 +518,22 @@ test("QA-11 no unnecessary API calls on editor or review load", () => {
 });
 
 test("QA-12 voiceover persistence hydrates review state for Build Storyboard", () => {
-  const reviewFlow = readSrc("src/features/create/components/ScriptReviewFlow.tsx");
-  const editorFlow = readSrc("src/features/drafts/components/DraftEditorFlow.tsx");
-  const loadingShell = readSrc("src/features/drafts/components/DraftLoadingState.tsx");
-  const editorHook = readSrc("src/features/drafts/hooks/useEditorStoryDocument.ts");
-  const storyStore = readSrc("src/features/drafts/store/story-document.store.tsx");
+  const reviewFlow = readSrc(
+    "src/features/create/components/ScriptReviewFlow.tsx",
+  );
+  const editorFlow = readSrc(
+    "src/features/drafts/components/DraftEditorFlow.tsx",
+  );
+  const loadingShell = readSrc(
+    "src/features/drafts/components/DraftLoadingState.tsx",
+  );
+  const loadingState = readSrc("src/components/StudioLoadingState.tsx");
+  const editorHook = readSrc(
+    "src/features/drafts/hooks/useEditorStoryDocument.ts",
+  );
+  const storyStore = readSrc(
+    "src/features/drafts/store/story-document.store.tsx",
+  );
 
   assert.match(storyStore, /resolveDraftScriptForEditor/);
   assert.match(editorHook, /hydrateFromDraft/);
@@ -438,8 +543,12 @@ test("QA-12 voiceover persistence hydrates review state for Build Storyboard", (
   assert.match(editorFlow, /useEditorStoryDocument/);
   assert.match(editorFlow, /DraftLoadingState/);
   assert.match(loadingShell, /hasProject=\{false\}/);
-  assert.match(loadingShell, /Loading your story\.\.\./);
-  assert.doesNotMatch(reviewFlow, /hasVoiceover = Boolean\(script && getCanonicalVoiceover\(script\)\?\.url\)/);
+  assert.match(loadingShell, /StudioProjectLoadingState/);
+  assert.match(loadingState, /Opening your project\.\.\./);
+  assert.doesNotMatch(
+    reviewFlow,
+    /hasVoiceover = Boolean\(script && getCanonicalVoiceover\(script\)\?\.url\)/,
+  );
 
   const persistedScript = syncFootieScript({
     title: "Hydrated voice",

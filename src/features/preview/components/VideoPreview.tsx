@@ -17,7 +17,10 @@ import EditorCanvasEditLayer from "@/features/editor/components/EditorCanvasEdit
 import { useEditorSelection } from "@/features/editor/selection";
 import { sceneHasFramableMedia } from "@/features/media-framing";
 import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
-import PreviewFrame, { DynamicIsland, PreviewDeviceFrame } from "@/features/preview/components/PreviewFrame";
+import PreviewFrame, {
+  DynamicIsland,
+  PreviewDeviceFrame,
+} from "@/features/preview/components/PreviewFrame";
 import SubtitleOverlay from "@/features/preview/components/SubtitleOverlay";
 import { usePreviewPlayback } from "@/features/preview/hooks/usePreviewPlayback";
 import {
@@ -60,14 +63,23 @@ interface VideoPreviewProps {
   enableCanvasEdit?: boolean;
   /** Blocks canvas edit while export is running. */
   canvasEditBlocked?: boolean;
-  onSceneImageTransformChange?: (sceneId: string, patch: SceneImageTransformPatch) => void;
+  onSceneImageTransformChange?: (
+    sceneId: string,
+    patch: SceneImageTransformPatch,
+  ) => void;
   onSceneImageReset?: (sceneId: string) => void;
-  onCaptionLayoutOffsetCommit?: (sceneId: string, offsetX: number, offsetY: number) => void;
+  onCaptionLayoutOffsetCommit?: (
+    sceneId: string,
+    offsetX: number,
+    offsetY: number,
+  ) => void;
   onCaptionLayoutReset?: (sceneId: string) => void;
   /** Publishes preview clock snapshots for timeline playhead — does not affect playback. */
   onClockUpdate?: (snapshot: TimelinePlaybackSnapshot) => void;
   /** Optional — notifies parent when voiceover preview playback starts (sync wiring only). */
   onPreviewStart?: () => void;
+  /** Presentation-only preview width controlled by the editor workspace. */
+  previewMaxWidth?: string | number;
 }
 
 export default function VideoPreview({
@@ -80,6 +92,7 @@ export default function VideoPreview({
   onCaptionLayoutReset,
   onClockUpdate,
   onPreviewStart,
+  previewMaxWidth,
 }: VideoPreviewProps) {
   const selection = useEditorSelection();
   const canvasEditActive = enableCanvasEdit;
@@ -166,7 +179,9 @@ export default function VideoPreview({
         })
       : null;
   const transitionOverlay =
-    previewSceneTiming && masterTimeline && previewSceneTiming.timelineTimeMs != null
+    previewSceneTiming &&
+    masterTimeline &&
+    previewSceneTiming.timelineTimeMs != null
       ? resolvePreviewTransitionOverlay(
           masterTimeline,
           scenes,
@@ -176,12 +191,12 @@ export default function VideoPreview({
   // Intra-scene overlays keep captions; they only block two-layer canvas framing edit.
   const intraSceneTransitionActive = Boolean(
     displayScene &&
-      previewSceneTiming &&
-      !transitionOverlay &&
-      composeIntraSceneTransitionPreview(
-        displayScene,
-        previewSceneTiming.sceneElapsedMs,
-      ),
+    previewSceneTiming &&
+    !transitionOverlay &&
+    composeIntraSceneTransitionPreview(
+      displayScene,
+      previewSceneTiming.sceneElapsedMs,
+    ),
   );
 
   const playbackActive = isPlaying || isSpeaking;
@@ -191,13 +206,13 @@ export default function VideoPreview({
   );
   const canvasEditAvailable = Boolean(
     canvasEditActive &&
-      displayScene &&
-      sceneHasFramableMedia(displayScene) &&
-      !playbackActive &&
-      !canvasEditBlocked &&
-      !transitionOverlay &&
-      !intraSceneTransitionActive &&
-      onSceneImageTransformChange,
+    displayScene &&
+    sceneHasFramableMedia(displayScene) &&
+    !playbackActive &&
+    !canvasEditBlocked &&
+    !transitionOverlay &&
+    !intraSceneTransitionActive &&
+    onSceneImageTransformChange,
   );
 
   const isFrameEditing = canvasEditActive && selection.isImageEditing;
@@ -233,7 +248,12 @@ export default function VideoPreview({
       return;
     }
 
-    if (!script || sceneCount === 0 || !masterTimeline || masterTimeline.renderDurationMs <= 0) {
+    if (
+      !script ||
+      sceneCount === 0 ||
+      !masterTimeline ||
+      masterTimeline.renderDurationMs <= 0
+    ) {
       onClockUpdate(EMPTY_TIMELINE_PLAYBACK_SNAPSHOT);
       return;
     }
@@ -329,7 +349,14 @@ export default function VideoPreview({
     onCaptionLayoutReset(selection.selectedSceneId);
   }, [onCaptionLayoutReset, selection.selectedSceneId]);
 
-  if (!script || sceneCount === 0 || !scene || !previewFrame || !displayScene || !previewSceneTiming) {
+  if (
+    !script ||
+    sceneCount === 0 ||
+    !scene ||
+    !previewFrame ||
+    !displayScene ||
+    !previewSceneTiming
+  ) {
     return (
       <div className="flex w-full min-w-0 flex-col items-center gap-3 sm:gap-4">
         <PreviewDeviceFrame>
@@ -338,7 +365,9 @@ export default function VideoPreview({
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.06] ring-1 ring-white/10">
               <Smartphone className="h-6 w-6 text-white/40" />
             </div>
-            <p className="text-sm font-medium text-white/90">Preview your short</p>
+            <p className="text-sm font-medium text-white/90">
+              Preview your short
+            </p>
             <p className="mt-1.5 text-xs leading-relaxed text-white/45">
               Your 9:16 storyboard appears here scene by scene.
             </p>
@@ -351,7 +380,8 @@ export default function VideoPreview({
   const isNarrationSubtitles =
     normalizeCaptionMode(displayScene.captionMode) === "subtitles";
 
-  const { sceneElapsedMs, sceneDurationMs, timelineTimeMs } = previewSceneTiming;
+  const { sceneElapsedMs, sceneDurationMs, timelineTimeMs } =
+    previewSceneTiming;
   const timingMap = getSceneTimingMap(scenes);
   const transitionFromSceneElapsedMs =
     transitionOverlay && timelineTimeMs != null
@@ -361,7 +391,9 @@ export default function VideoPreview({
             transitionOverlay.fromScene.startMs ??
             timingMap[transitionOverlay.fromSceneIndex]?.startMs ??
             0,
-          sceneDurationMs: resolveSceneDurationMsForTiming(transitionOverlay.fromScene),
+          sceneDurationMs: resolveSceneDurationMsForTiming(
+            transitionOverlay.fromScene,
+          ),
         })
       : 0;
   const transitionFromSceneDurationMs = transitionOverlay
@@ -375,7 +407,9 @@ export default function VideoPreview({
             transitionOverlay.toScene.startMs ??
             timingMap[transitionOverlay.toSceneIndex]?.startMs ??
             0,
-          sceneDurationMs: resolveSceneDurationMsForTiming(transitionOverlay.toScene),
+          sceneDurationMs: resolveSceneDurationMsForTiming(
+            transitionOverlay.toScene,
+          ),
         })
       : 0;
   const transitionToSceneDurationMs = transitionOverlay
@@ -392,7 +426,8 @@ export default function VideoPreview({
       ? (scenes[previewSceneTiming.activeSceneIndex] ?? displayScene)
       : displayScene;
   const showSubtitles = isNarrationSubtitles && !hideCaptionsDuringTransition;
-  const showGeneratedCaption = !isNarrationSubtitles && !hideCaptionsDuringTransition;
+  const showGeneratedCaption =
+    !isNarrationSubtitles && !hideCaptionsDuringTransition;
 
   const previewInteraction = resolvePreviewInteractionLayer({
     canvasEditEnabled: canvasEditActive,
@@ -401,8 +436,10 @@ export default function VideoPreview({
     playbackActive,
     imageEditActive: isFrameEditing,
   });
-  const captionOverlayClassName = resolvePreviewCaptionOverlayClassName(previewInteraction);
-  const imageEditLayerClassName = resolvePreviewImageEditLayerClassName(previewInteraction);
+  const captionOverlayClassName =
+    resolvePreviewCaptionOverlayClassName(previewInteraction);
+  const imageEditLayerClassName =
+    resolvePreviewImageEditLayerClassName(previewInteraction);
 
   const editLayer =
     canvasEditAvailable && onSceneImageTransformChange && displayScene ? (
@@ -413,20 +450,22 @@ export default function VideoPreview({
         layerClassName={imageEditLayerClassName}
         overlayOnly={isVideoScene}
         onDragOffsetChange={setFramingDragOffset}
-        onTransformChange={(patch) => onSceneImageTransformChange(displayScene.id, patch)}
+        onTransformChange={(patch) =>
+          onSceneImageTransformChange(displayScene.id, patch)
+        }
         onResetFrame={
-          onSceneImageReset ? () => onSceneImageReset(displayScene.id) : undefined
+          onSceneImageReset
+            ? () => onSceneImageReset(displayScene.id)
+            : undefined
         }
       />
     ) : null;
 
   return (
-    <div
-      ref={previewRootRef}
-      className={studioPreviewStack}
-    >
+    <div ref={previewRootRef} className={studioPreviewStack}>
       <div className={studioPreviewFrameSlot}>
         <PreviewFrame
+          maxWidth={previewMaxWidth}
           title={script.title}
           previewFrame={previewFrame}
           transitionOverlay={transitionOverlay}
@@ -436,7 +475,9 @@ export default function VideoPreview({
           transitionToSceneDurationMs={transitionToSceneDurationMs}
           editLayer={editLayer}
           hideSceneImage={isFrameEditing && !isVideoScene}
-          framingDragOffset={isFrameEditing && isVideoScene ? framingDragOffset : null}
+          framingDragOffset={
+            isFrameEditing && isVideoScene ? framingDragOffset : null
+          }
           frameEditActive={isFrameEditing}
           onExitFrameEdit={exitFrameEdit}
           sceneElapsedMs={sceneElapsedMs}
@@ -453,11 +494,19 @@ export default function VideoPreview({
                   sceneDurationMs={sceneDurationMs}
                   activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
                   chunkProgress={previewSceneTiming.chunkProgress}
-                  captionAnimationState={previewSceneTiming.captionAnimationState}
-                  subtitleAvailableDurationMs={previewSceneTiming.subtitleAvailableDurationMs}
-                  captionTooShortForEffect={previewSceneTiming.captionTooShortForEffect}
+                  captionAnimationState={
+                    previewSceneTiming.captionAnimationState
+                  }
+                  subtitleAvailableDurationMs={
+                    previewSceneTiming.subtitleAvailableDurationMs
+                  }
+                  captionTooShortForEffect={
+                    previewSceneTiming.captionTooShortForEffect
+                  }
                   draggable={previewInteraction.allowCaptionDrag}
-                  allowPointerEvents={previewInteraction.allowCaptionPointerEvents}
+                  allowPointerEvents={
+                    previewInteraction.allowCaptionPointerEvents
+                  }
                   onOffsetCommit={handleCaptionOffsetCommit}
                   onResetLayout={handleCaptionLayoutReset}
                   className={captionOverlayClassName}
@@ -469,7 +518,9 @@ export default function VideoPreview({
                   script={script}
                   sceneIndex={previewFrame.sceneIndex}
                   draggable={previewInteraction.allowCaptionDrag}
-                  allowPointerEvents={previewInteraction.allowCaptionPointerEvents}
+                  allowPointerEvents={
+                    previewInteraction.allowCaptionPointerEvents
+                  }
                   onOffsetCommit={handleCaptionOffsetCommit}
                   onResetLayout={handleCaptionLayoutReset}
                   className={captionOverlayClassName}
@@ -480,14 +531,19 @@ export default function VideoPreview({
           footer={
             <>
               <div className="flex flex-wrap items-center justify-center gap-1 text-[10px] text-white/50">
-                {displayScene.sceneType && displayScene.sceneType !== "transition" ? (
+                {displayScene.sceneType &&
+                displayScene.sceneType !== "transition" ? (
                   <span className="capitalize">{displayScene.sceneType}</span>
                 ) : null}
-                {displayScene.sceneType && displayScene.sceneType !== "transition" ? (
+                {displayScene.sceneType &&
+                displayScene.sceneType !== "transition" ? (
                   <span>·</span>
                 ) : null}
                 <span className="tabular-nums">
-                  {formatDisplayTimeRangeSec(displayScene.start, displayScene.end)}
+                  {formatDisplayTimeRangeSec(
+                    displayScene.start,
+                    displayScene.end,
+                  )}
                 </span>
                 {isSpeaking ? (
                   <>
@@ -498,7 +554,9 @@ export default function VideoPreview({
                 {isPlaying && playbackMode === "narration" ? (
                   <>
                     <span>·</span>
-                    <span>{playbackScope === "scene" ? "Scene" : "Narration"}</span>
+                    <span>
+                      {playbackScope === "scene" ? "Scene" : "Narration"}
+                    </span>
                   </>
                 ) : null}
               </div>
@@ -517,7 +575,9 @@ export default function VideoPreview({
       </div>
 
       <div className={studioPreviewTransportStack}>
-        <div className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1`}>
+        <div
+          className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1`}
+        >
           {scenes.map((s, index) => (
             <button
               key={s.id}
@@ -544,194 +604,221 @@ export default function VideoPreview({
           ))}
         </div>
 
-        <div className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1`}>
-        <button
-          type="button"
-          onClick={() => {
-            onPreviewStart?.();
-            void playPreview();
-          }}
-          disabled={isPlaying || !hasPlayableVoiceover}
-          className={studioPreviewPillPrimary}
-          aria-label="Play story with voiceover"
+        <div
+          className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1`}
         >
-          <Play className="h-3 w-3" />
-          Play Story
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            onPreviewStart?.();
-            void playScenePreview();
-          }}
-          disabled={isPlaying || !hasPlayableVoiceover || scenePreviewControlsDisabled}
-          className={studioPreviewPill}
-          aria-label="Play selected scene with voiceover"
-          title={
-            scenePreviewControlsDisabled
-              ? "Exit image edit to preview a single scene"
-              : "Play the selected scene with voiceover"
-          }
-        >
-          <Play className="h-3 w-3" />
-          Play Scene
-        </button>
-        <button
-          type="button"
-          onClick={toggleLoopScene}
-          disabled={scenePreviewControlsDisabled}
-          aria-pressed={loopSceneEnabled}
-          className={`${studioPreviewPill} ${loopSceneEnabled ? "ring-accent/40 bg-accent/15 text-foreground" : ""}`}
-          aria-label="Loop selected scene during scene preview"
-          title={
-            scenePreviewControlsDisabled
-              ? "Exit image edit to use scene loop"
-              : loopSceneEnabled
-                ? "Scene loop enabled"
-                : "Loop the selected scene during scene preview"
-          }
-        >
-          <Repeat className="h-3 w-3" />
-          Loop Scene
-        </button>
-        <button
-          type="button"
-          onClick={pauseVoice}
-          disabled={!isPlaying && !isSpeaking}
-          className={studioPreviewPillMuted}
-          aria-label="Pause preview"
-          title="Pause preview"
-        >
-          <Pause className="h-3 w-3" />
-        </button>
-        <button
-          type="button"
-          onClick={stopVoice}
-          disabled={!isPlaying && !isSpeaking}
-          className={studioPreviewPillMuted}
-          aria-label="Stop preview"
-          title="Stop preview"
-        >
-          <Square className="h-3 w-3" />
-        </button>
-        <button
-          type="button"
-          data-preview-action="voice"
-          onClick={playWithBrowserVoice}
-          disabled={isPlaying}
-          className={studioPreviewPill}
-          aria-label="Preview with browser text-to-speech"
-          title={
-            hasCanonicalVoiceover
-              ? "Preview with browser text-to-speech (does not use generated voiceover)"
-              : "Preview with browser text-to-speech"
-          }
-        >
-          <Volume2 className="h-3 w-3" />
-          Voice
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              onPreviewStart?.();
+              void playPreview();
+            }}
+            disabled={isPlaying || !hasPlayableVoiceover}
+            className={studioPreviewPillPrimary}
+            aria-label="Play story with voiceover"
+          >
+            <Play className="h-3 w-3" />
+            Play Story
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onPreviewStart?.();
+              void playScenePreview();
+            }}
+            disabled={
+              isPlaying || !hasPlayableVoiceover || scenePreviewControlsDisabled
+            }
+            className={studioPreviewPill}
+            aria-label="Play selected scene with voiceover"
+            title={
+              scenePreviewControlsDisabled
+                ? "Exit image edit to preview a single scene"
+                : "Play the selected scene with voiceover"
+            }
+          >
+            <Play className="h-3 w-3" />
+            Play Scene
+          </button>
+          <button
+            type="button"
+            onClick={toggleLoopScene}
+            disabled={scenePreviewControlsDisabled}
+            aria-pressed={loopSceneEnabled}
+            className={`${studioPreviewPill} ${loopSceneEnabled ? "ring-accent/40 bg-accent/15 text-foreground" : ""}`}
+            aria-label="Loop selected scene during scene preview"
+            title={
+              scenePreviewControlsDisabled
+                ? "Exit image edit to use scene loop"
+                : loopSceneEnabled
+                  ? "Scene loop enabled"
+                  : "Loop the selected scene during scene preview"
+            }
+          >
+            <Repeat className="h-3 w-3" />
+            Loop Scene
+          </button>
+          <button
+            type="button"
+            onClick={pauseVoice}
+            disabled={!isPlaying && !isSpeaking}
+            className={studioPreviewPillMuted}
+            aria-label="Pause preview"
+            title="Pause preview"
+          >
+            <Pause className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={stopVoice}
+            disabled={!isPlaying && !isSpeaking}
+            className={studioPreviewPillMuted}
+            aria-label="Stop preview"
+            title="Stop preview"
+          >
+            <Square className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            data-preview-action="voice"
+            onClick={playWithBrowserVoice}
+            disabled={isPlaying}
+            className={studioPreviewPill}
+            aria-label="Preview with browser text-to-speech"
+            title={
+              hasCanonicalVoiceover
+                ? "Preview with browser text-to-speech (does not use generated voiceover)"
+                : "Preview with browser text-to-speech"
+            }
+          >
+            <Volume2 className="h-3 w-3" />
+            Voice
+          </button>
+        </div>
 
-      {!hasCanonicalVoiceover ? (
-        <p className={`${studioPreviewControls} text-center text-[10px] leading-relaxed text-muted`}>
-          Generate or upload voiceover to preview with audio.
-        </p>
-      ) : null}
+        {!hasCanonicalVoiceover ? (
+          <p
+            className={`${studioPreviewControls} text-center text-[10px] leading-relaxed text-muted`}
+          >
+            Generate or upload voiceover to preview with audio.
+          </p>
+        ) : null}
 
-      {hasCanonicalVoiceover && !hasPlayableVoiceover && !playbackError ? (
-        <p className={`${studioPreviewControls} text-center text-[10px] leading-relaxed text-muted`}>
-          Voiceover exists but could not be loaded. Regenerate or upload audio.
-        </p>
-      ) : null}
+        {hasCanonicalVoiceover && !hasPlayableVoiceover && !playbackError ? (
+          <p
+            className={`${studioPreviewControls} text-center text-[10px] leading-relaxed text-muted`}
+          >
+            Voiceover exists but could not be loaded. Regenerate or upload
+            audio.
+          </p>
+        ) : null}
 
-      {playbackError ? (
-        <StudioStatus
-          variant="error"
-          layout="inline"
-          description={playbackError}
-          className={`${studioPreviewControls} text-center`}
-        />
-      ) : null}
+        {playbackError ? (
+          <StudioStatus
+            variant="error"
+            layout="inline"
+            description={playbackError}
+            className={`${studioPreviewControls} text-center`}
+          />
+        ) : null}
 
-      <div className={`${studioPreviewControls} flex items-center gap-1`}>
-        <button
-          type="button"
-          onClick={goPrevious}
-          disabled={(isPlaying && !sceneScopePlaybackActive) || safeIndex === 0}
-          className={`${studioPreviewPillMuted} flex-1`}
-          aria-label="Previous scene"
-          title={safeIndex === 0 ? "Already on the first scene" : "Previous scene"}
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </button>
-        <span className="shrink-0 rounded-full bg-surface-elevated/50 px-2.5 py-1 text-[10px] font-medium tabular-nums text-muted ring-1 ring-border/30 sm:px-3 sm:py-1.5">
-          {activeSceneIndex + 1} / {sceneCount}
-        </span>
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={(isPlaying && !sceneScopePlaybackActive) || safeIndex >= sceneCount - 1}
-          className={`${studioPreviewPillMuted} flex-1`}
-          aria-label="Next scene"
-          title={safeIndex >= sceneCount - 1 ? "Already on the last scene" : "Next scene"}
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
+        <div className={`${studioPreviewControls} flex items-center gap-1`}>
+          <button
+            type="button"
+            onClick={goPrevious}
+            disabled={
+              (isPlaying && !sceneScopePlaybackActive) || safeIndex === 0
+            }
+            className={`${studioPreviewPillMuted} flex-1`}
+            aria-label="Previous scene"
+            title={
+              safeIndex === 0 ? "Already on the first scene" : "Previous scene"
+            }
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <span className="shrink-0 rounded-full bg-surface-elevated/50 px-2.5 py-1 text-[10px] font-medium tabular-nums text-muted ring-1 ring-border/30 sm:px-3 sm:py-1.5">
+            {activeSceneIndex + 1} / {sceneCount}
+          </span>
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={
+              (isPlaying && !sceneScopePlaybackActive) ||
+              safeIndex >= sceneCount - 1
+            }
+            className={`${studioPreviewPillMuted} flex-1`}
+            aria-label="Next scene"
+            title={
+              safeIndex >= sceneCount - 1
+                ? "Already on the last scene"
+                : "Next scene"
+            }
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
 
-      {isClient ? (
-        <details className={`${studioPreviewControls} rounded-xl bg-surface/30 ring-1 ring-border/30`}>
-          <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-medium text-muted [&::-webkit-details-marker]:hidden">
-            Browser voice settings
-          </summary>
-          <div className="space-y-2.5 border-t border-border/30 px-3 pb-2.5 pt-2">
-            <div className="relative">
-              <select
-                id="preview-voice"
-                value={selectedVoiceURI}
-                onChange={(e) => setSelectedVoiceURI(e.target.value)}
-                disabled={isPlaying}
-                className={studioSelectCompact}
-              >
-                {voices.length === 0 ? (
-                  <option value="">Loading voices...</option>
-                ) : (
-                  voices.map((voice) => (
-                    <option key={voice.voiceURI} value={voice.voiceURI}>
-                      {voice.name}
-                    </option>
-                  ))
-                )}
-              </select>
-              <ChevronDown className={studioSelectChevronCompact} />
+        {isClient ? (
+          <details
+            className={`${studioPreviewControls} rounded-xl bg-surface/30 ring-1 ring-border/30`}
+          >
+            <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-medium text-muted [&::-webkit-details-marker]:hidden">
+              Browser voice settings
+            </summary>
+            <div className="space-y-2.5 border-t border-border/30 px-3 pb-2.5 pt-2">
+              <div className="relative">
+                <select
+                  id="preview-voice"
+                  value={selectedVoiceURI}
+                  onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                  disabled={isPlaying}
+                  className={studioSelectCompact}
+                >
+                  {voices.length === 0 ? (
+                    <option value="">Loading voices...</option>
+                  ) : (
+                    voices.map((voice) => (
+                      <option key={voice.voiceURI} value={voice.voiceURI}>
+                        {voice.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <ChevronDown className={studioSelectChevronCompact} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Rate", value: speechRate, set: setSpeechRate },
+                  { label: "Pitch", value: speechPitch, set: setSpeechPitch },
+                  {
+                    label: "Vol",
+                    value: speechVolume,
+                    set: setSpeechVolume,
+                    max: 1,
+                  },
+                ].map(({ label, value, set, max = 1.2 }) => (
+                  <label key={label} className="space-y-1">
+                    <span className="flex justify-between text-[9px] text-muted-foreground">
+                      {label}
+                      <span>{value.toFixed(1)}</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={label === "Vol" ? 0 : 0.8}
+                      max={max}
+                      step={0.05}
+                      value={value}
+                      onChange={(e) => set(Number(e.target.value))}
+                      disabled={isPlaying}
+                      className="h-1 w-full accent-accent disabled:opacity-50"
+                    />
+                  </label>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: "Rate", value: speechRate, set: setSpeechRate },
-                { label: "Pitch", value: speechPitch, set: setSpeechPitch },
-                { label: "Vol", value: speechVolume, set: setSpeechVolume, max: 1 },
-              ].map(({ label, value, set, max = 1.2 }) => (
-                <label key={label} className="space-y-1">
-                  <span className="flex justify-between text-[9px] text-muted-foreground">
-                    {label}
-                    <span>{value.toFixed(1)}</span>
-                  </span>
-                  <input
-                    type="range"
-                    min={label === "Vol" ? 0 : 0.8}
-                    max={max}
-                    step={0.05}
-                    value={value}
-                    onChange={(e) => set(Number(e.target.value))}
-                    disabled={isPlaying}
-                    className="h-1 w-full accent-accent disabled:opacity-50"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-        </details>
-      ) : null}
+          </details>
+        ) : null}
       </div>
     </div>
   );

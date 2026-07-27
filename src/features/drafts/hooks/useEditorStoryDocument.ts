@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { FootieScript } from "@/features/story/types";
 
 import { getDraft } from "../services";
+import { hydrateDraftWithAudioAssets } from "../services/draft-audio-storage.service";
 import { flushDraftSessionPersist } from "../session/draft-session-store";
 import {
   getStoryDocumentState,
@@ -95,24 +96,38 @@ export function useEditorStoryDocument(draftId: string): UseEditorStoryDocumentR
         return;
       }
 
-      if (storedDraftHasScenes(stored) || isEditorReadyDraft(stored)) {
-        hydrateFromDraft(stored);
-
-        if (storyDocumentHasScenes(draftId)) {
-          setLookupResult({ draftId, status: "ready" });
+      void hydrateDraftWithAudioAssets(stored).then((hydratedDraft) => {
+        if (cancelled) {
           return;
         }
-      }
 
-      if (shouldOpenScriptReview(stored) || !storedDraftHasScenes(stored)) {
-        setLookupResult({ draftId, status: "needs_review" });
-        return;
-      }
+        if (
+          storedDraftHasScenes(hydratedDraft) ||
+          isEditorReadyDraft(hydratedDraft)
+        ) {
+          hydrateFromDraft(hydratedDraft);
 
-      hydrateFromDraft(stored);
-      setLookupResult({
-        draftId,
-        status: storyDocumentHasScenes(draftId) ? "ready" : "needs_review",
+          if (storyDocumentHasScenes(draftId)) {
+            setLookupResult({ draftId, status: "ready" });
+            return;
+          }
+        }
+
+        if (
+          shouldOpenScriptReview(hydratedDraft) ||
+          !storedDraftHasScenes(hydratedDraft)
+        ) {
+          setLookupResult({ draftId, status: "needs_review" });
+          return;
+        }
+
+        hydrateFromDraft(hydratedDraft);
+        setLookupResult({
+          draftId,
+          status: storyDocumentHasScenes(draftId)
+            ? "ready"
+            : "needs_review",
+        });
       });
     });
 

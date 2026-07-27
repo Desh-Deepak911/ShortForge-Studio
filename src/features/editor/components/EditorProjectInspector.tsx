@@ -3,7 +3,6 @@
 import { FileText } from "lucide-react";
 
 import StoryReview from "@/components/StoryReview";
-import ProjectAudioStudio from "@/features/editor/components/ProjectAudioStudio";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
 import type { FootieScript } from "@/features/story/types";
 import { studioInspectorStack } from "@/lib/utils/studioUi";
@@ -14,7 +13,7 @@ export interface EditorProjectInspectorProps {
 }
 
 /**
- * Project-level settings — audio studio is always visible; story text collapses below.
+ * Project-level story settings. Audio lives in its own inspector tab.
  */
 export default function EditorProjectInspector({
   script,
@@ -22,14 +21,16 @@ export default function EditorProjectInspector({
 }: EditorProjectInspectorProps) {
   return (
     <div className={`${studioInspectorStack} pb-1`}>
-      <ProjectAudioStudio script={script} onScriptChange={onScriptChange} />
-
       <InspectorSection
         icon={FileText}
         title="Project"
         description="Story title and narration text."
       >
-        <StoryReview story={script} onStoryChange={onScriptChange} variant="storyboard" />
+        <StoryReview
+          story={script}
+          onStoryChange={onScriptChange}
+          variant="storyboard"
+        />
       </InspectorSection>
     </div>
   );

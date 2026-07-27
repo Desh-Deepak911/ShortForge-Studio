@@ -1,9 +1,13 @@
-export type InspectorTabId = "scene" | "project";
+export type InspectorTabId = "scene" | "audio" | "project";
 
-export type SceneInspectorGroupId = "general" | "image" | "caption" | "transition" | "assets";
+export type SceneInspectorGroupId =
+  "general" | "image" | "caption" | "transition" | "assets";
+export type SceneInspectorWorkspaceId =
+  "media" | "adjust" | "caption" | "timing" | "transition" | "assets";
 
 export const INSPECTOR_TAB_LABELS: Record<InspectorTabId, string> = {
   scene: "Scene",
+  audio: "Audio",
   project: "Project",
 };
 
@@ -13,27 +17,30 @@ export const SCENE_INSPECTOR_GROUP_LABELS: Record<
 > = {
   general: {
     title: "General",
-    description: "Timing and narration for this scene.",
+    description: "",
   },
   image: {
     title: "Media",
-    description: "Upload images or clips, frame, zoom, motion, and position.",
+    description: "",
   },
   caption: {
     title: "Caption",
-    description: "Layout, style, and animation.",
+    description: "",
   },
   transition: {
     title: "Transition",
-    description: "Effect to the next scene.",
+    description: "",
   },
   assets: {
     title: "Assets",
-    description: "Creator Asset Studio recommendations.",
+    description: "",
   },
 };
 
-export const SCENE_INSPECTOR_GROUP_DEFAULT_OPEN: Record<SceneInspectorGroupId, boolean> = {
+export const SCENE_INSPECTOR_GROUP_DEFAULT_OPEN: Record<
+  SceneInspectorGroupId,
+  boolean
+> = {
   general: true,
   image: true,
   caption: false,

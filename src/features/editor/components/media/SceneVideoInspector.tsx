@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 
+import { StudioNumberStepper } from "@/components/ui";
 import {
   formatMediaDuration,
   formatMediaMimeType,
@@ -54,7 +55,6 @@ import { SCENE_MEDIA_FILE_ACCEPT } from "@/features/story/utils/scene-media-uplo
 import {
   studioDestructiveButton,
   studioFieldLabel,
-  studioInputCompact,
   studioPrimaryButton,
   studioSecondaryButton,
   studioSubtleText,
@@ -566,8 +566,7 @@ export default function SceneVideoInspector({
               <div className="grid grid-cols-2 gap-2">
                 <label className="block space-y-1">
                   <span className={`${studioSubtleText} text-[11px]`}>Trim start (s)</span>
-                  <input
-                    type="number"
+                  <StudioNumberStepper
                     inputMode="decimal"
                     min={0}
                     max={startMaxSec}
@@ -581,6 +580,14 @@ export default function SceneVideoInspector({
                         setDraftTrimStartMs(parsed);
                       }
                       setTrimError(null);
+                    }}
+                    onStepValue={(seconds) => {
+                      const nextStartMs = Math.round(seconds * 1000);
+                      applyLocalTrimDraft({
+                        trimStartMs: nextStartMs,
+                        trimEndMs: draftTrimEndMs,
+                      });
+                      commitTrimValues(nextStartMs, draftTrimEndMs);
                     }}
                     onFocus={() => setTrimStartFocused(true)}
                     onBlur={() => {
@@ -597,13 +604,14 @@ export default function SceneVideoInspector({
                     data-scene-video-trim-start="true"
                     aria-label="Trim start in seconds"
                     aria-describedby="scene-video-trim-help"
-                    className={`${studioInputCompact} w-full text-left`}
+                    suffix="sec"
+                    compact
+                    className="w-full"
                   />
                 </label>
                 <label className="block space-y-1">
                   <span className={`${studioSubtleText} text-[11px]`}>Trim end (s)</span>
-                  <input
-                    type="number"
+                  <StudioNumberStepper
                     inputMode="decimal"
                     min={endMinSec}
                     max={endMaxSec}
@@ -617,6 +625,14 @@ export default function SceneVideoInspector({
                         setDraftTrimEndMs(parsed);
                       }
                       setTrimError(null);
+                    }}
+                    onStepValue={(seconds) => {
+                      const nextEndMs = Math.round(seconds * 1000);
+                      applyLocalTrimDraft({
+                        trimStartMs: draftTrimStartMs,
+                        trimEndMs: nextEndMs,
+                      });
+                      commitTrimValues(draftTrimStartMs, nextEndMs);
                     }}
                     onFocus={() => setTrimEndFocused(true)}
                     onBlur={() => {
@@ -633,7 +649,9 @@ export default function SceneVideoInspector({
                     data-scene-video-trim-end="true"
                     aria-label="Trim end in seconds"
                     aria-describedby="scene-video-trim-help"
-                    className={`${studioInputCompact} w-full text-left`}
+                    suffix="sec"
+                    compact
+                    className="w-full"
                   />
                 </label>
               </div>

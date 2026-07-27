@@ -314,6 +314,11 @@ export function flushDraftSessionPersist(
 ): Promise<Draft | null> {
   const inFlight = persistInFlight.get(draftId);
   if (inFlight) {
+    if (nextStage != null || scriptOverride != null) {
+      return inFlight.then(() =>
+        flushDraftSessionPersist(draftId, nextStage, scriptOverride),
+      );
+    }
     return inFlight;
   }
 

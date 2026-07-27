@@ -11,6 +11,7 @@ import {
   type MediaMotionEasing,
   type SceneMediaMotion,
 } from "@/features/media-motion";
+import { StudioSwitch } from "@/components/ui";
 import {
   studioFieldLabel,
   studioSecondaryButton,
@@ -105,27 +106,15 @@ export default function MediaMotionInspectorPanel({
 
   return (
     <div className="space-y-3" data-media-motion-panel="true">
-      <div className="flex items-center justify-between gap-3">
-        <label
-          htmlFor={`${controlId}-enable`}
-          className="text-[11px] font-medium text-foreground/90"
-        >
-          Enable Motion
-        </label>
-        <input
-          id={`${controlId}-enable`}
-          type="checkbox"
-          checked={enabled}
-          disabled={disabled}
-          onChange={(event) => handleEnableChange(event.target.checked)}
-          data-media-motion-enable="true"
-          className="h-4 w-4 accent-accent"
-        />
-      </div>
-
-      <p className={studioSubtleText} data-media-motion-summary="true">
-        {summary}
-      </p>
+      <StudioSwitch
+        id={`${controlId}-enable`}
+        checked={enabled}
+        disabled={disabled}
+        onChange={(event) => handleEnableChange(event.target.checked)}
+        data-media-motion-enable="true"
+        label="Motion"
+        description={summary}
+      />
 
       {enabled ? (
         <>

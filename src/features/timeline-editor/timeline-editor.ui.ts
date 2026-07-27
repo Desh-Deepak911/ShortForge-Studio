@@ -1,13 +1,17 @@
 import { studioTimelineRailScroll } from "@/lib/utils/studioUi";
 
 /** Timeline rail scroller — extends studio scrollbar conventions with smooth follow. */
-export const timelineEditorRailScroll = `${studioTimelineRailScroll} scroll-smooth [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-border/10 [&::-webkit-scrollbar-thumb]:bg-border/55 [&::-webkit-scrollbar-thumb]:hover:bg-border/70`;
+export const timelineEditorRailScroll = `${studioTimelineRailScroll} overflow-y-auto scroll-smooth [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-border/10 [&::-webkit-scrollbar-thumb]:bg-border/55 [&::-webkit-scrollbar-thumb]:hover:bg-border/70`;
 
 export const timelineEditorTrackSurface =
   "relative min-h-[5.25rem] min-w-full rounded-xl bg-surface/25 px-1.5 py-1.5 ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:min-h-[5.5rem]";
 
 export const timelineEditorSegmentRow =
   "flex min-h-[4.75rem] min-w-full items-stretch gap-0.5 sm:min-h-[5rem]";
+
+/** Full-width editor for the selected scene; never squeezed into its duration block. */
+export const timelineEditorSelectedMediaLane =
+  "mt-2 min-w-full rounded-xl bg-background/35 p-2 ring-1 ring-border/25";
 
 export const timelineEditorFallbackNotice =
   "mb-1.5 flex items-center gap-1.5 rounded-lg bg-surface/30 px-2 py-1 text-[10px] leading-snug text-muted ring-1 ring-border/15";

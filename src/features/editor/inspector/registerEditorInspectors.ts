@@ -11,6 +11,7 @@ export function createEditorInspectorRegistry(): InspectorRegistry {
     .register({ id: "image", component: ImageInspector, order: 20 })
     .register({ id: "caption", component: CaptionInspector, order: 30 })
     .register({ id: "transition", component: TransitionInspector, order: 40 })
-    // AudioInspector is future-only — register when resolveInspectorPanels adds "audio".
+    .register({ id: "audio", component: AudioInspector, order: 90 })
     .register({ id: "project", component: ProjectInspector, order: 100 });
 }
+import AudioInspector from "./panels/AudioInspector";

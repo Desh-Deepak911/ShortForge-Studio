@@ -3,6 +3,8 @@
 import {
   studioShellBodyRowDocument,
   studioShellBodyRowFixed,
+  studioShellEditorMaxWidth,
+  studioShellEditorPanelGap,
   studioShellMainColumnDocument,
   studioShellMainColumnFixed,
   studioShellMaxWidth,
@@ -38,22 +40,32 @@ export default function StudioShell({
   canvasLayout,
   sidebarVisibleBelowLg = false,
   viewportMode = "document",
+  editorLayout,
   className = "",
   "aria-label": ariaLabel = "Studio workspace",
 }: StudioShellProps) {
   const isFixedViewport = viewportMode === "fixed";
   const showSidebar = Boolean(sidebar) && !focusMode;
+  const showInspector = Boolean(inspector || inspectorBanner) && !focusMode;
   const showFooter = Boolean(footer) && !(focusMode && hideFooterInFocusMode);
+  const panelGapClass = editorLayout
+    ? studioShellEditorPanelGap
+    : studioShellPanelGap;
   const bodyRowClass = sidebarVisibleBelowLg
-    ? `flex flex-1 flex-col ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} lg:flex-row ${studioShellPanelGap}`
-    : `flex flex-1 ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} ${studioShellPanelGap}`;
+    ? `flex flex-1 flex-col ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} lg:flex-row ${panelGapClass}`
+    : `flex flex-1 ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} ${panelGapClass}`;
   const mainColumnClass = isFixedViewport
     ? studioShellMainColumnFixed
     : studioShellMainColumnDocument;
   const bodyRowInnerClass = isFixedViewport
     ? studioShellBodyRowFixed
     : studioShellBodyRowDocument;
-  const rootViewportClass = isFixedViewport ? studioShellRootFixed : studioShellRootDocument;
+  const rootViewportClass = isFixedViewport
+    ? studioShellRootFixed
+    : studioShellRootDocument;
+  const maxWidthClass = editorLayout
+    ? studioShellEditorMaxWidth
+    : studioShellMaxWidth;
 
   return (
     <div
@@ -67,7 +79,7 @@ export default function StudioShell({
       {header}
 
       <div
-        className={`${studioShellMaxWidth} flex flex-1 flex-col ${isFixedViewport ? "min-h-0" : ""} ${studioShellPanelGap}`}
+        className={`${maxWidthClass} flex flex-1 flex-col ${isFixedViewport ? "min-h-0" : ""} ${panelGapClass}`}
       >
         <div className={bodyRowClass}>
           {showSidebar ? (
@@ -75,6 +87,14 @@ export default function StudioShell({
               compactMode={compactMode}
               visibleBelowLg={sidebarVisibleBelowLg}
               viewportMode={viewportMode}
+              collapsed={editorLayout?.sidebarCollapsed}
+              narrow={editorLayout?.sidebarNarrow}
+              mobileOpen={editorLayout?.mobileSidebarOpen}
+              onMobileClose={
+                editorLayout
+                  ? () => editorLayout.onMobileSidebarOpenChange(false)
+                  : undefined
+              }
             >
               {sidebar}
             </StudioSidebar>
@@ -91,8 +111,23 @@ export default function StudioShell({
                   {canvas}
                 </StudioCanvas>
               ) : null}
-              {inspector || inspectorBanner ? (
-                <StudioInspector compactMode={compactMode} viewportMode={viewportMode}>
+              {showInspector ? (
+                <StudioInspector
+                  compactMode={compactMode}
+                  viewportMode={viewportMode}
+                  collapsed={editorLayout?.inspectorCollapsed}
+                  widthPx={editorLayout?.inspectorWidthPx}
+                  onToggle={editorLayout?.onInspectorToggle}
+                  onResizePointerDown={
+                    editorLayout?.onInspectorResizePointerDown
+                  }
+                  mobileOpen={editorLayout?.mobileInspectorOpen}
+                  onMobileClose={
+                    editorLayout
+                      ? () => editorLayout.onMobileInspectorOpenChange(false)
+                      : undefined
+                  }
+                >
                   {inspectorBanner}
                   {inspector}
                 </StudioInspector>
@@ -100,7 +135,15 @@ export default function StudioShell({
             </div>
 
             {timeline ? (
-              <StudioTimelineShell compactMode={compactMode}>{timeline}</StudioTimelineShell>
+              <StudioTimelineShell
+                compactMode={compactMode}
+                density={editorLayout?.timelineDensity}
+                heightPx={editorLayout?.timelineHeightPx}
+                onDensityChange={editorLayout?.onTimelineDensityChange}
+                onResizePointerDown={editorLayout?.onTimelineResizePointerDown}
+              >
+                {timeline}
+              </StudioTimelineShell>
             ) : null}
           </div>
         </div>

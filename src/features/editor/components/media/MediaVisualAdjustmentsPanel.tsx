@@ -1,6 +1,7 @@
 "use client";
 
 import type { SceneMedia } from "@/features/story/types";
+import { StudioSwitch } from "@/components/ui";
 import {
   normalizeMediaVisualAdjustments,
   type SceneMediaVisualAdjustments,
@@ -76,10 +77,15 @@ export default function MediaVisualAdjustmentsPanel({
       <RangeControl label="Contrast" value={value.contrast} min={0} max={200} suffix="%" disabled={disabled} onChange={(contrast) => onChange({ contrast })} />
       <RangeControl label="Saturation" value={value.saturation} min={0} max={200} suffix="%" disabled={disabled} onChange={(saturation) => onChange({ saturation })} />
 
-      <label className="flex items-center justify-between gap-3 text-xs text-foreground/85">
-        <span>Shadow</span>
-        <input type="checkbox" checked={value.shadowEnabled} disabled={disabled} onChange={(event) => onChange({ shadowEnabled: event.currentTarget.checked })} />
-      </label>
+      <StudioSwitch
+        checked={value.shadowEnabled}
+        disabled={disabled}
+        onChange={(event) =>
+          onChange({ shadowEnabled: event.currentTarget.checked })
+        }
+        label="Shadow"
+        description="Add separation and depth behind this media."
+      />
       {value.shadowEnabled ? (
         <div className="space-y-3 rounded-lg bg-background/25 p-2.5 ring-1 ring-border/20">
           <label className="flex items-center justify-between gap-3">

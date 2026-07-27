@@ -74,8 +74,7 @@ export const studioChipActive =
 /** Rectangular selectable card — voice library, dense pickers. */
 export const studioCard = `w-full rounded-lg bg-surface-elevated/35 px-2 py-1.5 text-left ring-1 ring-border/20 transition hover:bg-surface-elevated/50 hover:ring-border/30 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 ${focusRing}`;
 
-export const studioCardActive =
-  `w-full rounded-lg bg-accent-soft/60 px-2 py-1.5 text-left ring-1 ring-accent/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-200 active:scale-[0.99] ${focusRing}`;
+export const studioCardActive = `w-full rounded-lg bg-accent-soft/60 px-2 py-1.5 text-left ring-1 ring-accent/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-200 active:scale-[0.99] ${focusRing}`;
 
 /** Compact inline tag for card metadata. */
 export const studioCardTag =
@@ -93,15 +92,13 @@ export const studioSegment =
 export const studioSegmentActive =
   "flex min-h-[2.25rem] flex-1 items-center justify-center rounded-lg bg-surface-elevated/85 px-2 py-2 text-center text-[11px] font-medium leading-tight text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-border/25 sm:min-h-0 sm:px-2.5 sm:text-xs";
 
-export const studioLabel =
-  "mb-2 block text-sm font-medium text-foreground/90";
+export const studioLabel = "mb-2 block text-sm font-medium text-foreground/90";
 
 export const studioFieldLabel =
   "mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-muted";
 
 /** Compact range slider for inspector controls (zoom, etc.). */
-export const studioRange =
-  `studio-range-input h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full bg-surface-elevated/80 accent-accent ${focusRing}`;
+export const studioRange = `studio-range-input h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full bg-surface-elevated/80 accent-accent ${focusRing}`;
 
 /** Touch-friendly host wrapper for range inputs — keeps a 44px tap target on coarse pointers. */
 export const studioRangeTouchHost =
@@ -135,14 +132,12 @@ export const studioSegmentedControlStacked =
 export const studioImageFitSegmentedControlStacked =
   "flex min-w-0 flex-col gap-1 rounded-[0.65rem] bg-surface-elevated/35 p-1 ring-1 ring-border/20 sm:flex-row sm:flex-1 sm:gap-0 sm:p-0.5";
 
-export const studioSubtleText =
-  "text-xs leading-relaxed text-muted";
+export const studioSubtleText = "text-xs leading-relaxed text-muted";
 
 /* ── Layout & surfaces ─────────────────────────────────────────────────────── */
 
 /** Primary page section card. */
-export const studioSectionCard =
-  `min-w-0 rounded-2xl bg-surface/40 p-4 backdrop-blur-xl sm:p-6 lg:p-7 ${surfaceRing} ${shadowInset}`;
+export const studioSectionCard = `min-w-0 rounded-2xl bg-surface/40 p-4 backdrop-blur-xl sm:p-6 lg:p-7 ${surfaceRing} ${shadowInset}`;
 
 /** @deprecated Use studioSectionCard */
 export const studioPageCard = studioSectionCard;
@@ -156,8 +151,7 @@ export const studioGlass =
   "rounded-xl bg-surface-elevated/50 p-3.5 ring-1 ring-border/20 backdrop-blur-md sm:p-4";
 
 /** Storyboard main-column section — lighter than studioSectionCard to reduce nesting weight. */
-export const studioWorkspaceSection =
-  `min-w-0 rounded-2xl bg-surface/30 p-4 ring-1 ring-border/15 sm:p-5 lg:p-6 ${shadowInset}`;
+export const studioWorkspaceSection = `min-w-0 rounded-2xl bg-surface/30 p-4 ring-1 ring-border/15 sm:p-5 lg:p-6 ${shadowInset}`;
 
 export const studioStepLabel =
   "text-[11px] font-medium uppercase tracking-[0.18em] text-muted";
@@ -168,17 +162,14 @@ export const studioSectionTitle =
 export const studioSectionDesc =
   "mt-1 text-sm leading-relaxed text-muted sm:mt-1.5";
 
-export const studioBadge =
-  `inline-flex items-center gap-1.5 rounded-full bg-surface-elevated/50 px-3 py-1.5 text-xs font-medium text-muted ring-1 ring-border/20`;
+export const studioBadge = `inline-flex items-center gap-1.5 rounded-full bg-surface-elevated/50 px-3 py-1.5 text-xs font-medium text-muted ring-1 ring-border/20`;
 
-export const studioIconBox =
-  `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-elevated/80 ring-1 ring-border/20 ${shadowInset}`;
+export const studioIconBox = `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-elevated/80 ring-1 ring-border/20 ${shadowInset}`;
 
 export const studioIconBoxAccent =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent ring-1 ring-accent/20";
 
-export const studioHeader =
-  `sticky top-0 z-30 overflow-hidden border-b border-border/60 bg-background/60 backdrop-blur-2xl backdrop-saturate-150 ${shadowInset}`;
+export const studioHeader = `sticky top-0 z-30 overflow-hidden border-b border-border/60 bg-background/60 backdrop-blur-2xl backdrop-saturate-150 ${shadowInset}`;
 
 export const studioShellContainer =
   "mx-auto w-full min-w-0 max-w-4xl px-3.5 sm:px-6 lg:px-8";
@@ -194,23 +185,18 @@ export const studioWorkspaceMain = "flex min-w-0 flex-col gap-5 sm:gap-6";
 export const studioWorkspaceAside =
   "flex min-w-0 flex-col gap-4 sm:gap-5 lg:sticky lg:top-[4.25rem] lg:max-h-[calc(100vh-5.5rem)] lg:gap-5 lg:overflow-y-auto lg:overscroll-contain lg:pr-0.5";
 
-export const studioWorkspacePanel =
-  `min-w-0 rounded-2xl bg-surface/35 p-4 backdrop-blur-xl sm:p-5 lg:p-6 ${surfaceRing} ${shadowInset}`;
+export const studioWorkspacePanel = `min-w-0 rounded-2xl bg-surface/35 p-4 backdrop-blur-xl sm:p-5 lg:p-6 ${surfaceRing} ${shadowInset}`;
 
 export const studioMobileActionBar =
   "fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/80 backdrop-blur-2xl backdrop-saturate-150 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 lg:hidden";
 
-export const studioMobileActionButton =
-  `flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-xl bg-surface-elevated/65 px-2.5 py-3 text-xs font-medium text-foreground/90 ring-1 ring-border/25 hover:bg-surface-elevated active:scale-[0.98] ${focusRing}`;
+export const studioMobileActionButton = `flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-xl bg-surface-elevated/65 px-2.5 py-3 text-xs font-medium text-foreground/90 ring-1 ring-border/25 hover:bg-surface-elevated active:scale-[0.98] ${focusRing}`;
 
-export const studioMobileActionButtonPrimary =
-  `flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent/85 px-2.5 py-3 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-accent active:scale-[0.98] ${focusRing}`;
+export const studioMobileActionButtonPrimary = `flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent/85 px-2.5 py-3 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-accent active:scale-[0.98] ${focusRing}`;
 
-export const studioNavPrimaryButton =
-  `inline-flex min-h-[2.25rem] min-w-[2.25rem] shrink-0 items-center justify-center gap-1.5 rounded-xl bg-accent/90 px-3 py-2 text-xs font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:min-w-0 sm:px-3.5 sm:py-1.5 ${focusRing}`;
+export const studioNavPrimaryButton = `inline-flex min-h-[2.25rem] min-w-[2.25rem] shrink-0 items-center justify-center gap-1.5 rounded-xl bg-accent/90 px-3 py-2 text-xs font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:min-w-0 sm:px-3.5 sm:py-1.5 ${focusRing}`;
 
-export const studioNavExportButton =
-  `inline-flex min-h-[2.25rem] min-w-[2.25rem] shrink-0 items-center justify-center gap-1.5 rounded-xl bg-surface-elevated/65 px-3 py-2 text-xs font-semibold text-foreground/90 ring-1 ring-border/25 backdrop-blur-md hover:bg-surface-elevated/80 hover:ring-border/35 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:min-w-0 sm:px-3.5 sm:py-1.5 ${focusRing}`;
+export const studioNavExportButton = `inline-flex min-h-[2.25rem] min-w-[2.25rem] shrink-0 items-center justify-center gap-1.5 rounded-xl bg-surface-elevated/65 px-3 py-2 text-xs font-semibold text-foreground/90 ring-1 ring-border/25 backdrop-blur-md hover:bg-surface-elevated/80 hover:ring-border/35 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0 sm:min-w-0 sm:px-3.5 sm:py-1.5 ${focusRing}`;
 
 export const studioFooter =
   "mt-auto border-t border-border/60 bg-background/50 py-5 backdrop-blur-sm sm:py-6";
@@ -238,7 +224,9 @@ export const studioOptionRow = (active: boolean) =>
 /** Read-only checklist row (export preflight). */
 export const studioChecklistItem = (done: boolean) =>
   `flex items-start gap-3 rounded-xl px-4 py-3.5 ring-1 transition-colors ${
-    done ? "bg-accent-soft/60 ring-accent/20" : "bg-surface-elevated/30 ring-border/20"
+    done
+      ? "bg-accent-soft/60 ring-accent/20"
+      : "bg-surface-elevated/30 ring-border/20"
   }`;
 
 /** Inline stat / progress summary bar. */
@@ -247,24 +235,22 @@ export const studioStatBar =
 
 /* ── Composer ──────────────────────────────────────────────────────────────── */
 
-export const studioComposerCard =
-  `min-w-0 rounded-2xl bg-surface-elevated/25 p-3.5 ring-1 ring-border/20 backdrop-blur-2xl transition-[box-shadow,ring-color] duration-200 focus-within:ring-accent/20 sm:p-5 ${shadowInset}`;
+export const studioComposerCard = `min-w-0 rounded-2xl bg-surface-elevated/25 p-3.5 ring-1 ring-border/20 backdrop-blur-2xl transition-[box-shadow,ring-color] duration-200 focus-within:ring-accent/20 sm:p-5 ${shadowInset}`;
 
-export const studioComposerInput =
-  `w-full min-h-[6.5rem] resize-y rounded-xl bg-transparent px-1.5 py-2 text-[15px] leading-[1.55] text-foreground placeholder:text-muted/70 outline-none transition-[background-color] duration-200 focus:bg-surface-elevated/10 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[8rem] sm:px-3 sm:py-2.5 sm:text-base sm:leading-[1.6] lg:min-h-[9rem] lg:text-[17px]`;
+export const studioComposerInput = `w-full min-h-[6.5rem] resize-y rounded-xl bg-transparent px-1.5 py-2 text-[15px] leading-[1.55] text-foreground placeholder:text-muted/70 outline-none transition-[background-color] duration-200 focus:bg-surface-elevated/10 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[8rem] sm:px-3 sm:py-2.5 sm:text-base sm:leading-[1.6] lg:min-h-[9rem] lg:text-[17px]`;
 
 export const studioComposerHelper =
   "px-1.5 text-xs leading-relaxed text-muted sm:px-3 sm:text-[13px]";
 
-export const studioComposerButton = studioPrimaryButton + " w-full min-h-[2.75rem] sm:w-auto sm:min-w-[10.5rem]";
+export const studioComposerButton =
+  studioPrimaryButton + " w-full min-h-[2.75rem] sm:w-auto sm:min-w-[10.5rem]";
 
 /** @deprecated Use studioSelectCompact */
 export const studioComposerSelect = studioSelectCompact;
 
 /* ── Storyboard scene cards ────────────────────────────────────────────────── */
 
-export const studioStoryboardCard =
-  `min-w-0 overflow-hidden rounded-2xl bg-surface/30 ring-1 ring-border/20 backdrop-blur-xl sm:rounded-2xl ${shadowInset}`;
+export const studioStoryboardCard = `min-w-0 overflow-hidden rounded-2xl bg-surface/30 ring-1 ring-border/20 backdrop-blur-xl sm:rounded-2xl ${shadowInset}`;
 
 export const studioStoryboardScenePill =
   "inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded-full bg-surface-elevated/70 px-2 text-[11px] font-medium tabular-nums text-muted ring-1 ring-border/20";
@@ -290,13 +276,11 @@ export const studioStoryboardControl = studioCompactButton;
 /** @deprecated Use studioUploadButton */
 export const studioStoryboardControlPrimary = studioUploadButton;
 
-export const studioStoryboardMeta =
-  "text-xs leading-relaxed text-muted";
+export const studioStoryboardMeta = "text-xs leading-relaxed text-muted";
 
 /* ── Transition connectors ─────────────────────────────────────────────────── */
 
-export const studioTransitionConnector =
-  `mx-auto w-full min-w-0 max-w-full rounded-xl bg-surface-elevated/25 px-2.5 py-2 ring-1 ring-border/20 backdrop-blur-xl transition duration-200 hover:bg-surface-elevated/35 hover:ring-border/30 sm:max-w-md sm:rounded-2xl sm:px-4 sm:py-2.5 ${shadowInset}`;
+export const studioTransitionConnector = `mx-auto w-full min-w-0 max-w-full rounded-xl bg-surface-elevated/25 px-2.5 py-2 ring-1 ring-border/20 backdrop-blur-xl transition duration-200 hover:bg-surface-elevated/35 hover:ring-border/30 sm:max-w-md sm:rounded-2xl sm:px-4 sm:py-2.5 ${shadowInset}`;
 
 /** @deprecated Use studioSelectCompact */
 export const studioTransitionConnectorInput = studioSelectCompact;
@@ -320,8 +304,7 @@ export const studioPreviewStack =
   "flex w-full min-w-0 flex-col items-center gap-1.5 sm:gap-2";
 
 /** Centers the phone at its intrinsic 9:16 size. */
-export const studioPreviewFrameSlot =
-  "flex w-full items-center justify-center";
+export const studioPreviewFrameSlot = "flex w-full items-center justify-center";
 
 /** Transport controls beneath the device — never shrink. */
 export const studioPreviewTransportStack =
@@ -338,18 +321,19 @@ export const studioPreviewCaption =
 export const studioStoryboardCaptionOverlay =
   "rounded-lg bg-black/55 px-2.5 py-2 text-center text-[11px] font-semibold leading-snug text-white/95 backdrop-blur-sm sm:text-xs";
 
-export const studioPreviewPill = studioSecondaryButton + " min-h-[2rem] rounded-full px-2.5 py-1.5 text-[10px] sm:min-h-0 sm:px-3 sm:py-2 sm:text-[11px]";
+export const studioPreviewPill =
+  studioSecondaryButton +
+  " min-h-[2rem] rounded-full px-2.5 py-1.5 text-[10px] sm:min-h-0 sm:px-3 sm:py-2 sm:text-[11px]";
 
 export const studioPreviewPillPrimary =
-  studioPrimaryButton + " min-h-[2rem] rounded-full px-3 py-1.5 text-[10px] shadow-none sm:min-h-0 sm:px-3.5 sm:py-2 sm:text-[11px]";
+  studioPrimaryButton +
+  " min-h-[2rem] rounded-full px-3 py-1.5 text-[10px] shadow-none sm:min-h-0 sm:px-3.5 sm:py-2 sm:text-[11px]";
 
-export const studioPreviewPillMuted =
-  `inline-flex min-h-[2rem] items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-medium text-muted ring-1 ring-border/20 hover:bg-surface-elevated/45 hover:text-foreground/85 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:min-h-0 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[11px] ${focusRing}`;
+export const studioPreviewPillMuted = `inline-flex min-h-[2rem] items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-medium text-muted ring-1 ring-border/20 hover:bg-surface-elevated/45 hover:text-foreground/85 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 sm:min-h-0 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[11px] ${focusRing}`;
 
 /* ── Empty & loading states ────────────────────────────────────────────────── */
 
-export const studioEmptyStateCard =
-  `mx-auto flex w-full min-w-0 max-w-lg flex-col items-center rounded-2xl bg-surface/50 px-5 py-8 text-center ring-1 ring-border/30 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-10 sm:py-10 ${shadowInset}`;
+export const studioEmptyStateCard = `mx-auto flex w-full min-w-0 max-w-lg flex-col items-center rounded-2xl bg-surface/50 px-5 py-8 text-center ring-1 ring-border/30 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-10 sm:py-10 ${shadowInset}`;
 
 export const studioEmptyStateIcon =
   "relative mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-elevated/70 ring-1 ring-border/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:mb-5 sm:h-16 sm:w-16";
@@ -366,8 +350,7 @@ export const studioSkeleton =
 export const studioLoadingMessage =
   "text-center text-sm font-medium tracking-tight text-foreground/90 sm:text-[15px]";
 
-export const studioLoadingSubtext =
-  "mt-1.5 text-center text-xs text-muted";
+export const studioLoadingSubtext = "mt-1.5 text-center text-xs text-muted";
 
 /** Shared spinner host for Studio status loading states. */
 export const studioStatusSpinnerHost =
@@ -382,10 +365,12 @@ export const studioStatusIconBoxInline =
   "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface/50 ring-1 ring-border/25";
 
 /** Shared status title — panel and compact layouts. */
-export const studioStatusTitle = "text-sm font-medium tracking-tight text-foreground/90";
+export const studioStatusTitle =
+  "text-sm font-medium tracking-tight text-foreground/90";
 
 /** Shared status description — panel layouts. */
-export const studioStatusDescription = "mt-1 text-xs leading-relaxed text-muted";
+export const studioStatusDescription =
+  "mt-1 text-xs leading-relaxed text-muted";
 
 /* ── Studio UX 2.0 shell layout (presentation only) ───────────────────────── */
 
@@ -402,11 +387,19 @@ export const studioShellRootDocument = "min-h-screen";
 /** Centered shell content max width (editor workspace). */
 export const studioShellMaxWidth = "mx-auto w-full min-w-0 max-w-[100rem]";
 
+/** Wide editor-only shell — uses large desktop space without changing document routes. */
+export const studioShellEditorMaxWidth =
+  "mx-auto w-full min-w-0 max-w-[128rem]";
+
 /** Gap between shell regions (sidebar, canvas, inspector). */
 export const studioShellPanelGap = "gap-3 lg:gap-5";
 
+/** Tighter editor-only gutters leave more room for the preview and tools. */
+export const studioShellEditorPanelGap = "gap-2 lg:gap-3";
+
 /** Horizontal padding inside shell regions. */
-export const studioShellRegionPadding = "px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-4";
+export const studioShellRegionPadding =
+  "px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-4";
 
 /** Thin vertical scrollbar — inspector, sidebar, drawers. */
 export const studioScrollbarVertical =
@@ -429,8 +422,7 @@ export const studioShellInspectorWidthCompact =
   "flex min-h-0 w-full shrink-0 flex-col lg:w-[16.25rem]";
 
 /** Primary scroll host inside shell rails — single owner per column. */
-export const studioShellRailScrollHost =
-  `min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] ${studioScrollbarVertical}`;
+export const studioShellRailScrollHost = `min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] ${studioScrollbarVertical}`;
 
 /** Inspector tab body — sole vertical scroll owner beneath pinned sync UI. */
 export const studioInspectorTabBodyScrollHost = studioShellRailScrollHost;
@@ -452,7 +444,8 @@ export const studioShellCanvasRegionEditor =
   "flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-start overflow-y-auto overscroll-contain rounded-xl bg-[#070708] ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] lg:rounded-2xl";
 
 /** Editor canvas column host — top-aligned preview stack. */
-export const studioShellEditorCanvasHost = "flex w-full min-w-0 flex-col items-center";
+export const studioShellEditorCanvasHost =
+  "flex w-full min-w-0 flex-col items-center";
 
 /** Editor preview stack — top-aligned under header inset. */
 export const studioShellEditorCanvasColumn =
@@ -471,7 +464,7 @@ export const studioShellCanvasMaxWidth =
 
 /** Editor canvas — larger preview focus area without changing VideoPreview internals. */
 export const studioShellEditorCanvasMaxWidth =
-  "w-full max-w-[min(100%,22rem)] sm:max-w-[min(100%,26rem)] lg:max-w-[min(100%,32rem)] xl:max-w-[min(100%,36rem)]";
+  "w-full max-w-[min(100%,24rem)] sm:max-w-[min(100%,28rem)] lg:max-w-[min(100%,36rem)] xl:max-w-[min(100%,40rem)]";
 
 /** Preview column inside the editor stage. */
 export const studioShellEditorPreviewWrap =
@@ -515,8 +508,7 @@ export const studioShellMainColumnDocument = "flex min-w-0 flex-1 flex-col";
 export const studioShellMainColumn = studioShellMainColumnFixed;
 
 /** Header slot container inside shell. */
-export const studioShellHeaderRegion =
-  `shrink-0 border-b border-border/50 bg-[#0b0b0d]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.9)] ${shadowInset}`;
+export const studioShellHeaderRegion = `shrink-0 border-b border-border/50 bg-[#0b0b0d]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.9)] ${shadowInset}`;
 
 /** Left scene-list rail surface — slightly darker than inspector. */
 export const studioShellSidebarSurface =
@@ -535,8 +527,7 @@ export const studioShellFooterRegion =
   "shrink-0 border-t border-border/60 bg-background/50 py-3 backdrop-blur-sm sm:py-4";
 
 /** Inner panel surface for shell slots. */
-export const studioShellPanelSurface =
-  `min-h-0 min-w-0 rounded-xl bg-surface/40 p-3 ring-1 ring-border/25 shadow-[0_10px_28px_-22px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4 ${shadowInset}`;
+export const studioShellPanelSurface = `min-h-0 min-w-0 rounded-xl bg-surface/40 p-3 ring-1 ring-border/25 shadow-[0_10px_28px_-22px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4 ${shadowInset}`;
 
 /** Section title inside shell panels. */
 export const studioShellSectionTitle =
@@ -561,8 +552,7 @@ export const studioExportDrawerHeader =
   "flex shrink-0 items-start justify-between gap-3 border-b border-border/30 px-4 py-3.5 sm:px-5 sm:py-4";
 
 /** Scrollable export drawer body. */
-export const studioExportDrawerBody =
-  `min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5 ${studioScrollbarVertical}`;
+export const studioExportDrawerBody = `min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5 ${studioScrollbarVertical}`;
 
 /** Shared overlay header — drawers and modals. */
 export const studioOverlayHeader = studioExportDrawerHeader;
@@ -575,8 +565,7 @@ export const studioOverlayFooter =
   "flex shrink-0 flex-col gap-2 border-t border-border/20 px-4 py-4 sm:flex-row sm:px-5";
 
 /** Unified overlay close control. */
-export const studioOverlayCloseButton =
-  `${studioSubtleText} inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-border/25 hover:bg-surface-elevated/50 hover:text-foreground/90`;
+export const studioOverlayCloseButton = `${studioSubtleText} inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-border/25 hover:bg-surface-elevated/50 hover:text-foreground/90`;
 
 /** Centered modal shell — flex host above backdrop. */
 export const studioOverlayModalShell =
@@ -593,8 +582,7 @@ export const studioTimelineRailScroll =
   "flex min-h-0 flex-1 items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/40";
 
 /** Compact scene navigation chip — inactive. */
-export const studioTimelineRailChip =
-  `group flex w-[4.75rem] shrink-0 flex-col items-stretch gap-1.5 rounded-xl bg-surface/35 p-1.5 text-left ring-1 ring-border/20 transition duration-150 hover:bg-surface-elevated/45 hover:ring-border/35 hover:shadow-sm active:scale-[0.98] sm:w-[5.25rem] ${focusRing}`;
+export const studioTimelineRailChip = `group flex w-[4.75rem] shrink-0 flex-col items-stretch gap-1.5 rounded-xl bg-surface/35 p-1.5 text-left ring-1 ring-border/20 transition duration-150 hover:bg-surface-elevated/45 hover:ring-border/35 hover:shadow-sm active:scale-[0.98] sm:w-[5.25rem] ${focusRing}`;
 
 /** Compact scene navigation chip — selected. */
 export const studioTimelineRailChipActive =
@@ -666,12 +654,10 @@ export const studioPickerGrid = "grid grid-cols-2 gap-1";
 export const studioPickerGridCompact = "grid grid-cols-2 gap-0.5";
 
 /** Picker card shell — extends studioCard with consistent flex layout. */
-export const studioPickerCard =
-  `${studioCard} flex min-h-[2.75rem] w-full flex-col items-start justify-center gap-1 text-left`;
+export const studioPickerCard = `${studioCard} flex min-h-[2.75rem] w-full flex-col items-start justify-center gap-1 text-left`;
 
 /** Picker card — selected state. */
-export const studioPickerCardActive =
-  `${studioCardActive} flex min-h-[2.75rem] w-full flex-col items-start justify-center gap-1 text-left`;
+export const studioPickerCardActive = `${studioCardActive} flex min-h-[2.75rem] w-full flex-col items-start justify-center gap-1 text-left`;
 
 /** Picker card title — compact inspector. */
 export const studioPickerCardLabel = "font-medium text-foreground/95 text-xs";
@@ -713,8 +699,7 @@ export const studioWorkspaceTabInactive =
 export const studioSidebarSceneList = "flex min-w-0 flex-col gap-1";
 
 /** Sidebar scene row — inactive. */
-export const studioSidebarSceneItem =
-  `flex w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ring-1 ring-border/15 bg-surface/20 transition duration-150 hover:-translate-y-px hover:bg-surface-elevated/45 hover:ring-border/30 hover:shadow-[0_8px_20px_-16px_rgba(0,0,0,0.85)] active:scale-[0.99] ${focusRing}`;
+export const studioSidebarSceneItem = `flex w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ring-1 ring-border/15 bg-surface/20 transition duration-150 hover:-translate-y-px hover:bg-surface-elevated/45 hover:ring-border/30 hover:shadow-[0_8px_20px_-16px_rgba(0,0,0,0.85)] active:scale-[0.99] ${focusRing}`;
 
 /** Sidebar scene row — selected. */
 export const studioSidebarSceneItemActive =
@@ -739,7 +724,8 @@ export const studioContextRibbon =
   "mb-2 flex w-full shrink-0 min-w-0 flex-wrap items-center gap-3 rounded-xl bg-surface/45 px-3 py-2.5 ring-1 ring-border/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3.5";
 
 /** Ribbon section grouping. */
-export const studioRibbonSection = "flex min-w-0 flex-wrap items-center gap-2 sm:gap-3";
+export const studioRibbonSection =
+  "flex min-w-0 flex-wrap items-center gap-2 sm:gap-3";
 
 /** Ribbon section title chip. */
 export const studioRibbonSectionTitle =

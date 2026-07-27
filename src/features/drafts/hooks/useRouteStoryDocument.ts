@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { FootieScript } from "@/features/story/types";
 
 import { getDraft } from "../services";
+import { hydrateDraftWithAudioAssets } from "../services/draft-audio-storage.service";
 import {
   flushDraftSessionPersist,
   persistDraftSessionCreationBrief,
@@ -82,8 +83,13 @@ export function useRouteStoryDocument(draftId: string): UseRouteStoryDocumentRes
         return;
       }
 
-      hydrateFromDraft(stored);
-      setLookupResult({ draftId, status: "ready" });
+      void hydrateDraftWithAudioAssets(stored).then((hydratedDraft) => {
+        if (cancelled) {
+          return;
+        }
+        hydrateFromDraft(hydratedDraft);
+        setLookupResult({ draftId, status: "ready" });
+      });
     });
 
     return () => {

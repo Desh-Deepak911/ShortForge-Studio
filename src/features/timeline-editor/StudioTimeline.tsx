@@ -52,6 +52,7 @@ import {
   timelineEditorPlaybackLocked,
   timelineEditorRailResizing,
   timelineEditorRailScroll,
+  timelineEditorSelectedMediaLane,
   timelineEditorRailTrimming,
   timelineEditorSegmentRow,
   timelineEditorTrackSurface,
@@ -86,7 +87,10 @@ import { releaseTimelineTrimPointerCapture } from "./timeline-trim-interaction.u
 
 export interface StudioTimelineProps {
   script: FootieScript;
-  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
+  onScriptChange: (
+    script: FootieScript,
+    options?: StoryScriptChangeOptions,
+  ) => void;
   /**
    * Dedicated media-intent trim commit — must call buildVideoTrimPatch
    * and onScriptChange(..., { intent: "media" }).
@@ -97,9 +101,16 @@ export interface StudioTimelineProps {
   ) => boolean;
   className?: string;
   id?: string;
+  /** UI-only density mode: keep all scene commands, but expand media lane for selection only. */
+  selectedSceneDetailOnly?: boolean;
+  /** When false, selected-scene media detail is hidden in compact timeline mode. */
+  showSelectedSceneMedia?: boolean;
 }
 
-function buildScriptFromSceneOrder(script: FootieScript, sceneIds: string[]): FootieScript {
+function buildScriptFromSceneOrder(
+  script: FootieScript,
+  sceneIds: string[],
+): FootieScript {
   const sceneById = new Map(script.scenes.map((scene) => [scene.id, scene]));
   const scenes = sceneIds
     .map((sceneId) => sceneById.get(sceneId))
@@ -127,6 +138,8 @@ export default function StudioTimeline({
   onApplyVideoTrim,
   className = "",
   id,
+  selectedSceneDetailOnly = false,
+  showSelectedSceneMedia = true,
 }: StudioTimelineProps) {
   const selection = useEditorSelection();
   const playback = useTimelinePlayback();
@@ -138,11 +151,15 @@ export default function StudioTimeline({
   const wrapperRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const [menu, setMenu] = useState<TimelineContextMenuState | null>(null);
   const [dragState, setDragState] = useState<TimelineDragState | null>(null);
-  const [resizeState, setResizeState] = useState<TimelineResizeState | null>(null);
-  const [trimState, setTrimState] = useState<TimelineVideoTrimState | null>(null);
-  const [mediaBoundaryOwnerSceneId, setMediaBoundaryOwnerSceneId] = useState<string | null>(
+  const [resizeState, setResizeState] = useState<TimelineResizeState | null>(
     null,
   );
+  const [trimState, setTrimState] = useState<TimelineVideoTrimState | null>(
+    null,
+  );
+  const [mediaBoundaryOwnerSceneId, setMediaBoundaryOwnerSceneId] = useState<
+    string | null
+  >(null);
   const [boundaryCancelEpoch, setBoundaryCancelEpoch] = useState(0);
   const [isFinePointer, setIsFinePointer] = useState(true);
   const sharedAppend = useOptionalSceneMediaImageAppendContext();
@@ -175,7 +192,10 @@ export default function StudioTimeline({
   }, [trimPreview]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return;
     }
     const mediaQuery = window.matchMedia("(pointer: fine)");
@@ -186,16 +206,30 @@ export default function StudioTimeline({
   }, []);
 
   const playbackLocked = selection.phase === SelectionPhase.PlaybackLocked;
-  const mediaInteractionActive = isMediaBoundaryGlobalLockActive(mediaBoundaryOwnerSceneId);
+  const mediaInteractionActive = isMediaBoundaryGlobalLockActive(
+    mediaBoundaryOwnerSceneId,
+  );
   const reorderDisabled =
-    playbackLocked || resizeState != null || trimState != null || mediaInteractionActive;
+    playbackLocked ||
+    resizeState != null ||
+    trimState != null ||
+    mediaInteractionActive;
   const resizeDisabled =
-    playbackLocked || dragState != null || trimState != null || mediaInteractionActive;
+    playbackLocked ||
+    dragState != null ||
+    trimState != null ||
+    mediaInteractionActive;
   const trimDisabled =
-    playbackLocked || dragState != null || resizeState != null || mediaInteractionActive;
+    playbackLocked ||
+    dragState != null ||
+    resizeState != null ||
+    mediaInteractionActive;
   const contextMenuDisabled = trimState != null || mediaInteractionActive;
   const sceneMediaLaneBaseLocked =
-    playbackLocked || dragState != null || resizeState != null || trimState != null;
+    playbackLocked ||
+    dragState != null ||
+    resizeState != null ||
+    trimState != null;
 
   useEffect(() => {
     const owner =
@@ -218,7 +252,10 @@ export default function StudioTimeline({
   }, [dragState, resizeState, trimState, mediaBoundaryOwnerSceneId]);
 
   const tryAcquireMediaBoundary = useCallback((sceneId: string) => {
-    const result = tryAcquireMediaBoundaryOwner(mediaBoundaryOwnerRef.current, sceneId);
+    const result = tryAcquireMediaBoundaryOwner(
+      mediaBoundaryOwnerRef.current,
+      sceneId,
+    );
     if (!result.ok) {
       return false;
     }
@@ -228,7 +265,10 @@ export default function StudioTimeline({
   }, []);
 
   const releaseMediaBoundary = useCallback((sceneId: string) => {
-    const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, sceneId);
+    const next = releaseMediaBoundaryOwner(
+      mediaBoundaryOwnerRef.current,
+      sceneId,
+    );
     mediaBoundaryOwnerRef.current = next;
     setMediaBoundaryOwnerSceneId(next);
   }, []);
@@ -241,7 +281,10 @@ export default function StudioTimeline({
     }
     if (selection.selectedSceneId !== owner) {
       setBoundaryCancelEpoch((epoch) => epoch + 1);
-      const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, owner);
+      const next = releaseMediaBoundaryOwner(
+        mediaBoundaryOwnerRef.current,
+        owner,
+      );
       mediaBoundaryOwnerRef.current = next;
       setMediaBoundaryOwnerSceneId(next);
     }
@@ -254,7 +297,10 @@ export default function StudioTimeline({
       return;
     }
     setBoundaryCancelEpoch((epoch) => epoch + 1);
-    const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, owner);
+    const next = releaseMediaBoundaryOwner(
+      mediaBoundaryOwnerRef.current,
+      owner,
+    );
     mediaBoundaryOwnerRef.current = next;
     setMediaBoundaryOwnerSceneId(next);
   }, [playbackLocked]);
@@ -267,7 +313,10 @@ export default function StudioTimeline({
     }
     if (!script.scenes.some((entry) => entry.id === owner)) {
       setBoundaryCancelEpoch((epoch) => epoch + 1);
-      const next = releaseMediaBoundaryOwner(mediaBoundaryOwnerRef.current, owner);
+      const next = releaseMediaBoundaryOwner(
+        mediaBoundaryOwnerRef.current,
+        owner,
+      );
       mediaBoundaryOwnerRef.current = next;
       setMediaBoundaryOwnerSceneId(next);
     }
@@ -303,23 +352,35 @@ export default function StudioTimeline({
     [layoutScript, masterTimeline],
   );
   const layout = useMemo(
-    () => (resizeState ? applyResizePreviewToLayout(baseLayout, resizeState) : baseLayout),
+    () =>
+      resizeState
+        ? applyResizePreviewToLayout(baseLayout, resizeState)
+        : baseLayout,
     [baseLayout, resizeState],
   );
 
   const sceneById = useMemo(() => {
     return new Map(script.scenes.map((scene) => [scene.id, scene]));
   }, [script.scenes]);
+  const selectedScene =
+    sceneById.get(selection.selectedSceneId ?? "") ??
+    script.scenes[selection.selectedSceneIndex] ??
+    null;
 
   const sceneIndexById = useMemo(() => {
-    const orderIds = dragState?.previewSceneIds ?? script.scenes.map((scene) => scene.id);
+    const orderIds =
+      dragState?.previewSceneIds ?? script.scenes.map((scene) => scene.id);
     return new Map(orderIds.map((sceneId, index) => [sceneId, index]));
   }, [dragState?.previewSceneIds, script.scenes]);
 
   const draggedSceneId = dragState?.draggedSceneId ?? null;
 
   const playbackProgress = useMemo(
-    () => clampTimelinePlaybackProgress(playback.currentTimeMs, playback.renderDurationMs),
+    () =>
+      clampTimelinePlaybackProgress(
+        playback.currentTimeMs,
+        playback.renderDurationMs,
+      ),
     [playback.currentTimeMs, playback.renderDurationMs],
   );
 
@@ -385,7 +446,9 @@ export default function StudioTimeline({
       event.preventDefault();
       setMenu(null);
 
-      const sourceIndex = script.scenes.findIndex((scene) => scene.id === sceneId);
+      const sourceIndex = script.scenes.findIndex(
+        (scene) => scene.id === sceneId,
+      );
       if (sourceIndex < 0) {
         return;
       }
@@ -405,20 +468,29 @@ export default function StudioTimeline({
 
   const handleDurationNudge = useCallback(
     (sceneId: string, deltaSec: number) => {
-      if (playbackLocked || dragStateRef.current || resizeStateRef.current || trimStateRef.current) {
+      if (
+        playbackLocked ||
+        dragStateRef.current ||
+        resizeStateRef.current ||
+        trimStateRef.current
+      ) {
         return;
       }
 
-      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      const scene = scriptRef.current.scenes.find(
+        (entry) => entry.id === sceneId,
+      );
       if (!scene) {
         return;
       }
 
       const currentDurationSec = Math.max(
         1,
-        Math.round(scene.durationMs != null && scene.durationMs > 0
-          ? scene.durationMs / 1000
-          : scene.duration),
+        Math.round(
+          scene.durationMs != null && scene.durationMs > 0
+            ? scene.durationMs / 1000
+            : scene.duration,
+        ),
       );
       const nextDurationSec = nudgeDurationSec(currentDurationSec, deltaSec);
       if (nextDurationSec === currentDurationSec) {
@@ -445,7 +517,9 @@ export default function StudioTimeline({
       setMenu(null);
       selection.selectScene(sceneId);
 
-      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      const scene = scriptRef.current.scenes.find(
+        (entry) => entry.id === sceneId,
+      );
       if (!scene) {
         return;
       }
@@ -456,10 +530,15 @@ export default function StudioTimeline({
       );
       const railWidthPx = Math.max(
         1,
-        segmentRowRef.current?.clientWidth ?? scrollContainerRef.current?.clientWidth ?? 1,
+        segmentRowRef.current?.clientWidth ??
+          scrollContainerRef.current?.clientWidth ??
+          1,
       );
       const totalDurationMs = Math.max(1, baseLayout.totalDurationMs);
-      const previewDurationSec = Math.max(1, Math.round(startDurationMs / 1000));
+      const previewDurationSec = Math.max(
+        1,
+        Math.round(startDurationMs / 1000),
+      );
 
       const nextResizeState: TimelineResizeState = {
         sceneId,
@@ -524,7 +603,12 @@ export default function StudioTimeline({
       event: React.PointerEvent<HTMLButtonElement>,
       stripRect: DOMRect,
     ) => {
-      if (playbackLocked || dragStateRef.current || resizeStateRef.current || trimStateRef.current) {
+      if (
+        playbackLocked ||
+        dragStateRef.current ||
+        resizeStateRef.current ||
+        trimStateRef.current
+      ) {
         return;
       }
 
@@ -532,7 +616,9 @@ export default function StudioTimeline({
         return;
       }
 
-      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      const scene = scriptRef.current.scenes.find(
+        (entry) => entry.id === sceneId,
+      );
       if (!scene) {
         return;
       }
@@ -610,7 +696,12 @@ export default function StudioTimeline({
       handle: TimelineVideoTrimHandle,
       event: React.KeyboardEvent<HTMLButtonElement>,
     ) => {
-      if (playbackLocked || dragStateRef.current || resizeStateRef.current || trimStateRef.current) {
+      if (
+        playbackLocked ||
+        dragStateRef.current ||
+        resizeStateRef.current ||
+        trimStateRef.current
+      ) {
         return;
       }
 
@@ -627,7 +718,9 @@ export default function StudioTimeline({
         return;
       }
 
-      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      const scene = scriptRef.current.scenes.find(
+        (entry) => entry.id === sceneId,
+      );
       const window = resolveTimelineVideoTrimWindow(scene);
       if (!window) {
         return;
@@ -803,7 +896,9 @@ export default function StudioTimeline({
       }
     };
 
-    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointermove", handlePointerMove, {
+      passive: false,
+    });
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerUp);
     window.addEventListener("keydown", handleKeyDown);
@@ -825,7 +920,11 @@ export default function StudioTimeline({
 
     const handlePointerMove = (event: PointerEvent) => {
       const current = trimStateRef.current;
-      if (!current || current.pointerId !== event.pointerId || trimSettledRef.current) {
+      if (
+        !current ||
+        current.pointerId !== event.pointerId ||
+        trimSettledRef.current
+      ) {
         return;
       }
 
@@ -917,7 +1016,9 @@ export default function StudioTimeline({
       cancelTrim();
     };
 
-    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointermove", handlePointerMove, {
+      passive: false,
+    });
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
     window.addEventListener("keydown", handleKeyDown);
@@ -1033,8 +1134,13 @@ export default function StudioTimeline({
       block: "nearest",
       inline: "center",
     });
-  }, [dragState, playback.isPlaying, resizeState, selection.selectedSceneId, trimState]);
-
+  }, [
+    dragState,
+    playback.isPlaying,
+    resizeState,
+    selection.selectedSceneId,
+    trimState,
+  ]);
 
   useEffect(() => {
     if (!playback.isPlaying || !showPlaybackHead) {
@@ -1051,7 +1157,10 @@ export default function StudioTimeline({
     const viewRight = viewLeft + container.clientWidth;
     const edgeMargin = 72;
 
-    if (playheadX >= viewLeft + edgeMargin && playheadX <= viewRight - edgeMargin) {
+    if (
+      playheadX >= viewLeft + edgeMargin &&
+      playheadX <= viewRight - edgeMargin
+    ) {
       return;
     }
 
@@ -1070,7 +1179,12 @@ export default function StudioTimeline({
       left: targetLeft,
       behavior: "smooth",
     });
-  }, [playback.isPlaying, playbackProgress, playback.currentTimeMs, showPlaybackHead]);
+  }, [
+    playback.isPlaying,
+    playbackProgress,
+    playback.currentTimeMs,
+    showPlaybackHead,
+  ]);
 
   if (script.scenes.length === 0) {
     return (
@@ -1117,17 +1231,24 @@ export default function StudioTimeline({
           </p>
         ) : null}
 
-        <p className={timelineEditorCoarsePointerHint}>
-          Tap the ⋮ menu on any scene for insert, duplicate, and delete actions. Trim video clips in
-          the Video Inspector.
-        </p>
+        {!selectedSceneDetailOnly ? (
+          <>
+            <p className={timelineEditorCoarsePointerHint}>
+              Tap the ⋮ menu on any scene for insert, duplicate, and delete
+              actions. Trim video clips in the Video Inspector.
+            </p>
 
-        <p className={timelineEditorDurationHint} data-timeline-duration-hint>
-          Drag a scene edge to adjust duration. Inner handles trim the video clip without changing
-          scene length.
-        </p>
+            <p
+              className={timelineEditorDurationHint}
+              data-timeline-duration-hint
+            >
+              Drag a scene edge to adjust duration. Inner handles trim the video
+              clip without changing scene length.
+            </p>
+          </>
+        ) : null}
 
-        {script.scenes.length > 0 ? (
+        {!selectedSceneDetailOnly && script.scenes.length > 0 ? (
           <p
             className={sceneMediaLaneNotice}
             role="status"
@@ -1143,115 +1264,192 @@ export default function StudioTimeline({
         >
           <div className={timelineEditorTrackSurface}>
             <div ref={segmentRowRef} className={timelineEditorSegmentRow}>
-            {layout.segments.map((segment) => {
-              if (segment.type === "transition") {
-                return <TimelineTransitionMarker key={segment.marker.id} marker={segment.marker} />;
-              }
-
-              const scene = sceneById.get(segment.block.sceneId);
-              if (!scene) {
-                return null;
-              }
-
-              const sceneIndex = sceneIndexById.get(segment.block.sceneId) ?? segment.block.sceneIndex;
-              const isSelected = selection.selectedSceneId === segment.block.sceneId;
-              const isDragging = dragState?.draggedSceneId === segment.block.sceneId;
-              const isResizing = resizeState?.sceneId === segment.block.sceneId;
-              const isTrimming = trimState?.sceneId === segment.block.sceneId;
-              const showInsertBefore =
-                dragState != null && dragState.hoverTargetIndex === sceneIndex;
-
-              return (
-                <TimelineSceneBlock
-                  key={segment.block.sceneId}
-                  block={{
-                    ...segment.block,
-                    sceneIndex,
-                    sceneNumber: sceneIndex + 1,
-                  }}
-                  scene={scene}
-                  isSelected={isSelected}
-                  isDragging={isDragging}
-                  isResizing={isResizing}
-                  isTrimming={isTrimming}
-                  trimState={isTrimming ? trimState : null}
-                  reorderDisabled={reorderDisabled}
-                  resizeDisabled={resizeDisabled}
-                  trimDisabled={trimDisabled}
-                  contextMenuDisabled={contextMenuDisabled}
-                  isFinePointer={isFinePointer}
-                  showInsertBefore={showInsertBefore}
-                  onSelect={() => selection.selectScene(segment.block.sceneId)}
-                  onMenuOpen={({ x, y }) => {
-                    if (trimStateRef.current || mediaBoundaryOwnerRef.current) {
-                      return;
-                    }
-                    setMenu({
-                      sceneId: segment.block.sceneId,
-                      sceneNumber: sceneIndex + 1,
-                      x,
-                      y,
-                    });
-                  }}
-                  onDragHandlePointerDown={(event) =>
-                    handleDragHandlePointerDown(segment.block.sceneId, event)
-                  }
-                  onResizeHandlePointerDown={(event) =>
-                    handleResizeHandlePointerDown(segment.block.sceneId, event)
-                  }
-                  onDurationNudge={(deltaSec) =>
-                    handleDurationNudge(segment.block.sceneId, deltaSec)
-                  }
-                  onTrimHandlePointerDown={(handle, event, stripRect) =>
-                    handleTrimHandlePointerDown(segment.block.sceneId, handle, event, stripRect)
-                  }
-                  onTrimHandleKeyDown={(handle, event) =>
-                    handleTrimHandleKeyDown(segment.block.sceneId, handle, event)
-                  }
-                  blockRef={(element) => {
-                    blockRefs.current.set(segment.block.sceneId, element);
-                  }}
-                  wrapperRef={(element) => {
-                    wrapperRefs.current.set(segment.block.sceneId, element);
-                  }}
-                  mediaLane={
-                    <SceneMediaTimelineLane
-                      scene={scene}
-                      script={script}
-                      onScriptChange={onScriptChange}
-                      selectedMediaItemId={
-                        selection.selectedSceneId === segment.block.sceneId
-                          ? selection.selectedMediaItemId
-                          : null
-                      }
-                      onSelectMediaItem={selection.selectSceneMediaItem}
-                      selectedMediaTransition={
-                        selection.selectedSceneId === segment.block.sceneId
-                          ? selection.selectedMediaTransition
-                          : null
-                      }
-                      onSelectMediaTransition={selection.selectSceneMediaTransition}
-                      appendApi={appendApi}
-                      playbackLocked={playbackLocked}
-                      interactionLocked={
-                        sceneMediaLaneBaseLocked ||
-                        isMediaBoundaryLaneLocked(
-                          mediaBoundaryOwnerSceneId,
-                          segment.block.sceneId,
-                        )
-                      }
-                      boundaryOwnerSceneId={mediaBoundaryOwnerSceneId}
-                      onTryAcquireBoundary={tryAcquireMediaBoundary}
-                      onReleaseBoundary={releaseMediaBoundary}
-                      boundaryCancelEpoch={boundaryCancelEpoch}
+              {layout.segments.map((segment) => {
+                if (segment.type === "transition") {
+                  return (
+                    <TimelineTransitionMarker
+                      key={segment.marker.id}
+                      marker={segment.marker}
                     />
-                  }
-                />
-              );
-            })}
+                  );
+                }
+
+                const scene = sceneById.get(segment.block.sceneId);
+                if (!scene) {
+                  return null;
+                }
+
+                const sceneIndex =
+                  sceneIndexById.get(segment.block.sceneId) ??
+                  segment.block.sceneIndex;
+                const isSelected =
+                  selection.selectedSceneId === segment.block.sceneId;
+                const isDragging =
+                  dragState?.draggedSceneId === segment.block.sceneId;
+                const isResizing =
+                  resizeState?.sceneId === segment.block.sceneId;
+                const isTrimming = trimState?.sceneId === segment.block.sceneId;
+                const showInsertBefore =
+                  dragState != null &&
+                  dragState.hoverTargetIndex === sceneIndex;
+
+                return (
+                  <TimelineSceneBlock
+                    key={segment.block.sceneId}
+                    block={{
+                      ...segment.block,
+                      sceneIndex,
+                      sceneNumber: sceneIndex + 1,
+                    }}
+                    scene={scene}
+                    isSelected={isSelected}
+                    isDragging={isDragging}
+                    isResizing={isResizing}
+                    isTrimming={isTrimming}
+                    trimState={isTrimming ? trimState : null}
+                    reorderDisabled={reorderDisabled}
+                    resizeDisabled={resizeDisabled}
+                    trimDisabled={trimDisabled}
+                    contextMenuDisabled={contextMenuDisabled}
+                    isFinePointer={isFinePointer}
+                    showInsertBefore={showInsertBefore}
+                    onSelect={() =>
+                      selection.selectScene(segment.block.sceneId)
+                    }
+                    onMenuOpen={({ x, y }) => {
+                      if (
+                        trimStateRef.current ||
+                        mediaBoundaryOwnerRef.current
+                      ) {
+                        return;
+                      }
+                      setMenu({
+                        sceneId: segment.block.sceneId,
+                        sceneNumber: sceneIndex + 1,
+                        x,
+                        y,
+                      });
+                    }}
+                    onDragHandlePointerDown={(event) =>
+                      handleDragHandlePointerDown(segment.block.sceneId, event)
+                    }
+                    onResizeHandlePointerDown={(event) =>
+                      handleResizeHandlePointerDown(
+                        segment.block.sceneId,
+                        event,
+                      )
+                    }
+                    onDurationNudge={(deltaSec) =>
+                      handleDurationNudge(segment.block.sceneId, deltaSec)
+                    }
+                    onTrimHandlePointerDown={(handle, event, stripRect) =>
+                      handleTrimHandlePointerDown(
+                        segment.block.sceneId,
+                        handle,
+                        event,
+                        stripRect,
+                      )
+                    }
+                    onTrimHandleKeyDown={(handle, event) =>
+                      handleTrimHandleKeyDown(
+                        segment.block.sceneId,
+                        handle,
+                        event,
+                      )
+                    }
+                    blockRef={(element) => {
+                      blockRefs.current.set(segment.block.sceneId, element);
+                    }}
+                    wrapperRef={(element) => {
+                      wrapperRefs.current.set(segment.block.sceneId, element);
+                    }}
+                    mediaLane={
+                      !selectedSceneDetailOnly && showSelectedSceneMedia ? (
+                        <SceneMediaTimelineLane
+                          scene={scene}
+                          script={script}
+                          onScriptChange={onScriptChange}
+                          selectedMediaItemId={
+                            selection.selectedSceneId === segment.block.sceneId
+                              ? selection.selectedMediaItemId
+                              : null
+                          }
+                          onSelectMediaItem={selection.selectSceneMediaItem}
+                          selectedMediaTransition={
+                            selection.selectedSceneId === segment.block.sceneId
+                              ? selection.selectedMediaTransition
+                              : null
+                          }
+                          onSelectMediaTransition={
+                            selection.selectSceneMediaTransition
+                          }
+                          appendApi={appendApi}
+                          playbackLocked={playbackLocked}
+                          interactionLocked={
+                            sceneMediaLaneBaseLocked ||
+                            isMediaBoundaryLaneLocked(
+                              mediaBoundaryOwnerSceneId,
+                              segment.block.sceneId,
+                            )
+                          }
+                          boundaryOwnerSceneId={mediaBoundaryOwnerSceneId}
+                          onTryAcquireBoundary={tryAcquireMediaBoundary}
+                          onReleaseBoundary={releaseMediaBoundary}
+                          boundaryCancelEpoch={boundaryCancelEpoch}
+                        />
+                      ) : null
+                    }
+                  />
+                );
+              })}
             </div>
+            {selectedSceneDetailOnly &&
+            showSelectedSceneMedia &&
+            selectedScene ? (
+              <section
+                className={timelineEditorSelectedMediaLane}
+                data-selected-scene-media-editor={selectedScene.id}
+                aria-label={`Selected scene ${selection.selectedSceneIndex + 1} media`}
+              >
+                <div className="mb-2 flex min-w-0 items-center justify-between gap-3 px-1">
+                  <p className="truncate text-[11px] font-semibold text-foreground/90">
+                    Scene {selection.selectedSceneIndex + 1} media
+                  </p>
+                  <p className="shrink-0 text-[10px] text-muted">
+                    Detailed controls
+                  </p>
+                </div>
+                <SceneMediaTimelineLane
+                  scene={selectedScene}
+                  script={script}
+                  onScriptChange={onScriptChange}
+                  selectedMediaItemId={selection.selectedMediaItemId}
+                  onSelectMediaItem={selection.selectSceneMediaItem}
+                  selectedMediaTransition={selection.selectedMediaTransition}
+                  onSelectMediaTransition={
+                    selection.selectSceneMediaTransition
+                  }
+                  appendApi={appendApi}
+                  playbackLocked={playbackLocked}
+                  interactionLocked={
+                    sceneMediaLaneBaseLocked ||
+                    isMediaBoundaryLaneLocked(
+                      mediaBoundaryOwnerSceneId,
+                      selectedScene.id,
+                    )
+                  }
+                  boundaryOwnerSceneId={mediaBoundaryOwnerSceneId}
+                  onTryAcquireBoundary={tryAcquireMediaBoundary}
+                  onReleaseBoundary={releaseMediaBoundary}
+                  boundaryCancelEpoch={boundaryCancelEpoch}
+                />
+              </section>
+            ) : null}
             {showPlaybackHead ? (
-              <TimelinePlaybackHead progress={playbackProgress} isActive={playback.isPlaying} />
+              <TimelinePlaybackHead
+                progress={playbackProgress}
+                isActive={playback.isPlaying}
+              />
             ) : null}
           </div>
         </div>

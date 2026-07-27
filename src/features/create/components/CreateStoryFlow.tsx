@@ -3,9 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 
-import type {
-  ResearchPreviewDevCall,
-} from "@/features/create/types/research-preview-dev.types";
+import type { ResearchPreviewDevCall } from "@/features/create/types/research-preview-dev.types";
 import {
   IDLE_RESEARCH_PREVIEW,
   type ResearchPreviewState,
@@ -40,6 +38,7 @@ import {
   reconcileStoryStrategySelection,
   type StoryStrategySelection,
 } from "@/features/retention-story/presentation";
+import { normalizeNarrationForEditing } from "@/features/story/utils/narration-editing.utils";
 import { consumeGenerateScriptStream } from "@/lib/utils/generateScriptStream";
 import { SAMPLE_TOPICS, WORKFLOW_STEPS } from "@/lib/constants/studioConstants";
 import { studioPanel, studioSubtleText } from "@/lib/utils/studioUi";
@@ -50,7 +49,11 @@ import type {
   ScriptMode,
   Tone,
 } from "@/types/footiebitz";
-import { DEFAULT_SCENE_COUNT, DEFAULT_SCRIPT_MODE, isResearchDefaultEnabledForScriptMode } from "@/types/footiebitz";
+import {
+  DEFAULT_SCENE_COUNT,
+  DEFAULT_SCRIPT_MODE,
+  isResearchDefaultEnabledForScriptMode,
+} from "@/types/footiebitz";
 
 /**
  * Prompt entry, generation options, and post-success draft persistence.
@@ -68,25 +71,31 @@ export default function CreateStoryFlow() {
   const [duration, setDuration] = useState<number>(30);
   const [qualityMode, setQualityMode] = useState<QualityMode>("cheap");
   const [sceneCount, setSceneCount] = useState<number>(DEFAULT_SCENE_COUNT);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<CreatorTemplateId | "">("");
-  const [storyStrategy, setStoryStrategy] = useState<StoryStrategySelection>("auto");
-  const [storyStrategyCompatibilityNotice, setStoryStrategyCompatibilityNotice] =
-    useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<
+    CreatorTemplateId | ""
+  >("");
+  const [storyStrategy, setStoryStrategy] =
+    useState<StoryStrategySelection>("auto");
+  const [
+    storyStrategyCompatibilityNotice,
+    setStoryStrategyCompatibilityNotice,
+  ] = useState<string | null>(null);
   const [hookStyle, setHookStyle] = useState<HookStyleSelection>("auto");
   const [userAuthoredHook, setUserAuthoredHook] = useState("");
-  const [hookStyleCompatibilityNotice, setHookStyleCompatibilityNotice] = useState<
-    string | null
-  >(null);
+  const [hookStyleCompatibilityNotice, setHookStyleCompatibilityNotice] =
+    useState<string | null>(null);
   const [factHandlingMode, setFactHandlingMode] = useState<
     "verified_facts_only" | "creative_premise"
   >("verified_facts_only");
   const [premiseDetails, setPremiseDetails] = useState("");
-  const [reliabilityMode, setReliabilityMode] = useState<"flexible" | "precise">(
-    "flexible",
-  );
+  const [reliabilityMode, setReliabilityMode] = useState<
+    "flexible" | "precise"
+  >("flexible");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [researchPreview, setResearchPreview] = useState<ResearchPreviewState>(IDLE_RESEARCH_PREVIEW);
+  const [researchPreview, setResearchPreview] = useState<ResearchPreviewState>(
+    IDLE_RESEARCH_PREVIEW,
+  );
   const topicInputRef = useRef<HTMLTextAreaElement>(null);
 
   const resetResearchPreview = useCallback(() => {
@@ -94,7 +103,9 @@ export default function CreateStoryFlow() {
   }, []);
 
   const scrollToBrief = useCallback(() => {
-    document.getElementById("studio-brief")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("studio-brief")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => topicInputRef.current?.focus(), 320);
   }, []);
 
@@ -113,7 +124,10 @@ export default function CreateStoryFlow() {
   const handleDurationChange = useCallback(
     (nextDuration: number) => {
       setDuration(nextDuration);
-      const reconciled = reconcileStoryStrategySelection(storyStrategy, nextDuration);
+      const reconciled = reconcileStoryStrategySelection(
+        storyStrategy,
+        nextDuration,
+      );
       setStoryStrategy(reconciled.selection);
       setStoryStrategyCompatibilityNotice(reconciled.compatibilityNotice);
     },
@@ -182,7 +196,10 @@ export default function CreateStoryFlow() {
 
       setSelectedTemplateId(templateId);
 
-      const nextBrief = applyCreatorTemplateToBrief(buildCurrentCreationBrief(), template);
+      const nextBrief = applyCreatorTemplateToBrief(
+        buildCurrentCreationBrief(),
+        template,
+      );
       const nextScriptMode = nextBrief.scriptMode ?? DEFAULT_SCRIPT_MODE;
 
       setScriptMode(nextScriptMode);
@@ -190,7 +207,10 @@ export default function CreateStoryFlow() {
       setDuration(nextBrief.duration);
       setSceneCount(nextBrief.sceneCount);
       // Template must not overwrite a compatible explicit Hook Style; reset only if incompatible.
-      const reconciledHook = reconcileHookStyleSelection(hookStyle, nextScriptMode);
+      const reconciledHook = reconcileHookStyleSelection(
+        hookStyle,
+        nextScriptMode,
+      );
       setHookStyle(reconciledHook.selection);
       setHookStyleCompatibilityNotice(reconciledHook.compatibilityNotice);
       // Duration from template may invalidate explicit Story Strategy — reset to Auto.
@@ -199,113 +219,122 @@ export default function CreateStoryFlow() {
         nextBrief.duration,
       );
       setStoryStrategy(reconciledStrategy.selection);
-      setStoryStrategyCompatibilityNotice(reconciledStrategy.compatibilityNotice);
+      setStoryStrategyCompatibilityNotice(
+        reconciledStrategy.compatibilityNotice,
+      );
       resetResearchPreview();
     },
     [buildCurrentCreationBrief, hookStyle, resetResearchPreview, storyStrategy],
   );
 
   const runIntelligenceResearch = useCallback(async () => {
-      if (!enableResearch) {
-        setResearchPreview({
-          status: "error",
-          errorMessage: "Enable Smart Research to gather supporting information.",
-        });
-        return;
-      }
-
-      const trimmedTopic = topic.trim();
-      if (!trimmedTopic) {
-        setResearchPreview({
-          status: "error",
-          errorMessage: "Enter a topic before running Research Preview.",
-        });
-        return;
-      }
-
+    if (!enableResearch) {
       setResearchPreview({
-        status: "loading",
+        status: "error",
+        errorMessage: "Enable Smart Research to gather supporting information.",
+      });
+      return;
+    }
+
+    const trimmedTopic = topic.trim();
+    if (!trimmedTopic) {
+      setResearchPreview({
+        status: "error",
+        errorMessage: "Enter a topic before running Research Preview.",
+      });
+      return;
+    }
+
+    setResearchPreview({
+      status: "loading",
+    });
+
+    try {
+      const isDev = process.env.NODE_ENV === "development";
+      const researchStartedAt = performance.now();
+
+      const { ok, status, payload } = await fetchIntelligenceResearch({
+        topic: trimmedTopic,
+        mode: scriptMode,
+        manualContext: context.trim() || undefined,
       });
 
-      try {
-        const isDev = process.env.NODE_ENV === "development";
-        const researchStartedAt = performance.now();
+      const researchFinishedAt = performance.now();
+      const assembledContext = payload.assembledContext;
 
-        const { ok, status, payload } = await fetchIntelligenceResearch({
-          topic: trimmedTopic,
-          mode: scriptMode,
-          manualContext: context.trim() || undefined,
-        });
+      if (!assembledContext || !payload.intelligenceQuery) {
+        throw new Error("Research returned no supporting information.");
+      }
 
-        const researchFinishedAt = performance.now();
-        const assembledContext = payload.assembledContext;
+      const intelligenceQuery = payload.intelligenceQuery;
+      const intelligenceAnalysis =
+        intelligenceQueryToAnalysis(intelligenceQuery);
 
-        if (!assembledContext || !payload.intelligenceQuery) {
-          throw new Error("Research returned no supporting information.");
-        }
+      const devCalls: ResearchPreviewDevCall[] | undefined = isDev
+        ? [
+            {
+              endpoint: "/api/research-football",
+              status,
+              ok,
+              durationMs: Math.round(researchFinishedAt - researchStartedAt),
+            },
+          ]
+        : undefined;
 
-        const intelligenceQuery = payload.intelligenceQuery;
-        const intelligenceAnalysis = intelligenceQueryToAnalysis(intelligenceQuery);
-
-        const devCalls: ResearchPreviewDevCall[] | undefined = isDev
-          ? [
-              {
-                endpoint: "/api/research-football",
-                status,
-                ok,
-                durationMs: Math.round(researchFinishedAt - researchStartedAt),
-              },
-            ]
-          : undefined;
-
-        setResearchPreview({
-          status: resolveResearchPreviewStatusFromPreview({
-            assembledContext,
-            executionStatus: payload.executionStatus,
-            httpOk: ok,
-          }),
-          topic: trimmedTopic,
-          mode: scriptMode,
-          intelligenceAnalysis,
-          intelligenceQuery,
+      setResearchPreview({
+        status: resolveResearchPreviewStatusFromPreview({
           assembledContext,
           executionStatus: payload.executionStatus,
-          entityPreview: buildEntityPreviewFromExecution({
-            intelligenceQuery,
-            assembledContext,
-          }),
-          ...(isDev && payload.providerResults ? { providerResults: payload.providerResults } : {}),
-          ...(isDev && payload.providerDiagnostics
-            ? { providerDiagnostics: payload.providerDiagnostics }
-            : {}),
-          ...(isDev && payload.providerExecutionSummary
-            ? { providerExecutionSummary: payload.providerExecutionSummary }
-            : {}),
-          ...(isDev && payload.canonicalResearchBundle
-            ? { canonicalResearchBundle: payload.canonicalResearchBundle }
-            : {}),
-          ...(isDev && payload.knowledgeGraph ? { knowledgeGraph: payload.knowledgeGraph } : {}),
-          ...(isDev && payload.graphContext ? { graphContext: payload.graphContext } : {}),
-          ...(devCalls ? { devCalls } : {}),
-          ...(ok
-            ? {}
-            : {
-                errorMessage:
-                  assembledContext.warnings[0] ??
-                  "Research couldn't be completed for this topic.",
-              }),
-        });
-      } catch (err) {
-        setResearchPreview({
-          status: "error",
-          errorMessage:
-            err instanceof TypeError
-              ? "Check your connection and try again."
-              : err instanceof Error
-                ? err.message
-                : "Research isn't available right now. You can still write your story.",
-        });
-      }
+          httpOk: ok,
+        }),
+        topic: trimmedTopic,
+        mode: scriptMode,
+        intelligenceAnalysis,
+        intelligenceQuery,
+        assembledContext,
+        executionStatus: payload.executionStatus,
+        entityPreview: buildEntityPreviewFromExecution({
+          intelligenceQuery,
+          assembledContext,
+        }),
+        ...(isDev && payload.providerResults
+          ? { providerResults: payload.providerResults }
+          : {}),
+        ...(isDev && payload.providerDiagnostics
+          ? { providerDiagnostics: payload.providerDiagnostics }
+          : {}),
+        ...(isDev && payload.providerExecutionSummary
+          ? { providerExecutionSummary: payload.providerExecutionSummary }
+          : {}),
+        ...(isDev && payload.canonicalResearchBundle
+          ? { canonicalResearchBundle: payload.canonicalResearchBundle }
+          : {}),
+        ...(isDev && payload.knowledgeGraph
+          ? { knowledgeGraph: payload.knowledgeGraph }
+          : {}),
+        ...(isDev && payload.graphContext
+          ? { graphContext: payload.graphContext }
+          : {}),
+        ...(devCalls ? { devCalls } : {}),
+        ...(ok
+          ? {}
+          : {
+              errorMessage:
+                assembledContext.warnings[0] ??
+                "Research couldn't be completed for this topic.",
+            }),
+      });
+    } catch (err) {
+      setResearchPreview({
+        status: "error",
+        errorMessage:
+          err instanceof TypeError
+            ? "Check your connection and try again."
+            : err instanceof Error
+              ? err.message
+              : "Research isn't available right now. You can still write your story.",
+      });
+    }
   }, [context, enableResearch, scriptMode, topic]);
 
   const previewResearch = useCallback(async () => {
@@ -337,14 +366,19 @@ export default function CreateStoryFlow() {
     try {
       const trimmedTopic = topic.trim();
       const manualContext = context.trim() || undefined;
-      const researchPreviewPayload = buildGenerateScriptResearchPreview(researchPreview);
-      const selectedTemplate = selectedTemplateId ? getCreatorTemplate(selectedTemplateId) : null;
+      const researchPreviewPayload =
+        buildGenerateScriptResearchPreview(researchPreview);
+      const selectedTemplate = selectedTemplateId
+        ? getCreatorTemplate(selectedTemplateId)
+        : null;
       const creationBrief = mergeCreationBriefWithTemplateSelection(
         buildCurrentCreationBrief(),
         selectedTemplate,
       );
       const writeMyOwn =
-        hookStyle === "user_written" ? validateWriteMyOwnOpening(userAuthoredHook) : null;
+        hookStyle === "user_written"
+          ? validateWriteMyOwnOpening(userAuthoredHook)
+          : null;
 
       const response = await fetch("/api/generate-script", {
         method: "POST",
@@ -354,18 +388,24 @@ export default function CreateStoryFlow() {
           scriptMode,
           context: manualContext,
           enableResearch,
-          ...(researchPreviewPayload ? { researchPreview: researchPreviewPayload } : {}),
+          ...(researchPreviewPayload
+            ? { researchPreview: researchPreviewPayload }
+            : {}),
           tone,
           duration,
           qualityMode,
           sceneCount,
           mode: "script-only",
           stream: true,
-          ...(creationBrief.templateId ? { templateId: creationBrief.templateId } : {}),
+          ...(creationBrief.templateId
+            ? { templateId: creationBrief.templateId }
+            : {}),
           ...(creationBrief.templatePromptHints
             ? { templatePromptHints: creationBrief.templatePromptHints }
             : {}),
-          ...(storyStrategy !== "auto" ? { formatStrategyId: storyStrategy } : {}),
+          ...(storyStrategy !== "auto"
+            ? { formatStrategyId: storyStrategy }
+            : {}),
           ...(hookStyle !== "auto" ? { hookStyle } : {}),
           ...(writeMyOwn?.ok ? { userAuthoredHook: writeMyOwn.text } : {}),
           factHandlingMode,
@@ -398,7 +438,10 @@ export default function CreateStoryFlow() {
         throw new Error(data.error ?? "Failed to create story");
       }
 
-      const nextScript = syncFootieScript(data.data);
+      const nextScript = syncFootieScript({
+        ...data.data,
+        narration: normalizeNarrationForEditing(data.data.narration),
+      });
 
       const draft = createDraft({
         script: nextScript,
@@ -408,7 +451,9 @@ export default function CreateStoryFlow() {
           // assembled/generated research prose (Sprint 10H.4A).
           ...(context.trim() ? { context: context.trim() } : {}),
           ...(data.researchApplied ? { researchApplied: true } : {}),
-          ...(data.researchWarning ? { researchWarning: data.researchWarning } : {}),
+          ...(data.researchWarning
+            ? { researchWarning: data.researchWarning }
+            : {}),
           ...(data.hookPlan ? { hookPlan: data.hookPlan } : {}),
           ...(data.retentionPlan ? { retentionPlan: data.retentionPlan } : {}),
           ...(data.retentionValidation
@@ -419,7 +464,9 @@ export default function CreateStoryFlow() {
             : {}),
           // Rewrite evidence lives on linked retentionValidation (10G.1) — do not
           // persist a standalone retentionRewriteUsed boolean as authority.
-          ...(storyStrategy !== "auto" ? { formatStrategyId: storyStrategy } : {}),
+          ...(storyStrategy !== "auto"
+            ? { formatStrategyId: storyStrategy }
+            : {}),
           ...(hookStyle !== "auto" ? { hookStyle } : {}),
           factHandlingMode,
           ...(factHandlingMode === "creative_premise" && premiseDetails.trim()
@@ -445,13 +492,15 @@ export default function CreateStoryFlow() {
 
   const trimmedTopic = topic.trim();
   const hasTopic = trimmedTopic.length > 0;
-  const loadingShellClass = loading ? "pointer-events-none select-none opacity-60" : undefined;
+  const loadingShellClass = loading
+    ? "pointer-events-none select-none opacity-60"
+    : undefined;
 
   return (
     <StudioShell
       aria-label="Create story brief"
       viewportMode="document"
-      compactMode={false}
+      compactMode
       focusMode={false}
       canvasCenterContent={false}
       header={
@@ -463,15 +512,32 @@ export default function CreateStoryFlow() {
       }
       sidebar={
         <div className={loadingShellClass}>
-          <StudioSection title="Your path" description="From idea to export.">
-            <ol className="space-y-2">
+          <StudioSection title="Your path">
+            <ol className="space-y-1.5">
               {WORKFLOW_STEPS.map((item, index) => (
                 <li
                   key={item.title}
-                  className={`${studioPanel} ${index === 0 ? "ring-accent/25" : ""}`}
+                  className={`rounded-xl px-3 py-2.5 ${
+                    index === 0
+                      ? "bg-accent/10 ring-1 ring-accent/25"
+                      : "bg-surface/25 ring-1 ring-border/15"
+                  }`}
                 >
-                  <p className="text-sm font-medium text-foreground/90">{item.title}</p>
-                  <p className={`${studioSubtleText} mt-1`}>{item.desc}</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        index === 0 ? "bg-accent" : "bg-muted/40"
+                      }`}
+                    />
+                    <p className="text-xs font-medium text-foreground/90">
+                      {item.title}
+                    </p>
+                  </div>
+                  {index === 0 ? (
+                    <p className={`${studioSubtleText} mt-1 pl-4`}>
+                      {item.desc}
+                    </p>
+                  ) : null}
                 </li>
               ))}
             </ol>
@@ -480,7 +546,10 @@ export default function CreateStoryFlow() {
       }
       canvas={
         loading ? (
-          <StudioLoadingState variant="create-story" enableResearch={enableResearch} />
+          <StudioLoadingState
+            variant="create-story"
+            enableResearch={enableResearch}
+          />
         ) : (
           <div className="flex w-full min-w-0 flex-col gap-6">
             <BriefCanvas
@@ -499,7 +568,9 @@ export default function CreateStoryFlow() {
               onDurationChange={handleDurationChange}
               storyStrategy={storyStrategy}
               onStoryStrategyChange={handleStoryStrategyChange}
-              storyStrategyCompatibilityNotice={storyStrategyCompatibilityNotice}
+              storyStrategyCompatibilityNotice={
+                storyStrategyCompatibilityNotice
+              }
               hookStyle={hookStyle}
               onHookStyleChange={handleHookStyleChange}
               userAuthoredHook={userAuthoredHook}
