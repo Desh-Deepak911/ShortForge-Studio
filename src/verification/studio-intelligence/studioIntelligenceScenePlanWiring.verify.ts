@@ -213,7 +213,7 @@ test("env off with request flag still disables SI path before OpenAI fallback", 
   });
 
   const scenePlanner = readSrc("src/features/story/services/scene-planning.service.ts");
-  assert.match(scenePlanner, /scenePlanMeta: \{\s*source: "ai_fallback"/s);
+  assert.match(scenePlanner, /scenePlanMeta: \{\s*source: "ai_fallback"/);
 });
 
 test("SI service does not re-split narration after materializer", () => {

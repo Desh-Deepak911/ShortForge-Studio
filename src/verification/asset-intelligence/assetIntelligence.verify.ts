@@ -101,7 +101,7 @@ function assertNoImageApiCallsInModule(): void {
     for (const pattern of forbiddenPatterns) {
       assert.match(
         contents,
-        /^(?!.*(?:fetch\s*\(|axios|image-search|unsplash|pexels|getty)).*$/s,
+        /^(?![\s\S]*(?:fetch\s*\(|axios|image-search|unsplash|pexels|getty))[\s\S]*$/,
         `${file} must not invoke image search APIs`,
       );
       assert.doesNotMatch(contents, pattern, `${file} must not invoke image search APIs`);
