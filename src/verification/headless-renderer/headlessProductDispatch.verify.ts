@@ -33,7 +33,7 @@ import {
   reconcileActiveJobReference,
   writeActiveJobReference,
 } from "@/features/headless-renderer/product/persistence/active-job-reference";
-import { UnavailableOwnedUploadAdapter } from "@/features/headless-renderer/product/upload/owned-upload.port";
+import { UnavailableOwnedUploadAdapter, type OwnedUploadPort } from "@/features/headless-renderer/product/upload/owned-upload.port";
 
 const TEST_OWNER = `${HEADLESS_TEST_AUTHORITY_PREFIX}owner`;
 const TEST_MANIFEST_FP = `${HEADLESS_TEST_AUTHORITY_PREFIX}manifest`;
@@ -340,7 +340,7 @@ async function main(): Promise<void> {
     const client = new FakeHeadlessRenderClient({ autoAdvance: false });
     const uploadPort = new FakeOwnedUploadAdapter();
     const order: string[] = [];
-    const trackingUpload: typeof uploadPort = {
+    const trackingUpload: OwnedUploadPort = {
       async uploadOwnedBundle(req) {
         order.push("upload");
         return uploadPort.uploadOwnedBundle(req);

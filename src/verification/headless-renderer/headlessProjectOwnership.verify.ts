@@ -12,8 +12,9 @@ import { TestHeadlessProjectAuthorizationAdapter } from "@/features/headless-ren
 import {
   validateHeadlessClaimableProjectId,
   isHeadlessClaimableProjectId,
+  type HeadlessProjectAuthorizationPort,
 } from "@/features/headless-renderer/control-plane";
-import { HEADLESS_MAX_ID_LENGTH } from "@/features/headless-renderer/domain";
+import { HEADLESS_MAX_ID_LENGTH } from "@/features/headless-renderer/domain/headless-render-constants";
 
 let passed = 0;
 
@@ -157,7 +158,8 @@ async function main() {
   });
 
   await test("unavailable adapter returns CONFIGURATION_UNAVAILABLE", async () => {
-    const auth = new UnavailableHeadlessProjectAuthorizationAdapter();
+    const auth: HeadlessProjectAuthorizationPort =
+      new UnavailableHeadlessProjectAuthorizationAdapter();
     const claim = await auth.claimUnownedProject(principal("owner-a"), randomUUID());
     assert.equal(claim.ok, false);
     if (!claim.ok) {
@@ -186,7 +188,7 @@ async function main() {
     assert.equal(snap[0]?.ownerId, "owner-a");
 
     assert.throws(() => {
-      (snap as { push: () => void }).push({
+      (snap as unknown as Array<{ projectId: string; ownerId: string }>).push({
         projectId: "evil",
         ownerId: "evil",
       });
