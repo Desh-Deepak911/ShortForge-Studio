@@ -12,9 +12,11 @@ import path from "node:path";
 
 import {
   buildExportManifest,
-  isExportManifestV3,
+  EXPORT_MANIFEST_VERSION,
+  EXPORT_RENDERER_CONTRACT_VERSION,
+  isExportManifestV4,
+  validateExportManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV3,
 } from "@/features/export/domain";
 import type { FootieScript } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -399,8 +401,11 @@ async function main() {
       audioMode: "with-voice",
       multiImageScenesEnabled: true,
     });
-    assert.ok(isExportManifestV3(built));
-    const manifest = built as ExportManifestV3;
+    assert.ok(isExportManifestV4(built));
+    assert.equal(built.version, EXPORT_MANIFEST_VERSION);
+    assert.equal(built.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+    assert.equal(validateExportManifest(built).ok, true);
+    const manifest = built;
     const projectId = manifest.project.projectId;
 
     const stack = composeTestHeadlessControlPlane({
