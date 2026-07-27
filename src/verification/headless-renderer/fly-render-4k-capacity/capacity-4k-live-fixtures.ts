@@ -19,9 +19,9 @@ import {
   deepFreezeExportManifest,
   validateExportManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain";
-import type { ExportManifestV3Draft } from "@/features/export/domain/export-manifest.types";
+import type { ExportManifestV4Draft } from "@/features/export/domain/export-manifest.types";
 import { validateHeadlessClaimableProjectId } from "@/features/headless-renderer/control-plane";
 import {
   createProvisionalMaterializingRecord,
@@ -140,7 +140,7 @@ function buildCapacity4kManifest(input: {
   readonly profileId: Capacity4kProfileId;
   readonly contentDurationMs: number;
   readonly audioMode: Capacity4kLiveAudioMode;
-}): ExportManifestV3 {
+}): ExportManifestV4 {
   const profile = HEADLESS_OUTPUT_PROFILES[input.profileId];
   const withVoice = input.audioMode === "with-voice-and-music";
   const story = capacity4kStory({
@@ -159,8 +159,8 @@ function buildCapacity4kManifest(input: {
       quality: "standard",
     },
   });
-  if (base.version !== 3) {
-    throw new Error("Expected ExportManifest v3 from builder.");
+  if (base.version !== 4) {
+    throw new Error("Expected ExportManifest v4 from builder.");
   }
 
   const claimable = validateHeadlessClaimableProjectId(input.projectId);
@@ -169,15 +169,15 @@ function buildCapacity4kManifest(input: {
   }
 
   // Rebind final projectId + recompute fingerprint (canonical-live-manifest.ts pattern).
-  const cloned = JSON.parse(JSON.stringify(base)) as ExportManifestV3;
+  const cloned = JSON.parse(JSON.stringify(base)) as ExportManifestV4;
   const { fingerprint: _drop, ...withoutFingerprint } = cloned;
   void _drop;
-  const draft: ExportManifestV3Draft = {
+  const draft: ExportManifestV4Draft = {
     ...withoutFingerprint,
     project: { ...withoutFingerprint.project, projectId: claimable.projectId },
   };
   const fingerprint = buildExportManifestFingerprint(draft);
-  const rebound: ExportManifestV3 = { ...draft, fingerprint };
+  const rebound: ExportManifestV4 = { ...draft, fingerprint };
   const reboundValidated = validateExportManifest(rebound);
   if (!reboundValidated.ok) {
     throw new Error(

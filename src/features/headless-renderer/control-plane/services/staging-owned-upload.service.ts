@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 import {
   validateExportManifest,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain/headless-safe";
 import {
   buildHeadlessIdempotencyAuthorityKey,
@@ -31,7 +31,7 @@ type PrepareBody = {
   readonly version: 1;
   readonly operationId: string;
   readonly projectId: string;
-  readonly manifest: ExportManifestV3;
+  readonly manifest: ExportManifestV4;
   readonly assetBundle: HeadlessAssetBundleV1;
   readonly rendererProfile: HeadlessRendererProfile;
   readonly idempotencyKey: string;

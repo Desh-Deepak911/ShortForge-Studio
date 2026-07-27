@@ -5,16 +5,21 @@
 export {
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_MANIFEST_V3_VERSION,
+  EXPORT_RENDERER_CONTRACT_V3,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
   isExportManifestV2,
   isExportManifestV3,
+  isExportManifestV4,
   isExportSceneManifestV3,
 } from "./export-manifest.types";
 export type {
   ExportManifest,
   ExportManifestV2,
   ExportManifestV3,
+  ExportManifestV4,
+  ExportManifestV4Draft,
   ExportManifestDraft,
   ExportProjectManifest,
   ExportOutputManifest,
@@ -60,6 +65,10 @@ export {
   type ExportManifestV3IntegrityIssue,
   type ExportManifestV3IntegrityResult,
 } from "./assert-export-manifest-v3-scene-media";
+export {
+  validateExportManifestV4SceneMedia,
+  assertExportManifestV4SceneMedia,
+} from "./assert-export-manifest-v4-scene-media";
 export {
   validateExportManifest,
   assertExportManifest,

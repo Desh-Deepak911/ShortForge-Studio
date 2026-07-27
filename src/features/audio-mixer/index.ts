@@ -23,7 +23,9 @@ export {
   formatMixerVolumePercent,
   resolveMusicDuckingMultiplier,
   resolveMusicStemGain,
+  resolveVoiceVolumeGain,
   resolveVoiceStemGain,
+  linearGainToDecibels,
 } from "./audio-mixer.utils";
 
 export {

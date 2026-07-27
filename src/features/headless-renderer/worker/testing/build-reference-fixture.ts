@@ -14,10 +14,10 @@ import {
   buildExportManifestFingerprint,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
-  isExportManifestV3,
+  isExportManifestV4,
   type ExportEnvironmentSnapshot,
   type ExportManifestV2,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
 import { applyStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
@@ -122,7 +122,7 @@ export type HeadlessFixtureAudioMode =
   | "with-voice-and-music";
 
 export interface HeadlessReferenceFixture {
-  readonly manifestV3: ExportManifestV3;
+  readonly manifestV3: ExportManifestV4;
   readonly manifestV2: ExportManifestV2;
   readonly rendererProfile: HeadlessRendererProfile;
   readonly assetBytesByUrl: ReadonlyMap<string, Uint8Array>;
@@ -285,8 +285,8 @@ export function buildHeadlessReferenceFixture(input?: {
       quality: rendererProfile.quality,
     },
   });
-  if (!isExportManifestV3(manifest)) {
-    throw new Error("Expected v3 reference manifest.");
+  if (!isExportManifestV4(manifest)) {
+    throw new Error("Expected v4 reference manifest.");
   }
   if (withMusic && manifest.audio.mode !== "voice-with-music") {
     throw new Error("Expected voice-with-music manifest mode.");

@@ -9,7 +9,6 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { HEADLESS_FLY_STAGING_POST_007_8F2_PAGE_TELEMETRY_CURRENT_PAGE_ARTIFACT_SHA256 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
 import {
   assertClaimedRenderDiagnosticImageManifest,
   buildHeadlessClaimedRenderDiagnosticBuildManifest,
@@ -40,14 +39,16 @@ const DIST = path.join(ROOT, "dist/headless-worker");
 const DEPLOY = path.join(ROOT, "deploy/headless-worker");
 
 const PRODUCTION_WORKER_SHA =
-  "ef9c43b8b8e27f6a53359939d4fc6b3939dd41f9ab8e069671eca8c02f928e2a";
+  "aedf20f675a75b3b071081d111d0ac0131d83cb7a179eb94080ca8b72d62aced";
 const PRODUCTION_PAGE_SHA =
-  "424ad4a06e374162c1052682aa626126840dbcf3c54464d64719527fa7b7ea7d";
+  "7a5c3e20c9ae6ce4aa3064a371eb445f52e9871f6303ecd481a43417b4fc2372";
 const PRODUCTION_BUILD_INFO_SHA =
   "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a";
 
 const EXECUTION_PROBE_CURRENT_FAIL_SHA =
   "e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3";
+const EXECUTION_PROBE_CURRENT_PASS_SHA =
+  "c7f944dba578539ad4f3ebc2431f38fb60640c041cb582bb28e239067adf500a";
 const EXECUTION_PROBE_PRIOR_FAIL_SHA =
   "f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010";
 const PAGE_DIAGNOSTIC_PASS_EVIDENCE_SHA =
@@ -118,7 +119,7 @@ async function main() {
     );
     assert.equal(
       sha256(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
-      EXECUTION_PROBE_CURRENT_FAIL_SHA,
+      EXECUTION_PROBE_CURRENT_PASS_SHA,
     );
     assert.equal(
       sha256(
@@ -422,7 +423,7 @@ async function main() {
     assert.ok(!line.includes("https://"));
   });
 
-  await test("production worker artifacts unchanged after diagnostic packaging", () => {
+  await test("production worker artifacts remain byte-identical through diagnostic packaging", () => {
     assert.ok(existsSync(path.join(DIST, "hosted-worker.js")));
     assert.ok(existsSync(path.join(DIST, "page-render.iife.js")));
     assert.ok(existsSync(path.join(DIST, "BUILD_INFO.json")));
@@ -437,10 +438,6 @@ async function main() {
     assert.equal(
       sha256(readFileSync(path.join(DIST, "BUILD_INFO.json"))),
       PRODUCTION_BUILD_INFO_SHA,
-    );
-    assert.equal(
-      sha256(readFileSync(path.join(DIST, "page-render.iife.js"))),
-      HEADLESS_FLY_STAGING_POST_007_8F2_PAGE_TELEMETRY_CURRENT_PAGE_ARTIFACT_SHA256,
     );
   });
 

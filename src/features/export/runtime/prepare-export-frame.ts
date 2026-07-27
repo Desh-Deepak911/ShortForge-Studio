@@ -8,7 +8,10 @@ import type {
   ExportManifest,
   ExportSceneManifestV3,
 } from "@/features/export/domain/export-manifest.types";
-import { isExportManifestV3 } from "@/features/export/domain/export-manifest.types";
+import {
+  isExportManifestV3,
+  isExportManifestV4,
+} from "@/features/export/domain/export-manifest.types";
 import { resolveExportActiveSceneMediaFrame } from "@/features/export/domain/resolve-export-active-scene-media-frame";
 import { resolveExportIntraSceneTransitionAtElapsed } from "@/features/export/domain/resolve-export-intra-scene-transition";
 import {
@@ -124,7 +127,7 @@ export async function prepareExportFrame(
       context.cancellation.throwIfCancelled();
       storePrepared(peer.id, peerActive?.item.id, prepared);
     }
-  } else if (isExportManifestV3(manifest)) {
+  } else if (isExportManifestV3(manifest) || isExportManifestV4(manifest)) {
     const manifestScene = scene.scene as ExportSceneManifestV3;
     const resolved = resolveExportIntraSceneTransitionAtElapsed(
       manifestScene,

@@ -5,7 +5,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { ExportManifestV3 } from "@/features/export/domain/headless-safe";
+import type { ExportManifestV4 } from "@/features/export/domain/headless-safe";
 
 import type { HeadlessRendererProfile } from "../../domain";
 
@@ -15,7 +15,7 @@ type EmbeddedProbeFixture = {
   readonly profileId: string;
   readonly contentDurationMs: number;
   readonly rendererProfile: HeadlessRendererProfile;
-  readonly manifest: ExportManifestV3;
+  readonly manifest: ExportManifestV4;
   readonly assetsBase64: readonly (readonly [string, string])[];
   readonly manifestFingerprint: string;
 };

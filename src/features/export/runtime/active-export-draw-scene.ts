@@ -50,6 +50,9 @@ function toSceneMedia(media: ExportMediaManifest): SceneMedia {
       fitMode,
       transform,
       ...(motion ? { motion } : {}),
+      ...(media.visualAdjustments
+        ? { visualAdjustments: media.visualAdjustments }
+        : {}),
     };
   }
 
@@ -64,6 +67,9 @@ function toSceneMedia(media: ExportMediaManifest): SceneMedia {
     transform,
     muted: true,
     ...(motion ? { motion } : {}),
+    ...(media.visualAdjustments
+      ? { visualAdjustments: media.visualAdjustments }
+      : {}),
   };
 }
 

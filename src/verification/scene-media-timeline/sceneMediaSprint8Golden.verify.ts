@@ -349,7 +349,7 @@ test("Preview: transition peers resolve independently", () => {
   );
 });
 
-test("Export: manifest v3 / contract 9C / compatibility = item 1", () => {
+test("Export: manifest v4 / contract 9D / compatibility = item 1", () => {
   const fixture = buildSceneMediaGoldenFixture("sm-two-equal-images");
   const manifest = buildExportManifest({
     story: fixture.story,
@@ -358,8 +358,8 @@ test("Export: manifest v3 / contract 9C / compatibility = item 1", () => {
   });
   assert.equal(manifest.version, EXPORT_MANIFEST_VERSION);
   assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
-  assert.equal(EXPORT_MANIFEST_VERSION, 3);
-  assert.equal(EXPORT_RENDERER_CONTRACT_VERSION, "9C");
+  assert.equal(EXPORT_MANIFEST_VERSION, 4);
+  assert.equal(EXPORT_RENDERER_CONTRACT_VERSION, "9D");
   const scene = manifest.scenes[0]!;
   assert.ok(scene.mediaTimeline.items.length >= 2);
   assert.deepEqual(scene.media, scene.mediaTimeline.items[0]!.media);

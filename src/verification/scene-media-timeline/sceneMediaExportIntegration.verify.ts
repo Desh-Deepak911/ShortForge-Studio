@@ -144,16 +144,16 @@ function twoItemScene(): FootieScene {
 
 console.log("\nscene-media-export (Sprint 8D)\n");
 
-test("1. Manifest version 3 and renderer contract 9C (production)", () => {
-  assert.equal(EXPORT_MANIFEST_VERSION, 3);
-  assert.equal(EXPORT_RENDERER_CONTRACT_VERSION, "9C");
+test("1. Manifest version 4 and renderer contract 9D (production)", () => {
+  assert.equal(EXPORT_MANIFEST_VERSION, 4);
+  assert.equal(EXPORT_RENDERER_CONTRACT_VERSION, "9D");
   const manifest = buildExportManifest({
     story: storyFromScenes([twoItemScene()]),
     environment: CAPABLE_ENV,
     multiImageScenesEnabled: true,
   });
-  assert.equal(manifest.version, 3);
-  assert.equal(manifest.rendererContractVersion, "9C");
+  assert.equal(manifest.version, 4);
+  assert.equal(manifest.rendererContractVersion, "9D");
 });
 
 test("2. Legacy story produces one media item", () => {

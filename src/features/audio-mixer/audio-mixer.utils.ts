@@ -8,8 +8,10 @@ import {
   DEFAULT_MASTER_MIX_SETTINGS,
   DEFAULT_MUSIC_MIX_SETTINGS,
   DEFAULT_VOICE_MIX_SETTINGS,
+  MAX_AUDIO_STEM_GAIN,
   MAX_DUCKING_STRENGTH,
   MAX_MIX_VOLUME,
+  MAX_VOICE_BOOST_DB,
   MIN_DUCKING_STRENGTH,
   MIN_MIX_VOLUME,
 } from "./audio-mixer.defaults";
@@ -144,9 +146,28 @@ export function resolveAudioMixerSettings(
   };
 }
 
-/** Voice bus gain before ducking/fades — `voice.volume * master.volume`. */
+/**
+ * Voice control is linear through 100%. Above unity it becomes an explicit
+ * perceptual boost: 100→200% maps to 0→+10 dB before the master bus.
+ */
+export function resolveVoiceVolumeGain(volume: number): number {
+  const bounded = Math.min(MAX_MIX_VOLUME, Math.max(MIN_MIX_VOLUME, volume));
+  if (bounded <= 1) return bounded;
+  return 10 ** (((bounded - 1) * MAX_VOICE_BOOST_DB) / 20);
+}
+
+/** Voice bus gain before ducking/fades — perceptual voice control × master. */
 export function resolveVoiceStemGain(settings: ResolvedAudioMixSettings): number {
-  return settings.voice.volume * settings.master.volume;
+  return Math.min(
+    MAX_AUDIO_STEM_GAIN,
+    resolveVoiceVolumeGain(settings.voice.volume) * settings.master.volume,
+  );
+}
+
+export function linearGainToDecibels(gain: number): number {
+  return gain > 0 && Number.isFinite(gain)
+    ? 20 * Math.log10(gain)
+    : Number.NEGATIVE_INFINITY;
 }
 
 /** Music bus gain before ducking/fades — `music.volume * master.volume`. */

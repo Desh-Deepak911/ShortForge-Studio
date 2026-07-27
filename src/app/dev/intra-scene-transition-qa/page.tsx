@@ -672,8 +672,8 @@ export default function IntraSceneTransitionQaPage() {
             stale: false,
           }),
           manifestV3Contract9C:
-            nextPrepared.manifest.version === 3 &&
-            nextPrepared.manifest.rendererContractVersion === "9C"
+            nextPrepared.manifest.version === 4 &&
+            nextPrepared.manifest.rendererContractVersion === "9D"
               ? "pass"
               : "fail",
           oneTerminalExportOutcome: "pass",
@@ -781,8 +781,8 @@ export default function IntraSceneTransitionQaPage() {
           : "fail",
         durationWithinTolerance: "not-tested",
         manifestV3Contract9C:
-          nextPrepared.manifest.version === 3 &&
-          nextPrepared.manifest.rendererContractVersion === "9C"
+          nextPrepared.manifest.version === 4 &&
+          nextPrepared.manifest.rendererContractVersion === "9D"
             ? "pass"
             : "fail",
         oneTerminalExportOutcome: "pass",

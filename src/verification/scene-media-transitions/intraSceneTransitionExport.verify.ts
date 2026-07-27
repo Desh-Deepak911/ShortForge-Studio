@@ -17,10 +17,11 @@ import {
   buildExportManifestFingerprint,
   buildExportSceneMediaTransitionTrack,
   EXPORT_MANIFEST_VERSION,
+  EXPORT_MANIFEST_V3_VERSION,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_RENDERER_CONTRACT_V3,
   EXPORT_RENDERER_CONTRACT_V2,
-  isExportManifestV3,
   isExportSceneManifestV3,
   resolveExportIntraSceneTransitionAtElapsed,
   runExportCapabilityPreflight,
@@ -129,13 +130,28 @@ function storyFrom(scene: FootieScene) {
 }
 
 function buildV3(scene: FootieScene): ExportManifestV3 {
-  const manifest = buildExportManifest({
+  const current = buildExportManifest({
     story: storyFrom(scene),
     environment: CAPABLE_ENV,
     multiImageScenesEnabled: true,
   });
-  assert.ok(isExportManifestV3(manifest));
-  return manifest;
+  const draft = {
+    version: EXPORT_MANIFEST_V3_VERSION,
+    rendererContractVersion: EXPORT_RENDERER_CONTRACT_V3,
+    manifestId: current.manifestId,
+    createdAtIso: current.createdAtIso,
+    project: current.project,
+    output: current.output,
+    scenes: current.scenes,
+    captions: current.captions,
+    audio: current.audio,
+    branding: current.branding,
+    capabilities: current.capabilities,
+  } satisfies Omit<ExportManifestV3, "fingerprint">;
+  return {
+    ...draft,
+    fingerprint: buildExportManifestFingerprint(draft),
+  };
 }
 
 function asV3Scene(manifest: ExportManifest): ExportSceneManifestV3 {
@@ -207,17 +223,21 @@ function threeItemSceneWithABAndBC(): {
 
 console.log("\nintra-scene-transition-export (Sprint 9C)\n");
 
-test("Production builder emits v3 / 9C", () => {
-  assert.equal(EXPORT_MANIFEST_VERSION, 3);
-  assert.equal(EXPORT_RENDERER_CONTRACT_VERSION, "9C");
+test("Production builder emits v4 / 9D", () => {
+  assert.equal(EXPORT_MANIFEST_VERSION, 4);
+  assert.equal(EXPORT_RENDERER_CONTRACT_VERSION, "9D");
   const { scene, a, b } = twoItemScene(
     imageMedia("https://example.com/a.jpg"),
     imageMedia("https://example.com/b.jpg"),
   );
   const withFade = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
-  const manifest = buildV3(withFade);
-  assert.equal(manifest.version, 3);
-  assert.equal(manifest.rendererContractVersion, "9C");
+  const manifest = buildExportManifest({
+    story: storyFrom(withFade),
+    environment: CAPABLE_ENV,
+    multiImageScenesEnabled: true,
+  });
+  assert.equal(manifest.version, 4);
+  assert.equal(manifest.rendererContractVersion, "9D");
   const v3Scene = asV3Scene(manifest);
   assert.equal(v3Scene.mediaTransitions.version, 1);
   assert.equal(v3Scene.mediaTransitions.boundaries.length, 1);

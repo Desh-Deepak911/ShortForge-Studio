@@ -12,12 +12,12 @@ import {
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
   isExportManifestV2,
-  isExportManifestV3,
+  isExportManifestV4,
   validateExportManifest,
   type ExportEnvironmentSnapshot,
   type ExportManifest,
   type ExportManifestV2,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain";
 import type { ExportManifestV2Draft } from "@/features/export/domain/export-manifest.types";
 import {
@@ -114,7 +114,7 @@ function fixStory(): FootieScript {
  */
 export function buildStaleProjectIdOverwrittenFixtureManifest(
   projectId: string,
-): ExportManifestV3 {
+): ExportManifestV4 {
   return buildStaleProjectIdOverwrittenManifest({
     projectId,
     story: fixStory(),
@@ -127,7 +127,7 @@ export function buildStaleProjectIdOverwrittenFixtureManifest(
  */
 export function buildCanonicalFixtureExportManifestV3(
   projectId: string,
-): ExportManifestV3 {
+): ExportManifestV4 {
   const built = buildCanonicalLiveExportManifest({
     projectId,
     story: fixStory(),
@@ -136,8 +136,8 @@ export function buildCanonicalFixtureExportManifestV3(
   if (!built.ok) {
     throw new Error(`${built.code}: ${built.message}`);
   }
-  if (!isExportManifestV3(built.manifest)) {
-    throw new Error("expected ExportManifestV3");
+  if (!isExportManifestV4(built.manifest)) {
+    throw new Error("expected ExportManifestV4");
   }
   return built.manifest;
 }

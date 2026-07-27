@@ -10,6 +10,7 @@ import {
   resolveAudioMixerSettings,
   resolveMusicStemGain,
   resolvePeakProtectionFromMixer,
+  resolveVoiceVolumeGain,
   resolveVoiceStemGain,
 } from "@/features/audio-mixer";
 import { prepareExportAudio } from "@/features/export/audio";
@@ -105,9 +106,9 @@ test("voice gain freezes stem gain (bus × master) for 0–200%", () => {
     { voice: 0.25, master: 1, expected: 0.25 },
     { voice: 0.5, master: 1, expected: 0.5 },
     { voice: 1, master: 1, expected: 1 },
-    { voice: 1.5, master: 1, expected: 1.5 },
-    { voice: 2, master: 1, expected: 2 },
-    { voice: 1.5, master: 0.8, expected: 1.2 },
+    { voice: 1.5, master: 1, expected: resolveVoiceVolumeGain(1.5) },
+    { voice: 2, master: 1, expected: resolveVoiceVolumeGain(2) },
+    { voice: 1.5, master: 0.8, expected: resolveVoiceVolumeGain(1.5) * 0.8 },
   ];
 
   for (const { voice, master, expected } of cases) {
@@ -210,7 +211,7 @@ test("peak protection freezes from mixer + stem gains", () => {
     audioMode: "with-voice",
   });
   assert.equal(manifest.audio.applyPeakProtection, true);
-  assert.equal(manifest.audio.voiceover?.volume, 2);
+  assert.equal(manifest.audio.voiceover?.volume, resolveVoiceVolumeGain(2));
 });
 
 test("silent mode has no voice stem; Model A playback rate stays 1", () => {

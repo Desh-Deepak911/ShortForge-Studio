@@ -14,9 +14,15 @@ import {
   assertExportManifestV3SceneMedia,
 } from "./assert-export-manifest-v3-scene-media";
 import {
+  validateExportManifestV4SceneMedia,
+  assertExportManifestV4SceneMedia,
+} from "./assert-export-manifest-v4-scene-media";
+import {
   EXPORT_MANIFEST_VERSION,
+  EXPORT_MANIFEST_V3_VERSION,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_RENDERER_CONTRACT_V3,
   EXPORT_RENDERER_CONTRACT_V2,
 } from "./export-manifest.types";
 
@@ -66,6 +72,21 @@ export function validateExportManifest(
       return validateExportManifestV2SceneMedia(manifest);
     }
 
+    if (version === EXPORT_MANIFEST_V3_VERSION) {
+      if (contract !== EXPORT_RENDERER_CONTRACT_V3) {
+        return {
+          ok: false,
+          issues: [
+            issue(
+              "UNSUPPORTED_RENDERER_CONTRACT",
+              `ExportManifest v3 requires renderer contract "${EXPORT_RENDERER_CONTRACT_V3}".`,
+            ),
+          ],
+        };
+      }
+      return validateExportManifestV3SceneMedia(manifest);
+    }
+
     if (version === EXPORT_MANIFEST_VERSION) {
       if (contract !== EXPORT_RENDERER_CONTRACT_VERSION) {
         return {
@@ -73,12 +94,12 @@ export function validateExportManifest(
           issues: [
             issue(
               "UNSUPPORTED_RENDERER_CONTRACT",
-              `ExportManifest v3 requires renderer contract "${EXPORT_RENDERER_CONTRACT_VERSION}".`,
+              `ExportManifest v4 requires renderer contract "${EXPORT_RENDERER_CONTRACT_VERSION}".`,
             ),
           ],
         };
       }
-      return validateExportManifestV3SceneMedia(manifest);
+      return validateExportManifestV4SceneMedia(manifest);
     }
 
     return {
@@ -116,4 +137,8 @@ export function assertExportManifest(manifest: unknown): void {
 }
 
 /** @deprecated Prefer assertExportManifest — kept for explicit frozen-v2 call sites. */
-export { assertExportManifestV2SceneMedia, assertExportManifestV3SceneMedia };
+export {
+  assertExportManifestV2SceneMedia,
+  assertExportManifestV3SceneMedia,
+  assertExportManifestV4SceneMedia,
+};

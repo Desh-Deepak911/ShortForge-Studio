@@ -7,10 +7,9 @@ import {
   buildExportManifestFingerprint,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
-  isExportManifestV3,
+  isExportManifestV4,
   type ExportEnvironmentSnapshot,
   type ExportManifestV2,
-  type ExportManifestV3,
 } from "@/features/export/domain";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -98,8 +97,8 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
       quality: rendererProfile.quality,
     },
   });
-  if (!isExportManifestV3(manifest)) {
-    throw new Error("Expected v3 video motion manifest.");
+  if (!isExportManifestV4(manifest)) {
+    throw new Error("Expected v4 video motion manifest.");
   }
   const appliedV3 = applyHeadlessFormatToManifest(manifest, rendererProfile);
   if (!appliedV3.ok) {

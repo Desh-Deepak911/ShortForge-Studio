@@ -1,4 +1,5 @@
 import { normalizeSceneCaptionSettings } from "./caption.utils";
+import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
 import type {
   FootieScene,
   SceneImage,
@@ -449,6 +450,11 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
       motion.endTransform = end;
     }
     normalized.motion = motion;
+  }
+
+  const visualAdjustments = freezeMediaVisualAdjustments(record.visualAdjustments);
+  if (visualAdjustments) {
+    normalized.visualAdjustments = visualAdjustments;
   }
 
   const posterUrl = normalizeSceneMediaUrl(record.posterUrl);

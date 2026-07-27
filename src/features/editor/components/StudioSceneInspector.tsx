@@ -9,6 +9,7 @@ import CaptionWorkspace from "@/features/editor/components/caption-workspace/Cap
 import CreatorAssetStudio from "@/features/editor/components/creator-asset-studio/CreatorAssetStudio";
 import SceneImageInspector from "@/features/editor/components/SceneImageInspector";
 import MediaMotionInspectorPanel from "@/features/editor/components/media/MediaMotionInspectorPanel";
+import MediaVisualAdjustmentsPanel from "@/features/editor/components/media/MediaVisualAdjustmentsPanel";
 import SceneMediaItemInspector from "@/features/editor/components/media/SceneMediaItemInspector";
 import SceneMediaTransitionInspector from "@/features/editor/components/media/SceneMediaTransitionInspector";
 import SceneVideoInspector from "@/features/editor/components/media/SceneVideoInspector";
@@ -41,6 +42,10 @@ import {
   resolveSceneMediaMotion,
   type SceneMediaMotion,
 } from "@/features/media-motion";
+import {
+  buildMediaVisualAdjustmentsPatch,
+  buildResetMediaVisualAdjustmentsPatch,
+} from "@/features/media-visual-adjustments";
 import {
   buildPosterTimePatch,
   buildResetPosterPatch,
@@ -429,6 +434,27 @@ export default function StudioSceneInspector({
     });
   }, [onScriptChange, sceneId, script]);
 
+  const handleMediaVisualAdjustmentsChange = useCallback(
+    (patch: Parameters<typeof buildMediaVisualAdjustmentsPatch>[1]) => {
+      if (!sceneId) return;
+      const target = script.scenes.find((entry) => entry.id === sceneId);
+      if (!target) return;
+      const result = buildMediaVisualAdjustmentsPatch(target, patch);
+      if (!result) return;
+      onScriptChange(applySceneUpdate(script, sceneId, result), { intent: "media" });
+    },
+    [onScriptChange, sceneId, script],
+  );
+
+  const handleResetMediaVisualAdjustments = useCallback(() => {
+    if (!sceneId) return;
+    const target = script.scenes.find((entry) => entry.id === sceneId);
+    if (!target) return;
+    const result = buildResetMediaVisualAdjustmentsPatch(target);
+    if (!result) return;
+    onScriptChange(applySceneUpdate(script, sceneId, result), { intent: "media" });
+  }, [onScriptChange, sceneId, script]);
+
   const handleCaptionModeChange = useCallback(
     (mode: CaptionMode) => {
       if (!sceneId) {
@@ -749,6 +775,13 @@ export default function StudioSceneInspector({
               onMotionChange={handleMediaMotionChange}
               onReset={handleResetMediaMotion}
             />
+            {sceneMedia && sceneMedia.type !== "placeholder" ? (
+              <MediaVisualAdjustmentsPanel
+                media={sceneMedia}
+                onChange={handleMediaVisualAdjustmentsChange}
+                onReset={handleResetMediaVisualAdjustments}
+              />
+            ) : null}
           </InspectorSection>
         ) : null}
       </InspectorSection>

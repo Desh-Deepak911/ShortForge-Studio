@@ -42,6 +42,7 @@ import {
 import type { ExportAudioMode } from "@/features/export/utils/export-quality.utils";
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
+import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
 import {
   projectSceneMediaTimeline,
   resolveSceneMediaWindows,
@@ -60,8 +61,8 @@ import {
   type ExportCapabilitySnapshot,
   type ExportCaptionManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV3,
-  type ExportManifestV3Draft,
+  type ExportManifestV4,
+  type ExportManifestV4Draft,
   type ExportManifestFormat,
   type ExportManifestResolutionLabel,
   type ExportMediaManifest,
@@ -90,7 +91,7 @@ export interface BuildExportManifestInput {
   readonly multiImageScenesEnabled?: boolean;
 }
 
-export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV3 {
+export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV4 {
   const prepared = input.prepared ?? prepareStoryForExport(input.story);
   const story = prepared.story;
   const timeline = prepared.masterTimeline;
@@ -119,7 +120,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   const branding = buildBrandingManifest();
   const capabilities = buildCapabilitySnapshot(environment);
 
-  const draft: ExportManifestV3Draft = {
+  const draft: ExportManifestV4Draft = {
     version: EXPORT_MANIFEST_VERSION,
     manifestId: createManifestId(),
     createdAt: new Date().toISOString(),
@@ -134,7 +135,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   };
 
   const fingerprint = buildExportManifestFingerprint(draft);
-  const manifest: ExportManifestV3 = { ...draft, fingerprint };
+  const manifest: ExportManifestV4 = { ...draft, fingerprint };
   return deepFreezeExportManifest(manifest);
 }
 
@@ -331,6 +332,7 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
   const zoom = framing.zoom;
   const rotationDeg = framing.rotationDeg;
   const source = typeof media.url === "string" ? media.url.trim() : "";
+  const visualAdjustments = freezeMediaVisualAdjustments(media.visualAdjustments);
 
   if (media.type === "image") {
     return {
@@ -342,6 +344,7 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
       zoom,
       rotationDeg,
       motion,
+      ...(visualAdjustments ? { visualAdjustments } : {}),
     };
   }
 
@@ -360,6 +363,7 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
     zoom,
     rotationDeg,
     motion,
+    ...(visualAdjustments ? { visualAdjustments } : {}),
   };
 }
 

@@ -14,7 +14,11 @@ import { EXPORT_CHUNKED_RENDERER_VERSION } from "@/features/export/chunking/expo
 
 import type { ExportCostEstimate } from "./export-capability.types";
 import type { ExportManifest } from "./export-manifest.types";
-import { isExportManifestV3, isExportSceneManifestV3 } from "./export-manifest.types";
+import {
+  isExportManifestV3,
+  isExportManifestV4,
+  isExportSceneManifestV3,
+} from "./export-manifest.types";
 
 const WASM_OVERHEAD_BYTES = 180 * 1024 * 1024;
 /** Safe peak estimate for Chromium browser path. */
@@ -105,7 +109,7 @@ function estimateMediaLayerDrawStats(
     if (scene.transitionOut && scene.transitionOut.durationMs > 0) {
       dualPeerMs += scene.transitionOut.durationMs;
     }
-    if (isExportManifestV3(manifest) && isExportSceneManifestV3(scene)) {
+    if ((isExportManifestV3(manifest) || isExportManifestV4(manifest)) && isExportSceneManifestV3(scene)) {
       for (const boundary of scene.mediaTransitions.boundaries) {
         dualPeerMs += Math.max(0, boundary.effectiveDurationMs);
       }

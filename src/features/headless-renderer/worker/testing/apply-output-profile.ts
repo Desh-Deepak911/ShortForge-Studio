@@ -6,7 +6,7 @@
 import {
   buildExportManifestFingerprint,
   type ExportManifest,
-  type ExportManifestV3,
+  type ExportManifestDraft,
 } from "@/features/export/domain/headless-safe";
 
 import type { HeadlessRendererProfile } from "../../domain";
@@ -56,7 +56,7 @@ export function applyHeadlessFormatToManifest<T extends ExportManifest>(
     },
   };
   const fingerprint = buildExportManifestFingerprint(
-    draft as unknown as Omit<ExportManifestV3, "fingerprint">,
+    draft as unknown as ExportManifestDraft,
   );
   return { ok: true, manifest: { ...draft, fingerprint } as T };
 }

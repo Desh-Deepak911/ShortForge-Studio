@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import SceneImageInspector from "@/features/editor/components/SceneImageInspector";
 import MediaMotionInspectorPanel from "@/features/editor/components/media/MediaMotionInspectorPanel";
+import MediaVisualAdjustmentsPanel from "@/features/editor/components/media/MediaVisualAdjustmentsPanel";
 import SceneVideoInspector from "@/features/editor/components/media/SceneVideoInspector";
 import { useEditorSelection } from "@/features/editor/selection";
 import { SelectionPhase } from "@/features/editor/selection/selection.types";
@@ -25,6 +26,10 @@ import {
   resolveSceneMediaMotion,
   type SceneMediaMotion,
 } from "@/features/media-motion";
+import {
+  patchSceneMediaVisualAdjustments,
+  resetSceneMediaVisualAdjustments,
+} from "@/features/media-visual-adjustments";
 import {
   buildResetVideoTrimPatch,
   buildVideoTrimPatch,
@@ -318,23 +323,31 @@ export default function SceneMediaItemInspector({
       )}
 
       {media.type === "image" || media.type === "video" ? (
-        <MediaMotionInspectorPanel
-          controlId={`inspector-media-item-motion-${scene.id}-${mediaItemId}`}
-          motion={motion}
-          disabled={controlsDisabled}
-          onMotionChange={(patch: Partial<SceneMediaMotion>) => {
-            runWithTempScene((temp) => {
-              const result = buildMediaMotionPatch(temp, patch);
-              return result?.media ? { media: result.media } : null;
-            });
-          }}
-          onReset={() => {
-            runWithTempScene((temp) => {
-              const result = buildResetMediaMotionPatch(temp);
-              return result?.media ? { media: result.media } : null;
-            });
-          }}
-        />
+        <>
+          <MediaMotionInspectorPanel
+            controlId={`inspector-media-item-motion-${scene.id}-${mediaItemId}`}
+            motion={motion}
+            disabled={controlsDisabled}
+            onMotionChange={(patch: Partial<SceneMediaMotion>) => {
+              runWithTempScene((temp) => {
+                const result = buildMediaMotionPatch(temp, patch);
+                return result?.media ? { media: result.media } : null;
+              });
+            }}
+            onReset={() => {
+              runWithTempScene((temp) => {
+                const result = buildResetMediaMotionPatch(temp);
+                return result?.media ? { media: result.media } : null;
+              });
+            }}
+          />
+          <MediaVisualAdjustmentsPanel
+            media={media}
+            disabled={controlsDisabled}
+            onChange={(patch) => commitItemMedia(patchSceneMediaVisualAdjustments(media, patch))}
+            onReset={() => commitItemMedia(resetSceneMediaVisualAdjustments(media))}
+          />
+        </>
       ) : null}
     </div>
   );

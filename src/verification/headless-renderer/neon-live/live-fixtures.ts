@@ -7,7 +7,7 @@ import { createHash, randomUUID as nodeRandomUUID } from "node:crypto";
 
 import {
   type ExportEnvironmentSnapshot,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain";
 import type { FootieScript } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -110,7 +110,7 @@ function fixStory(): FootieScript {
 function buildV3Manifest(
   projectId: string,
   contentDurationMs?: number,
-): ExportManifestV3 {
+): ExportManifestV4 {
   const durationSec =
     contentDurationMs != null
       ? Math.max(1, Math.round(contentDurationMs / 1000))
@@ -147,7 +147,7 @@ export type LiveDraftContext = {
   readonly projectId: string;
   readonly jobId: string;
   readonly operationId: string;
-  readonly manifest: ExportManifestV3;
+  readonly manifest: ExportManifestV4;
   readonly seeded: {
     readonly manifestPayloadDigest: string;
     readonly bundle: HeadlessAssetBundleV1;
@@ -369,7 +369,7 @@ export async function casLiveCoverage(
 }
 
 export function buildLiveCanonicalPair(
-  manifest: ExportManifestV3,
+  manifest: ExportManifestV4,
   bundle: HeadlessAssetBundleV1,
   record: HeadlessProvisionalStoredJobRecord | HeadlessProvisionalStoreWrite,
 ):

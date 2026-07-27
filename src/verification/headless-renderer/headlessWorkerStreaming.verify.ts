@@ -464,7 +464,7 @@ async function main() {
   test("Phase 3.2 renderer identity — not Phase 3.1A", () => {
     assert.equal(
       HEADLESS_PHASE3_RENDERER_BUILD_ID,
-      "headless-local-chromium-ffmpeg-11d-phase3.2",
+      "headless-local-chromium-ffmpeg-11e-phase2g.13",
     );
     assert.equal(HEADLESS_WORKER_RENDERER_BUILD_ID, HEADLESS_PHASE3_RENDERER_BUILD_ID);
     assert.equal(

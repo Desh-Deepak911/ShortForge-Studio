@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 import {
   buildExportManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain";
 import type { FootieScript } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -106,14 +106,14 @@ function fixStory(): FootieScript {
   });
 }
 
-function buildV3Manifest(): ExportManifestV3 {
+function buildV3Manifest(): ExportManifestV4 {
   const manifest = buildExportManifest({
     story: fixStory(),
     environment: CAPABLE_ENV,
     audioMode: "with-voice",
   });
-  assert.equal(manifest.version, 3);
-  return manifest as ExportManifestV3;
+  assert.equal(manifest.version, 4);
+  return manifest;
 }
 
 function buildIdempotencyKey(
@@ -282,7 +282,7 @@ async function casCoverage(
 }
 
 function buildCanonicalPair(
-  manifest: ExportManifestV3,
+  manifest: ExportManifestV4,
   bundle: (Awaited<ReturnType<typeof buildDraft>>)["seeded"]["bundle"],
   record: HeadlessProvisionalStoredJobRecord,
 ) {
