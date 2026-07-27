@@ -19,7 +19,6 @@ import { StudioShell, StudioSection } from "@/components/studio-shell";
 import { AppShell } from "@/components/layout";
 import { getCanonicalVoiceover } from "@/features/audio";
 import DraftLoadingState from "@/features/drafts/components/DraftLoadingState";
-import { isEditorReadyDraft } from "@/features/drafts";
 import { useReviewStoryDocument } from "@/features/drafts/hooks/useReviewStoryDocument";
 import { useDraftPersistFeedback } from "@/features/drafts/hooks/useDraftPersistFeedback";
 import type { Draft, DraftPersistedScript } from "@/features/drafts";
@@ -173,7 +172,6 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
   const scriptAutosaveReadyRef = useRef(false);
   const persistedVoiceoverUrlRef = useRef<string | undefined>(undefined);
   const isCreatingScenesRef = useRef(false);
-  const initialEditorRedirectCheckedRef = useRef(false);
   const normalizedNarrationDraftRef = useRef<string | null>(null);
   const {
     isLoading,
@@ -293,21 +291,6 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     )?.url;
     scriptAutosaveReadyRef.current = false;
   }, [isLoading, loadedDraft?.id]);
-
-  useEffect(() => {
-    if (isLoading || isCreatingScenesRef.current || !loadedDraft) {
-      return;
-    }
-
-    if (initialEditorRedirectCheckedRef.current) {
-      return;
-    }
-
-    initialEditorRedirectCheckedRef.current = true;
-    if (isEditorReadyDraft(loadedDraft)) {
-      router.replace(`/editor/${draftId}`);
-    }
-  }, [draftId, isLoading, loadedDraft, router]);
 
   useEffect(() => {
     if (

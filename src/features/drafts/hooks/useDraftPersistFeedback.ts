@@ -67,7 +67,9 @@ export function useDraftPersistFeedback(draftId: string): UseDraftPersistFeedbac
   }, [draftId]);
 
   const persistWarning =
-    session.persistStatus === "error" ? DRAFT_AUTOSAVE_FAILED_MESSAGE : null;
+    session.persistStatus === "error"
+      ? (session.persistError ?? DRAFT_AUTOSAVE_FAILED_MESSAGE)
+      : null;
 
   return {
     persistWarning,

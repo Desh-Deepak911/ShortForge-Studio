@@ -80,7 +80,10 @@ test("only the explicit Open Editor action navigates after storyboard success", 
   const reviewFlow = readSrc(
     "src/features/create/components/ScriptReviewFlow.tsx",
   );
-  assert.match(reviewFlow, /initialEditorRedirectCheckedRef/);
+  assert.doesNotMatch(
+    reviewFlow,
+    /router\.replace\(`\/editor\/\$\{draftId\}`\)/,
+  );
   assert.match(
     reviewFlow,
     /label:\s*"Open Editor"[\s\S]*onClick:\s*handlePrimaryAction/,
@@ -89,6 +92,32 @@ test("only the explicit Open Editor action navigates after storyboard success", 
     reviewFlow,
     /const handleOpenEditor[\s\S]*router\.push\(`\/editor\/\$\{draftId\}`\)/,
   );
+});
+
+test("draft audio is offloaded before localStorage metadata is updated", () => {
+  const persistence = readSrc(
+    "src/features/drafts/session/draft-session-persist.utils.ts",
+  );
+  const routeHydration = readSrc(
+    "src/features/drafts/hooks/useRouteStoryDocument.ts",
+  );
+  const audioStorage = readSrc(
+    "src/features/drafts/services/draft-audio-storage.service.ts",
+  );
+
+  const serializeAt = persistence.indexOf(
+    "serializeEditorStateForDraftAsync(scriptToPersist)",
+  );
+  const offloadAt = persistence.indexOf(
+    "offloadDraftAudioAssets(draftId, serializedWithAudio)",
+  );
+  const updateAt = persistence.indexOf("updateDraft(draftId");
+  assert.ok(serializeAt >= 0 && serializeAt < offloadAt);
+  assert.ok(offloadAt >= 0 && offloadAt < updateAt);
+  assert.match(routeHydration, /hydrateDraftAudioAssets\(stored\.script\)/);
+  assert.match(audioStorage, /shortforge-draft-audio:/);
+  assert.match(audioStorage, /delete compact\.voiceoverAudioBase64/);
+  assert.match(audioStorage, /delete compactBackground\.fileDataBase64/);
 });
 
 test("explicit saves queue behind background autosave instead of reusing it", () => {

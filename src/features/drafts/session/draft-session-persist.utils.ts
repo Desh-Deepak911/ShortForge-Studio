@@ -5,7 +5,8 @@ import { syncFootieScript } from "@/lib/utils/voiceover";
 import { getDraft, updateDraft } from "../services";
 import type { Draft, DraftPipelineStage } from "../types";
 import { resolveAssetPlanningSnapshotForDraftPersist } from "../utils/draft-asset-planning-persistence.utils";
-import { hydrateDraftScriptAudio, type DraftPersistedScript } from "../utils/draft-audio-persistence.utils";
+import { offloadDraftAudioAssets } from "../services/draft-audio-storage.service";
+import { type DraftPersistedScript } from "../utils/draft-audio-persistence.utils";
 import { resolvePipelineStageFromScript } from "../utils/draft-pipeline.utils";
 import { serializeEditorStateForDraftAsync } from "../utils/draft-serialization.utils";
 
@@ -75,7 +76,8 @@ export async function persistDraftSessionToStorage(
     fallbackStage,
     sessionScript,
   );
-  const serialized = await serializeEditorStateForDraftAsync(scriptToPersist);
+  const serializedWithAudio = await serializeEditorStateForDraftAsync(scriptToPersist);
+  const serialized = await offloadDraftAudioAssets(draftId, serializedWithAudio);
   const assetPlanningSnapshot = resolveAssetPlanningSnapshotForDraftPersist(draftId);
 
   const updated = updateDraft(draftId, {
@@ -90,6 +92,8 @@ export async function persistDraftSessionToStorage(
 
   return {
     ...updated,
-    script: syncFootieScript(hydrateDraftScriptAudio(updated.script)),
+    // Keep the playable in-memory document. The stored draft owns compact
+    // IndexedDB references and is rehydrated asynchronously on a cold load.
+    script: syncFootieScript(scriptToPersist),
   };
 }

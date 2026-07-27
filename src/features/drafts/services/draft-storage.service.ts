@@ -102,17 +102,29 @@ function readStore(adapter: DraftStorageAdapter): DraftStoreV1 {
   return safeParseStore(adapter.getItem(DRAFT_STORAGE_KEY));
 }
 
-function writeStore(adapter: DraftStorageAdapter, store: DraftStoreV1): boolean {
+function isStorageQuotaError(error: unknown): boolean {
+  return (
+    error instanceof DOMException &&
+    (error.name === "QuotaExceededError" ||
+      error.name === "NS_ERROR_DOM_QUOTA_REACHED")
+  );
+}
+
+function writeStore(adapter: DraftStorageAdapter, store: DraftStoreV1): void {
   const serialized = safeStringifyJson(store);
   if (!serialized) {
-    return false;
+    throw new Error("Draft data could not be serialized.");
   }
 
   try {
     adapter.setItem(DRAFT_STORAGE_KEY, serialized);
-    return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (isStorageQuotaError(error)) {
+      throw new Error(
+        "Browser draft storage is full. ShortForge moved narration audio to larger browser storage; try saving once more.",
+      );
+    }
+    throw new Error("Draft storage is unavailable. Your changes remain open in this tab.");
   }
 }
 
@@ -189,9 +201,7 @@ class LocalDraftStorageService implements DraftStorageBackend {
       store.drafts.unshift(normalizedDraft);
     }
 
-    if (!writeStore(adapter, store)) {
-      throw new Error("Failed to persist draft.");
-    }
+    writeStore(adapter, store);
 
     return normalizedDraft;
   }
@@ -225,9 +235,7 @@ class LocalDraftStorageService implements DraftStorageBackend {
     const merged = mergeDraftUpdatesSafely(current, touched);
     store.drafts[index] = merged;
 
-    if (!writeStore(adapter, store)) {
-      return null;
-    }
+    writeStore(adapter, store);
 
     return merged;
   }
@@ -245,7 +253,12 @@ class LocalDraftStorageService implements DraftStorageBackend {
       return false;
     }
 
-    return writeStore(adapter, { version: 1, drafts: nextDrafts });
+    try {
+      writeStore(adapter, { version: 1, drafts: nextDrafts });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   listDrafts(options?: DraftStorageOptions): Draft[] {
