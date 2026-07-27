@@ -1,1 +1,0 @@
-{"version":3,"file":"NarrationPanel.d.ts","sourceRoot":"","sources":["../../../src/components/NarrationPanel.tsx"],"names":[],"mappings":"AASA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,wBAAwB,CAAC;AAE3D,UAAU,mBAAmB;IAC3B,MAAM,EAAE,YAAY,CAAC;IACrB,OAAO,CAAC,EAAE,OAAO,CAAC;CACnB;AAED,MAAM,CAAC,OAAO,UAAU,cAAc,CAAC,EAAE,MAAM,EAAE,OAAe,EAAE,EAAE,mBAAmB,+BA6BtF"}
