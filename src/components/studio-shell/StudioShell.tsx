@@ -38,6 +38,7 @@ export default function StudioShell({
   canvasLayout,
   sidebarVisibleBelowLg = false,
   viewportMode = "document",
+  editorLayout,
   className = "",
   "aria-label": ariaLabel = "Studio workspace",
 }: StudioShellProps) {
@@ -53,7 +54,9 @@ export default function StudioShell({
   const bodyRowInnerClass = isFixedViewport
     ? studioShellBodyRowFixed
     : studioShellBodyRowDocument;
-  const rootViewportClass = isFixedViewport ? studioShellRootFixed : studioShellRootDocument;
+  const rootViewportClass = isFixedViewport
+    ? studioShellRootFixed
+    : studioShellRootDocument;
 
   return (
     <div
@@ -75,6 +78,13 @@ export default function StudioShell({
               compactMode={compactMode}
               visibleBelowLg={sidebarVisibleBelowLg}
               viewportMode={viewportMode}
+              collapsed={editorLayout?.sidebarCollapsed}
+              mobileOpen={editorLayout?.mobileSidebarOpen}
+              onMobileClose={
+                editorLayout
+                  ? () => editorLayout.onMobileSidebarOpenChange(false)
+                  : undefined
+              }
             >
               {sidebar}
             </StudioSidebar>
@@ -92,7 +102,22 @@ export default function StudioShell({
                 </StudioCanvas>
               ) : null}
               {inspector || inspectorBanner ? (
-                <StudioInspector compactMode={compactMode} viewportMode={viewportMode}>
+                <StudioInspector
+                  compactMode={compactMode}
+                  viewportMode={viewportMode}
+                  collapsed={editorLayout?.inspectorCollapsed}
+                  widthPx={editorLayout?.inspectorWidthPx}
+                  onToggle={editorLayout?.onInspectorToggle}
+                  onResizePointerDown={
+                    editorLayout?.onInspectorResizePointerDown
+                  }
+                  mobileOpen={editorLayout?.mobileInspectorOpen}
+                  onMobileClose={
+                    editorLayout
+                      ? () => editorLayout.onMobileInspectorOpenChange(false)
+                      : undefined
+                  }
+                >
                   {inspectorBanner}
                   {inspector}
                 </StudioInspector>
@@ -100,7 +125,15 @@ export default function StudioShell({
             </div>
 
             {timeline ? (
-              <StudioTimelineShell compactMode={compactMode}>{timeline}</StudioTimelineShell>
+              <StudioTimelineShell
+                compactMode={compactMode}
+                density={editorLayout?.timelineDensity}
+                heightPx={editorLayout?.timelineHeightPx}
+                onDensityChange={editorLayout?.onTimelineDensityChange}
+                onResizePointerDown={editorLayout?.onTimelineResizePointerDown}
+              >
+                {timeline}
+              </StudioTimelineShell>
             ) : null}
           </div>
         </div>

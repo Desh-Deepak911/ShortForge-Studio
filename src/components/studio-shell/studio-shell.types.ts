@@ -1,4 +1,23 @@
-import type { ReactNode } from "react";
+import type { PointerEventHandler, ReactNode } from "react";
+
+export type StudioTimelineDensity = "compact" | "comfortable" | "expanded";
+
+export interface StudioShellEditorLayout {
+  sidebarCollapsed: boolean;
+  inspectorCollapsed: boolean;
+  inspectorWidthPx: number;
+  timelineDensity: StudioTimelineDensity;
+  timelineHeightPx: number;
+  onSidebarToggle: () => void;
+  onInspectorToggle: () => void;
+  onInspectorResizePointerDown: PointerEventHandler<HTMLElement>;
+  onTimelineDensityChange: (density: StudioTimelineDensity) => void;
+  onTimelineResizePointerDown: PointerEventHandler<HTMLElement>;
+  mobileSidebarOpen: boolean;
+  mobileInspectorOpen: boolean;
+  onMobileSidebarOpenChange: (open: boolean) => void;
+  onMobileInspectorOpenChange: (open: boolean) => void;
+}
 
 export interface StudioShellProps {
   /** Top chrome — brand, project context, global actions. */
@@ -32,6 +51,8 @@ export interface StudioShellProps {
    * `document` — create/review: min-height page flow, browser scroll allowed.
    */
   viewportMode?: "fixed" | "document";
+  /** Optional editor-only presentation state. Never owns document or editing data. */
+  editorLayout?: StudioShellEditorLayout;
   className?: string;
   /** Accessible label for the shell landmark. */
   "aria-label"?: string;

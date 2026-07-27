@@ -16,13 +16,18 @@ import {
   registerInspectorProjectTabFocus,
   writeActiveInspectorTab,
 } from "./inspector-tab-shell.session";
-import { INSPECTOR_TAB_LABELS, type InspectorTabId } from "./inspector-tab-shell.types";
+import {
+  INSPECTOR_TAB_LABELS,
+  type InspectorTabId,
+} from "./inspector-tab-shell.types";
 
-const INSPECTOR_TABS: InspectorTabId[] = ["scene", "project"];
+const INSPECTOR_TABS: InspectorTabId[] = ["scene", "audio", "project"];
 
 export default function InspectorTabShell() {
   const { inspectorImageEditing } = useEditorSelection();
-  const [activeTab, setActiveTab] = useState<InspectorTabId>(() => readActiveInspectorTab());
+  const [activeTab, setActiveTab] = useState<InspectorTabId>(() =>
+    readActiveInspectorTab(),
+  );
 
   const selectTab = useCallback((tabId: InspectorTabId) => {
     writeActiveInspectorTab(tabId);
@@ -33,7 +38,7 @@ export default function InspectorTabShell() {
 
   useEffect(() => {
     return registerInspectorProjectTabFocus(() => {
-      selectTab("project");
+      selectTab("audio");
     });
   }, [selectTab]);
 
@@ -57,7 +62,9 @@ export default function InspectorTabShell() {
               id={`inspector-tab-${tabId}`}
               aria-selected={isActive}
               aria-controls={`inspector-tabpanel-${tabId}`}
-              className={isActive ? studioWorkspaceTabActive : studioWorkspaceTabInactive}
+              className={
+                isActive ? studioWorkspaceTabActive : studioWorkspaceTabInactive
+              }
               onClick={() => selectTab(tabId)}
             >
               {INSPECTOR_TAB_LABELS[tabId]}
@@ -68,11 +75,25 @@ export default function InspectorTabShell() {
 
       <div className={studioInspectorTabBodyScrollHost}>
         <div
+          id="inspector-tabpanel-audio"
+          role="tabpanel"
+          aria-labelledby="inspector-tab-audio"
+          hidden={displayedTab !== "audio"}
+          className={
+            displayedTab === "audio" ? "min-w-0" : "pointer-events-none min-w-0"
+          }
+        >
+          <InspectorPanel panelId="audio" />
+        </div>
+
+        <div
           id="inspector-tabpanel-scene"
           role="tabpanel"
           aria-labelledby="inspector-tab-scene"
           hidden={displayedTab !== "scene"}
-          className={displayedTab === "scene" ? "min-w-0" : "pointer-events-none min-w-0"}
+          className={
+            displayedTab === "scene" ? "min-w-0" : "pointer-events-none min-w-0"
+          }
         >
           <InspectorPanel panelId="scene" />
         </div>
@@ -82,7 +103,11 @@ export default function InspectorTabShell() {
           role="tabpanel"
           aria-labelledby="inspector-tab-project"
           hidden={displayedTab !== "project"}
-          className={displayedTab === "project" ? "min-w-0" : "pointer-events-none min-w-0"}
+          className={
+            displayedTab === "project"
+              ? "min-w-0"
+              : "pointer-events-none min-w-0"
+          }
         >
           <InspectorPanel panelId="project" />
         </div>

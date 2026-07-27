@@ -1,7 +1,19 @@
 "use client";
 
-import { ArrowLeftRight, ChevronDown, ImageIcon, ImagePlus, Mic, MoveHorizontal, Package, PenLine, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  ImageIcon,
+  ImagePlus,
+  Mic,
+  MoveHorizontal,
+  Package,
+  PenLine,
+  SlidersHorizontal,
+  Timer,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useState } from "react";
 
 import InspectorEmptyState from "@/components/studio-shell/InspectorEmptyState";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
@@ -19,9 +31,14 @@ import SmartEditImageAction, {
 } from "@/features/tool/components/SmartEditImageAction";
 import { useSceneMediaUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import { useInspectorContext } from "@/features/editor/inspector/InspectorContext";
-import { SCENE_INSPECTOR_GROUP_LABELS } from "@/features/editor/inspector/inspector-tab-shell.types";
-import { writeSceneGroupOpenState } from "@/features/editor/inspector/inspector-tab-shell.session";
-import { useSceneInspectorGroupAccordion } from "@/features/editor/inspector/useSceneInspectorGroupAccordion";
+import {
+  SCENE_INSPECTOR_GROUP_LABELS,
+  type SceneInspectorWorkspaceId,
+} from "@/features/editor/inspector/inspector-tab-shell.types";
+import {
+  readActiveSceneInspectorWorkspace,
+  writeActiveSceneInspectorWorkspace,
+} from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useEditorSelection } from "@/features/editor/selection";
 import { resolveSafeSceneIndex } from "@/features/editor/selection/selection.utils";
 import {
@@ -124,9 +141,25 @@ const SCENE_TYPE_LABELS: Record<SceneType, string> = {
   ending: "Ending",
 };
 
+const SCENE_WORKSPACES: {
+  id: SceneInspectorWorkspaceId;
+  label: string;
+  icon: typeof ImageIcon;
+}[] = [
+  { id: "media", label: "Media", icon: ImageIcon },
+  { id: "adjust", label: "Adjust", icon: SlidersHorizontal },
+  { id: "caption", label: "Caption", icon: PenLine },
+  { id: "timing", label: "Timing", icon: Timer },
+  { id: "transition", label: "Transition", icon: ArrowLeftRight },
+  { id: "assets", label: "Assets", icon: Package },
+];
+
 export interface StudioSceneInspectorProps {
   script: FootieScript;
-  onScriptChange: (script: FootieScript, options?: StoryScriptChangeOptions) => void;
+  onScriptChange: (
+    script: FootieScript,
+    options?: StoryScriptChangeOptions,
+  ) => void;
 }
 
 function formatTimeRange(start: number, end: number): string {
@@ -184,12 +217,10 @@ export default function StudioSceneInspector({
     isSceneMediaTransitionSelected,
   } = selection;
   const { assetPlanning, creatorAssetStudioVisible } = useInspectorContext();
-  const generalGroup = useSceneInspectorGroupAccordion("general");
-  const { open: imageGroupOpen, onOpenChange: onImageGroupOpenChange, setOpen: setImageGroupOpen } =
-    useSceneInspectorGroupAccordion("image");
-  const captionGroup = useSceneInspectorGroupAccordion("caption");
-  const transitionGroup = useSceneInspectorGroupAccordion("transition");
-  const assetsGroup = useSceneInspectorGroupAccordion("assets");
+  const [activeWorkspace, setActiveWorkspace] =
+    useState<SceneInspectorWorkspaceId>(() =>
+      readActiveSceneInspectorWorkspace(),
+    );
   const { replaceSceneMedia, removeSceneMedia, uploadError, clearUploadError } =
     useSceneMediaUpload({ script, onScriptChange });
   const scenes = script.scenes;
@@ -199,33 +230,36 @@ export default function StudioSceneInspector({
   const appendApi = useOptionalSceneMediaImageAppendContext();
   const showMediaItemInspector = Boolean(
     scene &&
-      isSceneMediaItemSelected &&
-      selectedMediaItemId &&
-      isSelectableSceneMediaItemId(scene, selectedMediaItemId),
+    isSceneMediaItemSelected &&
+    selectedMediaItemId &&
+    isSelectableSceneMediaItemId(scene, selectedMediaItemId),
   );
   const showMediaTransitionInspector = Boolean(
     scene &&
-      isSceneMediaTransitionSelected &&
-      selectedMediaTransition &&
-      isSelectableSceneMediaTransitionPair(
-        scene,
-        selectedMediaTransition.fromItemId,
-        selectedMediaTransition.toItemId,
-      ),
+    isSceneMediaTransitionSelected &&
+    selectedMediaTransition &&
+    isSelectableSceneMediaTransitionPair(
+      scene,
+      selectedMediaTransition.fromItemId,
+      selectedMediaTransition.toItemId,
+    ),
   );
 
-  // Auto-reveal Image/Media when a transition boundary is selected (Sprint 9D.2).
-  useEffect(() => {
-    if (!showMediaTransitionInspector) {
-      return;
-    }
-    onImageGroupOpenChange(true);
-  }, [
-    showMediaTransitionInspector,
-    selectedMediaTransition?.fromItemId,
-    selectedMediaTransition?.toItemId,
-    onImageGroupOpenChange,
-  ]);
+  const selectWorkspace = useCallback(
+    (workspaceId: SceneInspectorWorkspaceId) => {
+      writeActiveSceneInspectorWorkspace(workspaceId);
+      setActiveWorkspace(workspaceId);
+    },
+    [],
+  );
+
+  // Selection-derived presentation does not mutate editor or workspace state.
+  const displayedWorkspace: SceneInspectorWorkspaceId =
+    showMediaTransitionInspector
+      ? "transition"
+      : inspectorImageEditing
+        ? "adjust"
+        : activeWorkspace;
   const mediaWindows = scene ? resolveProjectedSceneMediaWindows(scene) : [];
   const selectedMediaIndex = selectedMediaItemId
     ? mediaWindows.findIndex((window) => window.itemId === selectedMediaItemId)
@@ -236,13 +270,17 @@ export default function StudioSceneInspector({
   );
   const exclusiveInteractionLocked = useTimelineExclusiveInteractionLocked();
   const appendInteractionLocked =
-    selection.phase === SelectionPhase.PlaybackLocked || exclusiveInteractionLocked;
+    selection.phase === SelectionPhase.PlaybackLocked ||
+    exclusiveInteractionLocked;
 
   const commitPresentationPatch = useCallback(
     (targetSceneId: string, patch: ScenePresentationPatch) => {
-      onScriptChange(applyPresentationSceneUpdate(script, targetSceneId, patch), {
-        intent: "presentation",
-      });
+      onScriptChange(
+        applyPresentationSceneUpdate(script, targetSceneId, patch),
+        {
+          intent: "presentation",
+        },
+      );
     },
     [onScriptChange, script],
   );
@@ -270,12 +308,22 @@ export default function StudioSceneInspector({
 
   const handleImageSettingsChange = useCallback(
     (sceneId: string, updates: SceneImageTransformPatch | SceneImage) => {
-      if (typeof updates === "object" && "url" in updates && typeof updates.url === "string") {
-        onScriptChange(applySceneImageSettings(script, sceneId, updates), { intent: "media" });
+      if (
+        typeof updates === "object" &&
+        "url" in updates &&
+        typeof updates.url === "string"
+      ) {
+        onScriptChange(applySceneImageSettings(script, sceneId, updates), {
+          intent: "media",
+        });
         return;
       }
       onScriptChange(
-        applyMediaFramingSettings(script, sceneId, updates as SceneImageTransformPatch),
+        applyMediaFramingSettings(
+          script,
+          sceneId,
+          updates as SceneImageTransformPatch,
+        ),
         { intent: "media" },
       );
     },
@@ -284,7 +332,9 @@ export default function StudioSceneInspector({
 
   const handleImageReset = useCallback(
     (sceneId: string) => {
-      onScriptChange(applyResetMediaFramingSettings(script, sceneId), { intent: "media" });
+      onScriptChange(applyResetMediaFramingSettings(script, sceneId), {
+        intent: "media",
+      });
     },
     [onScriptChange, script],
   );
@@ -301,7 +351,9 @@ export default function StudioSceneInspector({
         return;
       }
 
-      onScriptChange(applySceneUpdate(script, sceneId, patch), { intent: "media" });
+      onScriptChange(applySceneUpdate(script, sceneId, patch), {
+        intent: "media",
+      });
     },
     [onScriptChange, script],
   );
@@ -318,13 +370,18 @@ export default function StudioSceneInspector({
         return;
       }
 
-      onScriptChange(applySceneUpdate(script, sceneId, patch), { intent: "media" });
+      onScriptChange(applySceneUpdate(script, sceneId, patch), {
+        intent: "media",
+      });
     },
     [onScriptChange, script],
   );
 
   const handleApplyTrim = useCallback(
-    (sceneId: string, trim: { trimStartMs: number; trimEndMs: number }): boolean => {
+    (
+      sceneId: string,
+      trim: { trimStartMs: number; trimEndMs: number },
+    ): boolean => {
       const target = script.scenes.find((entry) => entry.id === sceneId);
       if (!target) {
         return false;
@@ -335,7 +392,9 @@ export default function StudioSceneInspector({
         return false;
       }
 
-      onScriptChange(applySceneUpdate(script, sceneId, result.patch), { intent: "media" });
+      onScriptChange(applySceneUpdate(script, sceneId, result.patch), {
+        intent: "media",
+      });
       return true;
     },
     [onScriptChange, script],
@@ -353,29 +412,25 @@ export default function StudioSceneInspector({
         return false;
       }
 
-      onScriptChange(applySceneUpdate(script, sceneId, result.patch), { intent: "media" });
+      onScriptChange(applySceneUpdate(script, sceneId, result.patch), {
+        intent: "media",
+      });
       return true;
     },
     [onScriptChange, script],
   );
 
   const updateTransition = useCallback(
-    (transitionId: string, patch: { effect?: TransitionTimelineItem["effect"]; durationMs?: number }) => {
+    (
+      transitionId: string,
+      patch: { effect?: TransitionTimelineItem["effect"]; durationMs?: number },
+    ) => {
       onScriptChange(applyTransitionUpdate(script, transitionId, patch));
     },
     [onScriptChange, script],
   );
 
   const sceneId = scene?.id;
-
-  useEffect(() => {
-    if (!inspectorImageEditing) {
-      return;
-    }
-
-    writeSceneGroupOpenState("image", true);
-    setImageGroupOpen(true);
-  }, [inspectorImageEditing, setImageGroupOpen]);
 
   const handleImageTransformChange = useCallback(
     (patch: SceneImageTransformPatch) => {
@@ -441,7 +496,9 @@ export default function StudioSceneInspector({
       if (!target) return;
       const result = buildMediaVisualAdjustmentsPatch(target, patch);
       if (!result) return;
-      onScriptChange(applySceneUpdate(script, sceneId, result), { intent: "media" });
+      onScriptChange(applySceneUpdate(script, sceneId, result), {
+        intent: "media",
+      });
     },
     [onScriptChange, sceneId, script],
   );
@@ -452,7 +509,9 @@ export default function StudioSceneInspector({
     if (!target) return;
     const result = buildResetMediaVisualAdjustmentsPatch(target);
     if (!result) return;
-    onScriptChange(applySceneUpdate(script, sceneId, result), { intent: "media" });
+    onScriptChange(applySceneUpdate(script, sceneId, result), {
+      intent: "media",
+    });
   }, [onScriptChange, sceneId, script]);
 
   const handleCaptionModeChange = useCallback(
@@ -467,7 +526,10 @@ export default function StudioSceneInspector({
     [onScriptChange, sceneId, script],
   );
 
-  const handleMediaUpload = async (uploadSceneId: string, file: File | null) => {
+  const handleMediaUpload = async (
+    uploadSceneId: string,
+    file: File | null,
+  ) => {
     if (!file) {
       return;
     }
@@ -492,139 +554,451 @@ export default function StudioSceneInspector({
   const captionMode = normalizeCaptionMode(scene.captionMode);
   const isSubtitlesMode = captionMode === "subtitles";
   const transitionAfterScene = getTransitionAfterScene(timelineItems, sceneId);
+  const selectionLabel = showMediaTransitionInspector
+    ? `Transition · ${mediaOrdinalLabel}`
+    : showMediaItemInspector
+      ? `${getSceneMediaType(scene) === "video" ? "Video" : "Media"} · ${mediaOrdinalLabel}`
+      : `Scene ${safeIndex + 1}`;
 
   return (
     <div className={`${studioInspectorStack} pb-1`}>
-      <InspectorSection
-        icon={SlidersHorizontal}
-        title={SCENE_INSPECTOR_GROUP_LABELS.general.title}
-        description={SCENE_INSPECTOR_GROUP_LABELS.general.description}
-        open={inspectorImageEditing ? false : generalGroup.open}
-        onOpenChange={inspectorImageEditing ? undefined : generalGroup.onOpenChange}
-      >
-        <div className={studioInspectorSummaryStrip}>
-          <div className="flex items-start gap-2.5">
-            <span className={studioStoryboardScenePill} aria-label={`Scene ${safeIndex + 1}`}>
-              {safeIndex + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold tracking-tight text-foreground/95">
-                Scene {safeIndex + 1}
-              </p>
-              <p className={`${studioStoryboardMeta} mt-0.5`}>
-                {formatTimeRange(scene.start, scene.end)} · {formatDisplayDurationSec(scene.duration)}
-              </p>
-              <span className={`${studioBadge} mt-2 inline-flex`}>{resolveSceneStatus(scene)}</span>
-            </div>
-          </div>
-
-          <div className="mt-3 space-y-1.5 border-t border-border/15 pt-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Timer className="h-3.5 w-3.5 text-muted" aria-hidden />
-              <label htmlFor={`inspector-duration-${scene.id}`} className={studioFieldLabel}>
-                Duration
-              </label>
-              <input
-                id={`inspector-duration-${scene.id}`}
-                type="number"
-                min={1}
-                max={20}
-                value={scene.duration}
-                onChange={(event) => {
-                  const raw = Number(event.target.value);
-                  const clamped = Math.min(20, Math.max(1, Math.round(raw)));
-                  updateScene(scene.id, {
-                    duration: Number.isFinite(raw) && raw > 0 ? clamped : scene.duration,
-                  });
-                }}
-                className={`${studioInputCompact} w-14 min-h-[2rem]`}
-              />
-              <span className="text-[11px] text-muted">sec</span>
-            </div>
-            <p className={`${studioSubtleText} text-[11px] leading-snug`}>
-              Drag scene edges on the timeline for faster timing edits.
+      <div className="rounded-2xl bg-background/30 p-2.5 ring-1 ring-border/30">
+        <div className="mb-2 flex items-center justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold text-foreground/95">
+              Scene {safeIndex + 1}
             </p>
+            <p className="truncate text-[10px] text-muted">{selectionLabel}</p>
           </div>
-
-          <div className="mt-3">
-            <label htmlFor={`inspector-scene-type-${scene.id}`} className={studioFieldLabel}>
-              Scene type
-            </label>
-            <div className="relative mt-1.5 w-full">
-              <select
-                id={`inspector-scene-type-${scene.id}`}
-                value={scene.sceneType ?? ""}
-                onChange={(event) =>
-                  updateScene(scene.id, {
-                    sceneType: event.target.value ? (event.target.value as SceneType) : undefined,
-                  })
-                }
-                className={studioSelectCompact}
-              >
-                <option value="">General</option>
-                {SCENE_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className={studioSelectChevronCompact} aria-hidden />
-            </div>
-          </div>
+          <span className="shrink-0 text-[10px] tabular-nums text-muted">
+            {formatTimeRange(scene.start, scene.end)}
+          </span>
         </div>
-
-        <InspectorSection
-          icon={Mic}
-          title="Narration"
-          description="Voiceover timing for this scene."
-          open={inspectorImageEditing ? false : undefined}
+        <div
+          className="grid grid-cols-3 gap-1 sm:grid-cols-6 lg:grid-cols-3 xl:grid-cols-6"
+          role="tablist"
+          aria-label="Scene editing tools"
+          data-scene-inspector-workspaces
         >
-          <div className="rounded-xl bg-background/25 px-3 py-3 ring-1 ring-border/30">
-            <p className="text-sm leading-relaxed text-foreground/90">
-              Plays during voiceover at{" "}
-              <span className="font-medium tabular-nums">{formatTimeRange(scene.start, scene.end)}</span>
-            </p>
-            <p className={`${studioSubtleText} mt-1.5`}>
-              Visuals and captions appear while story narration continues. Click the image on the
-              preview to adjust focus when playback is stopped.
-            </p>
-          </div>
-        </InspectorSection>
-      </InspectorSection>
+          {SCENE_WORKSPACES.filter(
+            (workspace) =>
+              workspace.id !== "assets" || creatorAssetStudioVisible,
+          ).map((workspace) => {
+            const Icon = workspace.icon;
+            const selected = displayedWorkspace === workspace.id;
+            return (
+              <button
+                key={workspace.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => selectWorkspace(workspace.id)}
+                className={`flex min-h-11 flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 text-[10px] font-medium transition ${
+                  selected
+                    ? "bg-accent/15 text-accent ring-1 ring-accent/25"
+                    : "text-muted hover:bg-surface-elevated/45 hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
+                <span>{workspace.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      <InspectorSection
-        icon={ImageIcon}
-        title={SCENE_INSPECTOR_GROUP_LABELS.image.title}
-        description={SCENE_INSPECTOR_GROUP_LABELS.image.description}
-        open={inspectorImageEditing ? true : imageGroupOpen}
-        onOpenChange={inspectorImageEditing ? undefined : onImageGroupOpenChange}
-      >
+      {displayedWorkspace === "timing" ? (
         <InspectorSection
-          icon={ImageIcon}
-          title="Media"
-          description="Upload images or clips, frame, zoom, and position."
+          icon={SlidersHorizontal}
+          title="Timing"
+          description={SCENE_INSPECTOR_GROUP_LABELS.general.description}
           defaultOpen
-          open={inspectorImageEditing ? true : undefined}
         >
-          {mediaWindows.length > 0 ? (
-            <div
-              className="mb-2 flex flex-wrap items-center justify-between gap-2"
-              data-scene-media-inspector-context
-            >
-              <p className="text-[11px] font-medium text-foreground/85" data-scene-media-ordinal>
-                Scene {safeIndex + 1} · {mediaOrdinalLabel}
-              </p>
-              {appendApi ? (
-                <SceneMediaAddAnotherImageButton
-                  scene={scene}
-                  appendApi={appendApi}
-                  disabled={appendInteractionLocked}
-                  className={studioUploadButton}
-                  label="Add another image"
-                />
-              ) : null}
+          <div className={studioInspectorSummaryStrip}>
+            <div className="flex items-start gap-2.5">
+              <span
+                className={studioStoryboardScenePill}
+                aria-label={`Scene ${safeIndex + 1}`}
+              >
+                {safeIndex + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold tracking-tight text-foreground/95">
+                  Scene {safeIndex + 1}
+                </p>
+                <p className={`${studioStoryboardMeta} mt-0.5`}>
+                  {formatTimeRange(scene.start, scene.end)} ·{" "}
+                  {formatDisplayDurationSec(scene.duration)}
+                </p>
+                <span className={`${studioBadge} mt-2 inline-flex`}>
+                  {resolveSceneStatus(scene)}
+                </span>
+              </div>
             </div>
+
+            <div className="mt-3 space-y-1.5 border-t border-border/15 pt-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Timer className="h-3.5 w-3.5 text-muted" aria-hidden />
+                <label
+                  htmlFor={`inspector-duration-${scene.id}`}
+                  className={studioFieldLabel}
+                >
+                  Duration
+                </label>
+                <input
+                  id={`inspector-duration-${scene.id}`}
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={scene.duration}
+                  onChange={(event) => {
+                    const raw = Number(event.target.value);
+                    const clamped = Math.min(20, Math.max(1, Math.round(raw)));
+                    updateScene(scene.id, {
+                      duration:
+                        Number.isFinite(raw) && raw > 0
+                          ? clamped
+                          : scene.duration,
+                    });
+                  }}
+                  className={`${studioInputCompact} w-14 min-h-[2rem]`}
+                />
+                <span className="text-[11px] text-muted">sec</span>
+              </div>
+              <p className={`${studioSubtleText} text-[11px] leading-snug`}>
+                Drag scene edges on the timeline for faster timing edits.
+              </p>
+            </div>
+
+            <div className="mt-3">
+              <label
+                htmlFor={`inspector-scene-type-${scene.id}`}
+                className={studioFieldLabel}
+              >
+                Scene type
+              </label>
+              <div className="relative mt-1.5 w-full">
+                <select
+                  id={`inspector-scene-type-${scene.id}`}
+                  value={scene.sceneType ?? ""}
+                  onChange={(event) =>
+                    updateScene(scene.id, {
+                      sceneType: event.target.value
+                        ? (event.target.value as SceneType)
+                        : undefined,
+                    })
+                  }
+                  className={studioSelectCompact}
+                >
+                  <option value="">General</option>
+                  {SCENE_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className={studioSelectChevronCompact}
+                  aria-hidden
+                />
+              </div>
+            </div>
+          </div>
+
+          <InspectorSection
+            icon={Mic}
+            title="Narration"
+            description="Voiceover timing for this scene."
+            open={inspectorImageEditing ? false : undefined}
+          >
+            <div className="rounded-xl bg-background/25 px-3 py-3 ring-1 ring-border/30">
+              <p className="text-sm leading-relaxed text-foreground/90">
+                Plays during voiceover at{" "}
+                <span className="font-medium tabular-nums">
+                  {formatTimeRange(scene.start, scene.end)}
+                </span>
+              </p>
+              <p className={`${studioSubtleText} mt-1.5`}>
+                Visuals and captions appear while story narration continues.
+                Click the image on the preview to adjust focus when playback is
+                stopped.
+              </p>
+            </div>
+          </InspectorSection>
+        </InspectorSection>
+      ) : null}
+
+      {displayedWorkspace === "media" || displayedWorkspace === "adjust" ? (
+        <>
+          {displayedWorkspace === "media" ? (
+            <InspectorSection
+              icon={ImageIcon}
+              title="Media"
+              description="Upload images or clips, frame, zoom, and position."
+              defaultOpen
+              open={inspectorImageEditing ? true : undefined}
+            >
+              {mediaWindows.length > 0 ? (
+                <div
+                  className="mb-2 flex flex-wrap items-center justify-between gap-2"
+                  data-scene-media-inspector-context
+                >
+                  <p
+                    className="text-[11px] font-medium text-foreground/85"
+                    data-scene-media-ordinal
+                  >
+                    Scene {safeIndex + 1} · {mediaOrdinalLabel}
+                  </p>
+                  {appendApi ? (
+                    <SceneMediaAddAnotherImageButton
+                      scene={scene}
+                      appendApi={appendApi}
+                      disabled={appendInteractionLocked}
+                      className={studioUploadButton}
+                      label="Add another image"
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+              {showMediaItemInspector && selectedMediaItemId ? (
+                <SceneMediaItemInspector
+                  script={script}
+                  scene={scene}
+                  mediaItemId={selectedMediaItemId}
+                  onScriptChange={onScriptChange}
+                  section="media"
+                />
+              ) : (
+                <>
+                  {isVideoMedia && sceneMedia?.type === "video" ? (
+                    <SceneVideoInspector
+                      media={sceneMedia}
+                      sceneId={scene.id}
+                      sceneDurationMs={
+                        scene.durationMs ??
+                        (typeof scene.duration === "number" &&
+                        scene.duration > 0
+                          ? Math.round(scene.duration * 1000)
+                          : 0)
+                      }
+                      onReplace={(file) =>
+                        void handleMediaUpload(scene.id, file)
+                      }
+                      onRemove={() => removeMedia(scene.id)}
+                      onSetPoster={(posterTimeMs) =>
+                        handleSetPoster(scene.id, posterTimeMs)
+                      }
+                      onResetPoster={() => handleResetPoster(scene.id)}
+                      onApplyTrim={(trim) => handleApplyTrim(scene.id, trim)}
+                      onResetTrim={() => handleResetTrim(scene.id)}
+                      repositionActive={inspectorImageEditing}
+                      onReposition={() => selectImage(scene.id)}
+                      onResetFraming={() => handleImageReset(scene.id)}
+                      onFramingChange={(patch) => {
+                        handleImageTransformChange({
+                          ...(patch.fitMode !== undefined
+                            ? { fitMode: patch.fitMode }
+                            : {}),
+                          ...(patch.positionX !== undefined
+                            ? { x: patch.positionX }
+                            : {}),
+                          ...(patch.positionY !== undefined
+                            ? { y: patch.positionY }
+                            : {}),
+                          ...(patch.zoom !== undefined
+                            ? { scale: patch.zoom }
+                            : {}),
+                          ...(patch.rotationDeg !== undefined
+                            ? { rotation: patch.rotationDeg }
+                            : {}),
+                        });
+                      }}
+                    />
+                  ) : hasImageMedia ? (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        <SmartEditImageAction
+                          hasImage
+                          buttonOnly
+                          sceneId={scene.id}
+                        />
+                        <label className={studioUploadButton}>
+                          <ImagePlus className="h-3.5 w-3.5" />
+                          Replace current image
+                          <input
+                            type="file"
+                            accept={SCENE_MEDIA_FILE_ACCEPT}
+                            className="hidden"
+                            data-scene-media-replace-current="true"
+                            onChange={(event) => {
+                              void handleMediaUpload(
+                                scene.id,
+                                event.target.files?.[0] ?? null,
+                              );
+                              event.target.value = "";
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => removeMedia(scene.id)}
+                          className={studioDestructiveButton}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+                      <p className={studioSubtleText}>
+                        Replace current image changes only this scene’s current
+                        media. Add another image appends a new timeline item.{" "}
+                        {SMART_EDIT_HAS_IMAGE_COPY}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <label className={studioUploadZone}>
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-surface-elevated/50 ring-1 ring-border/25">
+                          <ImagePlus className="h-4 w-4 text-muted" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground/85">
+                          Upload media
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          Portrait 9:16 · Images or MP4, WebM, MOV clips
+                        </p>
+                        <input
+                          type="file"
+                          accept={SCENE_MEDIA_FILE_ACCEPT}
+                          className="hidden"
+                          onChange={(event) => {
+                            void handleMediaUpload(
+                              scene.id,
+                              event.target.files?.[0] ?? null,
+                            );
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <p className={studioSubtleText}>
+                        {SCENE_MEDIA_UPLOAD_HELPER_COPY}
+                      </p>
+                      <SmartEditImageAction
+                        hasImage={false}
+                        sceneId={scene.id}
+                      />
+                    </div>
+                  )}
+
+                  {uploadError ? (
+                    <p
+                      className="mt-2 text-[11px] leading-snug text-amber-100/90"
+                      role="status"
+                    >
+                      {uploadError}
+                    </p>
+                  ) : null}
+
+                  {!isVideoMedia && sceneImage ? (
+                    <SceneImageInspector
+                      variant="standalone"
+                      showHeader={false}
+                      hideMotion
+                      showSmartEdit={false}
+                      sceneId={scene.id}
+                      controlId={`inspector-scene-image-zoom-${scene.id}`}
+                      scale={sceneImage.scale}
+                      positionX={sceneImage.x}
+                      positionY={sceneImage.y}
+                      rotationDeg={sceneImage.rotation ?? 0}
+                      fitMode={sceneImage.fitMode}
+                      imageMotion={sceneImage.imageMotion}
+                      onScaleChange={(scale) =>
+                        handleImageTransformChange({ scale })
+                      }
+                      onFitModeChange={handleFitModeChange}
+                      onPositionChange={(position) =>
+                        handleImageTransformChange(position)
+                      }
+                      onReposition={() => selectImage(scene.id)}
+                      onReset={() => handleImageReset(scene.id)}
+                    />
+                  ) : !isVideoMedia ? (
+                    <p className={studioSubtleText}>
+                      Add media to adjust frame, zoom, and position.
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </InspectorSection>
           ) : null}
+
+          {displayedWorkspace === "adjust" && sceneHasMedia(scene) ? (
+            <InspectorSection
+              icon={MoveHorizontal}
+              title="Adjust"
+              description="Framing, motion and visual treatment."
+              defaultOpen
+            >
+              {showMediaItemInspector && selectedMediaItemId ? (
+                <SceneMediaItemInspector
+                  script={script}
+                  scene={scene}
+                  mediaItemId={selectedMediaItemId}
+                  onScriptChange={onScriptChange}
+                  section="adjust"
+                />
+              ) : (
+                <>
+                  <MediaMotionInspectorPanel
+                    controlId={`inspector-scene-media-motion-${scene.id}`}
+                    motion={resolveSceneMediaMotion(scene)}
+                    onMotionChange={handleMediaMotionChange}
+                    onReset={handleResetMediaMotion}
+                  />
+                  {sceneMedia && sceneMedia.type !== "placeholder" ? (
+                    <MediaVisualAdjustmentsPanel
+                      media={sceneMedia}
+                      onChange={handleMediaVisualAdjustmentsChange}
+                      onReset={handleResetMediaVisualAdjustments}
+                    />
+                  ) : null}
+                </>
+              )}
+            </InspectorSection>
+          ) : null}
+        </>
+      ) : null}
+
+      {displayedWorkspace === "caption" ? (
+        <InspectorSection
+          icon={PenLine}
+          title={SCENE_INSPECTOR_GROUP_LABELS.caption.title}
+          description={SCENE_INSPECTOR_GROUP_LABELS.caption.description}
+          defaultOpen
+        >
+          <CaptionWorkspace
+            scene={scene}
+            script={script}
+            sceneIndex={safeIndex}
+            captionMode={captionMode}
+            isSubtitlesMode={isSubtitlesMode}
+            onCaptionModeChange={handleCaptionModeChange}
+            onCommitPresentationPatch={(patch) =>
+              commitPresentationPatch(scene.id, patch)
+            }
+            onCommitScenePatch={(patch) => commitScenePatch(scene.id, patch)}
+            onCommitPresentationScript={commitPresentationScript}
+          />
+        </InspectorSection>
+      ) : null}
+
+      {displayedWorkspace === "transition" ? (
+        <InspectorSection
+          icon={ArrowLeftRight}
+          title={SCENE_INSPECTOR_GROUP_LABELS.transition.title}
+          description={SCENE_INSPECTOR_GROUP_LABELS.transition.description}
+          defaultOpen
+        >
           {showMediaTransitionInspector && selectedMediaTransition ? (
             <SceneMediaTransitionInspector
               script={script}
@@ -633,213 +1007,43 @@ export default function StudioSceneInspector({
               toItemId={selectedMediaTransition.toItemId}
               onScriptChange={onScriptChange}
             />
-          ) : showMediaItemInspector && selectedMediaItemId ? (
-            <SceneMediaItemInspector
-              script={script}
-              scene={scene}
-              mediaItemId={selectedMediaItemId}
-              onScriptChange={onScriptChange}
-            />
           ) : (
-            <>
-              {isVideoMedia && sceneMedia?.type === "video" ? (
-                <SceneVideoInspector
-                  media={sceneMedia}
-                  sceneId={scene.id}
-                  sceneDurationMs={
-                    scene.durationMs ??
-                    (typeof scene.duration === "number" && scene.duration > 0
-                      ? Math.round(scene.duration * 1000)
-                      : 0)
+            <InspectorSection
+              icon={ArrowLeftRight}
+              title="Transition"
+              description="Effect to the next scene."
+              open={inspectorImageEditing ? false : undefined}
+            >
+              {transitionAfterScene ? (
+                <TransitionCard
+                  variant="inline"
+                  item={transitionAfterScene}
+                  onUpdate={(patch) =>
+                    updateTransition(transitionAfterScene.id, patch)
                   }
-                  onReplace={(file) => void handleMediaUpload(scene.id, file)}
-                  onRemove={() => removeMedia(scene.id)}
-                  onSetPoster={(posterTimeMs) => handleSetPoster(scene.id, posterTimeMs)}
-                  onResetPoster={() => handleResetPoster(scene.id)}
-                  onApplyTrim={(trim) => handleApplyTrim(scene.id, trim)}
-                  onResetTrim={() => handleResetTrim(scene.id)}
-                  repositionActive={inspectorImageEditing}
-                  onReposition={() => selectImage(scene.id)}
-                  onResetFraming={() => handleImageReset(scene.id)}
-                  onFramingChange={(patch) => {
-                    handleImageTransformChange({
-                      ...(patch.fitMode !== undefined ? { fitMode: patch.fitMode } : {}),
-                      ...(patch.positionX !== undefined ? { x: patch.positionX } : {}),
-                      ...(patch.positionY !== undefined ? { y: patch.positionY } : {}),
-                      ...(patch.zoom !== undefined ? { scale: patch.zoom } : {}),
-                      ...(patch.rotationDeg !== undefined ? { rotation: patch.rotationDeg } : {}),
-                    });
-                  }}
                 />
-              ) : hasImageMedia ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    <SmartEditImageAction hasImage buttonOnly sceneId={scene.id} />
-                    <label className={studioUploadButton}>
-                      <ImagePlus className="h-3.5 w-3.5" />
-                      Replace current image
-                      <input
-                        type="file"
-                        accept={SCENE_MEDIA_FILE_ACCEPT}
-                        className="hidden"
-                        data-scene-media-replace-current="true"
-                        onChange={(event) => {
-                          void handleMediaUpload(scene.id, event.target.files?.[0] ?? null);
-                          event.target.value = "";
-                        }}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => removeMedia(scene.id)}
-                      className={studioDestructiveButton}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove
-                    </button>
-                  </div>
-                  <p className={studioSubtleText}>
-                    Replace current image changes only this scene’s current media. Add another
-                    image appends a new timeline item. {SMART_EDIT_HAS_IMAGE_COPY}
-                  </p>
-                </div>
               ) : (
-                <div className="space-y-3">
-                  <label className={studioUploadZone}>
-                    <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-surface-elevated/50 ring-1 ring-border/25">
-                      <ImagePlus className="h-4 w-4 text-muted" />
-                    </div>
-                    <p className="text-sm font-medium text-foreground/85">Upload media</p>
-                    <p className="mt-1 text-xs text-muted">
-                      Portrait 9:16 · Images or MP4, WebM, MOV clips
-                    </p>
-                    <input
-                      type="file"
-                      accept={SCENE_MEDIA_FILE_ACCEPT}
-                      className="hidden"
-                      onChange={(event) => {
-                        void handleMediaUpload(scene.id, event.target.files?.[0] ?? null);
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
-                  <p className={studioSubtleText}>{SCENE_MEDIA_UPLOAD_HELPER_COPY}</p>
-                  <SmartEditImageAction hasImage={false} sceneId={scene.id} />
-                </div>
-              )}
-
-              {uploadError ? (
-                <p className="mt-2 text-[11px] leading-snug text-amber-100/90" role="status">
-                  {uploadError}
+                <p className={studioSubtleText}>
+                  No transition after this scene.
                 </p>
-              ) : null}
-
-              {!isVideoMedia && sceneImage ? (
-                <SceneImageInspector
-                  variant="standalone"
-                  showHeader={false}
-                  hideMotion
-                  showSmartEdit={false}
-                  sceneId={scene.id}
-                  controlId={`inspector-scene-image-zoom-${scene.id}`}
-                  scale={sceneImage.scale}
-                  positionX={sceneImage.x}
-                  positionY={sceneImage.y}
-                  rotationDeg={sceneImage.rotation ?? 0}
-                  fitMode={sceneImage.fitMode}
-                  imageMotion={sceneImage.imageMotion}
-                  onScaleChange={(scale) => handleImageTransformChange({ scale })}
-                  onFitModeChange={handleFitModeChange}
-                  onPositionChange={(position) => handleImageTransformChange(position)}
-                  onReposition={() => selectImage(scene.id)}
-                  onReset={() => handleImageReset(scene.id)}
-                />
-              ) : !isVideoMedia ? (
-                <p className={studioSubtleText}>Add media to adjust frame, zoom, and position.</p>
-              ) : null}
-            </>
+              )}
+            </InspectorSection>
           )}
         </InspectorSection>
+      ) : null}
 
-        {!showMediaItemInspector && sceneHasMedia(scene) ? (
-          <InspectorSection
-            icon={MoveHorizontal}
-            title="Motion"
-            description="Shared motion presets for image and video."
-            defaultOpen
-            open={inspectorImageEditing ? true : undefined}
-          >
-            <MediaMotionInspectorPanel
-              controlId={`inspector-scene-media-motion-${scene.id}`}
-              motion={resolveSceneMediaMotion(scene)}
-              onMotionChange={handleMediaMotionChange}
-              onReset={handleResetMediaMotion}
-            />
-            {sceneMedia && sceneMedia.type !== "placeholder" ? (
-              <MediaVisualAdjustmentsPanel
-                media={sceneMedia}
-                onChange={handleMediaVisualAdjustmentsChange}
-                onReset={handleResetMediaVisualAdjustments}
-              />
-            ) : null}
-          </InspectorSection>
-        ) : null}
-      </InspectorSection>
-
-      <InspectorSection
-        icon={PenLine}
-        title={SCENE_INSPECTOR_GROUP_LABELS.caption.title}
-        description={SCENE_INSPECTOR_GROUP_LABELS.caption.description}
-        open={inspectorImageEditing ? false : captionGroup.open}
-        onOpenChange={inspectorImageEditing ? undefined : captionGroup.onOpenChange}
-      >
-        <CaptionWorkspace
-          scene={scene}
-          script={script}
-          sceneIndex={safeIndex}
-          captionMode={captionMode}
-          isSubtitlesMode={isSubtitlesMode}
-          onCaptionModeChange={handleCaptionModeChange}
-          onCommitPresentationPatch={(patch) => commitPresentationPatch(scene.id, patch)}
-          onCommitScenePatch={(patch) => commitScenePatch(scene.id, patch)}
-          onCommitPresentationScript={commitPresentationScript}
-        />
-      </InspectorSection>
-
-      <InspectorSection
-        icon={ArrowLeftRight}
-        title={SCENE_INSPECTOR_GROUP_LABELS.transition.title}
-        description={SCENE_INSPECTOR_GROUP_LABELS.transition.description}
-        open={inspectorImageEditing ? false : transitionGroup.open}
-        onOpenChange={inspectorImageEditing ? undefined : transitionGroup.onOpenChange}
-      >
-        <InspectorSection
-          icon={ArrowLeftRight}
-          title="Transition"
-          description="Effect to the next scene."
-          open={inspectorImageEditing ? false : undefined}
-        >
-          {transitionAfterScene ? (
-            <TransitionCard
-              variant="inline"
-              item={transitionAfterScene}
-              onUpdate={(patch) => updateTransition(transitionAfterScene.id, patch)}
-            />
-          ) : (
-            <p className={studioSubtleText}>No transition after this scene.</p>
-          )}
-        </InspectorSection>
-      </InspectorSection>
-
-      {creatorAssetStudioVisible ? (
+      {displayedWorkspace === "assets" && creatorAssetStudioVisible ? (
         <InspectorSection
           icon={Package}
           title={SCENE_INSPECTOR_GROUP_LABELS.assets.title}
           description={SCENE_INSPECTOR_GROUP_LABELS.assets.description}
-          open={assetsGroup.open}
-          onOpenChange={assetsGroup.onOpenChange}
+          defaultOpen
         >
-          <CreatorAssetStudio sceneIndex={safeIndex} planning={assetPlanning ?? null} compact />
+          <CreatorAssetStudio
+            sceneIndex={safeIndex}
+            planning={assetPlanning ?? null}
+            compact
+          />
         </InspectorSection>
       ) : null}
     </div>

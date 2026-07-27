@@ -71,9 +71,13 @@ function twoItemScene(): { scene: FootieScene; a: string; b: string } {
     subtitle: "Cap",
     media: imageMedia("https://example.com/a.jpg"),
   };
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const items = projectSceneMediaTimeline(scene).items;
   return { scene, a: items[0]!.id, b: items[1]!.id };
 }
@@ -86,10 +90,7 @@ test("Transition control is outside clipping ancestors", () => {
   );
   assert.match(ui, /sceneMediaTransitionRow/);
   assert.match(ui, /overflow-visible/);
-  assert.doesNotMatch(
-    ui,
-    /sceneMediaTransitionAffordance[\s\S]*-top-3/,
-  );
+  assert.doesNotMatch(ui, /sceneMediaTransitionAffordance[\s\S]*-top-3/);
   assert.match(ui, /sceneMediaLaneTrack[\s\S]*overflow-hidden/);
 
   const lane = readSrc(
@@ -99,7 +100,7 @@ test("Transition control is outside clipping ancestors", () => {
   assert.match(lane, /SceneMediaBoundaryHandle/);
   // Transition row is rendered before the overflow-hidden track.
   const rowIdx = lane.indexOf("<SceneMediaTransitionRow");
-  const trackIdx = lane.indexOf('data-scene-media-track');
+  const trackIdx = lane.indexOf("data-scene-media-track");
   assert.ok(rowIdx >= 0 && trackIdx > rowIdx);
   // Affordance is not composed inside the track segment map.
   assert.doesNotMatch(
@@ -125,7 +126,10 @@ test("Dedicated transition row renders once per adjacent pair", () => {
     "src/features/timeline-editor/scene-media/SceneMediaTransitionRow.tsx",
   );
   assert.match(row, /data-scene-media-transition-row/);
-  assert.match(row, /data-scene-media-transition-control-count=\{windows\.length - 1\}/);
+  assert.match(
+    row,
+    /data-scene-media-transition-control-count=\{windows\.length - 1\}/,
+  );
   assert.match(row, /windows\.length < 2/);
   assert.match(row, /SceneMediaTransitionAffordance/);
   assert.match(row, /role="toolbar"/);
@@ -163,7 +167,10 @@ test("Keyboard / ARIA contract on affordance", () => {
   assert.match(affordance, /title=\{label\}/);
   assert.match(affordance, /event\.key === "Enter"/);
   assert.match(affordance, /event\.key === " "/);
-  assert.match(affordance, /formatMediaTransitionAffordanceLabel\(fromIndex, toIndex, effect\)/);
+  assert.match(
+    affordance,
+    /formatMediaTransitionAffordanceLabel\(fromIndex, toIndex, effect\)/,
+  );
   assert.equal(
     formatMediaTransitionAffordanceLabel(0, 1, "fade"),
     "Transition between Media 1 and Media 2: Fade",
@@ -171,12 +178,15 @@ test("Keyboard / ARIA contract on affordance", () => {
   assert.doesNotMatch(affordance, /<button[\s\S]*<button/);
 });
 
-test("Selection opens the Inspector Image/Media group", () => {
-  const studio = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+test("Selection opens the contextual Transition workspace", () => {
+  const studio = readSrc(
+    "src/features/editor/components/StudioSceneInspector.tsx",
+  );
   assert.match(studio, /showMediaTransitionInspector/);
-  assert.match(studio, /onImageGroupOpenChange\(true\)/);
+  assert.match(studio, /showMediaTransitionInspector[\s\S]*\? "transition"/);
+  assert.match(studio, /displayedWorkspace === "transition"/);
   assert.match(studio, /SceneMediaTransitionInspector/);
-  assert.match(studio, /useEffect/);
+  assert.match(studio, /selectedMediaTransition/);
 });
 
 test("Inspector clarity and current Preview/Export copy", () => {
@@ -194,7 +204,10 @@ test("Inspector clarity and current Preview/Export copy", () => {
     INTRA_SCENE_TRANSITION_EDITOR_NOTICE.includes("Preview and Export"),
     true,
   );
-  assert.equal(INTRA_SCENE_TRANSITION_EDITOR_NOTICE.includes("hard cuts"), false);
+  assert.equal(
+    INTRA_SCENE_TRANSITION_EDITOR_NOTICE.includes("hard cuts"),
+    false,
+  );
 });
 
 test("Selection validation, stale clear, sibling independence", () => {
@@ -207,9 +220,13 @@ test("Selection validation, stale clear, sibling independence", () => {
 
   scene = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
   const generateId = createSequentialMediaItemIdGenerator("x");
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/c.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/c.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const ids = projectSceneMediaTimeline(scene).items.map((i) => i.id);
   const c = ids[2]!;
   scene = setSceneMediaTransitionBoundary(scene, b, c, "slide-left", 500).scene;
@@ -318,7 +335,9 @@ test("Selection API wired; Escape returns to scene", () => {
 });
 
 test("Scene-to-scene TransitionCard remains distinct", () => {
-  const studio = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const studio = readSrc(
+    "src/features/editor/components/StudioSceneInspector.tsx",
+  );
   assert.match(studio, /TransitionCard/);
 });
 

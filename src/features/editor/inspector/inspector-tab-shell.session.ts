@@ -1,4 +1,8 @@
-import type { InspectorTabId, SceneInspectorGroupId } from "./inspector-tab-shell.types";
+import type {
+  InspectorTabId,
+  SceneInspectorGroupId,
+  SceneInspectorWorkspaceId,
+} from "./inspector-tab-shell.types";
 import { SCENE_INSPECTOR_GROUP_DEFAULT_OPEN } from "./inspector-tab-shell.types";
 
 const sceneGroupOpenState: Record<SceneInspectorGroupId, boolean> = {
@@ -6,14 +10,20 @@ const sceneGroupOpenState: Record<SceneInspectorGroupId, boolean> = {
 };
 
 let activeInspectorTab: InspectorTabId = "scene";
+let activeSceneInspectorWorkspace: SceneInspectorWorkspaceId = "media";
 
-let focusProjectTabHandler: (() => void) | null = null;
+let focusAudioTabHandler: (() => void) | null = null;
 
-export function readSceneGroupOpenState(groupId: SceneInspectorGroupId): boolean {
+export function readSceneGroupOpenState(
+  groupId: SceneInspectorGroupId,
+): boolean {
   return sceneGroupOpenState[groupId];
 }
 
-export function writeSceneGroupOpenState(groupId: SceneInspectorGroupId, open: boolean): void {
+export function writeSceneGroupOpenState(
+  groupId: SceneInspectorGroupId,
+  open: boolean,
+): void {
   sceneGroupOpenState[groupId] = open;
 }
 
@@ -25,15 +35,27 @@ export function writeActiveInspectorTab(tabId: InspectorTabId): void {
   activeInspectorTab = tabId;
 }
 
-export function registerInspectorProjectTabFocus(handler: () => void): () => void {
-  focusProjectTabHandler = handler;
+export function readActiveSceneInspectorWorkspace(): SceneInspectorWorkspaceId {
+  return activeSceneInspectorWorkspace;
+}
+
+export function writeActiveSceneInspectorWorkspace(
+  workspaceId: SceneInspectorWorkspaceId,
+): void {
+  activeSceneInspectorWorkspace = workspaceId;
+}
+
+export function registerInspectorProjectTabFocus(
+  handler: () => void,
+): () => void {
+  focusAudioTabHandler = handler;
   return () => {
-    if (focusProjectTabHandler === handler) {
-      focusProjectTabHandler = null;
+    if (focusAudioTabHandler === handler) {
+      focusAudioTabHandler = null;
     }
   };
 }
 
 export function focusInspectorProjectTab(): void {
-  focusProjectTabHandler?.();
+  focusAudioTabHandler?.();
 }
