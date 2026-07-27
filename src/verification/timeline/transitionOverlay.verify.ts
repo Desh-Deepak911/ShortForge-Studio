@@ -8,13 +8,9 @@ import {
   getTransitionProgress,
   getTransitionToNextScene,
   OVERLAY_TRANSITION_FALLBACK_DURATION_MS,
-} from "@/features/story/utils";
-import { getTransitionLayerStyles } from "@/features/preview/utils/previewTimeline";
-import {
-  getTransitionProgress,
-  getTransitionToNextScene,
   resolveSceneTransitionOverlay,
 } from "@/features/story/utils/transition-overlay.utils";
+import { getTransitionLayerStyles } from "@/features/preview/utils/previewTimeline";
 import type { FootieScene, TimelineItem } from "@/features/story/types";
 
 function test(name: string, fn: () => void) {

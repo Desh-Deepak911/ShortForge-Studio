@@ -15,6 +15,8 @@ import {
   gateHeadlessRouteAuth,
   isClerkEnvironmentConfigured,
   runHeadlessClerkProxy,
+  UnavailableHeadlessDownloadCapabilityAdapter,
+  UnavailableHeadlessUploadCapabilityAdapter,
   validateClerkAuthSnapshot,
   validateHeadlessAuthenticatedPrincipal,
   type ClerkEnvironmentStatus,
@@ -35,7 +37,7 @@ import {
   HEADLESS_AUTH_TEMPORARILY_UNAVAILABLE,
   PRODUCTION_HEADLESS_UNAVAILABLE,
 } from "@/features/headless-renderer/product/availability/availability.types";
-import { HEADLESS_MAX_ID_LENGTH } from "@/features/headless-renderer/domain";
+import { HEADLESS_MAX_ID_LENGTH } from "@/features/headless-renderer/domain/headless-render-constants";
 
 let passed = 0;
 
@@ -70,14 +72,23 @@ function mockCompose(input: {
       productionAvailable: false as const,
       canCreateJob: false as const,
       reason: "CONFIGURATION_UNAVAILABLE" as const,
+      activationStatus: "disabled" as const,
       stagingSessionConfigured: classify() === "configured",
       stagingSessionEnvironmentStatus:
         classify() === "configured" ? "configured" : "absent",
       neonDatabaseConfigured: false as const,
       neonEnvironmentStatus: "unconfigured" as const,
+      r2EnvironmentStatus: "unconfigured" as const,
+      r2Configured: false as const,
+      upstashProducerEnvironmentStatus: "unconfigured" as const,
+      upstashProducerConfigured: false as const,
+      upstashRestProducer: null,
       principal,
       projectAuthorization: new UnavailableHeadlessProjectAuthorizationAdapter(),
       jobStore: null,
+      ownedObjectStore: null,
+      uploadCapability: new UnavailableHeadlessUploadCapabilityAdapter(),
+      downloadCapability: new UnavailableHeadlessDownloadCapabilityAdapter(),
     };
   };
 }
