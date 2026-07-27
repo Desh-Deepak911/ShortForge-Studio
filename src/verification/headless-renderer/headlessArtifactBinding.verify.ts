@@ -8,6 +8,11 @@ import { join } from "node:path";
 
 import { toHeadlessPublicJobView } from "@/features/headless-renderer/control-plane/services/safe-job-view";
 import {
+  isCanonicalStoredJobRecord,
+  type HeadlessCanonicalStoredJobRecord,
+  type HeadlessStoredJobRecord,
+} from "@/features/headless-renderer/control-plane";
+import {
   assertStoredBindingStateRules,
   buildValidatedArtifactObjectBinding,
   validateHeadlessArtifactObjectBinding,
@@ -41,6 +46,16 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 30_000) {
     }
     await sleep(20);
   }
+}
+
+function requireCanonicalStoredJobRecord(
+  record: HeadlessStoredJobRecord,
+  scenario: string,
+): HeadlessCanonicalStoredJobRecord {
+  if (!isCanonicalStoredJobRecord(record)) {
+    throw new Error(`expected canonical stored job: ${scenario}`);
+  }
+  return record;
 }
 
 async function main() {
@@ -286,16 +301,21 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "succeeded");
-      assert.ok(stored.value.artifactObjectBinding);
-      const binding = stored.value.artifactObjectBinding!;
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "success CAS preserves object + binding",
+      );
+      const canonicalJob = canonicalRecord.canonicalJob;
+      assert.equal(canonicalJob.state, "succeeded");
+      assert.ok(canonicalRecord.artifactObjectBinding);
+      const binding = canonicalRecord.artifactObjectBinding!;
       assert.equal(binding.jobId, jobId);
       assert.equal(binding.ownerId, ownerId);
       assert.equal(
         binding.contentDigest,
-        stored.value.canonicalJob.artifact!.contentDigest,
+        canonicalJob.artifact!.contentDigest,
       );
-      assert.equal(binding.byteLength, stored.value.canonicalJob.artifact!.byteLength);
+      assert.equal(binding.byteLength, canonicalJob.artifact!.byteLength);
 
       const opened = await stack.storage.openOwnedObject(
         binding.storageLocator,
@@ -307,7 +327,7 @@ async function main() {
       assert.equal(opened.value.metadata.byteLength, binding.byteLength);
       assert.equal(opened.value.metadata.mimeType, binding.mimeType);
 
-      const publicView = toHeadlessPublicJobView(stored.value.canonicalJob);
+      const publicView = toHeadlessPublicJobView(canonicalJob);
       assert.equal(publicView.artifactAvailable, true);
       const publicJson = JSON.stringify(publicView);
       assert.equal(publicJson.includes("storageLocator"), false);
@@ -374,12 +394,17 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "cancelled");
-      assert.equal(stored.value.artifactObjectBinding, null);
-      assert.equal(stored.value.canonicalJob.artifact, null);
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "cancel after finalize race",
+      );
+      const canonicalJob = canonicalRecord.canonicalJob;
+      assert.equal(canonicalJob.state, "cancelled");
+      assert.equal(canonicalRecord.artifactObjectBinding, null);
+      assert.equal(canonicalJob.artifact, null);
       assert.equal(stack.storage.testingCountFinalizedArtifacts(ownerId), 0);
 
-      const publicView = toHeadlessPublicJobView(stored.value.canonicalJob);
+      const publicView = toHeadlessPublicJobView(canonicalJob);
       assert.equal(publicView.artifactAvailable, false);
     },
   );
@@ -425,8 +450,12 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.notEqual(stored.value.canonicalJob.state, "succeeded");
-      assert.equal(stored.value.artifactObjectBinding, null);
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "stale store version after finalize",
+      );
+      assert.notEqual(canonicalRecord.canonicalJob.state, "succeeded");
+      assert.equal(canonicalRecord.artifactObjectBinding, null);
       assert.equal(stack.storage.testingCountFinalizedArtifacts(ownerId), 0);
     },
   );
@@ -506,8 +535,12 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "cancelled");
-      assert.equal(stored.value.artifactObjectBinding, null);
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "delete failure schedules durable cleanup",
+      );
+      assert.equal(canonicalRecord.canonicalJob.state, "cancelled");
+      assert.equal(canonicalRecord.artifactObjectBinding, null);
       assert.equal(stack.artifactCleanup.testingCountPendingForOwner(ownerId), 1);
       assert.ok(stack.storage.testingCountFinalizedArtifacts(ownerId) >= 1);
     },
@@ -613,9 +646,13 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.artifactObjectBinding, null);
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "failed/cancelled jobs have no retrievable binding",
+      );
+      assert.equal(canonicalRecord.artifactObjectBinding, null);
       assert.equal(
-        toHeadlessPublicJobView(stored.value.canonicalJob).artifactAvailable,
+        toHeadlessPublicJobView(canonicalRecord.canonicalJob).artifactAvailable,
         false,
       );
     },

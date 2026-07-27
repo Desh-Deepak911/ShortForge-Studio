@@ -11,6 +11,11 @@ import { join } from "node:path";
 
 import { MemoryHeadlessOwnedObjectStoreAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-owned-object-store.adapter";
 import { createMemoryArtifactObjectIO } from "@/features/headless-renderer/control-plane/adapters/memory-artifact-object-io.adapter";
+import {
+  isCanonicalStoredJobRecord,
+  type HeadlessCanonicalStoredJobRecord,
+  type HeadlessStoredJobRecord,
+} from "@/features/headless-renderer/control-plane";
 import { toHeadlessPublicJobView } from "@/features/headless-renderer/control-plane/services/safe-job-view";
 import { processHeadlessArtifactCleanupOnce } from "@/features/headless-renderer/control-plane/services/process-artifact-cleanup";
 import { HEADLESS_WORKER_RENDERER_BUILD_ID } from "@/features/headless-renderer/worker/runtime/worker-types";
@@ -34,6 +39,16 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 60_000) {
     if (Date.now() - started > timeoutMs) throw new Error("waitUntil timed out");
     await sleep(20);
   }
+}
+
+function requireCanonicalStoredJobRecord(
+  record: HeadlessStoredJobRecord,
+  scenario: string,
+): HeadlessCanonicalStoredJobRecord {
+  if (!isCanonicalStoredJobRecord(record)) {
+    throw new Error(`expected canonical stored job: ${scenario}`);
+  }
+  return record;
 }
 
 function sha256FileBytes(bytes: Buffer): string {
@@ -283,25 +298,32 @@ async function main() {
         idempotencyKey: "p33a-ev-bind-survive",
       });
       const result = await worker.processOnce(1);
-      assert.equal(result.ok && result.value.succeeded === 1, true);
+      assert.equal(result.ok, true);
+      if (!result.ok) throw new Error("process failed");
+      assert.equal(result.value.succeeded, 1);
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) throw new Error("missing store");
-      const binding = stored.value.artifactObjectBinding;
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "binding survives cleanup evidence",
+      );
+      const canonicalJob = canonicalRecord.canonicalJob;
+      const binding = canonicalRecord.artifactObjectBinding;
       assert.ok(binding);
       const opened = await stack.storage.openOwnedObject(
         binding!.storageLocator,
         ownerId,
       );
       assert.equal(opened.ok, true);
-      const view = toHeadlessPublicJobView(stored.value.canonicalJob);
+      const view = toHeadlessPublicJobView(canonicalJob);
       const record = {
         status: "REAL_LOCAL_PASS",
         kind: "measured",
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         jobId,
-        digest: stored.value.canonicalJob.artifact!.contentDigest,
-        byteLength: stored.value.canonicalJob.artifact!.byteLength,
+        digest: canonicalJob.artifact!.contentDigest,
+        byteLength: canonicalJob.artifact!.byteLength,
         bindingPresent: true,
         ownedObjectRetrieved: opened.ok,
         artifactAvailable: view.artifactAvailable,
@@ -379,19 +401,23 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) throw new Error("missing");
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "cancel after finalize evidence",
+      );
+      const canonicalJob = canonicalRecord.canonicalJob;
       const record = {
         status: "REAL_LOCAL_PASS",
         kind: "measured",
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
-        jobState: stored.value.canonicalJob.state,
-        bindingPresent: stored.value.artifactObjectBinding != null,
+        jobState: canonicalJob.state,
+        bindingPresent: canonicalRecord.artifactObjectBinding != null,
         finalizedArtifactsRemaining:
           stack.storage.testingCountFinalizedArtifacts(ownerId),
         artifactsWhilePaused: countWhilePaused,
         orphanCleanupStatus: result.value.lastOrphanCleanup?.status ?? null,
         cleanupIntents: stack.artifactCleanup.testingCountForOwner(ownerId),
-        artifactAvailable: toHeadlessPublicJobView(stored.value.canonicalJob)
-          .artifactAvailable,
+        artifactAvailable: toHeadlessPublicJobView(canonicalJob).artifactAvailable,
       };
       assert.equal(record.jobState, "cancelled");
       assert.equal(record.bindingPresent, false);
@@ -469,7 +495,9 @@ async function main() {
           ownerId,
           cleanupId,
         });
-      assert.equal(recovered.ok && recovered.value.completed === 1, true);
+      assert.equal(recovered.ok, true);
+      if (!recovered.ok) throw new Error("cleanup recovery failed");
+      assert.equal(recovered.value.completed, 1);
       const replay = await processHeadlessArtifactCleanupOnce({
         cleanup: stack.artifactCleanup,
         ownedObjectStore,
@@ -479,27 +507,34 @@ async function main() {
         nowMs: () => 1_700_000_000_000,
         limit: 4,
       });
-      assert.equal(replay.ok && replay.value.completed === 0, true);
+      assert.equal(replay.ok, true);
+      if (!replay.ok) throw new Error("cleanup replay failed");
+      assert.equal(replay.value.completed, 0);
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) throw new Error("missing");
+      const canonicalRecord = requireCanonicalStoredJobRecord(
+        stored.value,
+        "delete fail durable cleanup retry evidence",
+      );
+      const canonicalJob = canonicalRecord.canonicalJob;
       const record = {
         status: "REAL_LOCAL_PASS",
         kind: "measured",
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
-        jobState: stored.value.canonicalJob.state,
-        bindingPresent: stored.value.artifactObjectBinding != null,
+        jobState: canonicalJob.state,
+        bindingPresent: canonicalRecord.artifactObjectBinding != null,
         orphanCleanupStatus: result.value.lastOrphanCleanup?.status ?? null,
         cleanupCompleted: recovered.value.completed,
         cleanupReplayCompleted: replay.value.completed,
         deleteFailureHonest: true,
-        primaryJobStatePreserved: stored.value.canonicalJob.state,
+        primaryJobStatePreserved: canonicalJob.state,
         finalizedArtifactsRemaining:
           stack.storage.testingCountFinalizedArtifacts(ownerId),
         pendingCleanupIntents:
           stack.artifactCleanup.testingCountPendingForOwner(ownerId),
         publicViewLeaksLocator: JSON.stringify(
-          toHeadlessPublicJobView(stored.value.canonicalJob),
+          toHeadlessPublicJobView(canonicalJob),
         ).includes("objectKey"),
       };
       assert.equal(record.jobState, "cancelled");
