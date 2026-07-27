@@ -19,6 +19,7 @@ export interface StudioSidebarProps extends StudioShellRegionProps {
   viewportMode?: "fixed" | "document";
   /** Editor-only thumbnail rail mode. Children retain selection behavior. */
   collapsed?: boolean;
+  narrow?: boolean;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   /** Accessible label for the sidebar landmark. */
@@ -36,6 +37,7 @@ export default function StudioSidebar({
   visibleBelowLg = false,
   viewportMode = "document",
   collapsed = false,
+  narrow = false,
   mobileOpen,
   onMobileClose,
   "aria-label": ariaLabel = "Scene list",
@@ -47,14 +49,18 @@ export default function StudioSidebar({
       : mobileOpen === false
         ? effectiveCollapsed
           ? "hidden min-h-0 w-[4.75rem] shrink-0 flex-col lg:flex"
-          : compactMode
-            ? studioShellSidebarWidthCompact
-            : studioShellSidebarWidth
+          : narrow
+            ? "hidden min-h-0 w-[13rem] shrink-0 flex-col lg:flex"
+            : compactMode
+              ? studioShellSidebarWidthCompact
+              : studioShellSidebarWidth
         : effectiveCollapsed
           ? "hidden min-h-0 w-[4.75rem] shrink-0 flex-col lg:flex"
-          : compactMode
-            ? studioShellSidebarWidthCompact
-            : studioShellSidebarWidth;
+          : narrow
+            ? "hidden min-h-0 w-[13rem] shrink-0 flex-col lg:flex"
+            : compactMode
+              ? studioShellSidebarWidthCompact
+              : studioShellSidebarWidth;
   const visibilityClass = visibleBelowLg
     ? `flex max-h-[42vh] w-full shrink-0 flex-col overflow-hidden ${studioShellSidebarSurface} lg:max-h-none lg:w-[15rem] lg:overflow-hidden lg:border-b-0 lg:border-r xl:w-[15rem]`
     : widthClass;

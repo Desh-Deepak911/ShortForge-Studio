@@ -31,6 +31,8 @@ export interface EditorWorkflowStatusProps {
   onUpdateNarration?: () => void;
   onGenerateVoice?: () => void;
   onExportUpdated?: () => void;
+  persistActionLabel?: string;
+  onPersistAction?: () => void;
 }
 
 export default function EditorWorkflowStatus({
@@ -41,6 +43,8 @@ export default function EditorWorkflowStatus({
   onUpdateNarration,
   onGenerateVoice,
   onExportUpdated,
+  persistActionLabel = "Retry save",
+  onPersistAction,
 }: EditorWorkflowStatusProps) {
   const storySync = useOptionalStorySync();
   const steps = useMemo(
@@ -103,9 +107,6 @@ export default function EditorWorkflowStatus({
             <p className="text-sm font-semibold text-foreground/95">
               Project status
             </p>
-            <p className={`${studioSubtleText} mt-0.5 text-[11px]`}>
-              Save, narration, voice, media and export readiness.
-            </p>
           </div>
           <span
             className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
@@ -119,9 +120,18 @@ export default function EditorWorkflowStatus({
         </div>
 
         {persistWarning ? (
-          <p className="mt-3 rounded-xl bg-amber-400/10 px-3 py-2 text-[11px] leading-relaxed text-amber-100 ring-1 ring-amber-300/20">
-            {persistWarning}
-          </p>
+          <div className="mt-3 rounded-xl bg-amber-400/10 px-3 py-2 text-[11px] leading-relaxed text-amber-100 ring-1 ring-amber-300/20">
+            <p>{persistWarning}</p>
+            {onPersistAction ? (
+              <button
+                type="button"
+                onClick={onPersistAction}
+                className={`${studioPrimaryButton} mt-2 min-h-8 px-3 py-1.5 text-[11px]`}
+              >
+                {persistActionLabel}
+              </button>
+            ) : null}
+          </div>
         ) : saveDraftConfirmation ? (
           <p className="mt-3 text-[11px] text-emerald-200/90">
             {saveDraftConfirmation}

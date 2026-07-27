@@ -58,6 +58,12 @@ export function runEditorWorkspaceRedesignTests(): void {
   const layoutStorage = readSrc(
     "src/features/editor/workspace-layout/editor-workspace-layout.storage.ts",
   );
+  const canvasToolbar = readSrc(
+    "src/features/editor/components/EditorCanvasToolbar.tsx",
+  );
+  const mediaCommands = readSrc(
+    "src/features/scene-media-timeline/editor/scene-media-timeline.commands.ts",
+  );
 
   test("layout state is bounded and malformed persisted values fail safe", () => {
     assert.deepEqual(
@@ -171,6 +177,25 @@ export function runEditorWorkspaceRedesignTests(): void {
     assert.match(workflowStatus, /handleBannerPrimary/);
     assert.match(workflowStatus, /dismissBanner/);
     assert.match(workflowStatus, /onGenerateVoice/);
+    assert.match(workflowStatus, /onPersistAction/);
+  });
+
+  test("preview controls, focus mode, reset, and labelled timeline density remain reachable", () => {
+    assert.match(canvasToolbar, /Fit/);
+    assert.match(canvasToolbar, /\["fit", "100", "125"\]/);
+    assert.match(canvasToolbar, /Reset layout/);
+    assert.match(workspace, /focusMode=\{workspaceLayout\.focusMode\}/);
+    assert.match(workspace, /previewMaxWidth/);
+    assert.match(timelineShell, /group-hover:max-w-24/);
+  });
+
+  test("empty scenes block export and expose direct media recovery", () => {
+    assert.match(workspace, /effectiveExportDisabled/);
+    assert.match(workspace, /Add media/);
+    assert.match(projectSidebar, /onRequestMediaForScene/);
+    assert.match(projectSidebar, /data-scene-sidebar-id/);
+    assert.match(mediaCommands, /buildRemoveSceneMediaPatch/);
+    assert.match(mediaCommands, /items\.length === 0/);
   });
 }
 

@@ -6,10 +6,7 @@ import {
   type ActiveSceneMediaRenderView,
 } from "@/features/scene-media-timeline";
 import { planPreviewMediaLayers } from "@/features/scene-media-transitions/preview";
-import {
-  studioPreviewDevice,
-  studioPreviewScreen,
-} from "@/lib/utils/studioUi";
+import { studioPreviewDevice, studioPreviewScreen } from "@/lib/utils/studioUi";
 import type { FootieScene, SceneType } from "@/features/story/types";
 
 import type { PreviewSceneFrame } from "@/features/preview/utils";
@@ -83,7 +80,8 @@ export function SceneBackdrop({
     });
   const hasDrawableActive = activeViewIsDrawable(activeMediaView);
   const allowFramingDrag =
-    allowFramingDragOverride ?? (!multiEnabled || activeMediaView.itemIndex === 0);
+    allowFramingDragOverride ??
+    (!multiEnabled || activeMediaView.itemIndex === 0);
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={style}>
@@ -104,7 +102,9 @@ export function SceneBackdrop({
             <Film className="h-5 w-5 text-white/40" />
           </div>
           {sceneTypeMeta ? (
-            <p className={`text-[10px] font-medium uppercase tracking-widest ${sceneTypeMeta.color}`}>
+            <p
+              className={`text-[10px] font-medium uppercase tracking-widest ${sceneTypeMeta.color}`}
+            >
               {sceneTypeMeta.label}
             </p>
           ) : (
@@ -118,9 +118,18 @@ export function SceneBackdrop({
   );
 }
 
-export function PreviewDeviceFrame({ children }: { children: ReactNode }) {
+export function PreviewDeviceFrame({
+  children,
+  maxWidth,
+}: {
+  children: ReactNode;
+  maxWidth?: string | number;
+}) {
   return (
-    <div className={studioPreviewDevice}>
+    <div
+      className={studioPreviewDevice}
+      style={maxWidth ? { maxWidth } : undefined}
+    >
       <div className={studioPreviewScreen}>{children}</div>
     </div>
   );
@@ -161,6 +170,7 @@ interface PreviewFrameProps {
   sceneDurationMs?: number;
   /** Preview playback active — drives muted video play/pause. */
   isPlaying?: boolean;
+  maxWidth?: string | number;
 }
 
 export default function PreviewFrame({
@@ -181,6 +191,7 @@ export default function PreviewFrame({
   sceneElapsedMs = 0,
   sceneDurationMs = 0,
   isPlaying = false,
+  maxWidth,
 }: PreviewFrameProps) {
   void sceneDurationMs;
 
@@ -192,17 +203,16 @@ export default function PreviewFrame({
     : null;
 
   // Scene-to-scene wins. Otherwise one stable media stack (primary + optional outgoing).
-  const mediaLayerPlan =
-    !transitionOverlay
-      ? planPreviewMediaLayers({
-          scene: previewFrame.scene,
-          sceneElapsedMs,
-          isPlaying,
-        })
-      : null;
+  const mediaLayerPlan = !transitionOverlay
+    ? planPreviewMediaLayers({
+        scene: previewFrame.scene,
+        sceneElapsedMs,
+        isPlaying,
+      })
+    : null;
 
   return (
-    <PreviewDeviceFrame>
+    <PreviewDeviceFrame maxWidth={maxWidth}>
       <DynamicIsland />
 
       {transitionOverlay && transitionStyles ? (
@@ -278,10 +288,13 @@ export default function PreviewFrame({
             isPlaying={mediaLayerPlan.primary.isPlaying}
             isActive={mediaLayerPlan.primary.isActive}
             allowFramingDrag={
-              mediaLayerPlan.primary.allowFramingDrag && !mediaLayerPlan.intraScene
+              mediaLayerPlan.primary.allowFramingDrag &&
+              !mediaLayerPlan.intraScene
             }
             transformOffset={
-              mediaLayerPlan.intraScene ? undefined : framingDragOffset ?? undefined
+              mediaLayerPlan.intraScene
+                ? undefined
+                : (framingDragOffset ?? undefined)
             }
             isDragging={
               !mediaLayerPlan.intraScene && Boolean(framingDragOffset)

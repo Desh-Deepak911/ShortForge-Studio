@@ -27,44 +27,32 @@ export default function ProjectAudioStudio({
   onScriptChange,
 }: ProjectAudioStudioProps) {
   return (
-    <div className={`${studioInspectorStack} shrink-0 border-t border-border/20 pt-2`}>
+    <div
+      className={`${studioInspectorStack} shrink-0 border-t border-border/20 pt-2`}
+    >
       <header className="px-0.5">
         <p className={studioInspectorSectionTitle}>Project Audio</p>
-        <p className={`${studioSubtleText} mt-0.5 text-[11px] leading-snug`}>
-          Voiceover, background music, and export mix for this short.
-        </p>
       </header>
 
-      <InspectorSection
-        icon={Mic}
-        title="Voiceover"
-        description="Narration status, voice settings, generation, and upload."
-        defaultOpen
-      >
-        <ProjectAudioVoiceoverSection script={script} onScriptChange={onScriptChange} />
+      <InspectorSection icon={Mic} title="Voiceover" defaultOpen>
+        <ProjectAudioVoiceoverSection
+          script={script}
+          onScriptChange={onScriptChange}
+        />
       </InspectorSection>
 
-      <InspectorSection
-        icon={Music2}
-        title="Background Music"
-        description="Optional soundtrack — upload, volume, and fades."
-      >
-        <ProjectAudioBackgroundMusicSection script={script} onScriptChange={onScriptChange} />
+      <InspectorSection icon={Music2} title="Background Music">
+        <ProjectAudioBackgroundMusicSection
+          script={script}
+          onScriptChange={onScriptChange}
+        />
       </InspectorSection>
 
-      <InspectorSection
-        icon={SlidersHorizontal}
-        title="Audio Mixer"
-        description="Voice, music, and master volume for preview and export."
-      >
+      <InspectorSection icon={SlidersHorizontal} title="Audio Mixer">
         <AudioMixerPanel script={script} onScriptChange={onScriptChange} />
       </InspectorSection>
 
-      <InspectorSection
-        icon={Download}
-        title="Export Mix"
-        description="What will be included in your download."
-      >
+      <InspectorSection icon={Download} title="Export Mix">
         <ProjectAudioExportMixSummary script={script} embedded />
       </InspectorSection>
     </div>

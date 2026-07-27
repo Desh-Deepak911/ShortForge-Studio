@@ -13,7 +13,7 @@ import {
   Timer,
   Trash2,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import InspectorEmptyState from "@/components/studio-shell/InspectorEmptyState";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
@@ -37,6 +37,7 @@ import {
 } from "@/features/editor/inspector/inspector-tab-shell.types";
 import {
   readActiveSceneInspectorWorkspace,
+  registerInspectorSceneWorkspaceFocus,
   writeActiveSceneInspectorWorkspace,
 } from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useEditorSelection } from "@/features/editor/selection";
@@ -251,6 +252,11 @@ export default function StudioSceneInspector({
       setActiveWorkspace(workspaceId);
     },
     [],
+  );
+
+  useEffect(
+    () => registerInspectorSceneWorkspaceFocus(selectWorkspace),
+    [selectWorkspace],
   );
 
   // Selection-derived presentation does not mutate editor or workspace state.

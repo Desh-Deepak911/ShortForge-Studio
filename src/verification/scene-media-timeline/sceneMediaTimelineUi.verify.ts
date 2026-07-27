@@ -35,7 +35,11 @@ import {
   SCENE_MEDIA_MIN_ITEM_DURATION_MS,
   SCENE_MEDIA_TIMELINE_EXPERIMENTAL_NOTICE,
 } from "@/features/scene-media-timeline/editor";
-import type { FootieScene, FootieScript, SceneMedia } from "@/features/story/types";
+import type {
+  FootieScene,
+  FootieScript,
+  SceneMedia,
+} from "@/features/story/types";
 import { getSceneMedia } from "@/features/story/utils/scene.utils";
 import { buildMasterTimeline } from "@/features/timeline-intelligence/build-master-timeline";
 import {
@@ -122,7 +126,10 @@ test("1. multi-image is the default production capability (flag retired)", () =>
     /isMultiImageScenesEnabled|feature-gate/,
   );
   assert.throws(() => {
-    readFileSync(join(process.cwd(), "src/features/scene-media-timeline/feature-gate.ts"), "utf8");
+    readFileSync(
+      join(process.cwd(), "src/features/scene-media-timeline/feature-gate.ts"),
+      "utf8",
+    );
   }, /ENOENT/);
 });
 
@@ -176,9 +183,13 @@ test("6. first explicit add creates a stored two-item timeline", () => {
   const scene = baseScene({
     media: imageMedia("https://example.com/first.jpg"),
   });
-  const result = appendSceneMediaImageItem(scene, imageMedia("https://example.com/second.jpg"), {
-    generateId,
-  });
+  const result = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/second.jpg"),
+    {
+      generateId,
+    },
+  );
   assert.equal(result.convertedFromLegacy, true);
   assert.equal(result.scene.mediaTimeline?.items.length, 2);
   assert.equal(result.scene.media?.url, "https://example.com/first.jpg");
@@ -189,20 +200,34 @@ test("7. added image appends rather than replaces", () => {
   const scene = baseScene({
     media: imageMedia("https://example.com/keep.jpg"),
   });
-  const result = appendSceneMediaImageItem(scene, imageMedia("https://example.com/new.jpg"), {
-    generateId,
-  });
-  assert.equal(result.scene.mediaTimeline?.items[0]?.media.url, "https://example.com/keep.jpg");
-  assert.equal(result.scene.mediaTimeline?.items[1]?.media.url, "https://example.com/new.jpg");
+  const result = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/new.jpg"),
+    {
+      generateId,
+    },
+  );
+  assert.equal(
+    result.scene.mediaTimeline?.items[0]?.media.url,
+    "https://example.com/keep.jpg",
+  );
+  assert.equal(
+    result.scene.mediaTimeline?.items[1]?.media.url,
+    "https://example.com/new.jpg",
+  );
   assert.equal(result.scene.media?.url, "https://example.com/keep.jpg");
 });
 
 test("8. stable injected IDs", () => {
   const generateId = createSequentialMediaItemIdGenerator("fixed");
   const scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  const first = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  });
+  const first = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  );
   const second = appendSceneMediaImageItem(
     first.scene,
     imageMedia("https://example.com/c.jpg"),
@@ -217,12 +242,19 @@ test("8. stable injected IDs", () => {
 test("9–10. reorder updates array order and compatibility scene.media", () => {
   const generateId = createSequentialMediaItemIdGenerator("r");
   let scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const reordered = reorderSceneMediaItem(scene, "r-1", 0);
   assert.equal(reordered.scene.mediaTimeline?.items[0]?.id, "r-1");
-  assert.equal(reordered.scene.mediaTimeline?.items[0]?.media.url, "https://example.com/b.jpg");
+  assert.equal(
+    reordered.scene.mediaTimeline?.items[0]?.media.url,
+    "https://example.com/b.jpg",
+  );
   assert.equal(reordered.scene.media?.url, "https://example.com/b.jpg");
 });
 
@@ -234,33 +266,62 @@ test("11. remove selects nearest surviving item", () => {
 
   const generateId = createSequentialMediaItemIdGenerator("n");
   let scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/c.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/c.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const removed = removeSceneMediaItem(scene, "n-1");
   assert.equal(removed.selectedMediaItemId, "n-2");
   assert.equal(removed.scene.media?.url, "https://example.com/a.jpg");
 });
 
-test("12. only-item removal is rejected/disabled", () => {
-  const scene = baseScene({ media: imageMedia("https://example.com/only.jpg") });
-  assert.equal(canRemoveSceneMediaItem(scene), false);
-  assert.throws(() => removeSceneMediaItem(scene, "legacy-media:scene-1"));
+test("12. only-item removal creates a canonical empty scene", () => {
+  const scene = baseScene({
+    media: imageMedia("https://example.com/only.jpg"),
+  });
+  assert.equal(canRemoveSceneMediaItem(scene), true);
+  const removed = removeSceneMediaItem(scene, "legacy-media:scene-1");
+  assert.equal(removed.selectedMediaItemId, null);
+  assert.equal(removed.scene.media, undefined);
+  assert.equal(removed.scene.mediaTimeline, undefined);
+  assert.equal(removed.scene.image, undefined);
+  assert.equal(removed.scene.uploadedImage, undefined);
+  assert.equal(removed.scene.assetAttachment, undefined);
 });
 
 test("13. move-left/right boundaries", () => {
   const generateId = createSequentialMediaItemIdGenerator("m");
   let scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const left = moveSceneMediaItemLeft(scene, scene.mediaTimeline!.items[0]!.id);
-  assert.equal(left.scene.mediaTimeline?.items[0]?.media.url, "https://example.com/a.jpg");
-  const right = moveSceneMediaItemRight(scene, scene.mediaTimeline!.items[0]!.id);
-  assert.equal(right.scene.mediaTimeline?.items[0]?.media.url, "https://example.com/b.jpg");
+  assert.equal(
+    left.scene.mediaTimeline?.items[0]?.media.url,
+    "https://example.com/a.jpg",
+  );
+  const right = moveSceneMediaItemRight(
+    scene,
+    scene.mediaTimeline!.items[0]!.id,
+  );
+  assert.equal(
+    right.scene.mediaTimeline?.items[0]?.media.url,
+    "https://example.com/b.jpg",
+  );
   assert.equal(right.scene.media?.url, "https://example.com/b.jpg");
 });
 
@@ -270,9 +331,13 @@ test("14. average-weight append behavior (legacy + first add → equal windows)"
     media: imageMedia("https://example.com/a.jpg"),
     durationMs: 6000,
   });
-  const result = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  });
+  const result = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  );
   const windows = resolveProjectedSceneMediaWindows(result.scene);
   assert.equal(windows.length, 2);
   assert.equal(windows[0]?.durationMs, 3000);
@@ -286,9 +351,13 @@ test("15–17. adjacent boundary resize, min 500ms, scene duration unchanged", (
     durationMs: 6000,
     narration: "Keep narration.",
   });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const beforeDuration = scene.durationMs;
   const beforeNarration = scene.narration;
   const resized = resizeAdjacentSceneMediaBoundary(scene, 0, 1000);
@@ -302,8 +371,13 @@ test("15–17. adjacent boundary resize, min 500ms, scene duration unchanged", (
   // Extreme deltas clamp to the 500ms minimum rather than producing invalid windows.
   const clamped = resizeAdjacentSceneMediaBoundary(scene, 0, 10_000);
   const clampedWindows = resolveProjectedSceneMediaWindows(clamped.scene);
-  assert.ok((clampedWindows[1]?.durationMs ?? 0) <= SCENE_MEDIA_MIN_ITEM_DURATION_MS + 1);
-  assert.ok((clampedWindows[1]?.durationMs ?? 0) >= SCENE_MEDIA_MIN_ITEM_DURATION_MS);
+  assert.ok(
+    (clampedWindows[1]?.durationMs ?? 0) <=
+      SCENE_MEDIA_MIN_ITEM_DURATION_MS + 1,
+  );
+  assert.ok(
+    (clampedWindows[1]?.durationMs ?? 0) >= SCENE_MEDIA_MIN_ITEM_DURATION_MS,
+  );
   assert.equal(
     (clampedWindows[0]?.durationMs ?? 0) + (clampedWindows[1]?.durationMs ?? 0),
     6000,
@@ -316,16 +390,22 @@ test("18. narration remains unchanged across append/reorder/remove", () => {
     media: imageMedia("https://example.com/a.jpg"),
     narration: "Immutable narration line.",
   });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   scene = reorderSceneMediaItem(scene, "nar-1", 0).scene;
   scene = removeSceneMediaItem(scene, "nar-1").scene;
   assert.equal(scene.narration, "Immutable narration line.");
 });
 
 test("19. pointer cancellation documented in lane (no commit on Escape/cancel)", () => {
-  const lane = readSrc("src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx");
+  const lane = readSrc(
+    "src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx",
+  );
   assert.match(lane, /cancelBoundaryDrag/);
   assert.match(lane, /Escape/);
   assert.match(lane, /pointercancel/);
@@ -347,7 +427,11 @@ test("19. pointer cancellation documented in lane (no commit on Escape/cancel)",
   const cancelled = cancelBoundaryInteraction(session, globalOwner);
   assert.equal(cancelled.didCancel, true);
   assert.equal(cancelled.state.status, "cancelled");
-  const lateUp = pointerUpBoundaryInteraction(cancelled.state, cancelled.nextGlobalOwner, 80);
+  const lateUp = pointerUpBoundaryInteraction(
+    cancelled.state,
+    cancelled.nextGlobalOwner,
+    80,
+  );
   assert.equal(lateUp.shouldCommit, false);
 });
 
@@ -355,7 +439,9 @@ test("20. keyboard boundary nudge", () => {
   const handle = readSrc(
     "src/features/timeline-editor/scene-media/SceneMediaBoundaryHandle.tsx",
   );
-  const lane = readSrc("src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx");
+  const lane = readSrc(
+    "src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx",
+  );
   assert.match(handle, /aria-valuenow/);
   assert.match(lane, /ArrowLeft/);
   assert.match(lane, /ArrowRight/);
@@ -365,13 +451,17 @@ test("21. playback lock wiring", () => {
   const studio = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
   assert.match(studio, /playbackLocked=\{playbackLocked\}/);
   assert.match(studio, /mediaInteractionActive/);
-  const lane = readSrc("src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx");
+  const lane = readSrc(
+    "src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx",
+  );
   assert.match(lane, /playbackLocked/);
   assert.match(lane, /controlsDisabled/);
 });
 
 test("22–23. scene change clears media item; Scene/Image selection APIs remain", () => {
-  const provider = readSrc("src/features/editor/selection/EditorSelectionProvider.tsx");
+  const provider = readSrc(
+    "src/features/editor/selection/EditorSelectionProvider.tsx",
+  );
   assert.match(provider, /selectSceneMediaItem/);
   assert.match(provider, /clearSceneMediaItemSelection/);
   assert.match(provider, /setSelectedMediaItemId\(null\)/);
@@ -408,9 +498,13 @@ test("26. Preview/Export still use first compatibility media", () => {
   let scene = baseScene({
     media: imageMedia("https://example.com/first.jpg"),
   });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/second.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/second.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   scene = reorderSceneMediaItem(scene, "pe-1", 0).scene;
 
   assert.equal(getSceneMedia(scene)?.url, "https://example.com/second.jpg");
@@ -437,16 +531,22 @@ test("26. Preview/Export still use first compatibility media", () => {
 test("27. draft JSON preserves item order/weights/IDs", () => {
   const generateId = createSequentialMediaItemIdGenerator("json");
   let scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const script: FootieScript = {
     title: "Draft",
     narration: "Narration.",
     totalDuration: 6,
     scenes: [scene],
   };
-  const reloaded = JSON.parse(JSON.stringify(syncFootieScript(script))) as FootieScript;
+  const reloaded = JSON.parse(
+    JSON.stringify(syncFootieScript(script)),
+  ) as FootieScript;
   assert.deepEqual(
     reloaded.scenes[0]?.mediaTimeline?.items.map((item) => item.id),
     scene.mediaTimeline?.items.map((item) => item.id),
@@ -498,7 +598,10 @@ test("applySceneUpdate preserves timeline after media intent patch shape", () =>
     mediaTimeline: built.scene.mediaTimeline,
   });
   assert.equal(next.scenes[0]?.mediaTimeline?.items.length, 2);
-  assert.equal(projectSceneMediaTimeline(next.scenes[0]!).fromStoredTimeline, true);
+  assert.equal(
+    projectSceneMediaTimeline(next.scenes[0]!).fromStoredTimeline,
+    true,
+  );
 });
 
 // ── Sprint 8B.1 hardening ─────────────────────────────────────────────
@@ -560,15 +663,15 @@ test("8B.1-6. global scene ops remain locked during drag", () => {
   assert.match(studio, /isMediaBoundaryGlobalLockActive/);
   assert.match(
     studio,
-    /reorderDisabled =\s*playbackLocked \|\| resizeState != null \|\| trimState != null \|\| mediaInteractionActive/,
+    /reorderDisabled =\s*playbackLocked\s*\|\|\s*resizeState != null\s*\|\|\s*trimState != null\s*\|\|\s*mediaInteractionActive/,
   );
   assert.match(
     studio,
-    /resizeDisabled =\s*playbackLocked \|\| dragState != null \|\| trimState != null \|\| mediaInteractionActive/,
+    /resizeDisabled =\s*playbackLocked\s*\|\|\s*dragState != null\s*\|\|\s*trimState != null\s*\|\|\s*mediaInteractionActive/,
   );
   assert.match(
     studio,
-    /trimDisabled =\s*playbackLocked \|\| dragState != null \|\| resizeState != null \|\| mediaInteractionActive/,
+    /trimDisabled =\s*playbackLocked\s*\|\|\s*dragState != null\s*\|\|\s*resizeState != null\s*\|\|\s*mediaInteractionActive/,
   );
 });
 
@@ -611,24 +714,42 @@ test("8B.1-9. equal valid weights still append", () => {
     durationMs: 6000,
     media: imageMedia("https://example.com/a.jpg"),
   });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   assert.equal(canAddSceneMediaItem(scene), true);
-  const next = appendSceneMediaImageItem(scene, imageMedia("https://example.com/c.jpg"), {
-    generateId,
-  });
+  const next = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/c.jpg"),
+    {
+      generateId,
+    },
+  );
   assert.equal(next.scene.mediaTimeline?.items.length, 3);
   const windows = resolveProjectedSceneMediaWindows(next.scene);
-  assert.ok(windows.every((window) => window.durationMs >= SCENE_MEDIA_MIN_ITEM_DURATION_MS));
+  assert.ok(
+    windows.every(
+      (window) => window.durationMs >= SCENE_MEDIA_MIN_ITEM_DURATION_MS,
+    ),
+  );
 });
 
 test("8B.1-10. legacy plus first image remains equal", () => {
   const generateId = createSequentialMediaItemIdGenerator("leg");
-  const scene = baseScene({ media: imageMedia("https://example.com/legacy.jpg") });
-  const result = appendSceneMediaImageItem(scene, imageMedia("https://example.com/new.jpg"), {
-    generateId,
+  const scene = baseScene({
+    media: imageMedia("https://example.com/legacy.jpg"),
   });
+  const result = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/new.jpg"),
+    {
+      generateId,
+    },
+  );
   const windows = resolveProjectedSceneMediaWindows(result.scene);
   assert.equal(windows.length, 2);
   assert.equal(windows[0]?.durationMs, windows[1]?.durationMs);
@@ -697,31 +818,44 @@ test("8B.1-13. unknown media-item selection is rejected", () => {
   const scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
   assert.equal(isSelectableSceneMediaItemId(scene, ""), false);
   assert.equal(isSelectableSceneMediaItemId(scene, "not-a-real-id"), false);
-  assert.equal(isSelectableSceneMediaItemId(scene, "legacy-media:scene-1"), true);
+  assert.equal(
+    isSelectableSceneMediaItemId(scene, "legacy-media:scene-1"),
+    true,
+  );
 
-  const provider = readSrc("src/features/editor/selection/EditorSelectionProvider.tsx");
+  const provider = readSrc(
+    "src/features/editor/selection/EditorSelectionProvider.tsx",
+  );
   assert.match(provider, /isSelectableSceneMediaItemId/);
 });
 
 test("8B.1-14. stale selection clears after external item removal", () => {
   const generateId = createSequentialMediaItemIdGenerator("stale");
   let scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const selectedId = "stale-1";
   assert.equal(isSelectableSceneMediaItemId(scene, selectedId), true);
   scene = removeSceneMediaItem(scene, selectedId).scene;
   assert.equal(isSelectableSceneMediaItemId(scene, selectedId), false);
 
-  const provider = readSrc("src/features/editor/selection/EditorSelectionProvider.tsx");
+  const provider = readSrc(
+    "src/features/editor/selection/EditorSelectionProvider.tsx",
+  );
   assert.match(provider, /validatedMediaItemId/);
   assert.match(provider, /isSelectableSceneMediaItemId/);
 });
 
 test("8B.1-15. experimental notice has one render authority", () => {
   const studio = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
-  const lane = readSrc("src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx");
+  const lane = readSrc(
+    "src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx",
+  );
   assert.match(studio, /data-scene-media-experimental-notice/);
   assert.match(studio, /SCENE_MEDIA_TIMELINE_EXPERIMENTAL_NOTICE/);
   assert.doesNotMatch(lane, /SCENE_MEDIA_TIMELINE_EXPERIMENTAL_NOTICE/);
@@ -763,7 +897,9 @@ test("8B.1-17. safe error messages contain no URLs or stack content", () => {
     "scene_too_short",
   );
   const message = resolveSceneMediaLaneErrorMessage(
-    new Error("boom at Module.load (/Users/secret/app.ts:1:1) https://evil.example/x"),
+    new Error(
+      "boom at Module.load (/Users/secret/app.ts:1:1) https://evil.example/x",
+    ),
   );
   assert.equal(isSafeSceneMediaLaneErrorMessage(message), true);
   assert.doesNotMatch(message, /https?:\/\//);
@@ -777,7 +913,10 @@ test("8B.1-18. blob revocation matrix", () => {
   assert.equal(isOwnedBlobUrl("blob:foreign", owned), false);
 
   // Reorder/selection/cancel never call revoke — only owned remove/fail.
-  assert.equal(revokeOwnedBlobUrlIfPresent("https://cdn.example/a.jpg", owned), false);
+  assert.equal(
+    revokeOwnedBlobUrlIfPresent("https://cdn.example/a.jpg", owned),
+    false,
+  );
   assert.equal(revokeOwnedBlobUrlIfPresent("blob:foreign", owned), false);
   assert.equal(owned.has("blob:owned-1"), true);
 
@@ -787,7 +926,10 @@ test("8B.1-18. blob revocation matrix", () => {
 
   // Unmount never revokes (duplicate-scene safety).
   assert.equal(shouldRevokeOnOwnerUnmount("blob:owned-2", owned), false);
-  assert.equal(shouldRevokeOnOwnerUnmount("blob:other", new Set(["blob:other"])), false);
+  assert.equal(
+    shouldRevokeOnOwnerUnmount("blob:other", new Set(["blob:other"])),
+    false,
+  );
 
   const appendHook = readSrc(
     "src/features/timeline-editor/scene-media/useSceneMediaImageAppend.ts",
@@ -897,9 +1039,13 @@ test("8B.2 empty scene first-image append", () => {
   });
   assert.equal(canAddSceneMediaItem(empty), true);
   const generateId = createSequentialMediaItemIdGenerator("empty");
-  const result = appendSceneMediaImageItem(empty, imageMedia("https://example.com/first.jpg"), {
-    generateId,
-  });
+  const result = appendSceneMediaImageItem(
+    empty,
+    imageMedia("https://example.com/first.jpg"),
+    {
+      generateId,
+    },
+  );
   assert.equal(result.convertedFromLegacy, false);
   assert.equal(result.selectedMediaItemId, "empty-1");
   assert.equal(result.scene.mediaTimeline?.items.length, 1);
@@ -917,9 +1063,13 @@ test("8B.2 empty scene first-image append", () => {
   });
   assert.equal(canAddSceneMediaItem(tooShort), false);
   assert.throws(() =>
-    appendSceneMediaImageItem(tooShort, imageMedia("https://example.com/x.jpg"), {
-      generateId: createSequentialMediaItemIdGenerator("short"),
-    }),
+    appendSceneMediaImageItem(
+      tooShort,
+      imageMedia("https://example.com/x.jpg"),
+      {
+        generateId: createSequentialMediaItemIdGenerator("short"),
+      },
+    ),
   );
 });
 
@@ -932,16 +1082,28 @@ test("8B.2 malformed unusable timeline recovers via first-image path", () => {
     mediaTimeline: {
       version: 1,
       items: [
-        { id: "", media: imageMedia("https://example.com/bad.jpg"), durationWeight: 1 },
-        { id: "neg", media: imageMedia("https://example.com/bad2.jpg"), durationWeight: -2 },
+        {
+          id: "",
+          media: imageMedia("https://example.com/bad.jpg"),
+          durationWeight: 1,
+        },
+        {
+          id: "neg",
+          media: imageMedia("https://example.com/bad2.jpg"),
+          durationWeight: -2,
+        },
       ],
     },
   });
   assert.equal(projectSceneMediaTimeline(scene).items.length, 0);
   assert.equal(canAddSceneMediaItem(scene), true);
-  const result = appendSceneMediaImageItem(scene, imageMedia("https://example.com/ok.jpg"), {
-    generateId: createSequentialMediaItemIdGenerator("rec"),
-  });
+  const result = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/ok.jpg"),
+    {
+      generateId: createSequentialMediaItemIdGenerator("rec"),
+    },
+  );
   assert.equal(result.convertedFromLegacy, false);
   assert.equal(result.scene.mediaTimeline?.items.length, 1);
   assert.equal(result.scene.media?.url, "https://example.com/ok.jpg");
@@ -961,7 +1123,12 @@ test("8B.2 ensureStored always rebuilds complete normalized projection", () => {
             url: "https://example.com/same.jpg",
             source: "upload",
             // Malformed nested fields that share id/type/URL with normalized form.
-            transform: { x: Number.NaN, y: "bad" as unknown as number, scale: 99, rotation: Number.POSITIVE_INFINITY },
+            transform: {
+              x: Number.NaN,
+              y: "bad" as unknown as number,
+              scale: 99,
+              rotation: Number.POSITIVE_INFINITY,
+            },
             motion: {
               version: 1,
               enabled: true,
@@ -984,15 +1151,24 @@ test("8B.2 ensureStored always rebuilds complete normalized projection", () => {
   const written = ensured.scene.mediaTimeline?.items[0]?.media;
   assert.ok(written);
   assert.equal(written.url, "https://example.com/same.jpg");
-  assert.equal(written.transform?.scale != null && written.transform.scale <= 5, true);
+  assert.equal(
+    written.transform?.scale != null && written.transform.scale <= 5,
+    true,
+  );
   assert.notEqual(written.transform?.x, Number.NaN);
   assert.equal(written.mimeType, "image/jpeg");
   assert.equal(written.width, undefined);
   assert.equal(written.height, undefined);
   assert.equal(written.posterUrl, undefined);
-  assert.ok(written.motion == null || written.motion.easing !== ("not-a-real-easing" as "linear"));
+  assert.ok(
+    written.motion == null ||
+      written.motion.easing !== ("not-a-real-easing" as "linear"),
+  );
   // Rejected raw fields must not be silently restored.
-  assert.notDeepEqual(written.transform, (scene.mediaTimeline!.items[0]!.media as SceneMedia).transform);
+  assert.notDeepEqual(
+    written.transform,
+    (scene.mediaTimeline!.items[0]!.media as SceneMedia).transform,
+  );
 });
 
 test("8B.2 duplicate-scene blob lifetime; unmount does not revoke", () => {
@@ -1011,20 +1187,33 @@ test("8B.2 duplicate-scene blob lifetime; unmount does not revoke", () => {
 
   // Failed append path still revokes (owned set simulation).
   const failedOwned = new Set<string>(["blob:failed-append"]);
-  assert.equal(revokeOwnedBlobUrlIfPresent("blob:failed-append", failedOwned), true);
+  assert.equal(
+    revokeOwnedBlobUrlIfPresent("blob:failed-append", failedOwned),
+    true,
+  );
 
   // External/legacy never revoke.
   const legacyOwned = new Set<string>(["blob:x"]);
-  assert.equal(revokeOwnedBlobUrlIfPresent("https://cdn.example/asset.jpg", legacyOwned), false);
-  assert.equal(revokeOwnedBlobUrlIfPresent("blob:not-owned", legacyOwned), false);
+  assert.equal(
+    revokeOwnedBlobUrlIfPresent("https://cdn.example/asset.jpg", legacyOwned),
+    false,
+  );
+  assert.equal(
+    revokeOwnedBlobUrlIfPresent("blob:not-owned", legacyOwned),
+    false,
+  );
 });
 
 test("8B.2 stale selection reconciliation clears stored authority", () => {
   const generateId = createSequentialMediaItemIdGenerator("sel");
   let scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const storedId = "sel-1";
   assert.equal(
     reconcileMediaItemSelectionAuthority({
@@ -1066,7 +1255,9 @@ test("8B.2 stale selection reconciliation clears stored authority", () => {
   assert.equal(resurrectGuard.storedMediaItemId, null);
   assert.equal(resurrectGuard.didClear, false);
 
-  const provider = readSrc("src/features/editor/selection/EditorSelectionProvider.tsx");
+  const provider = readSrc(
+    "src/features/editor/selection/EditorSelectionProvider.tsx",
+  );
   assert.match(provider, /reconcileMediaItemSelectionAuthority/);
   assert.match(provider, /queueMicrotask/);
 });
@@ -1074,14 +1265,20 @@ test("8B.2 stale selection reconciliation clears stored authority", () => {
 test("8B.2 non-finite reorder index rejected", () => {
   const generateId = createSequentialMediaItemIdGenerator("idx");
   let scene = baseScene({ media: imageMedia("https://example.com/a.jpg") });
-  scene = appendSceneMediaImageItem(scene, imageMedia("https://example.com/b.jpg"), {
-    generateId,
-  }).scene;
+  scene = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/b.jpg"),
+    {
+      generateId,
+    },
+  ).scene;
   const movedId = scene.mediaTimeline?.items[1]?.id;
   assert.ok(movedId);
   const before = JSON.stringify(scene);
   assert.throws(() => reorderSceneMediaItem(scene, movedId, Number.NaN));
-  assert.throws(() => reorderSceneMediaItem(scene, movedId, Number.POSITIVE_INFINITY));
+  assert.throws(() =>
+    reorderSceneMediaItem(scene, movedId, Number.POSITIVE_INFINITY),
+  );
   assert.equal(JSON.stringify(scene), before);
   // Valid no-op reorder remains allowed.
   const firstId = scene.mediaTimeline?.items[0]?.id;
@@ -1107,13 +1304,17 @@ test("8E.2 shared append authority — Inspector + lane use one provider", () =>
   const workspace = readSrc("src/components/StoryWorkspace.tsx");
   assert.match(workspace, /SceneMediaImageAppendProvider/);
 
-  const lane = readSrc("src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx");
+  const lane = readSrc(
+    "src/features/timeline-editor/scene-media/SceneMediaTimelineLane.tsx",
+  );
   assert.match(lane, /appendApi/);
   assert.match(lane, /Add another image/);
   assert.match(lane, /data-scene-media-ordinal/);
   assert.doesNotMatch(lane, /useSceneMediaImageAppend\(/);
 
-  const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const inspector = readSrc(
+    "src/features/editor/components/StudioSceneInspector.tsx",
+  );
   assert.match(inspector, /Replace current image/);
   assert.match(inspector, /Add another image/);
   assert.match(inspector, /data-scene-media-replace-current/);
@@ -1129,21 +1330,35 @@ test("8E.2 shared append authority — Inspector + lane use one provider", () =>
 
 test("8E.2 append selects new item; replace labels cannot be confused", () => {
   const generateId = createSequentialMediaItemIdGenerator("vis");
-  const scene = baseScene({ media: imageMedia("https://example.com/keep.jpg") });
-  const firstUrl = scene.media?.url;
-  const result = appendSceneMediaImageItem(scene, imageMedia("https://example.com/second.jpg"), {
-    generateId,
+  const scene = baseScene({
+    media: imageMedia("https://example.com/keep.jpg"),
   });
+  const firstUrl = scene.media?.url;
+  const result = appendSceneMediaImageItem(
+    scene,
+    imageMedia("https://example.com/second.jpg"),
+    {
+      generateId,
+    },
+  );
   assert.equal(result.scene.media?.url, firstUrl);
   assert.equal(result.scene.mediaTimeline?.items.length, 2);
   assert.equal(result.selectedMediaItemId, "vis-1");
   assert.equal(result.scene.mediaTimeline?.items[0]?.media.url, firstUrl);
-  assert.equal(result.scene.mediaTimeline?.items[1]?.media.url, "https://example.com/second.jpg");
+  assert.equal(
+    result.scene.mediaTimeline?.items[1]?.media.url,
+    "https://example.com/second.jpg",
+  );
 
-  const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const inspector = readSrc(
+    "src/features/editor/components/StudioSceneInspector.tsx",
+  );
   assert.match(inspector, /Replace current image/);
   assert.match(inspector, /Add another\s+image appends a new timeline item/);
-  assert.doesNotMatch(inspector, /multiImageScenesEnabled \? "Replace current image"/);
+  assert.doesNotMatch(
+    inspector,
+    /multiImageScenesEnabled \? "Replace current image"/,
+  );
 });
 
 test("8E.2 too-short scene rejects without mutation; locks documented", () => {
@@ -1154,9 +1369,13 @@ test("8E.2 too-short scene rejects without mutation; locks documented", () => {
   assert.equal(canAddSceneMediaItem(short), false);
   const before = JSON.stringify(short);
   assert.throws(() =>
-    appendSceneMediaImageItem(short, imageMedia("https://example.com/nope.jpg"), {
-      generateId: createSequentialMediaItemIdGenerator("x"),
-    }),
+    appendSceneMediaImageItem(
+      short,
+      imageMedia("https://example.com/nope.jpg"),
+      {
+        generateId: createSequentialMediaItemIdGenerator("x"),
+      },
+    ),
   );
   assert.equal(JSON.stringify(short), before);
 
@@ -1169,7 +1388,9 @@ test("8E.2 too-short scene rejects without mutation; locks documented", () => {
   const studio = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
   assert.match(studio, /setTimelineExclusiveInteraction/);
   assert.match(studio, /releaseTimelineExclusiveInteraction/);
-  const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  const inspector = readSrc(
+    "src/features/editor/components/StudioSceneInspector.tsx",
+  );
   assert.match(inspector, /useTimelineExclusiveInteractionLocked/);
   assert.match(inspector, /SelectionPhase\.PlaybackLocked/);
 });
@@ -1177,11 +1398,19 @@ test("8E.2 too-short scene rejects without mutation; locks documented", () => {
 test("8E.3 production default — Add another image and multi-image shell always present", () => {
   const studio = readSrc("src/features/timeline-editor/StudioTimeline.tsx");
   assert.match(studio, /SceneMediaTimelineLane/);
-  assert.match(studio, /Add another image|SceneMediaAddAnotherImageButton|appendApi/);
+  assert.match(
+    studio,
+    /Add another image|SceneMediaAddAnotherImageButton|appendApi/,
+  );
   const shell = readSrc("src/components/studio-shell/StudioTimelineShell.tsx");
   assert.match(shell, /studioShellTimelineHeightMultiImage/);
-  assert.doesNotMatch(shell, /studioShellTimelineHeight\b(?!MultiImage|Compact)/);
-  const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
+  assert.doesNotMatch(
+    shell,
+    /studioShellTimelineHeight\b(?!MultiImage|Compact)/,
+  );
+  const inspector = readSrc(
+    "src/features/editor/components/StudioSceneInspector.tsx",
+  );
   assert.match(inspector, /Add another image/);
   assert.match(inspector, /Replace current image/);
 });

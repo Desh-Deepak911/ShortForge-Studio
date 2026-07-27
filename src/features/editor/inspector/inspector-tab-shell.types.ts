@@ -17,23 +17,23 @@ export const SCENE_INSPECTOR_GROUP_LABELS: Record<
 > = {
   general: {
     title: "General",
-    description: "Timing and narration for this scene.",
+    description: "",
   },
   image: {
     title: "Media",
-    description: "Upload images or clips, frame, zoom, motion, and position.",
+    description: "",
   },
   caption: {
     title: "Caption",
-    description: "Layout, style, and animation.",
+    description: "",
   },
   transition: {
     title: "Transition",
-    description: "Effect to the next scene.",
+    description: "",
   },
   assets: {
     title: "Assets",
-    description: "Creator Asset Studio recommendations.",
+    description: "",
   },
 };
 

@@ -13,7 +13,11 @@ import type {
   SceneMedia,
   SceneMediaTimelineItem,
 } from "@/features/story/types";
-import { getSceneDurationMs, normalizeSceneMedia } from "@/features/story/utils/scene.utils";
+import {
+  getSceneDurationMs,
+  normalizeSceneMedia,
+} from "@/features/story/utils/scene.utils";
+import { buildRemoveSceneMediaPatch } from "@/features/story/utils/scene-media-upload.utils";
 
 import { applyBuiltMediaTimelineToScene } from "../adapters/build-scene-media-timeline";
 import { buildLegacyVirtualMediaItemId } from "../domain/legacy-virtual-id";
@@ -49,8 +53,21 @@ function cloneItems(
 
 function applyItemsToScene(
   scene: FootieScene,
-  items: ReadonlyArray<{ id: string; media: SceneMedia; durationWeight: number }>,
+  items: ReadonlyArray<{
+    id: string;
+    media: SceneMedia;
+    durationWeight: number;
+  }>,
 ): FootieScene {
+  if (items.length === 0) {
+    const emptyScene = {
+      ...scene,
+      ...buildRemoveSceneMediaPatch(),
+      mediaTimeline: undefined,
+      mediaTransitions: undefined,
+    };
+    return emptyScene;
+  }
   const next = applyBuiltMediaTimelineToScene(scene, { items });
   return reconcileSceneMediaTransitionsAfterTimelineWrite(next);
 }
@@ -102,7 +119,11 @@ export function resolveAverageDurationWeight(
 }
 
 function windowsMeetMinimumDuration(
-  items: ReadonlyArray<{ id: string; media: SceneMedia; durationWeight: number }>,
+  items: ReadonlyArray<{
+    id: string;
+    media: SceneMedia;
+    durationWeight: number;
+  }>,
   sceneDurationMs: number,
 ): boolean {
   if (items.length === 0) {
@@ -115,7 +136,9 @@ function windowsMeetMinimumDuration(
   if (windows.length !== items.length) {
     return false;
   }
-  return windows.every((window) => window.durationMs >= SCENE_MEDIA_MIN_ITEM_DURATION_MS);
+  return windows.every(
+    (window) => window.durationMs >= SCENE_MEDIA_MIN_ITEM_DURATION_MS,
+  );
 }
 
 /**
@@ -198,7 +221,9 @@ export function isSelectableSceneMediaItemId(
   if (!trimmed) {
     return false;
   }
-  return projectSceneMediaTimeline(scene).items.some((item) => item.id === trimmed);
+  return projectSceneMediaTimeline(scene).items.some(
+    (item) => item.id === trimmed,
+  );
 }
 
 /**
@@ -250,7 +275,9 @@ export function appendSceneMediaImageItem(
     { id: newId, media, durationWeight: averageWeight },
   ];
 
-  if (!windowsMeetMinimumDuration(nextItems, getSceneDurationMs(ensured.scene))) {
+  if (
+    !windowsMeetMinimumDuration(nextItems, getSceneDurationMs(ensured.scene))
+  ) {
     throw new Error(
       `Cannot add media item: scene is shorter than ${SCENE_MEDIA_MIN_ITEM_DURATION_MS}ms per item.`,
     );
@@ -345,23 +372,27 @@ export function resolveNextMediaItemSelectionAfterRemoval(
   if (remaining.length === 0) {
     return null;
   }
-  return remaining[Math.min(index, remaining.length - 1)]?.id ?? remaining[0]!.id;
+  return (
+    remaining[Math.min(index, remaining.length - 1)]?.id ?? remaining[0]!.id
+  );
 }
 
 /**
- * Removes a media item. Rejects removing the only remaining item.
+ * Removes a media item. Removing the final item leaves an intentionally empty
+ * scene so the editor can ask the user to add replacement media.
  */
 export function removeSceneMediaItem(
   scene: FootieScene,
   mediaItemId: string,
 ): SceneMediaTimelineCommandResult {
   const ensured = ensureStoredSceneMediaTimeline(scene);
-  if (ensured.items.length <= 1) {
-    throw new Error("Cannot remove the only media item from the scene media timeline.");
-  }
-
-  const nextSelection = resolveNextMediaItemSelectionAfterRemoval(ensured.items, mediaItemId);
-  const nextItems = cloneItems(ensured.items).filter((item) => item.id !== mediaItemId);
+  const nextSelection = resolveNextMediaItemSelectionAfterRemoval(
+    ensured.items,
+    mediaItemId,
+  );
+  const nextItems = cloneItems(ensured.items).filter(
+    (item) => item.id !== mediaItemId,
+  );
   if (nextItems.length === ensured.items.length) {
     throw new Error("Media item not found for removal.");
   }
@@ -378,7 +409,11 @@ export function updateSceneMediaItemDurationWeight(
   mediaItemId: string,
   durationWeight: number,
 ): SceneMediaTimelineCommandResult {
-  if (!(typeof durationWeight === "number" && Number.isFinite(durationWeight) && durationWeight > 0)) {
+  if (!(
+    typeof durationWeight === "number" &&
+    Number.isFinite(durationWeight) &&
+    durationWeight > 0
+  )) {
     throw new Error("durationWeight must be finite and greater than zero.");
   }
 
@@ -466,7 +501,10 @@ export function resizeAdjacentSceneMediaBoundary(
   const combinedWeight = leftItem.durationWeight + rightItem.durationWeight;
   const leftShare = nextLeftMs / combinedMs;
   const nextLeftWeight = Math.max(Number.EPSILON, combinedWeight * leftShare);
-  const nextRightWeight = Math.max(Number.EPSILON, combinedWeight - nextLeftWeight);
+  const nextRightWeight = Math.max(
+    Number.EPSILON,
+    combinedWeight - nextLeftWeight,
+  );
 
   const nextItems = items.map((item, index) => {
     if (index === leftIndex) {
@@ -502,20 +540,26 @@ export function previewAdjacentBoundaryResize(
   }
 }
 
-export function canMoveSceneMediaItemLeft(scene: FootieScene, mediaItemId: string): boolean {
+export function canMoveSceneMediaItemLeft(
+  scene: FootieScene,
+  mediaItemId: string,
+): boolean {
   const projected = projectSceneMediaTimeline(scene);
   const index = projected.items.findIndex((item) => item.id === mediaItemId);
   return index > 0;
 }
 
-export function canMoveSceneMediaItemRight(scene: FootieScene, mediaItemId: string): boolean {
+export function canMoveSceneMediaItemRight(
+  scene: FootieScene,
+  mediaItemId: string,
+): boolean {
   const projected = projectSceneMediaTimeline(scene);
   const index = projected.items.findIndex((item) => item.id === mediaItemId);
   return index >= 0 && index < projected.items.length - 1;
 }
 
 export function canRemoveSceneMediaItem(scene: FootieScene): boolean {
-  return projectSceneMediaTimeline(scene).items.length > 1;
+  return projectSceneMediaTimeline(scene).items.length > 0;
 }
 
 /**
@@ -526,10 +570,18 @@ export function canRemoveSceneMediaItem(scene: FootieScene): boolean {
 export function buildTemporarySceneForMediaItemEdit(
   scene: FootieScene,
   itemMedia: SceneMedia,
-): Pick<FootieScene, "id" | "image" | "uploadedImage" | "media" | "duration" | "durationMs"> {
-  const framing = resolveSceneMediaFraming({ media: itemMedia }, { media: itemMedia });
+): Pick<
+  FootieScene,
+  "id" | "image" | "uploadedImage" | "media" | "duration" | "durationMs"
+> {
+  const framing = resolveSceneMediaFraming(
+    { media: itemMedia },
+    { media: itemMedia },
+  );
   const image: SceneImage | undefined =
-    itemMedia.type === "image" && typeof itemMedia.url === "string" && itemMedia.url.trim()
+    itemMedia.type === "image" &&
+    typeof itemMedia.url === "string" &&
+    itemMedia.url.trim()
       ? {
           url: itemMedia.url.trim(),
           ...framingToSceneImageFields(framing),

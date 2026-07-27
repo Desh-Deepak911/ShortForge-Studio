@@ -5,6 +5,7 @@ import {
   EDITOR_TIMELINE_MAX_HEIGHT_PX,
   EDITOR_TIMELINE_MIN_HEIGHT_PX,
   type EditorTimelineDensity,
+  type EditorPreviewSize,
   type EditorWorkspaceLayoutState,
 } from "./editor-workspace-layout.types";
 
@@ -17,6 +18,10 @@ function clamp(value: number, min: number, max: number): number {
 
 function isTimelineDensity(value: unknown): value is EditorTimelineDensity {
   return value === "compact" || value === "comfortable" || value === "expanded";
+}
+
+function isPreviewSize(value: unknown): value is EditorPreviewSize {
+  return value === "fit" || value === "100" || value === "125";
 }
 
 export function normalizeEditorWorkspaceLayout(
@@ -52,6 +57,13 @@ export function normalizeEditorWorkspaceLayout(
             EDITOR_TIMELINE_MAX_HEIGHT_PX,
           )
         : DEFAULT_EDITOR_WORKSPACE_LAYOUT.timelineHeightPx,
+    previewSize: isPreviewSize(value?.previewSize)
+      ? value.previewSize
+      : DEFAULT_EDITOR_WORKSPACE_LAYOUT.previewSize,
+    focusMode:
+      typeof value?.focusMode === "boolean"
+        ? value.focusMode
+        : DEFAULT_EDITOR_WORKSPACE_LAYOUT.focusMode,
   };
 }
 

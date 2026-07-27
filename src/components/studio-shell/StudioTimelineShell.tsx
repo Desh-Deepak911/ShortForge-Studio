@@ -90,7 +90,7 @@ export default function StudioTimelineShell({
                 key={option}
                 type="button"
                 onClick={() => onDensityChange(option)}
-                className={`flex h-7 min-w-7 items-center justify-center rounded-lg px-2 text-[10px] font-medium capitalize transition ${
+                className={`group flex h-7 min-w-7 items-center justify-center gap-1 rounded-lg px-2 text-[10px] font-medium capitalize transition ${
                   density === option
                     ? "bg-accent/15 text-accent ring-1 ring-accent/25"
                     : "text-muted hover:bg-surface-elevated/50 hover:text-foreground"
@@ -105,6 +105,9 @@ export default function StudioTimelineShell({
                 ) : (
                   <Rows3 className="h-3.5 w-3.5" aria-hidden />
                 )}
+                <span className="max-w-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-w-24 group-hover:opacity-100 group-focus-visible:max-w-24 group-focus-visible:opacity-100">
+                  {option}
+                </span>
               </button>
             ))}
           </div>

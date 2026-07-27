@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Film, Play, SlidersHorizontal } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import ExportPanel from "@/components/ExportPanel";
 import {
@@ -10,6 +10,7 @@ import {
   StudioContextRibbon,
 } from "@/components/studio-shell";
 import EditorProjectSidebar from "@/features/editor/components/EditorProjectSidebar";
+import EditorCanvasToolbar from "@/features/editor/components/EditorCanvasToolbar";
 import ImageRibbonContext from "@/features/editor/components/ImageRibbonContext";
 import EditorStudioHeader from "@/features/editor/components/EditorStudioHeader";
 import EditorWorkflowStatus from "@/features/editor/components/EditorWorkflowStatus";
@@ -21,7 +22,10 @@ import {
   InspectorContextProvider,
   InspectorResolver,
 } from "@/features/editor/inspector";
-import { focusInspectorProjectTab } from "@/features/editor/inspector/inspector-tab-shell.session";
+import {
+  focusInspectorProjectTab,
+  focusInspectorSceneWorkspace,
+} from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import {
   EditorSelectionProvider,
@@ -48,7 +52,7 @@ import {
   useOptionalStorySync,
 } from "@/features/story-sync";
 import type { SceneImageTransformPatch } from "@/features/story/utils";
-import { getSceneImage } from "@/features/story/utils";
+import { getSceneImage, sceneHasMedia } from "@/features/story/utils";
 import { applyPendingSceneCaptionDrafts } from "@/features/editor/scene-caption-drafts/scene-caption-draft-registry";
 import {
   applyMediaFramingSettings,
@@ -150,6 +154,26 @@ function StoryWorkspaceContent({
     scriptMode,
   );
   const { selectedSceneId } = useEditorSelection();
+  const missingMediaScenes = useMemo(
+    () => script.scenes.filter((scene) => !sceneHasMedia(scene)),
+    [script.scenes],
+  );
+  const firstMissingScene = missingMediaScenes[0] ?? null;
+  const missingMediaWarning =
+    missingMediaScenes.length > 0
+      ? `${missingMediaScenes.length === 1 ? "One scene has" : `${missingMediaScenes.length} scenes have`} no media. Add media before saving or exporting.`
+      : null;
+  const effectivePersistWarning = persistWarning ?? missingMediaWarning;
+  const effectiveSaveDisabled =
+    saveDraftDisabled || missingMediaScenes.length > 0;
+  const effectiveExportDisabled =
+    exportDisabled || missingMediaScenes.length > 0;
+  const previewMaxWidth =
+    workspaceLayout.previewSize === "125"
+      ? "325px"
+      : workspaceLayout.previewSize === "100"
+        ? "260px"
+        : "min(100%, calc((100dvh - 28rem) * 0.5625))";
 
   const storySync = useOptionalStorySync();
 
@@ -333,6 +357,21 @@ function StoryWorkspaceContent({
     setMobileSidebarOpen(true);
   };
 
+  const focusSceneMedia = useCallback(() => {
+    if (firstMissingScene) {
+      document
+        .querySelector<HTMLElement>(
+          `[data-scene-sidebar-id="${CSS.escape(firstMissingScene.id)}"]`,
+        )
+        ?.click();
+    }
+    if (workspaceLayout.inspectorCollapsed) {
+      workspaceLayout.toggleInspector();
+    }
+    setMobileInspectorOpen(true);
+    focusInspectorSceneWorkspace("media");
+  }, [firstMissingScene, workspaceLayout]);
+
   return (
     <>
       <SceneMediaImageAppendProvider
@@ -344,26 +383,35 @@ function StoryWorkspaceContent({
           viewportMode="fixed"
           canvasCenterContent={false}
           canvasLayout="editor"
+          focusMode={workspaceLayout.focusMode}
           className="h-full min-h-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
           header={
             <EditorStudioHeader
               projectTitle={projectTitle}
               projectMeta={projectMeta}
               onSaveDraft={onSaveDraft}
-              saveDraftDisabled={saveDraftDisabled}
+              saveDraftDisabled={effectiveSaveDisabled}
               saveDraftConfirmation={saveDraftConfirmation}
               onExport={openExportDrawer}
-              exportDisabled={exportDisabled}
-              persistWarning={persistWarning}
+              exportDisabled={effectiveExportDisabled}
+              persistWarning={effectivePersistWarning}
               workflowStatus={
                 <EditorWorkflowStatus
                   script={script}
-                  persistWarning={persistWarning}
+                  persistWarning={effectivePersistWarning}
                   saveDraftConfirmation={saveDraftConfirmation}
                   warning={narrationRebuildWarning}
                   onUpdateNarration={handleUpdateNarration}
                   onGenerateVoice={focusVoiceoverSection}
                   onExportUpdated={openExportDrawer}
+                  persistActionLabel={
+                    missingMediaScenes.length > 0 ? "Add media" : "Retry save"
+                  }
+                  onPersistAction={
+                    missingMediaScenes.length > 0
+                      ? focusSceneMedia
+                      : onSaveDraft
+                  }
                 />
               }
             />
@@ -375,6 +423,13 @@ function StoryWorkspaceContent({
               collapsed={workspaceLayout.sidebarCollapsed}
               mobileOpen={mobileSidebarOpen}
               onCollapsedToggle={workspaceLayout.toggleSidebar}
+              onRequestMediaForScene={() => {
+                if (workspaceLayout.inspectorCollapsed) {
+                  workspaceLayout.toggleInspector();
+                }
+                setMobileInspectorOpen(true);
+                focusInspectorSceneWorkspace("media");
+              }}
             />
           }
           canvas={
@@ -382,6 +437,13 @@ function StoryWorkspaceContent({
               id="studio-preview"
               className={`${studioShellEditorCanvasMaxWidth} ${studioShellEditorCanvasColumn} ${studioShellEditorCanvasInset} scroll-mt-24`}
             >
+              <EditorCanvasToolbar
+                previewSize={workspaceLayout.previewSize}
+                focusMode={workspaceLayout.focusMode}
+                onPreviewSizeChange={workspaceLayout.setPreviewSize}
+                onFocusModeToggle={workspaceLayout.toggleFocusMode}
+                onResetLayout={workspaceLayout.resetLayout}
+              />
               <StudioContextRibbon
                 renderers={{
                   image: selectedSceneImage ? (
@@ -399,6 +461,7 @@ function StoryWorkspaceContent({
                 <div className={studioShellEditorPreviewWrap}>
                   <VideoPreview
                     script={script}
+                    previewMaxWidth={previewMaxWidth}
                     enableCanvasEdit
                     canvasEditBlocked={exportActive}
                     onSceneImageTransformChange={
@@ -448,6 +511,9 @@ function StoryWorkspaceContent({
             inspectorWidthPx: workspaceLayout.inspectorWidthPx,
             timelineDensity: workspaceLayout.timelineDensity,
             timelineHeightPx: workspaceLayout.timelineHeightPx,
+            sidebarNarrow:
+              !workspaceLayout.inspectorCollapsed &&
+              workspaceLayout.inspectorWidthPx >= 440,
             onSidebarToggle: workspaceLayout.toggleSidebar,
             onInspectorToggle: workspaceLayout.toggleInspector,
             onInspectorResizePointerDown: workspaceLayout.beginInspectorResize,
@@ -512,7 +578,7 @@ function StoryWorkspaceContent({
           <button
             type="button"
             onClick={openExportDrawer}
-            disabled={exportDisabled}
+            disabled={effectiveExportDisabled}
             className={studioMobileActionButtonPrimary}
           >
             <Download className="h-3.5 w-3.5" />

@@ -13,6 +13,9 @@ let activeInspectorTab: InspectorTabId = "scene";
 let activeSceneInspectorWorkspace: SceneInspectorWorkspaceId = "media";
 
 let focusAudioTabHandler: (() => void) | null = null;
+let focusSceneTabHandler: (() => void) | null = null;
+let focusSceneWorkspaceHandler:
+  ((workspaceId: SceneInspectorWorkspaceId) => void) | null = null;
 
 export function readSceneGroupOpenState(
   groupId: SceneInspectorGroupId,
@@ -58,4 +61,33 @@ export function registerInspectorProjectTabFocus(
 
 export function focusInspectorProjectTab(): void {
   focusAudioTabHandler?.();
+}
+
+export function registerInspectorSceneTabFocus(
+  handler: () => void,
+): () => void {
+  focusSceneTabHandler = handler;
+  return () => {
+    if (focusSceneTabHandler === handler) {
+      focusSceneTabHandler = null;
+    }
+  };
+}
+
+export function registerInspectorSceneWorkspaceFocus(
+  handler: (workspaceId: SceneInspectorWorkspaceId) => void,
+): () => void {
+  focusSceneWorkspaceHandler = handler;
+  return () => {
+    if (focusSceneWorkspaceHandler === handler) {
+      focusSceneWorkspaceHandler = null;
+    }
+  };
+}
+
+export function focusInspectorSceneWorkspace(
+  workspaceId: SceneInspectorWorkspaceId,
+): void {
+  focusSceneTabHandler?.();
+  focusSceneWorkspaceHandler?.(workspaceId);
 }

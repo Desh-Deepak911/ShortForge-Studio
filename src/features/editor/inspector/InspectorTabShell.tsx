@@ -14,6 +14,7 @@ import { useEditorSelection } from "@/features/editor/selection";
 import {
   readActiveInspectorTab,
   registerInspectorProjectTabFocus,
+  registerInspectorSceneTabFocus,
   writeActiveInspectorTab,
 } from "./inspector-tab-shell.session";
 import {
@@ -37,9 +38,16 @@ export default function InspectorTabShell() {
   const displayedTab = inspectorImageEditing ? "scene" : activeTab;
 
   useEffect(() => {
-    return registerInspectorProjectTabFocus(() => {
+    const unregisterAudio = registerInspectorProjectTabFocus(() => {
       selectTab("audio");
     });
+    const unregisterScene = registerInspectorSceneTabFocus(() => {
+      selectTab("scene");
+    });
+    return () => {
+      unregisterAudio();
+      unregisterScene();
+    };
   }, [selectTab]);
 
   return (

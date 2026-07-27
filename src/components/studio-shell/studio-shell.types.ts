@@ -8,6 +8,7 @@ export interface StudioShellEditorLayout {
   inspectorWidthPx: number;
   timelineDensity: StudioTimelineDensity;
   timelineHeightPx: number;
+  sidebarNarrow?: boolean;
   onSidebarToggle: () => void;
   onInspectorToggle: () => void;
   onInspectorResizePointerDown: PointerEventHandler<HTMLElement>;
@@ -34,7 +35,7 @@ export interface StudioShellProps {
   timeline?: ReactNode;
   /** Optional footer — omitted in focus mode when `hideFooterInFocusMode` is true. */
   footer?: ReactNode;
-  /** Reduces chrome: hides sidebar and optional footer. */
+  /** Reduces chrome: hides both side rails and optional footer. */
   focusMode?: boolean;
   /** Narrower sidebar and inspector widths. */
   compactMode?: boolean;

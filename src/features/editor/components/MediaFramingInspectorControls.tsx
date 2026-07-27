@@ -64,7 +64,9 @@ function InspectorSubsection({
     <section className="space-y-2">
       <div>
         <p className={`${studioFieldLabel} mb-0`}>{title}</p>
-        {description ? <p className={`${studioSubtleText} mt-1`}>{description}</p> : null}
+        {description ? (
+          <p className={`${studioSubtleText} mt-1`}>{description}</p>
+        ) : null}
       </div>
       {children}
     </section>
@@ -127,7 +129,9 @@ export default function MediaFramingInspectorControls({
                 aria-checked={isActive}
                 title={option.title}
                 onClick={() => onFramingChange({ fitMode: option.value })}
-                className={isActive ? studioImageFitSegmentActive : studioImageFitSegment}
+                className={
+                  isActive ? studioImageFitSegmentActive : studioImageFitSegment
+                }
               >
                 <span className="sm:hidden">{option.shortLabel}</span>
                 <span className="hidden sm:inline">{option.label}</span>
@@ -160,15 +164,13 @@ export default function MediaFramingInspectorControls({
 
         {repositionActive ? (
           <p className={`${studioSubtleText} mt-2`}>
-            Drag to reposition · {activeFitMode === "fill" ? "Fill" : "Fit"} mode
+            Drag to reposition · {activeFitMode === "fill" ? "Fill" : "Fit"}{" "}
+            mode
           </p>
         ) : null}
       </InspectorSubsection>
 
-      <InspectorSubsection
-        title="Horizontal"
-        description="Shift media left or right inside the 9:16 frame."
-      >
+      <InspectorSubsection title="Horizontal">
         <div className={`${studioRangeTouchHost}`}>
           <input
             id={`${controlId}-x`}
@@ -179,7 +181,10 @@ export default function MediaFramingInspectorControls({
             value={Math.round(uiX)}
             onChange={(event) =>
               onFramingChange({
-                positionX: framingPositionUiToReference(Number(event.target.value), "x"),
+                positionX: framingPositionUiToReference(
+                  Number(event.target.value),
+                  "x",
+                ),
               })
             }
             aria-label={`${mediaLabel} horizontal position`}
@@ -188,10 +193,7 @@ export default function MediaFramingInspectorControls({
         </div>
       </InspectorSubsection>
 
-      <InspectorSubsection
-        title="Vertical"
-        description="Shift media up or down inside the 9:16 frame."
-      >
+      <InspectorSubsection title="Vertical">
         <div className={`${studioRangeTouchHost}`}>
           <input
             id={`${controlId}-y`}
@@ -202,7 +204,10 @@ export default function MediaFramingInspectorControls({
             value={Math.round(uiY)}
             onChange={(event) =>
               onFramingChange({
-                positionY: framingPositionUiToReference(Number(event.target.value), "y"),
+                positionY: framingPositionUiToReference(
+                  Number(event.target.value),
+                  "y",
+                ),
               })
             }
             aria-label={`${mediaLabel} vertical position`}
@@ -211,10 +216,7 @@ export default function MediaFramingInspectorControls({
         </div>
       </InspectorSubsection>
 
-      <InspectorSubsection
-        title="Zoom"
-        description="Zoom in to crop tighter or out to reveal more."
-      >
+      <InspectorSubsection title="Zoom">
         <div className="mb-1.5 flex items-center justify-between gap-3">
           <label htmlFor={`${controlId}-zoom`} className="sr-only">
             {mediaLabel} zoom
@@ -243,7 +245,9 @@ export default function MediaFramingInspectorControls({
               step={0.01}
               value={clampedZoom}
               onChange={(event) =>
-                onFramingChange({ zoom: clampSceneImageScale(Number(event.target.value)) })
+                onFramingChange({
+                  zoom: clampSceneImageScale(Number(event.target.value)),
+                })
               }
               aria-valuemin={MIN_SCENE_IMAGE_SCALE}
               aria-valuemax={MAX_SCENE_IMAGE_SCALE}

@@ -45,6 +45,7 @@ export default function StudioShell({
 }: StudioShellProps) {
   const isFixedViewport = viewportMode === "fixed";
   const showSidebar = Boolean(sidebar) && !focusMode;
+  const showInspector = Boolean(inspector || inspectorBanner) && !focusMode;
   const showFooter = Boolean(footer) && !(focusMode && hideFooterInFocusMode);
   const bodyRowClass = sidebarVisibleBelowLg
     ? `flex flex-1 flex-col ${isFixedViewport ? "min-h-0 overflow-hidden" : ""} lg:flex-row ${studioShellPanelGap}`
@@ -83,6 +84,7 @@ export default function StudioShell({
               visibleBelowLg={sidebarVisibleBelowLg}
               viewportMode={viewportMode}
               collapsed={editorLayout?.sidebarCollapsed}
+              narrow={editorLayout?.sidebarNarrow}
               mobileOpen={editorLayout?.mobileSidebarOpen}
               onMobileClose={
                 editorLayout
@@ -105,7 +107,7 @@ export default function StudioShell({
                   {canvas}
                 </StudioCanvas>
               ) : null}
-              {inspector || inspectorBanner ? (
+              {showInspector ? (
                 <StudioInspector
                   compactMode={compactMode}
                   viewportMode={viewportMode}

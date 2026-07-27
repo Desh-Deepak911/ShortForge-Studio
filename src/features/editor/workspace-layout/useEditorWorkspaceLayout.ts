@@ -15,6 +15,7 @@ import {
   EDITOR_TIMELINE_MAX_HEIGHT_PX,
   EDITOR_TIMELINE_MIN_HEIGHT_PX,
   type EditorTimelineDensity,
+  type EditorPreviewSize,
   type EditorWorkspaceLayoutState,
 } from "./editor-workspace-layout.types";
 import {
@@ -37,6 +38,8 @@ export interface EditorWorkspaceLayoutController extends EditorWorkspaceLayoutSt
   toggleSidebar: () => void;
   toggleInspector: () => void;
   setTimelineDensity: (density: EditorTimelineDensity) => void;
+  setPreviewSize: (size: EditorPreviewSize) => void;
+  toggleFocusMode: () => void;
   beginInspectorResize: (event: ReactPointerEvent<HTMLElement>) => void;
   beginTimelineResize: (event: ReactPointerEvent<HTMLElement>) => void;
   resetLayout: () => void;
@@ -94,6 +97,15 @@ export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
     },
     [patchLayout],
   );
+
+  const setPreviewSize = useCallback(
+    (previewSize: EditorPreviewSize) => patchLayout({ previewSize }),
+    [patchLayout],
+  );
+
+  const toggleFocusMode = useCallback(() => {
+    setLayout((current) => ({ ...current, focusMode: !current.focusMode }));
+  }, []);
 
   const beginInspectorResize = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
@@ -198,18 +210,23 @@ export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
             timelineHeightPx: EDITOR_TIMELINE_DENSITY_HEIGHTS[next],
           };
         });
+      } else if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        toggleFocusMode();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggleInspector, toggleSidebar]);
+  }, [toggleFocusMode, toggleInspector, toggleSidebar]);
 
   return {
     ...layout,
     toggleSidebar,
     toggleInspector,
     setTimelineDensity,
+    setPreviewSize,
+    toggleFocusMode,
     beginInspectorResize,
     beginTimelineResize,
     resetLayout,
