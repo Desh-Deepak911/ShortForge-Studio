@@ -168,7 +168,21 @@ test("response shape unchanged — no SI metadata on GenerateScriptResponse", ()
   assert.doesNotMatch(responseBlock, /useStudioIntelligenceScenes/);
   assert.doesNotMatch(responseBlock, /StudioIntelligenceScenePlanDiagnostics/);
   assert.match(responseBlock, /scenePlanDevDebug\?: ScenePlanDevDebug/);
-  assert.match(route, /data: buildStoryResponse\(scenesResult\.footieScript\)/);
+  const scenesRouteStart = route.indexOf('if (params.mode === "scenes-only")');
+  const scenesRouteEnd = route.indexOf(
+    "const resolvedContext = await resolveNarrationGenerationContext",
+  );
+  const scenesRouteBlock = route.slice(scenesRouteStart, scenesRouteEnd);
+  assert.match(
+    scenesRouteBlock,
+    /data: buildScenesOnlyStoryResponse\(scenesResult\.footieScript\)/,
+    "Create scenes-only flow intentionally preserves reviewed title/narration via buildScenesOnlyStoryResponse",
+  );
+  assert.doesNotMatch(
+    scenesRouteBlock,
+    /buildStoryResponse\(scenesResult/,
+    "scenes-only route must not trim reviewed narration through buildStoryResponse",
+  );
   assert.doesNotMatch(route, /materializer|BlueprintMappedScene|StudioIntelligenceResult/);
 });
 
@@ -177,7 +191,11 @@ test("client defaults useStudioIntelligenceScenes off — omitted unless toggle 
   const devUtils = readSrc("src/features/story/utils/studio-intelligence-scene-plan-dev.utils.ts");
 
   assert.match(reviewFlow, /useState\(false\)/);
-  assert.match(reviewFlow, /useStudioIntelligenceScenes \? \{ useStudioIntelligenceScenes: true \}/);
+  assert.match(
+    reviewFlow,
+    /\.\.\.\(useStudioIntelligenceScenes[\s\S]*?\?\s*\{\s*useStudioIntelligenceScenes:\s*true\s*\}[\s\S]*?:\s*\{\}\)/,
+    "Create scenes request must omit SI flag unless dev toggle is enabled",
+  );
   assert.doesNotMatch(reviewFlow, /useStudioIntelligenceScenes:\s*true,/);
   assert.match(reviewFlow, /isStudioIntelligenceScenePlanToggleVisible/);
   assert.match(devUtils, /NODE_ENV !== "production"/);
@@ -189,7 +207,7 @@ test("review storyboard toggle is hidden unless dev/staging visibility rules pas
   const reviewInspector = readSrc("src/features/create/components/ReviewInspector.tsx");
 
   assert.match(reviewFlow, /showStudioIntelligenceScenePlanToggle/);
-  assert.match(reviewInspector, /Use Studio Intelligence scene planning/);
+  assert.match(reviewInspector, /label="Studio Intelligence scene planning"/);
   assert.match(reviewInspector, /showStudioIntelligenceScenePlanToggle \?/);
 });
 
