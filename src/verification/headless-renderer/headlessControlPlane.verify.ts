@@ -10,14 +10,18 @@ import {
   buildExportManifest,
   buildExportManifestFingerprint,
   EXPORT_MANIFEST_V2_VERSION,
+  EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
+  EXPORT_RENDERER_CONTRACT_VERSION,
   type ExportEnvironmentSnapshot,
   type ExportManifest,
   type ExportManifestV2,
-  type ExportManifestV3,
-  isExportManifestV3,
+  type ExportManifestV4,
+  isExportManifestV4,
+  isExportSceneManifestV3,
   validateExportManifest,
 } from "@/features/export/domain";
+import type { HeadlessRenderJobV1 } from "@/features/headless-renderer/domain";
 import {
   composeProductionHeadlessControlPlane,
   HEADLESS_JOB_REQUEST_MAX_BYTES,
@@ -91,7 +95,6 @@ function fixStory(imageUrl = "https://example.com/a.jpg"): FootieScript {
           url: imageUrl,
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
       {
@@ -109,25 +112,44 @@ function fixStory(imageUrl = "https://example.com/a.jpg"): FootieScript {
           url: "https://example.com/b.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
     ],
   });
 }
 
-function buildV3Manifest(story?: FootieScript): ExportManifestV3 {
+function buildProductionManifest(story?: FootieScript): ExportManifestV4 {
   const manifest = buildExportManifest({
     story: story ?? fixStory(),
     environment: CAPABLE_ENV,
     audioMode: "with-voice",
     multiImageScenesEnabled: true,
   });
-  assert.ok(isExportManifestV3(manifest));
+  assert.ok(
+    isExportManifestV4(manifest),
+    "buildExportManifest must emit production ExportManifest v4 / renderer 9D",
+  );
+  assert.equal(manifest.version, EXPORT_MANIFEST_VERSION);
+  assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+  const validation = validateExportManifest(manifest);
+  assert.equal(
+    validation.ok,
+    true,
+    validation.ok ? "" : validation.issues.map((issue) => issue.code).join(", "),
+  );
+  assert.ok(
+    manifest.scenes.every(
+      (scene) =>
+        isExportSceneManifestV3(scene) && scene.mediaTimeline.items.length >= 1,
+    ),
+    "production v4 manifests must carry scene mediaTimeline and mediaTransitions authority",
+  );
+  assert.ok(manifest.fingerprint.length > 0);
+  assert.ok(manifest.audio.voiceover != null);
   return manifest;
 }
 
-function freezeAsV2(manifest: ExportManifestV3): ExportManifestV2 {
+function freezeAsV2(manifest: ExportManifestV4): ExportManifestV2 {
   const scenes = manifest.scenes.map((scene) => {
     const rest = { ...scene };
     delete (rest as { mediaTransitions?: unknown }).mediaTransitions;
@@ -165,7 +187,7 @@ async function seedAndCreate(opts?: {
   mutateLastAsset?: boolean;
   failEnqueue?: boolean;
 }) {
-  const manifest = opts?.manifest ?? buildV3Manifest();
+  const manifest = opts?.manifest ?? buildProductionManifest();
   const projectId = opts?.projectId ?? manifest.project.projectId;
   const ownerId = opts?.ownerId ?? "owner-server-1";
   const stack = composeTestHeadlessControlPlane({
@@ -221,7 +243,7 @@ async function seedAndCreate(opts?: {
     rendererProfile: {
       resolution: manifest.output.resolution,
       format: manifest.output.format,
-      fps: 30,
+      fps: 30 as const,
       quality: manifest.output.quality,
     },
     rendererBuildId: "renderer-build-1",
@@ -349,12 +371,11 @@ async function main() {
     const body = `{"pad":"${euroPad}"}`;
     assert.ok(body.length < HEADLESS_JOB_REQUEST_MAX_BYTES);
     assert.ok(new TextEncoder().encode(body).byteLength > HEADLESS_JOB_REQUEST_MAX_BYTES);
-    assert.equal(rejectMediaPayloadInTransportBody(body).ok, false);
-    assert.equal(
-      rejectMediaPayloadInTransportBody(body).ok === false &&
-        rejectMediaPayloadInTransportBody(body).issues[0]?.code,
-      "BODY_TOO_LARGE",
-    );
+    const rejectResult = rejectMediaPayloadInTransportBody(body);
+    assert.equal(rejectResult.ok, false);
+    if (!rejectResult.ok) {
+      assert.equal(rejectResult.issues[0]?.code, "BODY_TOO_LARGE");
+    }
 
     const asciiOk = "a".repeat(1000);
     assert.equal(rejectMediaPayloadInTransportBody(asciiOk).ok, true);
@@ -411,7 +432,7 @@ async function main() {
   });
 
   await testAsync("invented store-1/obj-N descriptors cannot accept a job", async () => {
-    const manifest = buildV3Manifest();
+    const manifest = buildProductionManifest();
     const stack = composeTestHeadlessControlPlane({
       principal: {ownerId: "o",
         sessionId: null,
@@ -519,7 +540,7 @@ async function main() {
   });
 
   await testAsync("negative: cross-owner, wrong project, forged owner, overflow", async () => {
-    const manifest = buildV3Manifest();
+    const manifest = buildProductionManifest();
     const projectId = manifest.project.projectId;
     // Seed as owner-a, try create as owner-b
     const stackA = composeTestHeadlessControlPlane({
@@ -595,7 +616,7 @@ async function main() {
   });
 
   await testAsync("negative: MIME / length / purpose mismatch via custom seeds", async () => {
-    const manifest = buildV3Manifest();
+    const manifest = buildProductionManifest();
     const projectId = manifest.project.projectId;
     const stack = composeTestHeadlessControlPlane({
       principal: {ownerId: "o",
@@ -730,17 +751,29 @@ async function main() {
     );
     assert.equal(record.ok, true);
     if (!record.ok) return;
+    assert.notEqual(record.value.canonicalJob, null);
+    assert.notEqual(record.value.canonicalRequest, null);
+    const canonicalJob = record.value.canonicalJob!;
+    const canonicalRequest = record.value.canonicalRequest!;
 
     const forged = await stack.jobStore.compareAndSetTransition({
       jobId: created.value.jobId,
       ownerId,
       expectedStoreVersion: record.value.storeVersion,
       next: {
-        ...record.value,
         job: {
-          ...record.value.canonicalJob,
-          ownership: { ownerId: "hijack", projectId: record.value.canonicalJob.ownership.projectId },
+          ...canonicalJob,
+          ownership: {
+            ownerId: "hijack",
+            projectId: canonicalJob.ownership.projectId,
+          },
         },
+        request: canonicalRequest,
+        idempotencyAuthorityKey: record.value.idempotencyAuthorityKey,
+        operationId: record.value.operationId,
+        claimToken: null,
+        claimedAtMs: null,
+        artifactObjectBinding: null,
       },
     });
     assert.equal(forged.ok, false);
@@ -750,14 +783,14 @@ async function main() {
       ownerId,
       expectedStoreVersion: record.value.storeVersion - 1,
       next: {
-        job: record.value.canonicalJob,
-        request: record.value.canonicalRequest,
+        job: canonicalJob,
+        request: canonicalRequest,
         idempotencyAuthorityKey: record.value.idempotencyAuthorityKey,
         operationId: record.value.operationId,
         claimToken: null,
         claimedAtMs: null,
         artifactObjectBinding: null,
-        },
+      },
     });
     assert.equal(stale.ok, true);
     if (!stale.ok) return;
@@ -775,7 +808,8 @@ async function main() {
     );
     assert.equal(again.ok, true);
     if (!again.ok) return;
-    assert.equal(again.value.canonicalJob.state, "queued");
+    assert.notEqual(again.value.canonicalJob, null);
+    assert.equal(again.value.canonicalJob!.state, "queued");
 
     const cancelled = await stack.service.cancelJob({
       requestContext: {},
@@ -788,33 +822,39 @@ async function main() {
       ownerId,
       expectedStoreVersion: again.value.storeVersion + 1,
       next: {
-        job: { ...cancelled.value, state: "succeeded" } as typeof again.value.canonicalJob,
-        request: again.value.canonicalRequest,
+        job: {
+          ...(cancelled.value as unknown as HeadlessRenderJobV1),
+          state: "succeeded",
+        } as unknown as HeadlessRenderJobV1,
+        request: again.value.canonicalRequest!,
         idempotencyAuthorityKey: again.value.idempotencyAuthorityKey,
+        operationId: again.value.operationId,
         claimToken: null,
         claimedAtMs: null,
         artifactObjectBinding: null,
-        },
+      },
     });
-    // get fresh version after cancel
     const afterCancel = await stack.jobStore.getByJobIdAndOwner(
       created.value.jobId,
       ownerId,
     );
     assert.equal(afterCancel.ok, true);
     if (!afterCancel.ok) return;
+    assert.notEqual(afterCancel.value.canonicalJob, null);
+    assert.notEqual(afterCancel.value.canonicalRequest, null);
     const overwrite = await stack.jobStore.compareAndSetTransition({
       jobId: created.value.jobId,
       ownerId,
       expectedStoreVersion: afterCancel.value.storeVersion,
       next: {
-        job: afterCancel.value.job,
-        request: afterCancel.value.canonicalRequest,
+        job: afterCancel.value.canonicalJob!,
+        request: afterCancel.value.canonicalRequest!,
         idempotencyAuthorityKey: afterCancel.value.idempotencyAuthorityKey,
+        operationId: afterCancel.value.operationId,
         claimToken: null,
         claimedAtMs: null,
         artifactObjectBinding: null,
-        },
+      },
     });
     assert.equal(overwrite.ok, true);
     if (!overwrite.ok) return;
@@ -828,16 +868,17 @@ async function main() {
       idempotencyKey: "enq-fail",
     });
     assert.equal(created.ok, false);
-    if (!created.ok) {
-      assert.equal(created.issues[0]?.code, "QUEUE_ENQUEUE_FAILED");
-      assert.ok(created.recoverableJob);
-      assert.equal(created.recoverableJob?.state, "failed");
-      assert.equal(created.recoverableJob?.reasonId, "QUEUE_ENQUEUE_FAILED");
-      assert.equal(created.recoverableJob?.retryable, true);
-      assert.notEqual(created.recoverableJob?.state, "materializing");
-      assert.notEqual(created.recoverableJob?.state, "queued");
-    }
-    if (!created.ok || !created.recoverableJob) return;
+    if (created.ok) return;
+    const failedCreate = created;
+    assert.equal(failedCreate.issues[0]?.code, "QUEUE_ENQUEUE_FAILED");
+    assert.ok(failedCreate.recoverableJob);
+    assert.equal(failedCreate.recoverableJob?.state, "failed");
+    assert.equal(failedCreate.recoverableJob?.reasonId, "QUEUE_ENQUEUE_FAILED");
+    assert.equal(failedCreate.recoverableJob?.retryable, true);
+    assert.notEqual(failedCreate.recoverableJob?.state, "materializing");
+    assert.notEqual(failedCreate.recoverableJob?.state, "queued");
+    if (!failedCreate.recoverableJob) return;
+    const recoverableJob = failedCreate.recoverableJob;
 
     // Idempotent create replay returns truthful terminal job (not stuck materializing).
     const replay = await stack.service.createJob({
@@ -847,17 +888,17 @@ async function main() {
     });
     assert.equal(replay.ok, true);
     if (!replay.ok) return;
-    assert.equal(replay.value.jobId, created.recoverableJob.jobId);
+    assert.equal(replay.value.jobId, recoverableJob.jobId);
     assert.equal(replay.value.state, "failed");
     assert.equal(replay.value.reasonId, "QUEUE_ENQUEUE_FAILED");
 
     const recovered = await stack.service.recoverDispatch({
       requestContext: {},
-      jobId: created.recoverableJob.jobId,
+      jobId: recoverableJob.jobId,
     });
     assert.equal(recovered.ok, true);
     if (!recovered.ok) return;
-    assert.notEqual(recovered.value.jobId, created.recoverableJob.jobId);
+    assert.notEqual(recovered.value.jobId, recoverableJob.jobId);
     assert.equal(recovered.value.state, "queued");
   });
 
@@ -894,7 +935,7 @@ async function main() {
   });
 
   await testAsync("immediate delivery after queued persist claims successfully", async () => {
-    const manifest = buildV3Manifest();
+    const manifest = buildProductionManifest();
     const projectId = manifest.project.projectId;
     const ownerId = "owner-immediate";
     const stack = composeTestHeadlessControlPlane({
@@ -967,7 +1008,7 @@ async function main() {
   });
 
   await testAsync("worker claim racing enqueue-failure preserves claim", async () => {
-    const manifest = buildV3Manifest();
+    const manifest = buildProductionManifest();
     const projectId = manifest.project.projectId;
     const ownerId = "owner-claim-race";
     const stack = composeTestHeadlessControlPlane({
@@ -995,7 +1036,8 @@ async function main() {
       );
       assert.equal(rec.ok, true);
       if (!rec.ok) return;
-      assert.equal(rec.value.canonicalJob.state, "queued");
+      assert.notEqual(rec.value.canonicalJob, null);
+      assert.equal(rec.value.canonicalJob!.state, "queued");
       const claimed = await stack.jobStore.claimQueuedJob({
         jobId: message.jobId,
         ownerId: message.ownerId,
@@ -1038,8 +1080,9 @@ async function main() {
     );
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
+    assert.notEqual(stored.value.canonicalJob, null);
     assert.equal(stored.value.claimToken, "claim_race_token");
-    assert.notEqual(stored.value.canonicalJob.state, "failed");
+    assert.notEqual(stored.value.canonicalJob!.state, "failed");
   });
 
   await testAsync("cancel during dispatch recovery returns terminal cancelled", async () => {
@@ -1048,11 +1091,13 @@ async function main() {
       idempotencyKey: "cancel-dispatch",
     });
     assert.equal(created.ok, false);
-    if (!created.ok || !created.recoverableJob) return;
+    if (created.ok) return;
+    if (!created.recoverableJob) return;
+    const recoverableJob = created.recoverableJob;
     // Force cancel is illegal from failed — recover then cancel, or cancel a queued job.
     const recovered = await stack.service.recoverDispatch({
       requestContext: {},
-      jobId: created.recoverableJob.jobId,
+      jobId: recoverableJob.jobId,
     });
     assert.equal(recovered.ok, true);
     if (!recovered.ok) return;
@@ -1108,7 +1153,7 @@ async function main() {
       insufficientLease: false,
     });
     // Override: re-seed with exact lease via custom path
-    const manifest = buildV3Manifest();
+    const manifest = buildProductionManifest();
     const projectId = manifest.project.projectId;
     const ownerId = "owner-expiry";
     const stack = composeTestHeadlessControlPlane({
@@ -1314,7 +1359,7 @@ async function main() {
   await testAsync("v2/v3 + refresh status + worker failure", async () => {
     const v3 = await seedAndCreate({ idempotencyKey: "v3" });
     assert.equal(v3.created.ok, true);
-    const v2m = freezeAsV2(buildV3Manifest());
+    const v2m = freezeAsV2(buildProductionManifest());
     assert.equal(validateExportManifest(v2m).ok, true);
     const v2 = await seedAndCreate({ manifest: v2m, idempotencyKey: "v2" });
     assert.equal(v2.created.ok, true);
