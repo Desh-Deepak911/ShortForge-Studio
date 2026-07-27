@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { getCanonicalVoiceover } from "@/features/audio";
 import { StudioStatus } from "@/components/studio-status";
-import { VoiceLibraryPanel } from "@/features/voice-library";
+import {
+  resolveVoiceLibraryDisplayName,
+  VoiceLibraryPanel,
+} from "@/features/voice-library";
 import { SpeechStylePanel } from "@/features/speech-style";
 import { getStoryVoiceSettings } from "@/features/story/utils";
 import type { FootieScript } from "@/features/story/types";
@@ -50,6 +54,9 @@ export default function VoiceSettingsCard({
   showApplyButton = true,
   onApplyControlReady,
 }: VoiceSettingsCardProps) {
+  const [voiceLibraryOpen, setVoiceLibraryOpen] = useState(
+    variant !== "review",
+  );
   const { applyVoiceoverChanges, loading, error } = useStoryVoiceoverApply(
     script,
     onScriptChange,
@@ -93,50 +100,72 @@ export default function VoiceSettingsCard({
 
   return (
     <div className={`${studioPanel} space-y-4`}>
-      <div>
-        <h3 className="text-sm font-semibold tracking-tight text-foreground">Voice Settings</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">
+          Voice Settings
+        </h3>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <span className={studioChip}>
+            {resolveVoiceLibraryDisplayName(selectedVoice)}
+          </span>
+          <span className={studioChip}>
+            {VOICE_SPEED_LABELS[selectedSpeed as VoiceoverSpeedOption]}
+          </span>
+        </div>
       </div>
 
-      <VoiceLibraryPanel
-        labelledBy="story-voice-label"
-        selectedVoiceId={selectedVoice}
-        previewSpeed={selectedSpeed}
-        previewStylePreset={selectedStylePreset}
-        previewExpressiveDelivery={expressiveDelivery}
-        disabled={controlsDisabled}
-        compact
-        onVoiceSelect={(voice) =>
-          onScriptChange(
-            applyStoryVoiceSettings(script, {
-              voice,
-            }),
-          )
-        }
-      />
-      <span id="story-voice-label" className="sr-only">
-        Voice
-      </span>
+      <details
+        className="group rounded-xl bg-background/25 p-3 ring-1 ring-border/20"
+        open={voiceLibraryOpen}
+        onToggle={(event) => setVoiceLibraryOpen(event.currentTarget.open)}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-semibold text-foreground/90 [&::-webkit-details-marker]:hidden">
+          Change voice and delivery
+          <ChevronDown className="h-3.5 w-3.5 text-muted transition group-open:rotate-180" />
+        </summary>
+        <div className="mt-3 space-y-4 border-t border-border/20 pt-3">
+          <VoiceLibraryPanel
+            labelledBy="story-voice-label"
+            selectedVoiceId={selectedVoice}
+            previewSpeed={selectedSpeed}
+            previewStylePreset={selectedStylePreset}
+            previewExpressiveDelivery={expressiveDelivery}
+            disabled={controlsDisabled}
+            compact
+            onVoiceSelect={(voice) =>
+              onScriptChange(
+                applyStoryVoiceSettings(script, {
+                  voice,
+                }),
+              )
+            }
+          />
+          <span id="story-voice-label" className="sr-only">
+            Voice
+          </span>
 
-      <SpeechStylePanel
-        stylePreset={selectedStylePreset}
-        expressiveDelivery={expressiveDelivery}
-        disabled={controlsDisabled}
-        compact
-        onStylePresetChange={(stylePreset) =>
-          onScriptChange(
-            applyStoryVoiceSettings(script, {
-              stylePreset,
-            }),
-          )
-        }
-        onExpressiveDeliveryChange={(nextExpressiveDelivery) =>
-          onScriptChange(
-            applyStoryVoiceSettings(script, {
-              expressiveDelivery: nextExpressiveDelivery,
-            }),
-          )
-        }
-      />
+          <SpeechStylePanel
+            stylePreset={selectedStylePreset}
+            expressiveDelivery={expressiveDelivery}
+            disabled={controlsDisabled}
+            compact
+            onStylePresetChange={(stylePreset) =>
+              onScriptChange(
+                applyStoryVoiceSettings(script, {
+                  stylePreset,
+                }),
+              )
+            }
+            onExpressiveDeliveryChange={(nextExpressiveDelivery) =>
+              onScriptChange(
+                applyStoryVoiceSettings(script, {
+                  expressiveDelivery: nextExpressiveDelivery,
+                }),
+              )
+            }
+          />
+        </div>
+      </details>
 
       <div>
         <span className={studioFieldLabel}>Voice speed</span>
@@ -180,7 +209,11 @@ export default function VoiceSettingsCard({
       ) : null}
 
       {loading ? (
-        <p className={`${studioSubtleText} text-center tabular-nums`} role="status" aria-live="polite">
+        <p
+          className={`${studioSubtleText} text-center tabular-nums`}
+          role="status"
+          aria-live="polite"
+        >
           {variant === "review"
             ? "Recording narration from your script..."
             : "Updating narration..."}
@@ -200,7 +233,12 @@ export default function VoiceSettingsCard({
       )}
 
       {error ? (
-        <StudioStatus variant="error" layout="panel" title="Couldn't update narration" description={error} />
+        <StudioStatus
+          variant="error"
+          layout="panel"
+          title="Couldn't update narration"
+          description={error}
+        />
       ) : null}
     </div>
   );

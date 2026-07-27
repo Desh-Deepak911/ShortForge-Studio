@@ -123,13 +123,13 @@ function SidebarSceneRow({
   const hasMedia = sceneHasMedia(scene);
 
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 items-stretch gap-1">
       <button
         type="button"
         onClick={onSelect}
         data-scene-sidebar-id={scene.id}
         aria-current={isSelected ? "true" : undefined}
-        className={`${studioSidebarSceneItem} ${compact ? "justify-center px-1.5 py-2" : ""} ${isSelected ? studioSidebarSceneItemActive : ""}`}
+        className={`${studioSidebarSceneItem} min-w-0 flex-1 ${compact ? "justify-center px-1.5 py-2" : ""} ${isSelected ? studioSidebarSceneItemActive : ""}`}
         title={
           compact
             ? `Scene ${index + 1} · ${formatDisplayDurationSec(scene.duration)}`
@@ -176,10 +176,11 @@ function SidebarSceneRow({
         <button
           type="button"
           onClick={onRequestMedia}
-          className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-400/10 px-2 py-1.5 text-[10px] font-semibold text-amber-100 ring-1 ring-amber-300/20 transition hover:bg-amber-400/15"
+          className="flex w-8 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-100 ring-1 ring-amber-300/20 transition hover:bg-amber-400/15"
+          aria-label={`Add media to scene ${index + 1}`}
+          title="Add media"
         >
-          <ImagePlus className="h-3 w-3" aria-hidden />
-          Add media
+          <ImagePlus className="h-3.5 w-3.5" aria-hidden />
         </button>
       ) : null}
     </div>

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import ScriptCanvas from "@/features/create/components/ScriptCanvas";
 import ReviewInspector from "@/features/create/components/ReviewInspector";
@@ -35,7 +41,11 @@ import {
 } from "@/lib/utils/studioUi";
 import { applyStoryUpdate, syncFootieScript } from "@/lib/utils/voiceover";
 import { isStudioIntelligenceScenePlanToggleVisible } from "@/features/story/utils/studio-intelligence-scene-plan-dev.utils";
-import type { GenerateScriptResponse, GenerationLoadingStep, ScenePlanDevDebug } from "@/types/footiebitz";
+import type {
+  GenerateScriptResponse,
+  GenerationLoadingStep,
+  ScenePlanDevDebug,
+} from "@/types/footiebitz";
 import {
   DEFAULT_SCENE_COUNT,
   MAX_SCENE_COUNT,
@@ -142,7 +152,10 @@ function resolveActiveReviewStep(
   return 2;
 }
 
-function mergeStoryboardOntoScript(current: FootieScript, generated: FootieScript): FootieScript {
+function mergeStoryboardOntoScript(
+  current: FootieScript,
+  generated: FootieScript,
+): FootieScript {
   return syncFootieScript({
     ...current,
     title: generated.title,
@@ -178,16 +191,25 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     loadedDraftRef.current = loadedDraft;
   }, [loadedDraft, script]);
 
-  const { persistWarning, autosaveSavedMessage } = useDraftPersistFeedback(draftId);
-  const [sceneCountOverride, setSceneCountOverride] = useState<number | null>(null);
+  const { persistWarning, autosaveSavedMessage } =
+    useDraftPersistFeedback(draftId);
+  const [sceneCountOverride, setSceneCountOverride] = useState<number | null>(
+    null,
+  );
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isCreatingScenes, setIsCreatingScenes] = useState(false);
   const [isPersistingForEditor, setIsPersistingForEditor] = useState(false);
-  const [createScenesError, setCreateScenesError] = useState<string | null>(null);
-  const [scenesCreatedSuccessfully, setScenesCreatedSuccessfully] = useState(false);
-  const [storyboardStep, setStoryboardStep] = useState<GenerationLoadingStep>(3);
-  const [useStudioIntelligenceScenes, setUseStudioIntelligenceScenes] = useState(false);
-  const [scenePlanDevDebug, setScenePlanDevDebug] = useState<ScenePlanDevDebug | null>(null);
+  const [createScenesError, setCreateScenesError] = useState<string | null>(
+    null,
+  );
+  const [scenesCreatedSuccessfully, setScenesCreatedSuccessfully] =
+    useState(false);
+  const [storyboardStep, setStoryboardStep] =
+    useState<GenerationLoadingStep>(3);
+  const [useStudioIntelligenceScenes, setUseStudioIntelligenceScenes] =
+    useState(false);
+  const [scenePlanDevDebug, setScenePlanDevDebug] =
+    useState<ScenePlanDevDebug | null>(null);
   const [voiceApplyControl, setVoiceApplyControl] = useState<{
     apply: () => void;
     canApply: boolean;
@@ -196,7 +218,12 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
   } | null>(null);
 
   const handleVoiceApplyControlReady = useCallback(
-    (control: { apply: () => void; canApply: boolean; loading: boolean; label: string }) => {
+    (control: {
+      apply: () => void;
+      canApply: boolean;
+      loading: boolean;
+      label: string;
+    }) => {
       setVoiceApplyControl((previous) => {
         if (
           previous &&
@@ -214,7 +241,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
 
   const creationBrief = loadedDraft?.creationBrief;
   const sceneCount =
-    sceneCountOverride ?? loadedDraft?.creationBrief?.sceneCount ?? DEFAULT_SCENE_COUNT;
+    sceneCountOverride ??
+    loadedDraft?.creationBrief?.sceneCount ??
+    DEFAULT_SCENE_COUNT;
   const pipelineStage = loadedDraft?.pipelineStage;
 
   const activeStep = script
@@ -222,25 +251,32 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     : 2;
   const hasVoiceover = Boolean(
     script &&
-      resolveReviewHasVoiceover(script, {
-        pipelineStage,
-        draftHasVoiceover: loadedDraft?.hasVoiceover,
-      }),
+    resolveReviewHasVoiceover(script, {
+      pipelineStage,
+      draftHasVoiceover: loadedDraft?.hasVoiceover,
+    }),
   );
   const hasStoryboard = Boolean(script && script.scenes.length > 0);
   const hasNarration = Boolean(script?.narration?.trim());
   const scriptMode = resolveScriptMode(creationBrief?.scriptMode);
   const scriptModeLabel =
-    SCRIPT_MODE_OPTIONS.find((option) => option.value === scriptMode)?.label ?? "Story";
-  const researchConfidenceLabel = resolveBriefResearchConfidenceLabel(creationBrief);
+    SCRIPT_MODE_OPTIONS.find((option) => option.value === scriptMode)?.label ??
+    "Story";
+  const researchConfidenceLabel =
+    resolveBriefResearchConfidenceLabel(creationBrief);
   const briefToneLabel = resolveBriefToneLabel(creationBrief?.tone);
-  const briefQualityLabel = resolveBriefQualityLabel(creationBrief?.qualityMode);
-  const targetDurationSeconds = creationBrief?.duration ?? script?.totalDuration ?? 30;
+  const briefQualityLabel = resolveBriefQualityLabel(
+    creationBrief?.qualityMode,
+  );
+  const targetDurationSeconds =
+    creationBrief?.duration ?? script?.totalDuration ?? 30;
   const voiceoverDurationMs =
     script != null
-      ? getCanonicalVoiceover(script)?.durationMs ?? script.voiceoverDurationMs
+      ? (getCanonicalVoiceover(script)?.durationMs ??
+        script.voiceoverDurationMs)
       : undefined;
-  const showStudioIntelligenceScenePlanToggle = isStudioIntelligenceScenePlanToggleVisible();
+  const showStudioIntelligenceScenePlanToggle =
+    isStudioIntelligenceScenePlanToggleVisible();
   const scriptVoiceoverUrl =
     script != null ? getCanonicalVoiceover(script)?.url : undefined;
 
@@ -249,7 +285,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
       return;
     }
 
-    persistedVoiceoverUrlRef.current = getCanonicalVoiceover(scriptRef.current ?? undefined)?.url;
+    persistedVoiceoverUrlRef.current = getCanonicalVoiceover(
+      scriptRef.current ?? undefined,
+    )?.url;
     scriptAutosaveReadyRef.current = false;
   }, [isLoading, loadedDraft?.id]);
 
@@ -290,7 +328,13 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     saveMessageTimeoutRef.current = window.setTimeout(() => {
       setSaveMessage(null);
     }, 2500);
-  }, [pipelineStage, schedulePersist, script?.title, script?.narration, script?.scenes.length]);
+  }, [
+    pipelineStage,
+    schedulePersist,
+    script?.title,
+    script?.narration,
+    script?.scenes.length,
+  ]);
 
   useEffect(() => {
     const currentScript = scriptRef.current;
@@ -324,7 +368,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
 
   const handleStoryChange = useCallback(
     (next: FootieScript) => {
-      updateScript((current) => syncFootieScript(applyStoryUpdate(current, next)));
+      updateScript((current) =>
+        syncFootieScript(applyStoryUpdate(current, next)),
+      );
       setSaveMessage(null);
     },
     [updateScript],
@@ -336,7 +382,10 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
         return;
       }
 
-      const nextCount = Math.max(MIN_SCENE_COUNT, Math.min(MAX_SCENE_COUNT, Math.round(value)));
+      const nextCount = Math.max(
+        MIN_SCENE_COUNT,
+        Math.min(MAX_SCENE_COUNT, Math.round(value)),
+      );
       setSceneCountOverride(nextCount);
 
       if (!creationBrief) {
@@ -360,7 +409,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     try {
       const updated = await flushPersist("editor_ready", script);
       if (!updated) {
-        setCreateScenesError("Could not save narration before opening the editor. Try again.");
+        setCreateScenesError(
+          "Could not save narration before opening the editor. Try again.",
+        );
         return;
       }
 
@@ -379,7 +430,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     const measuredVoiceoverDurationMs =
       getCanonicalVoiceover(script)?.durationMs ?? script.voiceoverDurationMs;
     if (!measuredVoiceoverDurationMs || measuredVoiceoverDurationMs <= 0) {
-      setCreateScenesError("Create narration first — your storyboard is timed to match it.");
+      setCreateScenesError(
+        "Create narration first — your storyboard is timed to match it.",
+      );
       return;
     }
 
@@ -406,7 +459,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
           scriptMode,
           sceneCount,
           stream: true,
-          ...(useStudioIntelligenceScenes ? { useStudioIntelligenceScenes: true } : {}),
+          ...(useStudioIntelligenceScenes
+            ? { useStudioIntelligenceScenes: true }
+            : {}),
         }),
       });
 
@@ -445,9 +500,14 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
       setIsPersistingForEditor(true);
 
       try {
-        const updated = await flushPersist("editor_ready", nextScriptWithScenes);
+        const updated = await flushPersist(
+          "editor_ready",
+          nextScriptWithScenes,
+        );
         if (!updated) {
-          throw new Error("Could not save narration before opening the editor. Try again.");
+          throw new Error(
+            "Could not save narration before opening the editor. Try again.",
+          );
         }
 
         router.push(`/editor/${draftId}`);
@@ -531,7 +591,8 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
     primaryAction = {
       label: voiceApplyControl?.label ?? "Create Narration",
       onClick: handlePrimaryAction,
-      disabled: !voiceApplyControl?.canApply || Boolean(voiceApplyControl?.loading),
+      disabled:
+        !voiceApplyControl?.canApply || Boolean(voiceApplyControl?.loading),
       loading: voiceApplyControl?.loading,
       disabledReason: !hasNarration
         ? "Add script text in the canvas before creating narration."
@@ -559,10 +620,13 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
         onExport={() => undefined}
         exportDisabled
       >
-        <div className={`${studioPanel} mx-auto max-w-lg space-y-5 px-5 py-10 text-center sm:px-8 sm:py-12`}>
+        <div
+          className={`${studioPanel} mx-auto max-w-lg space-y-5 px-5 py-10 text-center sm:px-8 sm:py-12`}
+        >
           <h1 className={studioSectionTitle}>Draft not found</h1>
           <p className={studioSectionDesc}>
-            This project could not be found. It may have been deleted or saved in another browser.
+            This project could not be found. It may have been deleted or saved
+            in another browser.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Link href="/drafts" className={studioPrimaryButton}>
@@ -590,8 +654,8 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
         />
       }
       sidebar={
-        <StudioSection title="Workflow" description="Brief through editor.">
-          <ol className="space-y-2">
+        <StudioSection title="Workflow">
+          <ol className="space-y-1.5">
             {REVIEW_WORKFLOW_STEPS.map((step) => {
               const state = resolveReviewWorkflowStepState(
                 step.key,
@@ -603,12 +667,31 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
               return (
                 <li
                   key={step.key}
-                  className={`${studioPanel} ${
-                    state === "current" ? "ring-1 ring-accent/30" : ""
-                  } ${state === "complete" ? "opacity-80" : ""}`}
+                  className={`rounded-xl px-3 py-2.5 transition ${
+                    state === "current"
+                      ? "bg-accent/10 ring-1 ring-accent/30"
+                      : "bg-surface/25 ring-1 ring-border/15"
+                  } ${state === "complete" ? "opacity-75" : ""}`}
                 >
-                  <p className="text-sm font-medium text-foreground/90">{step.title}</p>
-                  <p className={`${studioSubtleText} mt-1`}>{step.description}</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        state === "complete"
+                          ? "bg-emerald-400"
+                          : state === "current"
+                            ? "bg-accent"
+                            : "bg-muted/40"
+                      }`}
+                    />
+                    <p className="text-xs font-medium text-foreground/90">
+                      {step.title}
+                    </p>
+                  </div>
+                  {state === "current" ? (
+                    <p className={`${studioSubtleText} mt-1 pl-4`}>
+                      {step.description}
+                    </p>
+                  ) : null}
                 </li>
               );
             })}
@@ -646,7 +729,9 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
           storyboardStep={storyboardStep}
           createScenesError={createScenesError}
           voiceControlsDisabled={isCreatingScenes}
-          showStudioIntelligenceScenePlanToggle={showStudioIntelligenceScenePlanToggle}
+          showStudioIntelligenceScenePlanToggle={
+            showStudioIntelligenceScenePlanToggle
+          }
           useStudioIntelligenceScenes={useStudioIntelligenceScenes}
           onUseStudioIntelligenceScenesChange={setUseStudioIntelligenceScenes}
           scenePlanDevDebug={scenePlanDevDebug}
