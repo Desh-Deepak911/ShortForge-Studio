@@ -10,12 +10,26 @@ import path from "node:path";
 
 import {
   buildExportManifest,
+  EXPORT_MANIFEST_VERSION,
+  EXPORT_RENDERER_CONTRACT_VERSION,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV3,
-  isExportManifestV3,
+  type ExportManifestV4,
+  isExportManifestV4,
+  isExportSceneManifestV3,
+  validateExportManifest,
 } from "@/features/export/domain";
 import type { FootieScript } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
+import {
+  buildHeadlessAuthorityFingerprint,
+  createAcceptedHeadlessRenderJob,
+  extractRequiredHeadlessSourceSlots,
+  finalizeHeadlessRenderJobRequest,
+  HEADLESS_CLAIM_LEASE_MS,
+  headlessSourceSlotKey,
+  type HeadlessAssetBundleV1,
+  type HeadlessAssetDescriptorV1,
+} from "@/features/headless-renderer/domain";
 import {
   appendProvisionalStagingObjectRefs,
   createProvisionalMaterializingRecord,
@@ -33,14 +47,11 @@ import {
   MemoryHeadlessJobStoreAdapter,
   seedOwnedManifestAndBundle,
 } from "@/features/headless-renderer/control-plane/testing";
-import {
-  buildHeadlessAuthorityFingerprint,
-  createAcceptedHeadlessRenderJob,
-  extractRequiredHeadlessSourceSlots,
-  finalizeHeadlessRenderJobRequest,
-  HEADLESS_CLAIM_LEASE_MS,
-  headlessSourceSlotKey,
-} from "@/features/headless-renderer/domain";
+
+type SeedOwnedManifestAndBundleValue = Extract<
+  Awaited<ReturnType<typeof seedOwnedManifestAndBundle>>,
+  { ok: true }
+>["value"];
 
 const CLOCK = 1_700_000_000_000;
 
@@ -88,7 +99,6 @@ function fixStory(): FootieScript {
           url: "https://example.com/a.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
       {
@@ -106,7 +116,6 @@ function fixStory(): FootieScript {
           url: "https://example.com/b.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
     ],
@@ -136,21 +145,46 @@ function fixZeroSlotStory(): FootieScript {
           url: "",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
     ],
   });
 }
 
-function buildV3Manifest(story?: FootieScript): ExportManifestV3 {
+function buildProductionManifest(story?: FootieScript): ExportManifestV4 {
+  const silentAudio =
+    story != null &&
+    (story.voiceoverUrl?.trim() ?? "") === "" &&
+    story.narration.trim() === "";
   const manifest = buildExportManifest({
     story: story ?? fixStory(),
     environment: CAPABLE_ENV,
-    audioMode: story === fixZeroSlotStory() ? "silent" : "with-voice",
+    audioMode: silentAudio ? "silent" : "with-voice",
     multiImageScenesEnabled: true,
   });
-  assert.ok(isExportManifestV3(manifest));
+  assert.ok(
+    isExportManifestV4(manifest),
+    "buildExportManifest must emit production ExportManifest v4 / renderer 9D",
+  );
+  assert.equal(manifest.version, EXPORT_MANIFEST_VERSION);
+  assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+  const validation = validateExportManifest(manifest);
+  assert.equal(
+    validation.ok,
+    true,
+    validation.ok ? "" : validation.issues.map((issue) => issue.code).join(", "),
+  );
+  assert.ok(
+    manifest.scenes.every(
+      (scene) =>
+        isExportSceneManifestV3(scene) && scene.mediaTimeline.items.length >= 1,
+    ),
+    "production v4 manifests must carry scene mediaTimeline and mediaTransitions authority",
+  );
+  assert.ok(manifest.fingerprint.length > 0);
+  if (!silentAudio) {
+    assert.ok(manifest.audio.voiceover != null);
+  }
   return manifest;
 }
 
@@ -171,13 +205,8 @@ function buildIdempotencyKey(
 }
 
 function buildStagingObjectRefs(
-  seeded: Awaited<ReturnType<typeof seedOwnedManifestAndBundle>> extends {
-    ok: true;
-    value: infer V;
-  }
-    ? V
-    : never,
-  manifest: ExportManifestV3,
+  seeded: SeedOwnedManifestAndBundleValue,
+  manifest: ExportManifestV4,
 ) {
   const bundle = seeded.bundle;
   void manifest;
@@ -198,7 +227,7 @@ function buildStagingObjectRefs(
       byteLengthClaim: 200,
       mimeTypeClaim: "application/json",
     },
-    ...bundle.assets.map((asset) => ({
+    ...bundle.assets.map((asset: HeadlessAssetDescriptorV1) => ({
       purpose: "asset_bytes" as const,
       slotKey: headlessSourceSlotKey({
         role: asset.sourceIdentity.role,
@@ -215,15 +244,11 @@ function buildStagingObjectRefs(
 }
 
 function buildExpectedSlotClaims(
-  manifest: ExportManifestV3,
-  bundle: Awaited<
-    ReturnType<typeof seedOwnedManifestAndBundle>
-  > extends { ok: true; value: infer V }
-    ? V
-    : never["bundle"],
+  manifest: ExportManifestV4,
+  bundle: HeadlessAssetBundleV1,
 ) {
   const slots = extractRequiredHeadlessSourceSlots(manifest);
-  return bundle.assets.map((asset) => {
+  return bundle.assets.map((asset: HeadlessAssetDescriptorV1) => {
     const slot = slots.find(
       (s) =>
         s.role === asset.sourceIdentity.role &&
@@ -260,7 +285,7 @@ async function buildProvisionalDraftContext(input?: {
   stagingObjectRefs?: StagingObjectRefs;
 }) {
   const zeroSlots = input?.zeroSlots === true;
-  const manifest = buildV3Manifest(zeroSlots ? fixZeroSlotStory() : undefined);
+  const manifest = buildProductionManifest(zeroSlots ? fixZeroSlotStory() : undefined);
   const ownerId = input?.ownerId ?? "owner-provisional-1";
   const projectId = input?.projectId ?? manifest.project.projectId;
   const stack = composeTestHeadlessControlPlane({
@@ -313,7 +338,7 @@ async function buildProvisionalDraftContext(input?: {
     requestedRendererProfile: {
       resolution: manifest.output.resolution,
       format: manifest.output.format,
-      fps: 30,
+      fps: 30 as const,
       quality: manifest.output.quality,
     },
     requestedRendererBuildId: "renderer-build-1",
@@ -355,8 +380,10 @@ async function seedProvisionalMaterializing(input?: {
   stagingObjectRefs?: StagingObjectRefs;
 }) {
   const ctx = await buildProvisionalDraftContext(input);
-  assert.equal(ctx.draftResult.ok, true, ctx.draftResult.ok ? "" : ctx.draftResult.message);
-  if (!ctx.draftResult.ok || !ctx.draft) throw new Error(ctx.draftResult.message);
+  if (!ctx.draftResult.ok) {
+    throw new Error(ctx.draftResult.message);
+  }
+  if (!ctx.draft) throw new Error("provisional draft missing after successful build");
 
   const created = await ctx.jobStore.createProvisionalIfAbsent({
     idempotencyAuthorityKey: ctx.idempotencyAuthorityKey,
@@ -402,7 +429,6 @@ async function applyVerificationCoverage(
     CLOCK + 1000,
     CLOCK + 2000,
   );
-  assert.equal(next.ok, true, next.ok ? "" : next.message);
   if (!next.ok) throw new Error(next.message);
 
   const cas = await jobStore.compareAndSetProvisional({
@@ -439,7 +465,6 @@ async function appendAllStagingRefs(
     stagingObjectRefs,
     CLOCK + 500,
   );
-  assert.equal(appended.ok, true, appended.ok ? "" : appended.message);
   if (!appended.ok) throw new Error(appended.message);
   const cas = await jobStore.compareAndSetProvisional({
     jobId: record.jobId,
@@ -455,8 +480,8 @@ async function appendAllStagingRefs(
 }
 
 function buildCanonicalPair(
-  manifest: ExportManifestV3,
-  bundle: (Awaited<ReturnType<typeof seedProvisionalMaterializing>>)["seeded"]["bundle"],
+  manifest: ExportManifestV4,
+  bundle: HeadlessAssetBundleV1,
   record: HeadlessProvisionalStoredJobRecord,
   overrides?: { rendererBuildId?: string },
 ) {
@@ -594,7 +619,11 @@ async function main() {
       next: {
         ...recordToWrite(record),
         updatedAtMs: record.updatedAtMs + 1,
-        progress: { stage: "uploading", percent: 10 },
+        progress: {
+          stage: "uploading",
+          percent: 10,
+          updatedAtMs: record.updatedAtMs + 1,
+        },
       },
     });
     assert.equal(stale.ok, true);
@@ -605,7 +634,6 @@ async function main() {
   await test("CAS provisional: terminal_locked after cancel", async () => {
     const { jobStore, record } = await seedProvisionalMaterializing();
     const cancelWrite = cancelProvisionalRecord(record, CLOCK + 5000);
-    assert.equal(cancelWrite.ok, true);
     if (!cancelWrite.ok) throw new Error(cancelWrite.message);
     const cancelled = await jobStore.compareAndSetProvisional({
       jobId: record.jobId,
@@ -977,7 +1005,6 @@ async function main() {
     const ctx = await seedProvisionalMaterializing();
     const ready = await completeVerificationCoverage(ctx.jobStore, ctx.record);
     const cancelWrite = cancelProvisionalRecord(ready, CLOCK + 9000);
-    assert.equal(cancelWrite.ok, true);
     if (!cancelWrite.ok) throw new Error(cancelWrite.message);
     const cancelled = await ctx.jobStore.compareAndSetProvisional({
       jobId: ready.jobId,
@@ -1040,6 +1067,7 @@ async function main() {
     const fetched = await jobStore.getByJobIdAndOwner(record.jobId, record.ownerId);
     assert.equal(fetched.ok, true);
     if (!fetched.ok) throw new Error("fetch failed");
+    assert.equal(fetched.value.stage, "provisional");
     assert.equal(Object.isFrozen(fetched.value), true);
     assert.equal(Object.isFrozen(fetched.value.snapshotClaim), true);
 
