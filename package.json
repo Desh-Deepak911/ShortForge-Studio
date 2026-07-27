@@ -285,6 +285,7 @@
     "test:export-ffmpeg-recovery": "tsx src/verification/export/exportFfmpegRecovery.verify.ts",
     "test:export-audio-policy": "tsx src/verification/export/exportAudioPolicy.verify.ts",
     "test:export-audio-parity": "tsx src/verification/export/exportAudioParity.verify.ts",
+    "test:media-visual-audio-parity": "tsx src/verification/export/mediaVisualAudioParity.verify.ts",
     "test:export-6g-runtime": "tsx src/verification/export/exportSprint6GRuntime.verify.ts",
     "test:export-audio-graph": "tsx src/verification/export/exportAudioGraph.verify.ts",
     "test:export-media-quality": "tsx src/verification/export/exportMediaQuality.verify.ts",

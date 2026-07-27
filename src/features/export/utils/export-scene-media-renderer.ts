@@ -14,6 +14,7 @@ import {
   resolveSceneMediaFraming,
   resolveSceneMediaFramingAsImage,
 } from "@/features/media-framing/resolve-scene-media-framing";
+import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
 import { resolveSceneMediaPlayback } from "@/features/media-playback/media-playback.engine";
 import type { MediaPlaybackState } from "@/features/media-playback/media-playback.types";
 import type { FootieScene, SceneImage, SceneMedia, SceneType } from "@/features/story/types";
@@ -428,6 +429,7 @@ export function drawCanvasImageSource(
     rotation?: number;
     opacity?: number;
   } | null,
+  visualAdjustments?: SceneMedia["visualAdjustments"],
 ): void {
   const resolvedTransform = resolveSceneImageTransformForFrame(sceneImage, width, height);
   const opacity =
@@ -441,6 +443,7 @@ export function drawCanvasImageSource(
   }
 
   applyExportCanvasMediaQuality(ctx);
+  ctx.filter = buildMediaVisualFilter(visualAdjustments, width);
 
   drawSceneImageInFrame(
     ctx,
@@ -528,6 +531,7 @@ export function drawSceneImageFrame(
     sourceWidth,
     sourceHeight,
     motionState,
+    scene.media?.visualAdjustments,
   );
   return true;
 }
@@ -967,6 +971,7 @@ function drawPreparedSceneVideoFrame(
       sourceWidth,
       sourceHeight,
       motionState,
+      scene.media?.visualAdjustments,
     );
     return true;
   } catch {

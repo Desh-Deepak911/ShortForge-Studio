@@ -1,6 +1,7 @@
 "use client";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
+import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
 import {
   getSceneImage,
   getSceneImageObjectFit,
@@ -73,6 +74,10 @@ export default function SceneFrameImage({
         transformOrigin: "center center" as const,
         ...(isDragging ? { willChange: "transform" as const } : {}),
       };
+  const visualFilter = buildMediaVisualFilter(
+    scene.media?.visualAdjustments,
+    frameWidth || 1080,
+  );
 
   return (
     <div
@@ -89,7 +94,7 @@ export default function SceneFrameImage({
         className={`absolute inset-0 h-full w-full max-w-none ${
           objectFit === "contain" ? "object-contain" : "object-cover"
         } ${imageClassName}`}
-        style={transformStyle}
+        style={{ ...transformStyle, filter: visualFilter }}
       />
     </div>
   );

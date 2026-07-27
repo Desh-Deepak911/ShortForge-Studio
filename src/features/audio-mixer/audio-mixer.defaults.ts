@@ -20,6 +20,10 @@ export const DEFAULT_MASTER_MIX_VOLUME = 1;
 
 export const MIN_MIX_VOLUME = 0;
 export const MAX_MIX_VOLUME = 2;
+/** Frozen voice/music stem ceiling accepted by hosted audio plans. */
+export const MAX_AUDIO_STEM_GAIN = 4;
+/** 100→200% voice control maps to 0→+10 dB perceived-boost range. */
+export const MAX_VOICE_BOOST_DB = 10;
 
 export const MIN_DUCKING_STRENGTH = 0;
 export const MAX_DUCKING_STRENGTH = 1;

@@ -2,7 +2,7 @@
  * Variant A — known-good minimal page diagnostic fixture via production path.
  */
 
-import type { ExportManifestV3 } from "@/features/export/domain/headless-safe";
+import type { ExportManifestV4 } from "@/features/export/domain/headless-safe";
 
 import type { HeadlessRendererProfile } from "../../domain";
 import {
@@ -14,7 +14,7 @@ import {
 import { buildClaimedRenderDiagnosticSmokeBoundary } from "./claimed-render-diagnostic-smoke-boundary";
 
 export type ClaimedRenderDiagnosticFixturePack = {
-  readonly manifest: ExportManifestV3;
+  readonly manifest: ExportManifestV4;
   readonly assetBytesByUrl: ReadonlyMap<string, Uint8Array>;
   readonly rendererProfile: HeadlessRendererProfile;
   readonly contentDurationMs: number;

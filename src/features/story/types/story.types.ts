@@ -4,6 +4,7 @@ import type { CaptionStyle } from "@/features/caption-style";
 import type { CaptionAnimation } from "@/features/caption-animation";
 import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.types";
 import type { PlatformExportPresetId } from "@/features/export-profiles/export-profile.types";
+import type { SceneMediaVisualAdjustments } from "@/features/media-visual-adjustments/media-visual-adjustments.types";
 import type { SpeechStylePreset } from "@/features/speech-style";
 
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
@@ -107,6 +108,8 @@ export interface SceneMedia {
   imageMotion?: SceneImageMotion;
   /** Shared image/video motion — optional; no migration required. */
   motion?: SceneMediaMotion;
+  /** Appearance-only media adjustments; never affects playback or captions. */
+  visualAdjustments?: SceneMediaVisualAdjustments;
   /** Optional still / poster frame URL (video). Images use `url` as poster. */
   posterUrl?: string;
   /** Absolute media time for the poster frame (video). Defaults to trim/window start. */

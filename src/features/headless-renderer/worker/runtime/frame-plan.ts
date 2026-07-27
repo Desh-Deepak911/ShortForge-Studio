@@ -5,6 +5,7 @@
 
 import {
   isExportManifestV3,
+  isExportManifestV4,
   resolveExportActiveSceneMediaFrame,
   resolveExportIntraSceneTransitionAtElapsed,
   type ExportManifest,
@@ -88,7 +89,7 @@ export function buildHeadlessFramePlan(
 
     let hasIntra = false;
     let intraProgress: number | null = null;
-    if (isExportManifestV3(manifest)) {
+    if (isExportManifestV3(manifest) || isExportManifestV4(manifest)) {
       const intra = resolveExportIntraSceneTransitionAtElapsed(
         scene.scene as ExportSceneManifestV3,
         scene.sceneElapsedMs,

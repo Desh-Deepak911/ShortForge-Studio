@@ -8,7 +8,10 @@ import {
   buildExportManifest,
   buildExportManifestFingerprint,
   EXPORT_MANIFEST_VERSION,
+  EXPORT_MANIFEST_V3_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_RENDERER_CONTRACT_V3,
+  validateExportManifest,
   type ExportEnvironmentSnapshot,
   type ExportManifestDraft,
 } from "@/features/export/domain";
@@ -347,6 +350,92 @@ test("explicit zero offsets and opacity are preserved (not defaulted away)", () 
   assert.equal(caption!.layout.offsetY, 0);
   assert.equal(caption!.style.backgroundOpacity, 0);
   assert.equal(caption!.layout.anchor, "top_center");
+});
+
+test("v4 freezes image/video visual adjustments into fingerprinted media", () => {
+  const base = fixStory();
+  const scenes = base.scenes.map((scene, index) =>
+    index === 0
+      ? {
+          ...scene,
+          media: {
+            ...scene.media!,
+            visualAdjustments: {
+              version: 1 as const,
+              brightness: 115,
+              contrast: 130,
+              saturation: 85,
+              shadowEnabled: true,
+              shadowColor: "#123456",
+              shadowOpacity: 0.4,
+              shadowBlur: 18,
+              shadowOffsetX: 4,
+              shadowOffsetY: 9,
+            },
+          },
+        }
+      : scene,
+  );
+  const manifest = buildExportManifest({
+    story: syncFootieScript({ ...base, scenes }),
+    environment: CAPABLE_ENV,
+  });
+  assert.equal(manifest.version, 4);
+  assert.equal(manifest.rendererContractVersion, "9D");
+  assert.equal(manifest.scenes[0]!.media.type, "image");
+  assert.equal(manifest.scenes[0]!.media.visualAdjustments?.contrast, 130);
+  assert.equal(
+    manifest.scenes[0]!.mediaTimeline.items[0]!.media.visualAdjustments?.shadowBlur,
+    18,
+  );
+  assert.equal(validateExportManifest(manifest).ok, true);
+
+  const corrupted = structuredClone(manifest);
+  const corruptedMedia = corrupted.scenes[0]!.media;
+  if (corruptedMedia.type !== "placeholder" && corruptedMedia.visualAdjustments) {
+    (corruptedMedia.visualAdjustments as { shadowColor: string }).shadowColor =
+      "red);url(https://invalid.example";
+  }
+  assert.equal(validateExportManifest(corrupted).ok, false);
+  assert.notEqual(buildExportManifestFingerprint({
+    version: corrupted.version,
+    rendererContractVersion: corrupted.rendererContractVersion,
+    createdAt: corrupted.createdAt,
+    project: corrupted.project,
+    output: corrupted.output,
+    scenes: corrupted.scenes,
+    captions: corrupted.captions,
+    audio: corrupted.audio,
+    branding: corrupted.branding,
+    capabilities: corrupted.capabilities,
+  }), manifest.fingerprint);
+
+  const frozenV3Draft = {
+    version: EXPORT_MANIFEST_V3_VERSION,
+    rendererContractVersion: EXPORT_RENDERER_CONTRACT_V3,
+    manifestId: manifest.manifestId,
+    createdAt: manifest.createdAt,
+    project: manifest.project,
+    output: manifest.output,
+    scenes: manifest.scenes,
+    captions: manifest.captions,
+    audio: manifest.audio,
+    branding: manifest.branding,
+    capabilities: manifest.capabilities,
+  };
+  const frozenV3WithV4Media = {
+    ...frozenV3Draft,
+    fingerprint: buildExportManifestFingerprint(
+      frozenV3Draft as unknown as ExportManifestDraft,
+    ),
+  };
+  const frozenV3Result = validateExportManifest(frozenV3WithV4Media);
+  assert.equal(frozenV3Result.ok, false);
+  assert.ok(
+    frozenV3Result.issues.some(
+      (entry) => entry.code === "UNSUPPORTED_MEDIA_VISUAL_ADJUSTMENTS",
+    ),
+  );
 });
 
 console.log(`\n${passed} tests passed.\n`);

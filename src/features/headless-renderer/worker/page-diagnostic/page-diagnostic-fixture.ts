@@ -11,7 +11,7 @@ import {
   buildExportManifestFingerprint,
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain/headless-safe";
 
 import { headlessSourceDigest, headlessSourceSlotKey } from "../../domain";
@@ -87,7 +87,7 @@ export function buildPageDiagnosticPngBytes(): Uint8Array {
   );
 }
 
-export function buildPageDiagnosticManifestV3(): ExportManifestV3 {
+export function buildPageDiagnosticManifestV3(): ExportManifestV4 {
   const durationMs = PAGE_DIAGNOSTIC_CONTENT_DURATION_MS;
   const imageMedia = Object.freeze({
     type: "image" as const,
@@ -99,7 +99,7 @@ export function buildPageDiagnosticManifestV3(): ExportManifestV3 {
     rotationDeg: 0,
     motion: null,
   });
-  const draft: Omit<ExportManifestV3, "fingerprint"> = {
+  const draft: Omit<ExportManifestV4, "fingerprint"> = {
     manifestId: "00000000-0000-4000-8000-0000000000m1",
     createdAt: "2026-07-23T00:00:00.000Z",
     version: EXPORT_MANIFEST_VERSION,
@@ -192,7 +192,7 @@ export function buildPageDiagnosticManifestV3(): ExportManifestV3 {
 
 export function stagePageDiagnosticAssets(input: {
   readonly workspace: HeadlessWorkerWorkspace;
-  readonly manifest: ExportManifestV3;
+  readonly manifest: ExportManifestV4;
   readonly pngBytes: Uint8Array;
 }): { readonly ok: true; readonly assets: readonly StagedWorkerAsset[] } | { readonly ok: false } {
   const scene = input.manifest.scenes[0];

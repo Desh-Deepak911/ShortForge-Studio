@@ -18,8 +18,8 @@ import {
 } from "./assert-export-manifest-v2-scene-media";
 import { verifyExportManifestFingerprintCoherence } from "./export-manifest-fingerprint";
 import {
-  EXPORT_MANIFEST_VERSION,
-  EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_MANIFEST_V3_VERSION,
+  EXPORT_RENDERER_CONTRACT_V3,
 } from "./export-manifest.types";
 
 export type ExportManifestV3IntegrityIssue = ExportManifestV2IntegrityIssue;
@@ -368,6 +368,45 @@ function validateMediaTransitions(
   return issues;
 }
 
+function validateV3HasNoMediaVisualAdjustments(
+  manifest: unknown,
+): ExportManifestV3IntegrityIssue[] {
+  if (!isObject(manifest) || !Array.isArray(manifest.scenes)) return [];
+  const issues: ExportManifestV3IntegrityIssue[] = [];
+  for (let sceneIndex = 0; sceneIndex < manifest.scenes.length; sceneIndex += 1) {
+    const scene = manifest.scenes[sceneIndex];
+    if (!isObject(scene)) continue;
+    if (isObject(scene.media) && scene.media.visualAdjustments !== undefined) {
+      issues.push(
+        issue(
+          "UNSUPPORTED_MEDIA_VISUAL_ADJUSTMENTS",
+          `Scene "${String(scene.id ?? sceneIndex)}" visual adjustments require ExportManifest v4.`,
+          typeof scene.id === "string" ? scene.id : undefined,
+        ),
+      );
+    }
+    const timeline = isObject(scene.mediaTimeline) ? scene.mediaTimeline : null;
+    const items = Array.isArray(timeline?.items) ? timeline.items : [];
+    if (
+      items.some(
+        (item) =>
+          isObject(item) &&
+          isObject(item.media) &&
+          item.media.visualAdjustments !== undefined,
+      )
+    ) {
+      issues.push(
+        issue(
+          "UNSUPPORTED_MEDIA_VISUAL_ADJUSTMENTS",
+          `Scene "${String(scene.id ?? sceneIndex)}" timeline visual adjustments require ExportManifest v4.`,
+          typeof scene.id === "string" ? scene.id : undefined,
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
 function validateFingerprintCoherence(
   manifest: Record<string, unknown>,
 ): ExportManifestV3IntegrityIssue[] {
@@ -380,6 +419,11 @@ function validateFingerprintCoherence(
 
 function validateExportManifestV3SceneMediaInner(
   manifest: unknown,
+  authority: {
+    version: number;
+    rendererContractVersion: string;
+    label: string;
+  },
 ): ExportManifestV3IntegrityResult {
   if (manifest === null || manifest === undefined || !isObject(manifest)) {
     return {
@@ -392,19 +436,19 @@ function validateExportManifestV3SceneMediaInner(
 
   const issues: ExportManifestV3IntegrityIssue[] = [];
 
-  if (manifest.version !== EXPORT_MANIFEST_VERSION) {
+  if (manifest.version !== authority.version) {
     issues.push(
       issue(
         "UNSUPPORTED_MANIFEST_VERSION",
-        `ExportManifest v3 version must be ${EXPORT_MANIFEST_VERSION}.`,
+        `ExportManifest ${authority.label} version must be ${authority.version}.`,
       ),
     );
   }
-  if (manifest.rendererContractVersion !== EXPORT_RENDERER_CONTRACT_VERSION) {
+  if (manifest.rendererContractVersion !== authority.rendererContractVersion) {
     issues.push(
       issue(
         "UNSUPPORTED_RENDERER_CONTRACT",
-        `ExportManifest v3 renderer contract must be "${EXPORT_RENDERER_CONTRACT_VERSION}".`,
+        `ExportManifest ${authority.label} renderer contract must be "${authority.rendererContractVersion}".`,
       ),
     );
   }
@@ -439,7 +483,41 @@ export function validateExportManifestV3SceneMedia(
   manifest: unknown,
 ): ExportManifestV3IntegrityResult {
   try {
-    return validateExportManifestV3SceneMediaInner(manifest);
+    const base = validateExportManifestV3SceneMediaInner(manifest, {
+      version: EXPORT_MANIFEST_V3_VERSION,
+      rendererContractVersion: EXPORT_RENDERER_CONTRACT_V3,
+      label: "v3",
+    });
+    const issues = [
+      ...base.issues,
+      ...validateV3HasNoMediaVisualAdjustments(manifest),
+    ];
+    return { ok: issues.length === 0, issues };
+  } catch (error) {
+    return {
+      ok: false,
+      issues: [
+        issue(
+          "INVALID_MANIFEST",
+          error instanceof Error
+            ? `Manifest validation failed unexpectedly: ${error.message}`
+            : "Manifest validation failed unexpectedly.",
+        ),
+      ],
+    };
+  }
+}
+
+export function validateExportManifestTransitionSceneMedia(
+  manifest: unknown,
+  authority: {
+    version: number;
+    rendererContractVersion: string;
+    label: string;
+  },
+): ExportManifestV3IntegrityResult {
+  try {
+    return validateExportManifestV3SceneMediaInner(manifest, authority);
   } catch (error) {
     return {
       ok: false,

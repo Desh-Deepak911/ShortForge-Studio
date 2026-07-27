@@ -17,6 +17,7 @@ import {
   DEFAULT_VOICE_MIX_VOLUME,
   resolveAudioMixerSettings,
   resolveMusicStemGain,
+  resolveVoiceVolumeGain,
   resolveVoiceStemGain,
 } from "@/features/audio-mixer";
 import {
@@ -208,7 +209,7 @@ test("stem gains multiply voice/music volume by master volume", () => {
   });
   const mixer = resolveAudioMixerSettings(script);
 
-  assert.equal(resolveVoiceStemGain(mixer), 0.96);
+  assert.ok(Math.abs(resolveVoiceStemGain(mixer) - (resolveVoiceVolumeGain(1.2) * 0.8)) < 1e-12);
   assert.equal(resolveMusicStemGain(mixer), 0.4);
 });
 
@@ -304,8 +305,9 @@ test("preview voice stem gain matches export for boosted voice levels", () => {
       },
     });
 
-    assert.equal(resolvePreviewVoiceStemGain(script), voiceVolume);
-    assert.equal(resolveExportVoiceStemGain(script), voiceVolume);
+    const effectiveGain = resolveVoiceVolumeGain(voiceVolume);
+    assert.equal(resolvePreviewVoiceStemGain(script), effectiveGain);
+    assert.equal(resolveExportVoiceStemGain(script), effectiveGain);
     assert.equal(
       shouldRoutePreviewVoiceThroughGainNode(voiceVolume, false),
       voiceVolume > 1,
@@ -399,7 +401,7 @@ test("preview and export modules apply mixer stem gains", () => {
 
   assert.match(previewHook, /resolvePreviewVoiceStemGain/);
   assert.match(exportMix, /mixSettings\.voiceGain/);
-  assert.match(exportMix, /settings\.musicGain/);
+  assert.match(exportMix, /toExportMusicEnvelopeInput\(settings\)/);
   assert.match(ffmpegUtils, /voiceGain/);
   assert.match(ffmpegUtils, /volume=\$\{voiceGain/);
   assert.doesNotMatch(ffmpegUtils, /loudnorm/);

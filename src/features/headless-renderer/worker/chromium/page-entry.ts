@@ -24,7 +24,7 @@ import {
   type HeadlessPageBootstrapRejectionReasonId,
 } from "./page-bootstrap-rejection";
 import { createHeadlessPageRenderContext } from "./create-page-render-context";
-import { isExportManifestV3 } from "@/features/export/domain/headless-safe";
+import { isExportManifestV3, isExportManifestV4 } from "@/features/export/domain/headless-safe";
 
 export interface HeadlessPageBootstrapConfig {
   readonly manifest: ExportManifest;
@@ -77,7 +77,7 @@ async function bootstrap(
     }
     manifestRef = config.manifest;
     if (
-      isExportManifestV3(config.manifest) &&
+      (isExportManifestV3(config.manifest) || isExportManifestV4(config.manifest)) &&
       config.manifest.rendererContractVersion !== HEADLESS_PAGE_CONTRACT_VERSION
     ) {
       return {

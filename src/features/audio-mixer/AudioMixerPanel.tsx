@@ -11,7 +11,10 @@ import {
 } from "@/features/audio-mixer/audio-mixer.defaults";
 import {
   applyStoryAudioMixer,
+  linearGainToDecibels,
   resolveAudioMixerSettings,
+  resolveMusicStemGain,
+  resolveVoiceStemGain,
 } from "@/features/audio-mixer/audio-mixer.utils";
 import type { FootieScript } from "@/features/story/types";
 import {
@@ -107,6 +110,9 @@ export default function AudioMixerPanel({
   const masterVolumeId = useId();
 
   const mixer = resolveAudioMixerSettings(script);
+  const voiceStemGain = resolveVoiceStemGain(mixer);
+  const musicStemGain = resolveMusicStemGain(mixer);
+  const voiceBoostDb = linearGainToDecibels(voiceStemGain);
 
   const patchMixer = (patch: Parameters<typeof applyStoryAudioMixer>[1]) => {
     onScriptChange(applyStoryAudioMixer(script, patch));
@@ -115,13 +121,14 @@ export default function AudioMixerPanel({
   return (
     <div className="space-y-1">
       <p className={`${studioSubtleText} text-[11px]`}>
-        Independent voice, music, and master levels for preview and export.
+        Independent voice, music, and master levels for preview and export. Voice above 100%
+        uses a measured perceptual boost with peak protection.
       </p>
 
       <MixerSection title="Voice">
         <AudioMixerSlider
           id={voiceVolumeId}
-          label="Voice Volume"
+          label="Voice Level"
           value={mixer.voice.volume}
           min={MIN_MIX_VOLUME}
           max={MAX_MIX_VOLUME}
@@ -210,8 +217,9 @@ export default function AudioMixerPanel({
       </MixerSection>
 
       <p className={`${studioSubtleText} pt-1 text-[10px]`}>
-        Stem output: voice {Math.round(mixer.voice.volume * mixer.master.volume * 100)}% · music{" "}
-        {Math.round(mixer.music.volume * mixer.master.volume * 100)}%
+        Effective output: voice {voiceStemGain.toFixed(2)}×
+        {Number.isFinite(voiceBoostDb) ? ` (${voiceBoostDb >= 0 ? "+" : ""}${voiceBoostDb.toFixed(1)} dB)` : ""}
+        {" "}· music {musicStemGain.toFixed(2)}×
       </p>
     </div>
   );

@@ -1,5 +1,5 @@
 import {
-  MAX_MIX_VOLUME,
+  MAX_AUDIO_STEM_GAIN,
   MIN_MIX_VOLUME,
 } from "@/features/audio-mixer/audio-mixer.defaults";
 import { resolvePeakProtectionFromMixer, resolvePreviewSafeVoiceOutputGain } from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
@@ -19,7 +19,7 @@ export function resolvePreviewVoiceStemGain(
   }
 
   const stemGain = resolveVoiceStemGain(resolveAudioMixerSettings(script));
-  return Math.min(MAX_MIX_VOLUME, Math.max(MIN_MIX_VOLUME, stemGain));
+  return Math.min(MAX_AUDIO_STEM_GAIN, Math.max(MIN_MIX_VOLUME, stemGain));
 }
 
 /**

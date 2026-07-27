@@ -71,16 +71,17 @@ test("voice 2.0 triggers peak protection path", () => {
   });
   const mixer = resolveAudioMixerSettings(script);
 
-  assert.equal(resolveVoiceStemGain(mixer), 2);
+  const boostedVoiceGain = resolveVoiceStemGain(mixer);
+  assert.ok(Math.abs(boostedVoiceGain - Math.sqrt(10)) < 1e-12);
   assert.equal(shouldApplyPeakProtection({
     master: mixer.master,
-    voiceStemGain: 2,
+    voiceStemGain: boostedVoiceGain,
     musicStemGain: resolveMusicStemGain(mixer),
   }), true);
   assert.equal(resolvePreviewPeakProtectionActive(script), true);
 
   const output = resolvePreviewVoiceSafeOutputGain(script);
-  assert.equal(output.stemGain, 2);
+  assert.ok(Math.abs(output.stemGain - Math.sqrt(10)) < 1e-12);
   assert.equal(output.peakProtectionActive, true);
   assert.equal(output.safeOutputCeiling, PEAK_PROTECTION_OUTPUT_CEILING);
 

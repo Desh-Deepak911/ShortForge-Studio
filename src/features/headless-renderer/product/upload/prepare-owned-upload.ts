@@ -4,10 +4,10 @@ import {
   buildExportManifestFingerprint,
   deepFreezeExportManifest,
   validateExportManifest,
-  type ExportManifestV3,
+  type ExportManifestV4,
   type PrepareExportRequestResult,
 } from "@/features/export/domain";
-import type { ExportManifestV3Draft } from "@/features/export/domain/export-manifest.types";
+import type { ExportManifestV4Draft } from "@/features/export/domain/export-manifest.types";
 import {
   buildHeadlessAssetBundleFingerprint,
   extractRequiredHeadlessSourceSlots,
@@ -31,7 +31,7 @@ export type PreparedOwnedSource = {
 };
 
 export type PreparedOwnedUpload = {
-  readonly manifest: ExportManifestV3;
+  readonly manifest: ExportManifestV4;
   readonly manifestBytes: Uint8Array;
   readonly bundle: HeadlessAssetBundleV1;
   readonly bundleBytes: Uint8Array;
@@ -39,7 +39,7 @@ export type PreparedOwnedUpload = {
 };
 
 function sourceForSlot(
-  manifest: ExportManifestV3,
+  manifest: ExportManifestV4,
   slot: HeadlessRequiredSourceSlot,
 ): string | null {
   if (slot.role === "voiceover") {
@@ -92,17 +92,17 @@ async function readSource(
 }
 
 function rebindProject(
-  manifest: ExportManifestV3,
+  manifest: ExportManifestV4,
   projectId: string,
-): ExportManifestV3 {
-  const clone = JSON.parse(JSON.stringify(manifest)) as ExportManifestV3;
+): ExportManifestV4 {
+  const clone = JSON.parse(JSON.stringify(manifest)) as ExportManifestV4;
   const { fingerprint: _oldFingerprint, ...withoutFingerprint } = clone;
   void _oldFingerprint;
-  const draft: ExportManifestV3Draft = {
+  const draft: ExportManifestV4Draft = {
     ...withoutFingerprint,
     project: { ...withoutFingerprint.project, projectId },
   };
-  const rebound: ExportManifestV3 = {
+  const rebound: ExportManifestV4 = {
     ...draft,
     fingerprint: buildExportManifestFingerprint(draft),
   };
@@ -117,7 +117,7 @@ export async function prepareOwnedHeadlessUpload(input: {
   readonly projectId: string;
   readonly signal?: AbortSignal;
 }): Promise<PreparedOwnedUpload> {
-  if (input.prepared.manifest.version !== 3) {
+  if (input.prepared.manifest.version !== 4) {
     throw new Error("INVALID_MANIFEST");
   }
   const manifest = rebindProject(input.prepared.manifest, input.projectId);

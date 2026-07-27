@@ -10,14 +10,14 @@ import {
   deepFreezeExportManifest,
   validateExportManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV3,
+  type ExportManifestV4,
 } from "@/features/export/domain";
-import type { ExportManifestV3Draft } from "@/features/export/domain/export-manifest.types";
+import type { ExportManifestV4Draft } from "@/features/export/domain/export-manifest.types";
 import { validateHeadlessClaimableProjectId } from "@/features/headless-renderer/control-plane";
 import type { FootieScript } from "@/features/story/types";
 
 export type CanonicalLiveManifestResult =
-  | { readonly ok: true; readonly manifest: ExportManifestV3 }
+  | { readonly ok: true; readonly manifest: ExportManifestV4 }
   | {
       readonly ok: false;
       readonly code:
@@ -36,7 +36,7 @@ export function buildStaleProjectIdOverwrittenManifest(input: {
   readonly projectId: string;
   readonly story: FootieScript;
   readonly environment: Partial<ExportEnvironmentSnapshot>;
-}): ExportManifestV3 {
+}): ExportManifestV4 {
   const base = buildExportManifest({
     story: input.story,
     environment: input.environment,
@@ -46,15 +46,15 @@ export function buildStaleProjectIdOverwrittenManifest(input: {
   return {
     ...base,
     project: { ...base.project, projectId: input.projectId },
-  } as ExportManifestV3;
+  } as ExportManifestV4;
 }
 
 function detachManifestDraft(
-  base: ExportManifestV3,
+  base: ExportManifestV4,
   projectId: string,
-): ExportManifestV3Draft {
+): ExportManifestV4Draft {
   // JSON round-trip detaches frozen production builder output without mutating it.
-  const cloned = JSON.parse(JSON.stringify(base)) as ExportManifestV3;
+  const cloned = JSON.parse(JSON.stringify(base)) as ExportManifestV4;
   const { fingerprint: _drop, ...withoutFingerprint } = cloned;
   void _drop;
   return {
@@ -91,11 +91,11 @@ export function buildCanonicalLiveExportManifest(input: {
       environment: input.environment,
       audioMode: "with-voice",
     });
-    if (base.version !== 3) {
+    if (base.version !== 4) {
       return {
         ok: false,
         code: "MANIFEST_BUILD_FAILED",
-        message: "Expected ExportManifest v3 from builder.",
+        message: "Expected ExportManifest v4 from builder.",
       };
     }
 
@@ -109,7 +109,7 @@ export function buildCanonicalLiveExportManifest(input: {
       };
     }
 
-    const candidate: ExportManifestV3 = { ...draft, fingerprint };
+    const candidate: ExportManifestV4 = { ...draft, fingerprint };
     const validated = validateExportManifest(candidate);
     if (!validated.ok) {
       return {

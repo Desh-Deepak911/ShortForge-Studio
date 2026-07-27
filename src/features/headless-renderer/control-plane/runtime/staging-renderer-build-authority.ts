@@ -5,4 +5,4 @@
  * hosted worker identity in the staging website integration authority suite.
  */
 export const STAGING_HEADLESS_RENDERER_BUILD_ID =
-  "headless-local-chromium-ffmpeg-11d-phase3.2" as const;
+  "headless-local-chromium-ffmpeg-11e-phase2g.13" as const;

@@ -2,17 +2,21 @@
  * Immutable ExportManifest domain types (Sprint 6B / 8D / 9C).
  * Contract: docs/EXPORT_CONTRACT.md
  *
- * Frozen backward-compatible pair: v2 / "8D"
- * Current production pair: v3 / "9C"
+ * Frozen backward-compatible pairs: v2 / "8D", v3 / "9C"
+ * Current production pair: v4 / "9D"
  */
 
 /** Frozen Sprint 8D contract — never silently upgraded. */
 export const EXPORT_MANIFEST_V2_VERSION = 2;
 export const EXPORT_RENDERER_CONTRACT_V2 = "8D";
 
-/** Current production ExportManifest / renderer contract (Sprint 9C). */
-export const EXPORT_MANIFEST_VERSION = 3;
-export const EXPORT_RENDERER_CONTRACT_VERSION = "9C";
+/** Frozen Sprint 9C contract — never silently upgraded. */
+export const EXPORT_MANIFEST_V3_VERSION = 3;
+export const EXPORT_RENDERER_CONTRACT_V3 = "9C";
+
+/** Current production ExportManifest / renderer contract (Sprint 11E 2G.13). */
+export const EXPORT_MANIFEST_VERSION = 4;
+export const EXPORT_RENDERER_CONTRACT_VERSION = "9D";
 
 /** @deprecated Prefer EXPORT_MANIFEST_V2_VERSION for frozen-v2 checks. */
 export const EXPORT_MANIFEST_V2 = EXPORT_MANIFEST_V2_VERSION;
@@ -56,6 +60,20 @@ export interface ExportMediaMotionManifest {
   readonly intensity: number;
 }
 
+export interface ExportMediaVisualAdjustmentsManifest {
+  readonly version: 1;
+  readonly brightness: number;
+  readonly contrast: number;
+  readonly saturation: number;
+  readonly shadowEnabled: boolean;
+  readonly shadowColor: string;
+  readonly shadowOpacity: number;
+  /** Canonical 1080-wide reference-frame pixels. */
+  readonly shadowBlur: number;
+  readonly shadowOffsetX: number;
+  readonly shadowOffsetY: number;
+}
+
 export interface ExportImageMediaManifest {
   readonly type: "image";
   readonly source: string;
@@ -65,6 +83,7 @@ export interface ExportImageMediaManifest {
   readonly zoom: number;
   readonly rotationDeg: number;
   readonly motion: ExportMediaMotionManifest | null;
+  readonly visualAdjustments?: ExportMediaVisualAdjustmentsManifest;
 }
 
 export interface ExportVideoMediaManifest {
@@ -81,6 +100,7 @@ export interface ExportVideoMediaManifest {
   readonly zoom: number;
   readonly rotationDeg: number;
   readonly motion: ExportMediaMotionManifest | null;
+  readonly visualAdjustments?: ExportMediaVisualAdjustmentsManifest;
 }
 
 export interface ExportPlaceholderMediaManifest {
@@ -312,19 +332,27 @@ export interface ExportManifestV2 extends ExportManifestBase {
   readonly scenes: readonly ExportSceneManifestV2[];
 }
 
-/** Production ExportManifest v3 / renderer "9C". */
+/** Frozen ExportManifest v3 / renderer "9C". */
 export interface ExportManifestV3 extends ExportManifestBase {
+  readonly version: typeof EXPORT_MANIFEST_V3_VERSION;
+  readonly rendererContractVersion: typeof EXPORT_RENDERER_CONTRACT_V3;
+  readonly scenes: readonly ExportSceneManifestV3[];
+}
+
+/** Production ExportManifest v4 / renderer "9D". */
+export interface ExportManifestV4 extends ExportManifestBase {
   readonly version: typeof EXPORT_MANIFEST_VERSION;
   readonly rendererContractVersion: typeof EXPORT_RENDERER_CONTRACT_VERSION;
   readonly scenes: readonly ExportSceneManifestV3[];
 }
 
-export type ExportManifest = ExportManifestV2 | ExportManifestV3;
+export type ExportManifest = ExportManifestV2 | ExportManifestV3 | ExportManifestV4;
 
 /** Draft before fingerprint assignment. */
 export type ExportManifestDraft = Omit<ExportManifest, "fingerprint">;
 export type ExportManifestV2Draft = Omit<ExportManifestV2, "fingerprint">;
 export type ExportManifestV3Draft = Omit<ExportManifestV3, "fingerprint">;
+export type ExportManifestV4Draft = Omit<ExportManifestV4, "fingerprint">;
 
 export function isExportManifestV2(
   manifest: ExportManifest,
@@ -338,6 +366,15 @@ export function isExportManifestV2(
 export function isExportManifestV3(
   manifest: ExportManifest,
 ): manifest is ExportManifestV3 {
+  return (
+    manifest.version === EXPORT_MANIFEST_V3_VERSION &&
+    manifest.rendererContractVersion === EXPORT_RENDERER_CONTRACT_V3
+  );
+}
+
+export function isExportManifestV4(
+  manifest: ExportManifest,
+): manifest is ExportManifestV4 {
   return (
     manifest.version === EXPORT_MANIFEST_VERSION &&
     manifest.rendererContractVersion === EXPORT_RENDERER_CONTRACT_VERSION
