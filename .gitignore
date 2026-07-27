@@ -49,3 +49,8 @@ yarn-error.log*
 
 # generated worker/diagnostic bundle output (not source authority)
 /dist/
+
+# generated TypeScript declaration stubs (local tooling only)
+/.tsbuild-verify/
+
+/patch-work/
