@@ -205,6 +205,8 @@
     "test:headless-fly-render-4k-operational-capacity": "tsx src/verification/headless-renderer/headlessFlyRender4kOperationalCapacity.verify.ts",
     "test:headless-run-correlation-authority": "tsx src/verification/headless-renderer/headlessRunCorrelationAuthority.verify.ts",
     "test:headless-page-render-contract": "tsx src/verification/headless-renderer/headlessPageRenderContract.verify.ts",
+    "test:headless-asset-server-range-authority": "tsx src/verification/headless-renderer/headlessAssetServerRangeAuthority.verify.ts",
+    "test:headless-real-video-motion-authority": "tsx src/verification/headless-renderer/headlessRealVideoMotionAuthority.verify.ts",
     "test:headless-page-execution-attribution": "tsx src/verification/headless-renderer/headlessPageExecutionAttribution.verify.ts",
     "test:headless-hosted-page-diagnostic": "tsx src/verification/headless-renderer/headlessHostedPageDiagnostic.verify.ts",
     "test:headless-page-diagnostic-image-authority": "tsx src/verification/headless-renderer/headlessPageDiagnosticImageAuthority.verify.ts",

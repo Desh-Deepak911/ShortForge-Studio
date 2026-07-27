@@ -11,8 +11,10 @@ import path from "node:path";
 import { HEADLESS_PAGE_CONTRACT_VERSION } from "@/features/headless-renderer/worker/chromium/page-contract";
 import { resolveSystemChromeExecutable } from "@/features/headless-renderer/worker/chromium/chrome-executable";
 import { buildHeadlessReferenceFixture } from "@/features/headless-renderer/worker/testing/build-reference-fixture";
+import { buildHeadlessVideoMotionReferenceFixture } from "@/features/headless-renderer/worker/testing/build-video-motion-reference-fixture";
 
 import { runHeadlessPageContractHarness } from "./fly-render-live/page-contract-harness";
+import { assertDistinctMotionFrameHashes } from "./headless-real-video-motion-authority";
 
 let passed = 0;
 
@@ -66,6 +68,25 @@ async function main() {
     );
     if (result.ok) {
       assert.ok(result.frameCount > 0);
+    }
+  });
+
+  await test("720p/6s trimmed MP4 fixture proves video motion in page-render output", async () => {
+    const videoFixture = buildHeadlessVideoMotionReferenceFixture({
+      contentDurationMs: 6000,
+      rendererProfile: { resolution: "720p", format: "webm", quality: "high" },
+    });
+    const result = await runHeadlessPageContractHarness({
+      fixture: videoFixture,
+      contentDurationMs: 6000,
+      verifyVideoMotion: true,
+    });
+    assert.equal(result.ok, true, result.ok ? "" : result.pageFailureReason);
+    if (result.ok) {
+      assert.ok(result.frameCount > 0);
+      assert.ok(result.motionFrameHashes != null);
+      assert.equal(result.motionFrameHashes.length, 3);
+      assertDistinctMotionFrameHashes(result.motionFrameHashes);
     }
   });
 

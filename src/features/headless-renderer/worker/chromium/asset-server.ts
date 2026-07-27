@@ -1,6 +1,7 @@
 /**
  * Private loopback asset server — serves only workspace files.
  * Serve-time realpath rejects symlink escapes.
+ * Supports single-range GET/HEAD for Chrome MP4 byte-range seeking.
  */
 
 import {
@@ -42,6 +43,154 @@ function contentType(filePath: string): string {
   }
 }
 
+export type HeadlessAssetRangeSelection =
+  | { readonly kind: "full" }
+  | { readonly kind: "partial"; readonly start: number; readonly end: number }
+  | { readonly kind: "unsatisfiable" }
+  | { readonly kind: "invalid" };
+
+/**
+ * Parse a single HTTP Range header for byte ranges (RFC 7233 subset).
+ * Rejects multiple ranges, malformed syntax, and unsafe values.
+ */
+export function parseHeadlessAssetByteRange(
+  rangeHeader: string | undefined | null,
+  fileSize: number,
+): HeadlessAssetRangeSelection {
+  if (fileSize < 0 || !Number.isSafeInteger(fileSize)) {
+    return { kind: "invalid" };
+  }
+  if (rangeHeader == null || rangeHeader.trim() === "") {
+    return { kind: "full" };
+  }
+  const trimmed = rangeHeader.trim();
+  if (!/^bytes=/i.test(trimmed)) {
+    return { kind: "invalid" };
+  }
+  const spec = trimmed.slice(trimmed.indexOf("=") + 1).trim();
+  if (spec === "" || spec.includes(",")) {
+    return { kind: "invalid" };
+  }
+  const dash = spec.indexOf("-");
+  if (dash < 0) {
+    return { kind: "invalid" };
+  }
+  const left = spec.slice(0, dash).trim();
+  const right = spec.slice(dash + 1).trim();
+  if (left === "" && right === "") {
+    return { kind: "invalid" };
+  }
+
+  if (left === "") {
+    const suffixLength = Number(right);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) {
+      return { kind: "invalid" };
+    }
+    if (fileSize === 0) {
+      return { kind: "unsatisfiable" };
+    }
+    if (suffixLength >= fileSize) {
+      return { kind: "full" };
+    }
+    return {
+      kind: "partial",
+      start: fileSize - suffixLength,
+      end: fileSize - 1,
+    };
+  }
+
+  const start = Number(left);
+  if (!Number.isSafeInteger(start) || start < 0) {
+    return { kind: "invalid" };
+  }
+
+  if (right === "") {
+    if (fileSize === 0 || start >= fileSize) {
+      return { kind: "unsatisfiable" };
+    }
+    return { kind: "partial", start, end: fileSize - 1 };
+  }
+
+  const end = Number(right);
+  if (!Number.isSafeInteger(end) || end < 0) {
+    return { kind: "invalid" };
+  }
+  if (start > end) {
+    return { kind: "invalid" };
+  }
+  if (fileSize === 0 || start >= fileSize) {
+    return { kind: "unsatisfiable" };
+  }
+  return {
+    kind: "partial",
+    start,
+    end: Math.min(end, fileSize - 1),
+  };
+}
+
+export function buildHeadlessAssetResponseHeaders(input: {
+  readonly filePath: string;
+  readonly fileSize: number;
+  readonly selection: HeadlessAssetRangeSelection;
+}): {
+  readonly status: 200 | 206 | 416;
+  readonly headers: Record<string, string>;
+  readonly bodyLength: number;
+} {
+  const base = {
+    "Content-Type": contentType(input.filePath),
+    "Accept-Ranges": "bytes",
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+  };
+
+  if (input.selection.kind === "unsatisfiable") {
+    return {
+      status: 416,
+      headers: {
+        ...base,
+        "Content-Range": `bytes */${input.fileSize}`,
+      },
+      bodyLength: 0,
+    };
+  }
+
+  if (input.selection.kind === "invalid") {
+    return {
+      status: 416,
+      headers: {
+        ...base,
+        "Content-Range": `bytes */${input.fileSize}`,
+      },
+      bodyLength: 0,
+    };
+  }
+
+  if (input.selection.kind === "full") {
+    return {
+      status: 200,
+      headers: {
+        ...base,
+        "Content-Length": String(input.fileSize),
+      },
+      bodyLength: input.fileSize,
+    };
+  }
+
+  const { start, end } = input.selection;
+  const length = end - start + 1;
+  return {
+    status: 206,
+    headers: {
+      ...base,
+      "Content-Range": `bytes ${start}-${end}/${input.fileSize}`,
+      "Content-Length": String(length),
+    },
+    bodyLength: length,
+  };
+}
+
 export interface HeadlessAssetServer {
   readonly origin: string;
   readonly port: number;
@@ -59,8 +208,18 @@ export async function startHeadlessAssetServer(input: {
         res.end();
         return;
       }
-      const url = new URL(req.url ?? "/", "http://127.0.0.1");
-      const rel = decodeURIComponent(url.pathname.replace(/^\//, ""));
+      const rawUrl = req.url ?? "/";
+      const questionIndex = rawUrl.indexOf("?");
+      const pathOnly =
+        questionIndex >= 0 ? rawUrl.slice(0, questionIndex) : rawUrl;
+      let rel: string;
+      try {
+        rel = decodeURIComponent(pathOnly.replace(/^\//, ""));
+      } catch {
+        res.writeHead(400);
+        res.end();
+        return;
+      }
       if (!rel || rel.includes("\0") || rel.split("/").includes("..")) {
         res.writeHead(400);
         res.end();
@@ -101,21 +260,54 @@ export async function startHeadlessAssetServer(input: {
         res.end();
         return;
       }
-      if (!statSync(realFile).isFile()) {
+      const fileStat = statSync(realFile);
+      if (!fileStat.isFile()) {
         res.writeHead(404);
         res.end();
         return;
       }
-      res.writeHead(200, {
-        "Content-Type": contentType(realFile),
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
+
+      const fileSize = fileStat.size;
+      const rangeHeader = req.headers.range;
+      const selection = parseHeadlessAssetByteRange(
+        typeof rangeHeader === "string" ? rangeHeader : undefined,
+        fileSize,
+      );
+      const response = buildHeadlessAssetResponseHeaders({
+        filePath: realFile,
+        fileSize,
+        selection,
       });
+
+      if (selection.kind === "invalid") {
+        res.writeHead(400);
+        res.end();
+        return;
+      }
+
+      if (response.status === 416) {
+        res.writeHead(416, response.headers);
+        res.end();
+        return;
+      }
+
+      res.writeHead(response.status, response.headers);
       if (req.method === "HEAD") {
         res.end();
         return;
       }
-      createReadStream(realFile).pipe(res);
+
+      if (selection.kind === "full") {
+        createReadStream(realFile).pipe(res);
+        return;
+      }
+
+      if (selection.kind === "partial") {
+        createReadStream(realFile, {
+          start: selection.start,
+          end: selection.end,
+        }).pipe(res);
+      }
     } catch {
       res.writeHead(500);
       res.end();

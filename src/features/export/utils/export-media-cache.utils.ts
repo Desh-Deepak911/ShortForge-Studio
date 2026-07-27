@@ -157,7 +157,24 @@ export function loadExportVideoElement(
     video.setAttribute("muted", "");
     video.setAttribute("playsinline", "");
 
-    if (!src.startsWith("blob:") && !src.startsWith("data:")) {
+    const mountId = "shortforge-export-media-mount";
+    let mount = document.getElementById(mountId);
+    if (!mount) {
+      mount = document.createElement("div");
+      mount.id = mountId;
+      mount.hidden = true;
+      mount.setAttribute("aria-hidden", "true");
+      mount.style.cssText =
+        "position:fixed;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;";
+      document.body.appendChild(mount);
+    }
+    mount.appendChild(video);
+
+    if (
+      !src.startsWith("blob:") &&
+      !src.startsWith("data:") &&
+      !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(src)
+    ) {
       video.crossOrigin = "anonymous";
     }
 
