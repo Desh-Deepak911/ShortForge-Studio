@@ -448,7 +448,8 @@ test("QA-10 draft dashboard routes correctly by workflow status", () => {
   const dashboard = readSrc(
     "src/features/drafts/components/DraftsDashboard.tsx",
   );
-  assert.match(dashboard, /resolveDraftHref\(storedDraft\)/);
+  assert.match(dashboard, /hydrateDraftWithAudioAssets\(storedDraft\)/);
+  assert.match(dashboard, /resolveDraftHref\(hydratedDraft\)/);
   assert.match(dashboard, /workflowStatusLabel/);
 
   assert.equal(resolveDraftHref(baseDraft()), "/create/review/draft-review-qa");

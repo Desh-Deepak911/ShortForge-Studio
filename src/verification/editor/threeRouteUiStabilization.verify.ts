@@ -114,7 +114,7 @@ test("draft audio is offloaded before localStorage metadata is updated", () => {
   const updateAt = persistence.indexOf("updateDraft(draftId");
   assert.ok(serializeAt >= 0 && serializeAt < offloadAt);
   assert.ok(offloadAt >= 0 && offloadAt < updateAt);
-  assert.match(routeHydration, /hydrateDraftAudioAssets\(stored\.script\)/);
+  assert.match(routeHydration, /hydrateDraftWithAudioAssets\(stored\)/);
   assert.match(audioStorage, /shortforge-draft-audio:/);
   assert.match(audioStorage, /delete compact\.voiceoverAudioBase64/);
   assert.match(audioStorage, /delete compactBackground\.fileDataBase64/);
@@ -148,6 +148,14 @@ test("Create and Review use bounded compact document layouts", () => {
   assert.match(reviewFlow, /compactMode/);
   assert.match(briefCanvas, /max-w-\[68rem\]/);
   assert.match(scriptCanvas, /max-w-\[68rem\]/);
+  assert.match(reviewFlow, /max-w-\[92rem\]/);
+  assert.match(
+    reviewFlow,
+    /xl:grid-cols-\[minmax\(0,1fr\)_22rem\]/,
+  );
+  assert.match(reviewFlow, /aria-label="Story workflow"/);
+  assert.doesNotMatch(reviewFlow, /\n\s+sidebar=\{/);
+  assert.doesNotMatch(reviewFlow, /\n\s+inspector=\{/);
 });
 
 test("Editor missing-media recovery remains compact", () => {

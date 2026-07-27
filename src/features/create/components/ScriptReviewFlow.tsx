@@ -15,7 +15,7 @@ import ReviewInspector from "@/features/create/components/ReviewInspector";
 import ReviewStudioHeader, {
   type ReviewPrimaryAction,
 } from "@/features/create/components/ReviewStudioHeader";
-import { StudioShell, StudioSection } from "@/components/studio-shell";
+import { StudioShell } from "@/components/studio-shell";
 import { AppShell } from "@/components/layout";
 import { getCanonicalVoiceover } from "@/features/audio";
 import DraftLoadingState from "@/features/drafts/components/DraftLoadingState";
@@ -686,90 +686,102 @@ function ScriptReviewFlowContent({ draftId }: ScriptReviewFlowProps) {
           persistWarning={persistWarning}
         />
       }
-      sidebar={
-        <StudioSection title="Workflow">
-          <ol className="space-y-1.5">
-            {REVIEW_WORKFLOW_STEPS.map((step) => {
-              const state = resolveReviewWorkflowStepState(
-                step.key,
-                activeStep,
-                hasVoiceover,
-                hasStoryboard || scenesCreatedSuccessfully,
-              );
-
-              return (
-                <li
-                  key={step.key}
-                  className={`rounded-xl px-3 py-2.5 transition ${
-                    state === "current"
-                      ? "bg-accent/10 ring-1 ring-accent/30"
-                      : "bg-surface/25 ring-1 ring-border/15"
-                  } ${state === "complete" ? "opacity-75" : ""}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        state === "complete"
-                          ? "bg-emerald-400"
-                          : state === "current"
-                            ? "bg-accent"
-                            : "bg-muted/40"
-                      }`}
-                    />
-                    <p className="text-xs font-medium text-foreground/90">
-                      {step.title}
-                    </p>
-                  </div>
-                  {state === "current" ? (
-                    <p className={`${studioSubtleText} mt-1 pl-4`}>
-                      {step.description}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
-        </StudioSection>
-      }
       canvas={
-        <ScriptCanvas
-          script={script}
-          onStoryChange={handleStoryChange}
-          targetDurationSeconds={targetDurationSeconds}
-          saveMessage={saveMessage}
-          autosaveSavedMessage={autosaveSavedMessage}
-        />
-      }
-      inspector={
-        <ReviewInspector
-          script={script}
-          onScriptChange={handleStoryChange}
-          creationBrief={creationBrief}
-          scriptMode={scriptMode}
-          scriptModeLabel={scriptModeLabel}
-          targetDurationSeconds={targetDurationSeconds}
-          researchConfidenceLabel={researchConfidenceLabel}
-          briefToneLabel={briefToneLabel}
-          briefQualityLabel={briefQualityLabel}
-          sceneCount={sceneCount}
-          onSceneCountChange={handleSceneCountChange}
-          hasVoiceover={hasVoiceover}
-          voiceoverDurationMs={voiceoverDurationMs}
-          hasStoryboard={hasStoryboard}
-          hasNarration={hasNarration}
-          isCreatingScenes={isCreatingScenes}
-          scenesCreatedSuccessfully={scenesCreatedSuccessfully}
-          storyboardStep={storyboardStep}
-          createScenesError={createScenesError}
-          voiceControlsDisabled={isCreatingScenes}
-          showStudioIntelligenceScenePlanToggle={
-            showStudioIntelligenceScenePlanToggle
-          }
-          useStudioIntelligenceScenes={useStudioIntelligenceScenes}
-          onUseStudioIntelligenceScenesChange={setUseStudioIntelligenceScenes}
-          scenePlanDevDebug={scenePlanDevDebug}
-          onVoiceApplyControlReady={handleVoiceApplyControlReady}
-        />
+        <div className="mx-auto w-full max-w-[92rem] min-w-0 space-y-4 sm:space-y-5">
+          <nav
+            aria-label="Story workflow"
+            className="rounded-2xl bg-surface/35 p-2 ring-1 ring-border/20"
+          >
+            <ol className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+              {REVIEW_WORKFLOW_STEPS.map((step) => {
+                const state = resolveReviewWorkflowStepState(
+                  step.key,
+                  activeStep,
+                  hasVoiceover,
+                  hasStoryboard || scenesCreatedSuccessfully,
+                );
+
+                return (
+                  <li
+                    key={step.key}
+                    className={`min-w-0 rounded-xl px-3 py-2.5 transition ${
+                      state === "current"
+                        ? "bg-accent/10 ring-1 ring-accent/30"
+                        : "bg-background/25 ring-1 ring-border/15"
+                    } ${state === "complete" ? "opacity-75" : ""}`}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${
+                          state === "complete"
+                            ? "bg-emerald-400"
+                            : state === "current"
+                              ? "bg-accent"
+                              : "bg-muted/40"
+                        }`}
+                      />
+                      <p className="truncate text-xs font-medium text-foreground/90">
+                        {step.title}
+                      </p>
+                    </div>
+                    {state === "current" ? (
+                      <p className={`${studioSubtleText} mt-1 line-clamp-2 pl-4`}>
+                        {step.description}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+
+          <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-5">
+            <ScriptCanvas
+              script={script}
+              onStoryChange={handleStoryChange}
+              targetDurationSeconds={targetDurationSeconds}
+              saveMessage={saveMessage}
+              autosaveSavedMessage={autosaveSavedMessage}
+            />
+
+            <aside
+              aria-label="Review tools"
+              className="min-w-0 rounded-2xl bg-surface/30 p-3.5 ring-1 ring-border/20 sm:p-4 xl:sticky xl:top-24"
+            >
+              <ReviewInspector
+                script={script}
+                onScriptChange={handleStoryChange}
+                creationBrief={creationBrief}
+                scriptMode={scriptMode}
+                scriptModeLabel={scriptModeLabel}
+                targetDurationSeconds={targetDurationSeconds}
+                researchConfidenceLabel={researchConfidenceLabel}
+                briefToneLabel={briefToneLabel}
+                briefQualityLabel={briefQualityLabel}
+                sceneCount={sceneCount}
+                onSceneCountChange={handleSceneCountChange}
+                hasVoiceover={hasVoiceover}
+                voiceoverDurationMs={voiceoverDurationMs}
+                hasStoryboard={hasStoryboard}
+                hasNarration={hasNarration}
+                isCreatingScenes={isCreatingScenes}
+                scenesCreatedSuccessfully={scenesCreatedSuccessfully}
+                storyboardStep={storyboardStep}
+                createScenesError={createScenesError}
+                voiceControlsDisabled={isCreatingScenes}
+                showStudioIntelligenceScenePlanToggle={
+                  showStudioIntelligenceScenePlanToggle
+                }
+                useStudioIntelligenceScenes={useStudioIntelligenceScenes}
+                onUseStudioIntelligenceScenesChange={
+                  setUseStudioIntelligenceScenes
+                }
+                scenePlanDevDebug={scenePlanDevDebug}
+                onVoiceApplyControlReady={handleVoiceApplyControlReady}
+              />
+            </aside>
+          </div>
+        </div>
       }
     />
   );
