@@ -134,6 +134,13 @@ function createMockVideo(url = "blob:clip"): HTMLVideoElement {
     removeEventListener(type: string, fn: () => void) {
       listeners.get(type)?.delete(fn);
     },
+    requestVideoFrameCallback(
+      cb: (now: number, metadata?: { mediaTime: number }) => void,
+    ) {
+      queueMicrotask(() => cb(0, { mediaTime: currentTime }));
+      return 1;
+    },
+    cancelVideoFrameCallback() {},
   };
 
   return video as unknown as HTMLVideoElement;

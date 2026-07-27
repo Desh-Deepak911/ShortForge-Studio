@@ -68,11 +68,13 @@ function createMockVideo(): HTMLVideoElement {
     removeEventListener(type: string, fn: () => void) {
       listeners.get(type)?.delete(fn);
     },
-    requestVideoFrameCallback(cb: () => void) {
+    requestVideoFrameCallback(
+      cb: (now: number, metadata?: { mediaTime: number }) => void,
+    ) {
       rvfcHandle += 1;
       queueMicrotask(() => {
         (video as { drawReadyAfterSeek: boolean }).drawReadyAfterSeek = true;
-        cb();
+        cb(0, { mediaTime: currentTime });
       });
       return rvfcHandle;
     },
@@ -231,6 +233,57 @@ async function main() {
     const ok = await waitForDecodedVideoFrame(video, { timeoutMs: 100 });
     assert.equal(ok, true);
     assert.equal((video as unknown as { drawReadyAfterSeek: boolean }).drawReadyAfterSeek, true);
+  });
+
+  await test("after real seek, stale HAVE_CURRENT_DATA does not satisfy expected media time", async () => {
+    let currentTime = 14.5;
+    let rvfcMediaTime = 14.5;
+    let seekIssued = 0;
+    let rvfcDeliveries = 0;
+    const listeners = new Map<string, Set<() => void>>();
+    const video = {
+      muted: true,
+      volume: 0,
+      paused: true,
+      readyState: 2,
+      get currentTime() {
+        return currentTime;
+      },
+      set currentTime(value: number) {
+        seekIssued += 1;
+        currentTime = value;
+        rvfcMediaTime = 14.5;
+        queueMicrotask(() => listeners.get("seeked")?.forEach((fn) => fn()));
+      },
+      pause() {
+        this.paused = true;
+      },
+      addEventListener(type: string, fn: () => void) {
+        if (!listeners.has(type)) listeners.set(type, new Set());
+        listeners.get(type)!.add(fn);
+      },
+      removeEventListener(type: string, fn: () => void) {
+        listeners.get(type)?.delete(fn);
+      },
+      requestVideoFrameCallback(
+        cb: (now: number, metadata: { mediaTime: number }) => void,
+      ) {
+        rvfcDeliveries += 1;
+        queueMicrotask(() => {
+          const mediaTime =
+            rvfcDeliveries === 1 && seekIssued === 1 ? rvfcMediaTime : currentTime;
+          cb(0, { mediaTime });
+        });
+        return rvfcDeliveries;
+      },
+      cancelVideoFrameCallback() {},
+    } as unknown as HTMLVideoElement;
+
+    const epsilon = resolveExportSeekEpsilonSec(30);
+    const ok = await seekVideoFrame(video, 15.0, { epsilonSec: epsilon, exportFps: 30 });
+    assert.equal(ok, true);
+    assert.ok(seekIssued >= 1);
+    assert.ok(rvfcDeliveries >= 2);
   });
 
   await test("stale seek request tokens are rejected", async () => {

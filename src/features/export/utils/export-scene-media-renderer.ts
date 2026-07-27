@@ -537,22 +537,75 @@ export function drawSceneImageFrame(
  * Prefer requestVideoFrameCallback; fall back to readyState + rAF.
  * When already ready within tolerance after seeked, resolves immediately.
  */
+function extractRequestVideoFrameMediaTimeSec(metadata: unknown): number | null {
+  if (metadata != null && typeof metadata === "object" && "mediaTime" in metadata) {
+    const mediaTime = (metadata as { mediaTime?: unknown }).mediaTime;
+    if (typeof mediaTime === "number" && Number.isFinite(mediaTime)) {
+      return mediaTime;
+    }
+  }
+  return null;
+}
+
+function decodedMediaTimeMatchesRequest(input: {
+  video: HTMLVideoElement;
+  expectedMediaTimeSec: number;
+  toleranceSec: number;
+  rvfcMetadata?: unknown;
+}): boolean {
+  const fromRvfc = extractRequestVideoFrameMediaTimeSec(input.rvfcMetadata);
+  if (fromRvfc != null) {
+    return Math.abs(fromRvfc - input.expectedMediaTimeSec) <= input.toleranceSec;
+  }
+  const observed = input.video.currentTime;
+  return (
+    Number.isFinite(observed) &&
+    Math.abs(observed - input.expectedMediaTimeSec) <= input.toleranceSec
+  );
+}
+
 export async function waitForDecodedVideoFrame(
   video: HTMLVideoElement,
   options: {
     timeoutMs?: number;
     seekRequestId?: number;
     onDecodeWait?: (reason: "rvfc" | "readyState" | "timeout") => void;
+    /** When set, stale HAVE_CURRENT_DATA from a prior position must not satisfy decode. */
+    expectedMediaTimeSec?: number;
+    mediaTimeToleranceSec?: number;
   } = {},
 ): Promise<boolean> {
   const timeoutMs = options.timeoutMs ?? DECODE_READY_TIMEOUT_MS;
   const seekRequestId = options.seekRequestId;
+  const expectedMediaTimeSec = options.expectedMediaTimeSec;
+  const mediaTimeToleranceSec =
+    options.mediaTimeToleranceSec ??
+    (expectedMediaTimeSec != null ? resolveExportSeekEpsilonSec(30) : undefined);
+  const requireFreshMediaTime = expectedMediaTimeSec != null;
 
   const isCurrent = () =>
     seekRequestId == null || isExportVideoSeekRequestCurrent(seekRequestId);
 
-  // Fast path: decoded data already available — do not pay the 500ms RVFC timeout.
-  if (video.readyState >= HAVE_CURRENT_DATA) {
+  const matchesExpectedMediaTime = (rvfcMetadata?: unknown): boolean => {
+    if (!requireFreshMediaTime || expectedMediaTimeSec == null) {
+      return video.readyState >= HAVE_CURRENT_DATA;
+    }
+    if (video.readyState < HAVE_CURRENT_DATA) {
+      return false;
+    }
+    if (rvfcMetadata === undefined) {
+      return false;
+    }
+    return decodedMediaTimeMatchesRequest({
+      video,
+      expectedMediaTimeSec,
+      toleranceSec: mediaTimeToleranceSec ?? resolveExportSeekEpsilonSec(30),
+      rvfcMetadata,
+    });
+  };
+
+  // Fast path: decoded data already available — skip only when media time is verified.
+  if (!requireFreshMediaTime && video.readyState >= HAVE_CURRENT_DATA) {
     options.onDecodeWait?.("readyState");
     if (!isCurrent()) {
       return false;
@@ -571,26 +624,84 @@ export async function waitForDecodedVideoFrame(
     options.onDecodeWait?.("rvfc");
     return await new Promise<boolean>((resolve) => {
       let settled = false;
-      const handle = anyVideo.requestVideoFrameCallback!(() => {
+      let activeHandle: number | undefined;
+      const startedAt = Date.now();
+
+      const finish = (ok: boolean) => {
         if (settled) {
           return;
         }
         settled = true;
         clearTimeout(timeoutId);
-        resolve(isCurrent());
-      });
+        if (
+          typeof anyVideo.cancelVideoFrameCallback === "function" &&
+          activeHandle != null
+        ) {
+          anyVideo.cancelVideoFrameCallback(activeHandle);
+        }
+        resolve(ok && isCurrent());
+      };
 
-      const timeoutId = setTimeout(() => {
+      const scheduleRvfc = () => {
         if (settled) {
           return;
         }
-        settled = true;
-        if (typeof anyVideo.cancelVideoFrameCallback === "function" && handle != null) {
-          anyVideo.cancelVideoFrameCallback(handle);
+        if (Date.now() - startedAt >= timeoutMs) {
+          options.onDecodeWait?.("timeout");
+          if (requireFreshMediaTime && expectedMediaTimeSec != null) {
+            const ok =
+              !video.seeking &&
+              video.readyState >= HAVE_CURRENT_DATA &&
+              decodedMediaTimeMatchesRequest({
+                video,
+                expectedMediaTimeSec,
+                toleranceSec:
+                  mediaTimeToleranceSec ?? resolveExportSeekEpsilonSec(30),
+              });
+            finish(ok);
+            return;
+          }
+          finish(!requireFreshMediaTime && matchesExpectedMediaTime());
+          return;
         }
+        if (
+          typeof anyVideo.cancelVideoFrameCallback === "function" &&
+          activeHandle != null
+        ) {
+          anyVideo.cancelVideoFrameCallback(activeHandle);
+        }
+        activeHandle = anyVideo.requestVideoFrameCallback!((_now, metadata) => {
+          if (!requireFreshMediaTime) {
+            finish(true);
+            return;
+          }
+          if (matchesExpectedMediaTime(metadata)) {
+            finish(true);
+            return;
+          }
+          queueMicrotask(() => scheduleRvfc());
+        });
+      };
+
+      const timeoutId = setTimeout(() => {
         options.onDecodeWait?.("timeout");
-        resolve(isCurrent() && video.readyState >= HAVE_CURRENT_DATA);
+        if (requireFreshMediaTime && expectedMediaTimeSec != null) {
+          const ok =
+            !video.seeking &&
+            video.readyState >= HAVE_CURRENT_DATA &&
+            decodedMediaTimeMatchesRequest({
+              video,
+              expectedMediaTimeSec,
+              toleranceSec:
+                mediaTimeToleranceSec ?? resolveExportSeekEpsilonSec(30),
+            });
+          finish(ok);
+          return;
+        }
+        finish(!requireFreshMediaTime && matchesExpectedMediaTime());
       }, timeoutMs);
+
+      scheduleRvfc();
     });
   }
 
@@ -607,10 +718,10 @@ export async function waitForDecodedVideoFrame(
       clearTimeout(timeoutId);
       resolve(ok && isCurrent());
     };
-    const onReady = () => finish(true);
+    const onReady = () => finish(matchesExpectedMediaTime());
     const timeoutId = setTimeout(() => {
       options.onDecodeWait?.("timeout");
-      finish(video.readyState >= HAVE_CURRENT_DATA);
+      finish(matchesExpectedMediaTime());
     }, timeoutMs);
     video.addEventListener("loadeddata", onReady);
     video.addEventListener("canplay", onReady);
@@ -658,22 +769,15 @@ export async function seekVideoFrame(
       video.pause();
     }
 
-    if (
-      Math.abs(video.currentTime - timeSec) <= epsilonSec &&
-      video.readyState >= HAVE_CURRENT_DATA
-    ) {
-      options.onSeekSkipped?.();
-      videoSamplingState.seekSkipCount += 1;
+    if (Math.abs(video.currentTime - timeSec) <= epsilonSec) {
       if (options.seekRequestId != null && !isExportVideoSeekRequestCurrent(seekRequestId)) {
         return false;
       }
-      return finishOk(video.currentTime);
-    }
-
-    // Within epsilon but not ready — still need decode confirmation without re-seeking.
-    if (Math.abs(video.currentTime - timeSec) <= epsilonSec) {
       const decoded = await waitForDecodedVideoFrame(video, {
         seekRequestId,
+        expectedMediaTimeSec: timeSec,
+        mediaTimeToleranceSec: epsilonSec,
+        timeoutMs: DECODE_READY_TIMEOUT_MS,
         onDecodeWait: options.onDecodeWait,
       });
       if (decoded) {
@@ -739,9 +843,12 @@ export async function seekVideoFrame(
       return false;
     }
 
-    // After seeked: prefer immediate readyState; RVFC only if still not ready.
+    // After seeked: require a fresh decoded frame at the requested media time.
     const decoded = await waitForDecodedVideoFrame(video, {
       seekRequestId,
+      expectedMediaTimeSec: timeSec,
+      mediaTimeToleranceSec: epsilonSec,
+      timeoutMs: DECODE_READY_TIMEOUT_MS,
       onDecodeWait: (reason) => {
         if (reason === "rvfc") {
           videoSamplingState.rvfcWaitCount += 1;

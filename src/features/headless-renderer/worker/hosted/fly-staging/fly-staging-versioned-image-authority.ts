@@ -8,7 +8,7 @@ import { HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT } from "@/features/headless-render
 import { HEADLESS_FLY_STAGING_VERIFY_FIRST_PASS_IMAGE_DIGEST } from "./fly-staging-verify-first-pass-evidence";
 
 /** Frozen authority schema version — bump only when record shape or selection rules change. */
-export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 26 as const;
+export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 28 as const;
 
 export type HeadlessFlyStagingImageLifecycle = "historical" | "current";
 
@@ -28,7 +28,9 @@ export type HeadlessFlyStagingVersionedImageRecordId =
   | "post_007_8i2_post_frame_attribution_historical"
   | "post_007_8i3_artifact_binding_coherence_historical"
   | "post_007_8i4_artifact_binding_cleanup_correction_historical"
-  | "post_007_8i5_object_key_binding_validation_current";
+  | "post_007_8i5_object_key_binding_validation_historical"
+  | "post_007_staging_runtime_observed_baseline_historical"
+  | "post_007_2g12_real_video_motion_current";
 
 export type HeadlessFlyStagingVersionedImageSchemaFingerprint = {
   readonly migrationIds: readonly string[];
@@ -139,6 +141,14 @@ export const HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTI
 export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST =
   "7a97f472859f5f8071d0311ee4d77c29f44ff44cb402aa57eed8f13872a74794" as const;
 
+/** Post-007 2G.12 real-video range/motion correction immutable digest (build-only push 2G.12B Part A; deployed 2G.12B-R). */
+export const HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST =
+  "69219707052de2db2fe10cadc39a96dafac6eab4d88ce8efc4146959a9bb1891" as const;
+
+/** Post-007 observed staging runtime baseline immutable digest (Fly release v25 pre-2G.12B-R rollout). */
+export const HEADLESS_FLY_STAGING_POST_007_STAGING_RUNTIME_OBSERVED_BASELINE_IMAGE_DIGEST =
+  "1aa65f6721b5fc6f9d35f97a2679fbaf117fe4ef0d585d0ed97d532591634fc0" as const;
+
 /** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8F_TELEMETRY_HISTORICAL_IMAGE_DIGEST */
 export const HEADLESS_FLY_STAGING_POST_007_TELEMETRY_CURRENT_IMAGE_DIGEST =
   HEADLESS_FLY_STAGING_POST_007_8F_TELEMETRY_HISTORICAL_IMAGE_DIGEST;
@@ -211,6 +221,14 @@ export const HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTI
 export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_HOSTED_WORKER_ARTIFACT_SHA256 =
   "79852daa3fc005e41968bd4a3b3d942be3ab4f094243c42caf9cc2834e3ab1fb" as const;
 
+/** Post-007 2G.12 real-video range/motion correction prospective hosted-worker.js SHA-256. */
+export const HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_HOSTED_WORKER_ARTIFACT_SHA256 =
+  "733c57c0235f56d986b1c6456fd13573d5c9c6a87d314294557cf387ad535c20" as const;
+
+/** Post-007 observed staging runtime baseline hosted-worker.js SHA-256 (remote inspection 2G.12B-R). */
+export const HEADLESS_FLY_STAGING_POST_007_STAGING_RUNTIME_OBSERVED_BASELINE_HOSTED_WORKER_ARTIFACT_SHA256 =
+  "245f6f4d43ffc2e7bdb71d5f913326397add7c1e72e89fdf0ee03f9ed6f5a63d" as const;
+
 /** Post-007 8I.3 artifact-binding coherence prospective BUILD_INFO.json SHA-256. */
 export const HEADLESS_FLY_STAGING_POST_007_8I3_ARTIFACT_BINDING_COHERENCE_PROSPECTIVE_BUILD_INFO_SHA256 =
   "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a" as const;
@@ -222,6 +240,14 @@ export const HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTI
 /** Post-007 8I.5 object-key binding validation prospective BUILD_INFO.json SHA-256. */
 export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_BUILD_INFO_SHA256 =
   HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTION_PROSPECTIVE_BUILD_INFO_SHA256;
+
+/** Post-007 2G.12 real-video range/motion correction prospective BUILD_INFO.json SHA-256. */
+export const HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_BUILD_INFO_SHA256 =
+  "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a" as const;
+
+/** Post-007 2G.12 real-video range/motion correction prospective page-render.iife.js SHA-256. */
+export const HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_PAGE_ARTIFACT_SHA256 =
+  "a7dda28554a76d98e4c8009244ad7d35f64d2be982cab99bbf8c328c177a6314" as const;
 
 /** Post-007 8H bootstrap-coherence prospective page-render.iife.js SHA-256. */
 export const HEADLESS_FLY_STAGING_POST_007_8H_BOOTSTRAP_COHERENCE_PROSPECTIVE_PAGE_ARTIFACT_SHA256 =
@@ -293,6 +319,10 @@ export const HEADLESS_FLY_STAGING_ARTIFACT_BINDING_CLEANUP_CORRECTION_CAPABILITY
 /** Object-key binding validation, structured comparison, evidence-reason, and cleanup capability bound to 8I.5 prospective images. */
 export const HEADLESS_FLY_STAGING_OBJECT_KEY_BINDING_VALIDATION_CAPABILITY_VERSION =
   "8I.5" as const;
+
+/** Asset-server byte-range + decoded-frame motion parity capability bound to 2G.12 prospective images. */
+export const HEADLESS_FLY_STAGING_REAL_VIDEO_MOTION_CAPABILITY_VERSION =
+  "2G.12" as const;
 
 /** Migration 007 checksum — bound to post-007 records (historical + current). */
 export const HEADLESS_FLY_STAGING_POST_007_MIGRATION_CHECKSUM_SHA256 =
@@ -708,11 +738,11 @@ export const HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTI
 export const HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTION_PROSPECTIVE_IMAGE_RECORD =
   HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTION_HISTORICAL_IMAGE_RECORD;
 
-/** Post-007 8I.5 object-key binding validation current — deployed runtime-ready (rollout 8I.5.2B). */
-export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD =
+/** Post-007 8I.5 object-key binding validation historical — authority-only; never deployed on staging runtime. */
+export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD =
   Object.freeze({
-    recordId: "post_007_8i5_object_key_binding_validation_current",
-    lifecycle: "current",
+    recordId: "post_007_8i5_object_key_binding_validation_historical",
+    lifecycle: "historical",
     imageDigestSha256:
       HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
     schemaFingerprint: buildSchemaFingerprint(POST_007_MIGRATIONS),
@@ -723,14 +753,61 @@ export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CUR
     telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
     pageTelemetryCapabilityVersion:
       HEADLESS_FLY_STAGING_OBJECT_KEY_BINDING_VALIDATION_CAPABILITY_VERSION,
+    eligibleForVerifyLiveHarness: false,
+    eligibleForRenderLiveHarness: false,
+    eligibleForCurrentStagingReadiness: false,
+  } satisfies HeadlessFlyStagingVersionedImageRecord);
+
+/** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD */
+export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD =
+  HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD;
+
+/** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD */
+export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_RECORD =
+  HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD;
+
+/** Post-007 observed staging runtime baseline historical — Fly release v25 rollback pin (2G.12B-R). */
+export const HEADLESS_FLY_STAGING_POST_007_STAGING_RUNTIME_OBSERVED_BASELINE_HISTORICAL_IMAGE_RECORD =
+  Object.freeze({
+    recordId: "post_007_staging_runtime_observed_baseline_historical",
+    lifecycle: "historical",
+    imageDigestSha256:
+      HEADLESS_FLY_STAGING_POST_007_STAGING_RUNTIME_OBSERVED_BASELINE_IMAGE_DIGEST,
+    schemaFingerprint: buildSchemaFingerprint(POST_007_MIGRATIONS),
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_POST_007_STAGING_RUNTIME_OBSERVED_BASELINE_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_POST_007_8H_BOOTSTRAP_COHERENCE_PROSPECTIVE_PAGE_ARTIFACT_SHA256,
+    telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
+    pageTelemetryCapabilityVersion: null,
+    eligibleForVerifyLiveHarness: false,
+    eligibleForRenderLiveHarness: false,
+    eligibleForCurrentStagingReadiness: false,
+  } satisfies HeadlessFlyStagingVersionedImageRecord);
+
+/** Post-007 2G.12 real-video range/motion correction current — deployed runtime-ready (rollout 2G.12B-R). */
+export const HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD =
+  Object.freeze({
+    recordId: "post_007_2g12_real_video_motion_current",
+    lifecycle: "current",
+    imageDigestSha256:
+      HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+    schemaFingerprint: buildSchemaFingerprint(POST_007_MIGRATIONS),
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_PAGE_ARTIFACT_SHA256,
+    telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
+    pageTelemetryCapabilityVersion:
+      HEADLESS_FLY_STAGING_REAL_VIDEO_MOTION_CAPABILITY_VERSION,
     eligibleForVerifyLiveHarness: true,
     eligibleForRenderLiveHarness: true,
     eligibleForCurrentStagingReadiness: true,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD */
-export const HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_RECORD =
-  HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD;
+/** @deprecated Use HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD */
+export const HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_RECORD =
+  HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD;
 
 /** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8F5_PAGE_ATTRIBUTION_CURRENT_IMAGE_RECORD */
 export const HEADLESS_FLY_STAGING_POST_007_CURRENT_IMAGE_RECORD =
@@ -752,7 +829,9 @@ export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS = Object.freeze([
   HEADLESS_FLY_STAGING_POST_007_8I2_POST_FRAME_ATTRIBUTION_HISTORICAL_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_8I3_ARTIFACT_BINDING_COHERENCE_HISTORICAL_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_8I4_ARTIFACT_BINDING_CLEANUP_CORRECTION_HISTORICAL_IMAGE_RECORD,
-  HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_STAGING_RUNTIME_OBSERVED_BASELINE_HISTORICAL_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD,
 ] as const);
 
 const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>(
@@ -763,12 +842,12 @@ const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>
 );
 
 export function resolveCurrentFlyStagingAcceptedImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD;
 }
 
-/** @deprecated Pre-rollout prospective selector — use resolveCurrentFlyStagingAcceptedImageRecord after 8I.5.2B PASS. */
+/** Pre-rollout prospective selector for the next controlled image rollout. */
 export function resolveProspectiveFlyStagingRolloutImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD;
 }
 
 export function resolveProspectiveFlyStaging8f5AttributionImageRecord(): HeadlessFlyStagingVersionedImageRecord {
@@ -812,7 +891,11 @@ export function resolveProspectiveFlyStaging8i4ArtifactBindingCleanupCorrectionI
 }
 
 export function resolveProspectiveFlyStaging8i5ObjectKeyBindingValidationImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_CURRENT_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD;
+}
+
+export function resolveProspectiveFlyStaging2g12RealVideoMotionImageRecord(): HeadlessFlyStagingVersionedImageRecord {
+  return HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD;
 }
 
 export function resolveHistoricalPost0078i4ArtifactBindingCleanupCorrectionFlyStagingImageRecord(): HeadlessFlyStagingVersionedImageRecord {
@@ -913,7 +996,9 @@ function isPost007VersionedImageRecord(
     record.recordId === "post_007_8i2_post_frame_attribution_historical" ||
     record.recordId === "post_007_8i3_artifact_binding_coherence_historical" ||
     record.recordId === "post_007_8i4_artifact_binding_cleanup_correction_historical" ||
-    record.recordId === "post_007_8i5_object_key_binding_validation_current"
+    record.recordId === "post_007_8i5_object_key_binding_validation_historical" ||
+    record.recordId === "post_007_staging_runtime_observed_baseline_historical" ||
+    record.recordId === "post_007_2g12_real_video_motion_current"
   );
 }
 
@@ -1129,7 +1214,9 @@ export function classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority(inp
     record.pageTelemetryCapabilityVersion !==
       HEADLESS_FLY_STAGING_ARTIFACT_BINDING_CLEANUP_CORRECTION_CAPABILITY_VERSION &&
     record.pageTelemetryCapabilityVersion !==
-      HEADLESS_FLY_STAGING_OBJECT_KEY_BINDING_VALIDATION_CAPABILITY_VERSION
+      HEADLESS_FLY_STAGING_OBJECT_KEY_BINDING_VALIDATION_CAPABILITY_VERSION &&
+    record.pageTelemetryCapabilityVersion !==
+      HEADLESS_FLY_STAGING_REAL_VIDEO_MOTION_CAPABILITY_VERSION
   ) {
     return { ok: false, reasonId: "missing_page_telemetry_capability" };
   }

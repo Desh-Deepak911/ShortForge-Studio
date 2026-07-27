@@ -34,7 +34,7 @@ import {
 } from "@/features/headless-renderer/worker/runtime/worker-types";
 
 const PRODUCTION_PAGE_SHA =
-  "424ad4a06e374162c1052682aa626126840dbcf3c54464d64719527fa7b7ea7d";
+  "a7dda28554a76d98e4c8009244ad7d35f64d2be982cab99bbf8c328c177a6314";
 
 let passed = 0;
 
@@ -200,6 +200,7 @@ async function main() {
     const attribution = classifyScrubbedPageFailureMessage({
       substage: "page_contract_ready",
       bootstrapRejected: true,
+      bootstrapReasonId: "bootstrap_runtime_exception",
     });
     assert.equal(attribution.pageFailureReason, "page_runtime_exception");
     assert.equal(attribution.pageResponseClass, "rejected");
@@ -213,6 +214,7 @@ async function main() {
     const bootstrap = classifyScrubbedPageFailureMessage({
       substage: "page_contract_ready",
       bootstrapRejected: true,
+      bootstrapReasonId: "bootstrap_runtime_exception",
     });
     assert.equal(missing.pageFailureReason, "page_contract_missing");
     assert.equal(bootstrap.pageFailureReason, "page_runtime_exception");

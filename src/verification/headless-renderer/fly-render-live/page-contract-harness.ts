@@ -28,6 +28,7 @@ export type HeadlessPageContractHarnessResult =
       readonly frameCount: number;
       readonly executionSubstage: null;
       readonly pageFailureReason: null;
+      readonly motionFrameHashes?: readonly string[];
     }
   | {
       readonly ok: false;
@@ -40,6 +41,7 @@ export async function runHeadlessPageContractHarness(input: {
   readonly fixture: HeadlessReferenceFixture;
   readonly contentDurationMs: number;
   readonly limits?: Partial<HeadlessWorkerLimits>;
+  readonly verifyVideoMotion?: boolean;
 }): Promise<HeadlessPageContractHarnessResult> {
   const chrome = resolveSystemChromeExecutable();
   if (!chrome.ok) {
@@ -103,7 +105,11 @@ export async function runHeadlessPageContractHarness(input: {
       throw new Error("fixture bytes missing");
     },
     mimeForSlot: (slot) =>
-      slot.expectedMediaKind === "audio" ? "audio/wav" : "image/png",
+      slot.expectedMediaKind === "audio"
+        ? "audio/wav"
+        : slot.expectedMediaKind === "video"
+          ? "video/mp4"
+          : "image/png",
   });
   if (!seeded.ok) {
     return {
@@ -141,6 +147,11 @@ export async function runHeadlessPageContractHarness(input: {
   }
 
   const deadlineMs = clock + limits.jobTimeoutMs;
+  const motionTargetContentMs = input.verifyVideoMotion
+    ? ([4500, 5000, 6000] as const)
+    : null;
+  const capturedMotionFrames: Array<{ readonly timestampMs: number; readonly hash: string }> =
+    [];
   const rendered = await renderFramesWithChromium({
     chromeExecutable: chrome.executable,
     workspace,
@@ -150,7 +161,16 @@ export async function runHeadlessPageContractHarness(input: {
     budget,
     limits,
     remainingMs: () => Math.max(1, deadlineMs - clock),
-    onPngFrame: async () => ({ ok: true }),
+    onPngFrame: async (frame) => {
+      if (motionTargetContentMs != null) {
+        const { createHash } = await import("node:crypto");
+        capturedMotionFrames.push({
+          timestampMs: frame.timestampMs,
+          hash: createHash("sha256").update(frame.pngBytes).digest("hex"),
+        });
+      }
+      return { ok: true };
+    },
   });
 
   workspace.cleanup();
@@ -164,10 +184,31 @@ export async function runHeadlessPageContractHarness(input: {
     };
   }
 
+  const motionFrameHashes =
+    motionTargetContentMs == null
+      ? undefined
+      : motionTargetContentMs.map((targetMs) => {
+          const nearest = capturedMotionFrames.reduce<(typeof capturedMotionFrames)[number] | null>(
+            (best, candidate) => {
+              if (best == null) return candidate;
+              return Math.abs(candidate.timestampMs - targetMs) <
+                Math.abs(best.timestampMs - targetMs)
+                ? candidate
+                : best;
+            },
+            null,
+          );
+          if (nearest == null) {
+            throw new Error(`missing motion frame near ${targetMs}ms`);
+          }
+          return nearest.hash;
+        });
+
   return {
     ok: true,
     frameCount: rendered.result.frameCount,
     executionSubstage: null,
     pageFailureReason: null,
+    ...(motionFrameHashes != null ? { motionFrameHashes } : {}),
   };
 }
