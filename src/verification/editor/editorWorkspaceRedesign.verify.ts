@@ -51,6 +51,7 @@ export function runEditorWorkspaceRedesignTests(): void {
   const workflowStatus = readSrc(
     "src/features/editor/components/EditorWorkflowStatus.tsx",
   );
+  const studioUi = readSrc("src/lib/utils/studioUi.ts");
   const layoutHook = readSrc(
     "src/features/editor/workspace-layout/useEditorWorkspaceLayout.ts",
   );
@@ -150,6 +151,17 @@ export function runEditorWorkspaceRedesignTests(): void {
     assert.match(layoutHook, /keydown/);
     assert.match(layoutHook, /beginInspectorResize/);
     assert.match(layoutHook, /beginTimelineResize/);
+  });
+
+  test("editor uses a wider desktop boundary without changing document shells", () => {
+    assert.match(studioUi, /studioShellEditorMaxWidth/);
+    assert.match(studioUi, /max-w-\[120rem\]/);
+    assert.match(shell, /editorLayout[\s\S]*studioShellEditorMaxWidth/);
+    assert.match(
+      timelineShell,
+      /hasEditorLayout[\s\S]*studioShellEditorMaxWidth/,
+    );
+    assert.match(header, /<StudioHeader wide>/);
   });
 
   test("status actions stay consolidated in the header without losing behavior", () => {

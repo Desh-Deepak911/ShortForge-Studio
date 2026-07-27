@@ -2,6 +2,7 @@ import { ChevronsDown, ChevronsUp, Rows3 } from "lucide-react";
 import type { CSSProperties, PointerEventHandler } from "react";
 
 import {
+  studioShellEditorMaxWidth,
   studioShellMaxWidth,
   studioShellRegionPadding,
   studioShellTimelineHeightCompact,
@@ -44,6 +45,9 @@ export default function StudioTimelineShell({
   const style = hasEditorLayout
     ? ({ height: `${heightPx}px`, maxHeight: `${heightPx}px` } as CSSProperties)
     : undefined;
+  const maxWidthClass = hasEditorLayout
+    ? studioShellEditorMaxWidth
+    : studioShellMaxWidth;
 
   return (
     <section
@@ -108,7 +112,7 @@ export default function StudioTimelineShell({
       ) : null}
 
       <div
-        className={`${studioShellMaxWidth} flex min-h-0 flex-1 flex-col ${hasEditorLayout ? "px-3 py-2 sm:px-4" : studioShellRegionPadding}`}
+        className={`${maxWidthClass} flex min-h-0 flex-1 flex-col ${hasEditorLayout ? "px-3 py-2 sm:px-4" : studioShellRegionPadding}`}
       >
         {children}
       </div>

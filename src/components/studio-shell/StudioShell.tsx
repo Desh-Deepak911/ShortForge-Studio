@@ -3,6 +3,7 @@
 import {
   studioShellBodyRowDocument,
   studioShellBodyRowFixed,
+  studioShellEditorMaxWidth,
   studioShellMainColumnDocument,
   studioShellMainColumnFixed,
   studioShellMaxWidth,
@@ -57,6 +58,9 @@ export default function StudioShell({
   const rootViewportClass = isFixedViewport
     ? studioShellRootFixed
     : studioShellRootDocument;
+  const maxWidthClass = editorLayout
+    ? studioShellEditorMaxWidth
+    : studioShellMaxWidth;
 
   return (
     <div
@@ -70,7 +74,7 @@ export default function StudioShell({
       {header}
 
       <div
-        className={`${studioShellMaxWidth} flex flex-1 flex-col ${isFixedViewport ? "min-h-0" : ""} ${studioShellPanelGap}`}
+        className={`${maxWidthClass} flex flex-1 flex-col ${isFixedViewport ? "min-h-0" : ""} ${studioShellPanelGap}`}
       >
         <div className={bodyRowClass}>
           {showSidebar ? (

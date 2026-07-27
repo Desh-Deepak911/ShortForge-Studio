@@ -37,7 +37,7 @@ export default function EditorStudioHeader({
   workflowStatus,
 }: EditorStudioHeaderProps) {
   return (
-    <StudioHeader>
+    <StudioHeader wide>
       <StudioHeaderBar>
         <Link
           href="/"
