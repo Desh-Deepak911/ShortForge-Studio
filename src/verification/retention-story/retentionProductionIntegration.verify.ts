@@ -81,12 +81,12 @@ function padWords(base: string, target: number): string {
 function weakProposalForRewrite(plan: RetentionStoryPlan) {
   return {
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, i) => ({
       beatId: beat.id,
       text:
         i === 0 ? "Why does Spain pressure matter?" : "Pressure keeps rising.",
-      claimRefs: [] as string[],
+      claimRefs: [] as unknown as string[],
     })),
   };
 }
@@ -130,7 +130,7 @@ function openingPreservingRewriteComposer(
       hookClaimRefs: [],
       segments: request.orderedBeatIds.map((beatId, i) => {
         if (i === 0) {
-          return { beatId, text: first, claimRefs: [] as string[] };
+          return { beatId, text: first, claimRefs: [] as unknown as string[] };
         }
         const section = SECTION_WORDS[i] ?? "next";
         const seed =
@@ -142,7 +142,7 @@ function openingPreservingRewriteComposer(
         return {
           beatId,
           text: padWords(seed, target),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }),
     };
@@ -359,7 +359,7 @@ function makeComposer(): RetentionComposerCallback {
         return {
           beatId,
           text: joinOpeningAndBody(open, body),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }
       const seed =
@@ -369,12 +369,12 @@ function makeComposer(): RetentionComposerCallback {
       return {
         beatId,
         text: padWords(seed, target),
-        claimRefs: [] as string[],
+        claimRefs: [] as unknown as string[],
       };
     });
     return {
       title: "Spain pressure story",
-      hookClaimRefs: [] as string[],
+      hookClaimRefs: [] as unknown as string[],
       segments,
     };
   };
@@ -1543,18 +1543,20 @@ async function main(): Promise<void> {
       grounding: emptyGrounding(),
       planner: null,
     });
-    const beats = base.beats.map((b) => ({ ...b }));
+    const baseBeats = base.beats ?? [];
+    assert.ok(baseBeats.length >= 2);
+    const beats = baseBeats.map((b) => ({ ...b }));
     beats[0] = { ...beats[0]!, purpose: "curiosity" };
     await assertPlannerFallsBack("wrong first purpose", { ...base, beats });
 
-    const beats2 = base.beats.map((b) => ({ ...b }));
+    const beats2 = baseBeats.map((b) => ({ ...b }));
     beats2[beats2.length - 1] = {
       ...beats2[beats2.length - 1]!,
       purpose: "curiosity",
     };
     await assertPlannerFallsBack("wrong terminal purpose", { ...base, beats: beats2 });
 
-    const beats3 = base.beats.map((b) => ({ ...b }));
+    const beats3 = baseBeats.map((b) => ({ ...b }));
     beats3[1] = { ...beats3[1]!, purpose: "not_a_purpose" };
     await assertPlannerFallsBack("invalid purpose", { ...base, beats: beats3 });
   });
@@ -1574,14 +1576,16 @@ async function main(): Promise<void> {
       grounding: emptyGrounding(),
       planner: null,
     });
+    const baseBeats = base.beats ?? [];
+    assert.ok(baseBeats.length >= 1);
     await assertPlannerFallsBack("too few beats", {
       ...base,
-      beats: base.beats.slice(0, 1),
+      beats: baseBeats.slice(0, 1),
     });
     await assertPlannerFallsBack("too many beats", {
       ...base,
       beats: Array.from({ length: 20 }, (_, i) => ({
-        ...base.beats[Math.min(i, base.beats.length - 1)]!,
+        ...baseBeats[Math.min(i, baseBeats.length - 1)]!,
         purpose: i === 0 ? "hook_handoff" : i === 19 ? "payoff" : "curiosity",
       })),
     });
@@ -1602,12 +1606,14 @@ async function main(): Promise<void> {
       grounding: emptyGrounding(),
       planner: null,
     });
-    const beats = base.beats.map((b, i) =>
+    const baseBeats = base.beats ?? [];
+    assert.ok(baseBeats.length >= 2);
+    const beats = baseBeats.map((b, i) =>
       i === 1
         ? {
             ...b,
             informationContribution: "Spain won 2-0 with a verified final score",
-            groundingClaimRefs: [] as string[],
+            groundingClaimRefs: [] as unknown as string[],
           }
         : { ...b },
     );
@@ -1696,18 +1702,18 @@ async function main(): Promise<void> {
                 Math.max(3, target - openWords),
               ),
             ),
-            claimRefs: [] as string[],
+            claimRefs: [] as unknown as string[],
           };
         }
         const seed =
           i === n - 1
             ? "Spain pressure closes this preview decisively tonight"
             : `Spain ${SECTION_WORDS[i] ?? "next"} pressure advances with clear focus`;
-        return { beatId, text: padWords(seed, target), claimRefs: [] as string[] };
+        return { beatId, text: padWords(seed, target), claimRefs: [] as unknown as string[] };
       });
       return {
         title: "Spain pressure story",
-        hookClaimRefs: [] as string[],
+        hookClaimRefs: [] as unknown as string[],
         segments,
       };
     };
@@ -1738,7 +1744,7 @@ async function main(): Promise<void> {
       let rem = targetTotal - base * n;
       return {
         title: "Spain pressure story",
-        hookClaimRefs: [] as string[],
+        hookClaimRefs: [] as unknown as string[],
         segments: request.orderedBeatIds.map((beatId, i) => {
           const target = Math.max(4, base + (rem > 0 ? 1 : 0));
           if (rem > 0) rem -= 1;
@@ -1754,7 +1760,7 @@ async function main(): Promise<void> {
                   Math.max(3, target - openWords),
                 ),
               ),
-              claimRefs: [] as string[],
+              claimRefs: [] as unknown as string[],
             };
           }
           const seed =
@@ -1764,7 +1770,7 @@ async function main(): Promise<void> {
           return {
             beatId,
             text: padWords(seed, target),
-            claimRefs: [] as string[],
+            claimRefs: [] as unknown as string[],
           };
         }),
       };

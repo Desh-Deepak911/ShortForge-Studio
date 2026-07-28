@@ -156,7 +156,7 @@ async function main() {
     const evaluated = evaluateArtifactObjectBindingCoherence({
       ...fixture,
       nowMs: 1_000,
-    });
+    } as never);
     assert.equal(evaluated.ok, true);
   });
 
@@ -175,7 +175,7 @@ async function main() {
         },
       },
       nowMs: 1_000,
-    });
+    } as never);
     assert.equal(evaluated.ok, false);
     assert.equal(evaluated.failureSubstage, "binding_validation");
     assert.equal(evaluated.firstMismatch?.field, "storage_locator");
@@ -205,7 +205,7 @@ async function main() {
         byteLength: 101,
       },
       nowMs: 1_000,
-    });
+    } as never);
     assert.equal(evaluated.ok, false);
     assert.equal(evaluated.mismatchShape, "multiple_field_mismatch");
   });

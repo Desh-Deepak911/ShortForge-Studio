@@ -654,7 +654,7 @@ test("8C.1-3. First video edit clears stale image compatibility fields", () => {
       x: 4,
       y: 2,
       rotation: 0,
-      fitMode: "cover",
+      fitMode: "fill",
     },
     uploadedImage: "https://example.com/upload-stale.jpg",
   });
@@ -680,7 +680,7 @@ test("8C.1-4. Non-first image/video edits preserve first-item legacy fields", ()
       x: 1,
       y: 2,
       rotation: 5,
-      fitMode: "contain",
+      fitMode: "fit",
     },
     uploadedImage: "https://example.com/upload-keep.jpg",
   });
@@ -830,8 +830,9 @@ test("8C.1-12. Successful trim commit returns true", () => {
   });
   assert.equal(ok, true);
   assert.ok(committed);
-  assert.equal(committed!.trimStartMs, 250);
-  assert.equal(committed!.trimEndMs, 4500);
+  const committedVideo = committed as SceneMedia | null;
+  assert.equal(committedVideo!.trimStartMs, 250);
+  assert.equal(committedVideo!.trimEndMs, 4500);
 });
 
 test("8C.1-13. Reset trim follows the same terminal rules", () => {

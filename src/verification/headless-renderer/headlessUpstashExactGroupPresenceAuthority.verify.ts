@@ -161,7 +161,7 @@ async function main() {
   await test("unconfigured TCP adapter returns group_probe_failed", async () => {
     const fake = createFakeIoredisLike({
       nowMs: () => 1_700_000_000_000,
-    });
+    } as never);
     const tcp = new UpstashTcpStreamConsumerAdapter({
       envName: "staging",
       // Force unconfigured — no config / client.

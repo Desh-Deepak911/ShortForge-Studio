@@ -108,9 +108,11 @@ function baseCtx(input: {
     tcpConsumer: null,
     streamNames: {
       verifyStream: "hfq:verify:staging",
-      verifyGroup: "hfq-verify-staging",
+      verifyDlq: "hfq:verify:staging:dlq",
+      verifyGroup: "hfq:verify-workers",
       renderStream: "hfq:render:staging",
-      renderGroup: "hfq-render-staging",
+      renderDlq: "hfq:render:staging:dlq",
+      renderGroup: "hfq:render-workers",
     },
     streamAuthority: "production_env",
     dispatchOutbox: input.dispatchOutbox ?? new MemoryHeadlessRenderDispatchOutboxAdapter(),

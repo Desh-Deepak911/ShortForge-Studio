@@ -26,6 +26,7 @@ import { materializeOwnedAssets } from "@/features/headless-renderer/worker/asse
 import { createHeadlessWorkerWorkspace } from "@/features/headless-renderer/worker/assets/workspace";
 import {
   resolveProviderBackedSourceBinding,
+  type SourceBindingAttributionSnapshot,
 } from "@/features/headless-renderer/worker/runtime/source-binding-resolution";
 import { buildHeadlessFlyRenderLiveSmokeBoundary } from "./fly-render-live/smoke-workload";
 import { deriveFlyRenderJobCreateStagingPayloads } from "./fly-render-live/job-create-fixture-identity";
@@ -112,7 +113,7 @@ async function buildIdentityFixture(): Promise<IdentityFixture> {
   const fake = new FakeS3Client();
   const ownedObjectStore = new MemoryHeadlessOwnedObjectStoreAdapter();
   const jobStore = new MemoryHeadlessJobStoreAdapter();
-  const ctx: R2LiveMatrixContext = {
+  const ctx = {
     runId,
     ownerId: draftCtx.ownerId,
     projectId: draftCtx.projectId,
@@ -128,7 +129,7 @@ async function buildIdentityFixture(): Promise<IdentityFixture> {
     createdJobIds: [],
     createdProjectIds: [],
     createdR2Locators: [],
-  };
+  } as unknown as R2LiveMatrixContext;
 
   const staged = await runOwnedObjectStagingRecordChain({
     ctx,
@@ -233,7 +234,7 @@ async function main() {
     const payloads = deriveFlyRenderJobCreateStagingPayloads(fixture.draftCtx);
     const driftedBundle = alignBundleToFinalizedStaging({
       bundle: fixture.unalignedBundle,
-      manifest: fixture.draftCtx.manifest,
+      manifest: fixture.draftCtx.manifest as unknown as import("@/features/export/domain").ExportManifestV3,
       staged: fixture.staged,
       payloads,
     });
@@ -260,7 +261,11 @@ async function main() {
       fixture.ownerId,
       CLOCK,
     );
-    const attribution = storage.consumeLastSourceBindingAttribution();
+    const attribution = (
+      storage as typeof storage & {
+        consumeLastSourceBindingAttribution(): SourceBindingAttributionSnapshot | null;
+      }
+    ).consumeLastSourceBindingAttribution();
     assert.equal(opened.ok, false);
     assert.equal(attribution?.sourceBindingSubstage, "owned_object_load");
     assert.equal(attribution?.sourceBindingResultClass, "record_missing");
@@ -286,7 +291,7 @@ async function main() {
       throw new Error(`${issue.code}: ${issue.message}`);
     }
 
-    const canonicalLocators = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const canonicalLocators = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (a) => a.storageLocator,
     );
     const listed = await fixture.ownedObjectStore.listByJobIdAndOwner({
@@ -311,7 +316,7 @@ async function main() {
     }
 
     assert.equal(
-      materialized.value.canonicalRequest.assetBundle.fingerprint,
+      materialized.value.canonicalRequest!.assetBundle.fingerprint,
       fixture.draftCtx.draft.snapshotClaim.assetBundleFingerprintClaim,
     );
   });
@@ -343,7 +348,7 @@ async function main() {
     if (!promoted.ok) throw new Error("promote failed");
     assert.equal(promoted.value.kind, "updated");
 
-    const allowed = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const allowed = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (a) => a.storageLocator,
     );
     const storage = createStorage({ fixture, allowedLocators: allowed });
@@ -354,7 +359,7 @@ async function main() {
     const materializeAssets = await materializeOwnedAssets({
       storage,
       ownerId: fixture.ownerId,
-      bundle: materialized.value.canonicalRequest.assetBundle,
+      bundle: materialized.value.canonicalRequest!.assetBundle,
       workspace,
       nowMs: CLOCK,
       maxTotalAssetBytes: 32 * 1024 * 1024,
@@ -387,12 +392,12 @@ async function main() {
     assert.equal(second.ok, true);
     if (!first.ok || !second.ok) throw new Error("materialize replay failed");
     assert.deepEqual(
-      first.value.canonicalRequest.assetBundle.assets.map((a) => a.storageLocator),
-      second.value.canonicalRequest.assetBundle.assets.map((a) => a.storageLocator),
+      first.value.canonicalRequest!.assetBundle.assets.map((a) => a.storageLocator),
+      second.value.canonicalRequest!.assetBundle.assets.map((a) => a.storageLocator),
     );
     assert.equal(
-      first.value.canonicalRequest.assetBundle.fingerprint,
-      second.value.canonicalRequest.assetBundle.fingerprint,
+      first.value.canonicalRequest!.assetBundle.fingerprint,
+      second.value.canonicalRequest!.assetBundle.fingerprint,
     );
   });
 
@@ -410,7 +415,7 @@ async function main() {
     assert.equal(materialized.ok, true);
     if (!materialized.ok) throw new Error("materialize failed");
     const locator =
-      materialized.value.canonicalRequest.assetBundle.assets[0]!.storageLocator;
+      materialized.value.canonicalRequest!.assetBundle.assets[0]!.storageLocator;
     const resolved = await resolveProviderBackedSourceBinding({
       locator,
       ownerId: fixture.ownerId,
@@ -548,7 +553,7 @@ async function main() {
     assert.equal(listed.ok, true);
     if (!listed.ok) throw new Error("list failed");
     const canonicalLocator =
-      promoted.value.record.canonicalRequest.assetBundle.assets[0]!.storageLocator;
+      promoted.value.record.canonicalRequest!.assetBundle.assets[0]!.storageLocator;
     const finalized = listed.value
       .map((s) => s.record)
       .find(

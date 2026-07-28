@@ -59,11 +59,11 @@ export async function observeHostedRendererState(
     const record = job.value;
     const jobSucceeded =
       record.stage === "canonical" &&
-      record.canonicalJob.state === "succeeded";
+      record.canonicalJob!.state === "succeeded";
     const jobTerminalFailed =
       record.stage === "canonical" &&
-      (record.canonicalJob.state === "failed" ||
-        record.canonicalJob.state === "cancelled");
+      (record.canonicalJob!.state === "failed" ||
+        record.canonicalJob!.state === "cancelled");
     const storeVersion = record.storeVersion;
 
     let artifactFinalized = false;
@@ -83,7 +83,7 @@ export async function observeHostedRendererState(
       const outbox = await ctx.dispatchOutbox.getByJobAttemptAndOwner({
         jobId,
         ownerId,
-        attempt: record.canonicalJob.attempt,
+        attempt: record.canonicalJob!.attempt,
       });
       dispatchOutboxCompleted =
         outbox.ok &&
@@ -122,11 +122,11 @@ export async function observeHostedRendererState(
       ffmpegExecuted:
         jobSucceeded ||
         (jobTerminalFailed &&
-          (record.canonicalJob.state === "failed" ||
-            record.canonicalJob.state === "cancelled") &&
-          (record.canonicalJob.progress?.stage === "uploading" ||
-            record.canonicalJob.progress?.stage === "validating" ||
-            record.canonicalJob.progress?.stage === "encoding" ||
+          (record.canonicalJob!.state === "failed" ||
+            record.canonicalJob!.state === "cancelled") &&
+          (record.canonicalJob!.progress?.stage === "uploading" ||
+            record.canonicalJob!.progress?.stage === "validating" ||
+            record.canonicalJob!.progress?.stage === "encoding" ||
             ctx.session.renderCompletedAtMs != null)),
       artifactUploaded:
         artifactFinalized ||

@@ -573,7 +573,7 @@ await runTests("selection-tamper", [
           wordLimit: true,
           spokenDurationLimit: true,
         }),
-        reasons: Object.freeze([] as string[]),
+        reasons: Object.freeze([] as unknown as string[]),
         groundingStatus: "user_context_only" as const,
         repairRecommended: false,
       });

@@ -44,7 +44,7 @@ const CONFIG: HeadlessConfiguredR2Config = Object.freeze({
 
 function stubJobStore(state: "succeeded" | "failed"): HeadlessJobStorePort {
   return {
-    async getByJobIdAndOwner(jobId, ownerId) {
+    async getByJobIdAndOwner(jobId: string, ownerId: string) {
       if (jobId !== "job_dl" || ownerId !== "owner_1") {
         return cpFail("JOB_NOT_FOUND", "Job not found for owner.");
       }

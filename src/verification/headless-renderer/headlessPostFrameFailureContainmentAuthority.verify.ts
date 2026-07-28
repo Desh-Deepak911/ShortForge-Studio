@@ -219,7 +219,8 @@ async function main() {
       forceGateOn: true,
       forceMutateGateOn: false,
       sql: {
-        withClient: async (fn) => fn(mockClient),
+        withClient: async (fn: (client: never) => Promise<unknown>) =>
+          fn(mockClient as never),
         withTransaction: async () => {
           throw new Error("unused");
         },

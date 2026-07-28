@@ -138,6 +138,7 @@ function buildInitialGeneratedStory(): FootieScript {
         toSceneId: "2",
         effect: "fade",
         durationMs: 500,
+        label: "Fade",
       },
       { id: "2", type: "scene", scene: { id: "2", start: 8, end: 16, duration: 8, subtitle: "Caption 2" } },
       { id: "3", type: "scene", scene: { id: "3", start: 16, end: 24, duration: 8, subtitle: "Caption 3" } },

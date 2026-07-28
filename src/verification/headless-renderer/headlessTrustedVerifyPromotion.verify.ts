@@ -91,7 +91,6 @@ const CAPABLE_ENV: Partial<ExportEnvironmentSnapshot> = {
   browserName: "chrome",
   supportsCanvasCaptureStream: true,
   supportsManualCanvasFrameRequest: true,
-  supportsWebAudio: true,
   supportsMediaRecorder: true,
 };
 
@@ -372,7 +371,6 @@ async function main() {
             url: "https://example.com/a.jpg",
             source: "upload",
             transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-            motion: null,
           },
         },
         {
@@ -390,7 +388,6 @@ async function main() {
             url: "https://example.com/b.jpg",
             source: "upload",
             transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-            motion: null,
           },
         },
       ],
@@ -697,7 +694,7 @@ async function main() {
     if (!materialize.ok) return;
 
     // 5: loaded from finalized durable objects (materialize path)
-    assert.ok(materialize.value.canonicalRequest.manifest);
+    assert.ok(materialize.value.canonicalRequest!.manifest);
 
     const promoted = await jobStore.promoteProvisionalToCanonical({
       jobId,
@@ -714,7 +711,7 @@ async function main() {
     const storeVersionAfter = promoted.value.record.storeVersion;
     assert.ok(isCanonicalStoredJobRecord(promoted.value.record));
 
-    const attempt = promoted.value.record.canonicalJob.attempt;
+    const attempt = promoted.value.record.canonicalJob!.attempt;
     const deliveryId = stableHeadlessDeliveryId(jobId, attempt);
     const outboxRow = await dispatchOutbox.getByJobAttemptAndOwner({
       jobId,
@@ -1083,7 +1080,6 @@ async function main() {
           verifiedTargets: [...targets],
           complete: true,
         },
-        storeVersion: 0,
       },
     });
     const materialize = await materializeCanonicalFromFinalizedCoverage({

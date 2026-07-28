@@ -104,7 +104,6 @@ function fixStory(imageUrl = "https://example.com/a.jpg"): FootieScript {
           url: imageUrl,
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
       {
@@ -122,7 +121,6 @@ function fixStory(imageUrl = "https://example.com/a.jpg"): FootieScript {
           url: "https://example.com/b.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
     ],

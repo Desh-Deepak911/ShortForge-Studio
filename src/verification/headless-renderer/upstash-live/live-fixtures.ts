@@ -240,7 +240,7 @@ export async function seedQueuedCanonicalJob(
     if (
       fx.projectId !== ctx.projectId ||
       fx.manifest.project.projectId !== ctx.projectId ||
-      fx.record.canonicalRequest.ownership.projectId !== ctx.projectId
+      fx.record.canonicalRequest!.ownership.projectId !== ctx.projectId
     ) {
       return {
         ok: false,
@@ -272,15 +272,15 @@ export async function seedQueuedCanonicalJob(
     if (!stored.ok || stored.value.stage !== "canonical") {
       return { ok: false, message: "expected canonical job after insert" };
     }
-    if (stored.value.canonicalJob.state !== "queued") {
+    if (stored.value.canonicalJob!.state !== "queued") {
       const queued = applyHeadlessJobTransition({
         jobValue: stored.value.canonicalJob,
         requestValue: stored.value.canonicalRequest,
         toState: "queued",
-        attempt: stored.value.canonicalJob.attempt,
+        attempt: stored.value.canonicalJob!.attempt,
         updatedAtMs: Math.max(
           ctx.nowMs,
-          stored.value.canonicalJob.updatedAtMs + 1,
+          stored.value.canonicalJob!.updatedAtMs + 1,
         ),
       });
       if (!queued.ok) {
@@ -308,7 +308,7 @@ export async function seedQueuedCanonicalJob(
     trackJobId(ctx, record.jobId);
     const deliveryId = stableHeadlessDeliveryId(
       record.jobId,
-      record.canonicalJob.attempt,
+      record.canonicalJob!.attempt,
     );
     ctx.session.jobId = record.jobId;
     ctx.session.renderDeliveryId = deliveryId;
@@ -316,7 +316,7 @@ export async function seedQueuedCanonicalJob(
       ok: true,
       jobId: record.jobId,
       deliveryId,
-      attempt: record.canonicalJob.attempt,
+      attempt: record.canonicalJob!.attempt,
       storeVersion:
         stored.value.stage === "canonical" ? stored.value.storeVersion : 1,
     };
@@ -347,10 +347,10 @@ export async function seedTerminalCanonicalJob(
     jobValue: loaded.value.canonicalJob,
     requestValue: loaded.value.canonicalRequest,
     toState: "failed",
-    attempt: loaded.value.canonicalJob.attempt,
+    attempt: loaded.value.canonicalJob!.attempt,
     updatedAtMs: Math.max(
       ctx.nowMs,
-      loaded.value.canonicalJob.updatedAtMs + 1,
+      loaded.value.canonicalJob!.updatedAtMs + 1,
     ),
     terminalReason: { reasonId: "WORKER_FAILED", retryable: false },
   });

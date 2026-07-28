@@ -20,7 +20,7 @@ require.cache[require.resolve("server-only")] = {
   filename: require.resolve("server-only"),
   loaded: true,
   exports: {},
-};
+} as unknown as NodeJS.Module;
 
 const QA_BASE_URL = process.env.QA_BASE_URL?.replace(/\/$/, "") ?? "";
 const root = process.cwd();

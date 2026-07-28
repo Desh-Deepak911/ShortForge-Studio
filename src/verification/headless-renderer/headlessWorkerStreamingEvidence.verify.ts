@@ -109,7 +109,7 @@ async function attempt(spec: RunSpec): Promise<{
       !result.ok ||
       !stored.ok ||
       result.value.succeeded !== 1 ||
-      stored.value.canonicalJob.state !== "succeeded" ||
+      stored.value.canonicalJob!.state !== "succeeded" ||
       !result.value.lastEvidence
     ) {
       return {
@@ -123,15 +123,15 @@ async function attempt(spec: RunSpec): Promise<{
           renderDurationMs: RENDER_MS,
           elapsedMs,
           processOnce: result.ok ? result.value : result,
-          jobState: stored.ok ? stored.value.canonicalJob.state : null,
-          terminalReason: stored.ok ? stored.value.canonicalJob.terminalReason : null,
+          jobState: stored.ok ? stored.value.canonicalJob!.state : null,
+          terminalReason: stored.ok ? stored.value.canonicalJob!.terminalReason : null,
           note: "Local resources/time could not complete 60s streamed artifact.",
         },
       };
     }
 
     const ev = result.value.lastEvidence;
-    const art = stored.value.canonicalJob.artifact!;
+    const art = stored.value.canonicalJob!.artifact!;
     const profileId =
       `${spec.profile.resolution}-${spec.profile.format}-30` as keyof typeof HEADLESS_OUTPUT_PROFILES;
     const expected = HEADLESS_OUTPUT_PROFILES[profileId];

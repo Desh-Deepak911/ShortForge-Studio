@@ -546,8 +546,8 @@ async function main() {
       if (stored.ok && stored.value.stage === "canonical") {
         assert.ok(stored.value.claimToken != null);
         assert.ok(
-          stored.value.canonicalJob.state === "running" ||
-            stored.value.canonicalJob.state === "queued",
+          stored.value.canonicalJob!.state === "rendering" ||
+            stored.value.canonicalJob!.state === "queued",
         );
       }
     } finally {
@@ -923,7 +923,7 @@ async function main() {
     });
     const expected = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     const recovered = await recoverQueuedRenderDispatchesOnce({
       jobStore: fx.stack.jobStore,
@@ -955,7 +955,7 @@ async function main() {
     );
     assert.equal(still.ok, true);
     if (still.ok && still.value.stage === "canonical") {
-      assert.equal(still.value.canonicalJob.state, "queued");
+      assert.equal(still.value.canonicalJob!.state, "queued");
       assert.equal(still.value.claimToken, null);
     }
     const second = await recoverQueuedRenderDispatchesOnce({
@@ -978,7 +978,7 @@ async function main() {
     assert.equal(before.ok, true);
     if (!before.ok) return;
     const attempt = before.value.stage === "canonical"
-      ? before.value.canonicalJob.attempt
+      ? before.value.canonicalJob!.attempt
       : -1;
     await recoverQueuedRenderDispatchesOnce({
       jobStore: fx.stack.jobStore,
@@ -998,7 +998,7 @@ async function main() {
     );
     assert.equal(after.ok, true);
     if (!after.ok || after.value.stage !== "canonical") return;
-    assert.equal(after.value.canonicalJob.attempt, attempt);
+    assert.equal(after.value.canonicalJob!.attempt, attempt);
     assert.equal(after.value.jobId, fx.record.jobId);
   });
 
@@ -1088,7 +1088,7 @@ async function main() {
         id,
         stableHeadlessDeliveryId(
           fx.record.jobId,
-          fx.record.canonicalJob.attempt,
+          fx.record.canonicalJob!.attempt,
         ),
       );
     }

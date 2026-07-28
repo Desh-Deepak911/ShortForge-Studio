@@ -85,7 +85,11 @@ function minimalProvisional(input: {
     expiresAtMs: 1_700_003_600_000,
   });
   assert.equal(result.ok, true, result.ok ? "" : result.message);
-  if (!result.ok) throw new Error(result.message);
+  if (!result.ok) {
+    throw new Error(
+      String((result as { message?: unknown }).message ?? "materialize failed"),
+    );
+  }
   return { record: result.record, idem };
 }
 

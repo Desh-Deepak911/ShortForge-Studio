@@ -149,7 +149,9 @@ async function main() {
     assert.equal(seeded.ok, true);
     if (!seeded.ok) return;
     const ctx = classifyProviderRenderContext({
-      request: seeded.value.request,
+      request: {
+        assetBundle: seeded.value.bundle,
+      } as never,
       bundle: seeded.value.bundle,
       storageAdapterClass: "memory",
       identityCoherent: true,
@@ -497,7 +499,7 @@ async function main() {
       owningBoundaryIngestionFailure: null,
       boundaryEmissionClassification: null,
       notes: ["fixture"],
-    });
+    } as never);
     assert.equal(assertExecutionProbeEvidenceSafe(md).ok, true);
     assert.match(md, /## Owning boundary telemetry/);
     assert.match(md, /last_observed_boundary=chromium_session_cleanup/);

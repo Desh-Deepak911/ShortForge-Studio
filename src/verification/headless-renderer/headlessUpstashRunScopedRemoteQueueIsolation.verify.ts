@@ -516,7 +516,7 @@ async function main() {
     const orig = stream.qaProbeStreamEntry.bind(stream);
     stream.qaProbeStreamEntry = async () => ({
       ok: false,
-      reasonId: "stream_probe_failed",
+      reasonId: "stream_presence_probe_failed",
     });
     const cleanup = await defaultUpstashLiveCleanup(ctx, false);
     stream.qaProbeStreamEntry = orig;

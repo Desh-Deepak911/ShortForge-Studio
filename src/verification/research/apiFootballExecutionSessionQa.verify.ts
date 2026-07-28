@@ -232,7 +232,7 @@ async function main() {
     const adapters = mockAdapters(order);
     const query = mockQuery(id);
     registerProviderExecutionContext(id, {
-      topic: query.topic,
+      topic: query.input.topic,
       mode: "match_recap",
     });
 
@@ -324,7 +324,7 @@ async function main() {
     };
     const query = mockQuery(id);
     registerProviderExecutionContext(id, {
-      topic: query.topic,
+      topic: query.input.topic,
       mode: "match_recap",
     });
     try {

@@ -180,7 +180,7 @@ function makeRetentionPassComposer(): RetentionComposerCallback {
     let rem = targetTotal - base * n;
     return {
       title: "Golden Retention",
-      hookClaimRefs: [] as string[],
+      hookClaimRefs: [] as unknown as string[],
       segments: request.orderedBeatIds.map((beatId, i) => {
         const target = Math.max(minPer, base + (rem > 0 ? 1 : 0));
         if (rem > 0) rem -= 1;
@@ -195,7 +195,7 @@ function makeRetentionPassComposer(): RetentionComposerCallback {
           return {
             beatId,
             text: joinOpeningAndBody(open, body),
-            claimRefs: [] as string[],
+            claimRefs: [] as unknown as string[],
           };
         }
         const seed =
@@ -205,7 +205,7 @@ function makeRetentionPassComposer(): RetentionComposerCallback {
         return {
           beatId,
           text: padWords(seed, target),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }),
     };

@@ -35,6 +35,7 @@ import {
 } from "@/features/headless-renderer/worker/runtime/execute-claimed-render";
 import { renderFlyRenderExecutionProbeEvidenceMarkdown } from "./fly-render-live/claimed-render-execution-probe-evidence";
 import { buildAttributionFromTerminalJob } from "./fly-render-live/claim-correlation-authority";
+import { buildHeadlessFlyRenderLiveSmokeWorkloadEvidence } from "./fly-render-live/smoke-workload";
 
 let passed = 0;
 
@@ -146,7 +147,7 @@ async function main() {
       cleanupDisposition: "ok",
     });
     const missingContract = pageWorkspaceAttributionToTelemetryFacts({
-      ...bootstrapRejected,
+      ...sanitizePageWorkspaceAttributionFromTelemetryFacts(bootstrapRejected)!,
       pageErrorClass: "runtime_exception",
       contractGlobalPresence: "missing",
       contractVersionMatch: "not_applicable",
@@ -231,18 +232,13 @@ async function main() {
       }),
       cleanupStatus: "ok",
       executionStages: [{ stageId: "hosted.chromium_execution", status: "FAIL" }],
-      smokeWorkload: {
-        profileId: "720p-webm-30",
-        contentDurationMs: 2_000,
-        pollTimeoutMs: 180_000,
-        claims4kCapacity: false,
-      },
+      smokeWorkload: buildHeadlessFlyRenderLiveSmokeWorkloadEvidence(),
       resourceObservation: null,
       executionDurationMs: 900,
       artifactAuthority: null,
       acceptedImageDigestSha256: null,
       notes: ["fixture"],
-    });
+    } as never);
     assert.match(markdown, /## Page workspace attribution/);
     assert.match(markdown, /source_artifact_presence_class=present_readable/);
     assert.match(markdown, /bootstrap_response_class=missing_contract/);
@@ -295,12 +291,14 @@ async function main() {
       } as never,
       deliveryEvents: [
         {
+          name: "hosted.loop.delivery",
           atMs: 500,
           action: "terminalized_render_failure",
           reasonId: "page_contract_missing",
           facts: historicalFacts,
         },
         {
+          name: "hosted.loop.delivery",
           atMs: 1_500,
           action: "terminalized_render_failure",
           reasonId: "page_contract_missing",

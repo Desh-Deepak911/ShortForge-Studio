@@ -288,7 +288,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(wrong.ok, false);
   });
@@ -423,7 +423,7 @@ async function main() {
     const stored = await stack.jobStore.getByJobIdAndOwner(jobId, "owner-11d");
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
-    const art = stored.value.canonicalJob.artifact!;
+    const art = stored.value.canonicalJob!.artifact!;
     assert.equal(art.format, "mp4");
     assert.equal(art.video.codec, "h264");
     assert.equal(art.audio.present, true);

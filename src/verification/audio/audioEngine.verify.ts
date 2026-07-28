@@ -18,6 +18,7 @@ import {
   resolvePlayableVoiceoverFromStory,
 } from "@/features/audio";
 import { syncFootieScript } from "@/lib/utils/voiceover";
+import type { FootieScript } from "@/features/story/types";
 
 function test(name: string, fn: () => void) {
   fn();
@@ -87,7 +88,7 @@ test("getCanonicalVoiceover prefers voiceoverUrl and resolves legacy fields", ()
       voiceoverUrl: undefined,
       voiceoverDurationMs: undefined,
       voiceover: { url: "blob:legacy-voiceover", durationMs: 8_000 },
-    }),
+    } as unknown as FootieScript),
     { url: "blob:legacy-voiceover", durationMs: 8_000 },
   );
 
@@ -97,7 +98,7 @@ test("getCanonicalVoiceover prefers voiceoverUrl and resolves legacy fields", ()
       voiceoverUrl: undefined,
       voiceoverDurationMs: undefined,
       audioUrl: "blob:audio-first",
-    }),
+    } as unknown as FootieScript),
     { url: "blob:audio-first" },
   );
 
@@ -107,7 +108,7 @@ test("getCanonicalVoiceover prefers voiceoverUrl and resolves legacy fields", ()
       voiceoverUrl: undefined,
       voiceoverDurationMs: undefined,
       voiceoverAudio: "blob:voiceover-audio",
-    }),
+    } as unknown as FootieScript),
     { url: "blob:voiceover-audio" },
   );
 });
@@ -227,7 +228,7 @@ test("resolvePlayableVoiceoverFromStory materializes raw and data URL base64 pay
     voiceoverAudioBase64: dataUrl,
     voiceoverDurationMs: 5000,
     scenes: [{ id: "1", start: 0, end: 5, duration: 5, subtitle: "A" }],
-  });
+  } as unknown as FootieScript);
 
   const playable = resolvePlayableVoiceoverFromStory(script, { preferObjectUrl: true });
   assert.equal(playable.hasPlayableSrc, true);

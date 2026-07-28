@@ -607,12 +607,12 @@ test("23. MasterTimeline and ExportManifest output remain unchanged for legacy s
   assert.equal(manifestDormant.scenes[0]?.media.type, manifestA.scenes[0]?.media.type);
   const urlA =
     manifestA.scenes[0]?.media.type === "image" || manifestA.scenes[0]?.media.type === "video"
-      ? manifestA.scenes[0]?.media.url
+      ? manifestA.scenes[0]?.media.source
       : undefined;
   const urlD =
     manifestDormant.scenes[0]?.media.type === "image" ||
     manifestDormant.scenes[0]?.media.type === "video"
-      ? manifestDormant.scenes[0]?.media.url
+      ? manifestDormant.scenes[0]?.media.source
       : undefined;
   assert.equal(urlD, urlA);
 });

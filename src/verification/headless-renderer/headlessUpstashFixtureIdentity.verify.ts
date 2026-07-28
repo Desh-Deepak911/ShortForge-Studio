@@ -74,7 +74,7 @@ async function main() {
       assert.equal(fx.projectId, projectId);
       assert.equal(fx.manifest.project.projectId, projectId);
       assert.equal(
-        fx.record.canonicalRequest.ownership.projectId,
+        fx.record.canonicalRequest!.ownership.projectId,
         projectId,
       );
       assert.equal(validateExportManifest(fx.manifest).ok, true);

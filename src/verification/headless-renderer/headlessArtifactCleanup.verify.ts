@@ -284,7 +284,7 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "cancelled");
+      assert.equal(stored.value.canonicalJob!.state, "cancelled");
       assert.equal(stored.value.artifactObjectBinding, null);
       assert.equal(stack.storage.testingCountFinalizedArtifacts(ownerId), 0);
       assert.equal(stack.artifactCleanup.testingCountForOwner(ownerId), 0);
@@ -305,7 +305,7 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "cancelled");
+      assert.equal(stored.value.canonicalJob!.state, "cancelled");
       assert.equal(stored.value.artifactObjectBinding, null);
       assert.ok(stack.storage.testingCountFinalizedArtifacts(ownerId) >= 1);
       const intent = await stack.artifactCleanup.getByCleanupIdAndOwner(
@@ -315,7 +315,7 @@ async function main() {
       assert.equal(intent.ok, true);
       if (!intent.ok) return;
       assert.equal(intent.value.state, "pending");
-      const view = toHeadlessPublicJobView(stored.value.canonicalJob);
+      const view = toHeadlessPublicJobView(stored.value.canonicalJob!);
       const viewJson = JSON.stringify(view);
       assert.equal(viewJson.includes("objectKey"), false);
       assert.equal(viewJson.includes("cleanupId"), false);
@@ -458,7 +458,7 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "cancelled");
+      assert.equal(stored.value.canonicalJob!.state, "cancelled");
       assert.equal(stored.value.artifactObjectBinding, null);
       assert.equal(stack.artifactCleanup.testingCountForOwner(ownerId), 0);
       assert.ok(stack.storage.testingCountFinalizedArtifacts(ownerId) >= 1);
@@ -566,7 +566,7 @@ async function main() {
       assert.equal(stack.artifactCleanup.testingCountForOwner(ownerId), 0);
       const expectedId = stableHeadlessCleanupId({
         jobId,
-        attempt: stored.value.canonicalJob.attempt,
+        attempt: stored.value.canonicalJob!.attempt,
         storageLocator: stored.value.artifactObjectBinding!.storageLocator,
       });
       const missing = await stack.artifactCleanup.getByCleanupIdAndOwner(
@@ -589,7 +589,7 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      const view = toHeadlessPublicJobView(stored.value.canonicalJob);
+      const view = toHeadlessPublicJobView(stored.value.canonicalJob!);
       const blob = JSON.stringify({
         view,
         evidence: result.value.lastEvidence,

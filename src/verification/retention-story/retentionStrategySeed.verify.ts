@@ -62,7 +62,11 @@ function collectTsFiles(dir: string): string[] {
 }
 
 function emptyGrounding(): RetentionGroundingContext {
-  return normalizeRetentionGroundingContext({ version: 1, claims: [] });
+  return normalizeRetentionGroundingContext({
+    version: 1,
+    claims: [],
+    researchIdentity: null,
+  });
 }
 
 function baseContractInput(
@@ -157,6 +161,7 @@ check("research identity mismatch", () => {
   const input = planningPair();
   const forged = normalizeRetentionGroundingContext({
     version: 1,
+    researchIdentity: null,
     claims: [
       {
         claimId: "x1",
@@ -1529,11 +1534,14 @@ check("asserted seed is deeply frozen and detached from caller objects", () => {
 
   try {
     (canonical.controllingIdea as { statement: string }).statement = "mutated";
-    (canonical.controllingIdeaClaimRefs as string[]).push("x");
+    (canonical.controllingIdeaClaimRefs as unknown as string[]).push("x");
     (canonical.emotionalArcBlueprint as { primaryEmotion: string }).primaryEmotion =
       "rage";
-    (canonical.emotionalArcBlueprint.curve as { emotion: string }[])[0]!.emotion =
-      "rage";
+    (
+      canonical.emotionalArcBlueprint.curve as unknown as {
+        emotion: string;
+      }[]
+    )[0]!.emotion = "rage";
   } catch {
     /* frozen writes may throw */
   }

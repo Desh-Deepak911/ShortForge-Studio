@@ -69,9 +69,9 @@ function buildCtx(): FlyRenderLiveMatrixContext {
     projectId: randomUUID(),
     nowMs: NOW,
     sql: {
-      withClient: async (fn) =>
+      withClient: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
-      withTransaction: async (fn) =>
+      withTransaction: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
     } as never,
     jobStore: new MemoryHeadlessJobStoreAdapter(),

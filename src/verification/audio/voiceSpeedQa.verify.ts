@@ -232,7 +232,12 @@ test("subtitle timing still derives from unchanged scene.durationMs", () => {
   assert.equal(previewTiming.sceneDurationMs, 8000);
 
   const previewSubtitle = resolveActiveSubtitleForScene(updated.scenes[0]!, previewTiming);
-  const exportSubtitle = resolveExportSubtitleDisplay(updated.scenes[0]!, previewTiming);
+  const exportSubtitle = resolveExportSubtitleDisplay(
+    updated.scenes[0]! as unknown as Parameters<
+      typeof resolveExportSubtitleDisplay
+    >[0],
+    previewTiming,
+  );
 
   assert.equal(previewSubtitle.chunkDurationMs, chunkDurationMs);
   assert.ok(exportSubtitle);
@@ -257,7 +262,12 @@ test("subtitle animations remain synchronized between preview and export", () =>
   };
 
   const preview = resolveActiveSubtitleForScene(updated.scenes[0]!, timing);
-  const exportState = getExportSubtitleChunkState(updated.scenes[0]!, timing);
+  const exportState = getExportSubtitleChunkState(
+    updated.scenes[0]! as unknown as Parameters<
+      typeof getExportSubtitleChunkState
+    >[0],
+    timing,
+  );
 
   assert.equal(preview.activeChunk, exportState.chunk);
   assert.equal(preview.chunkIndex, Math.floor(timing.sceneElapsedMs / preview.chunkDurationMs));
@@ -310,7 +320,10 @@ test("no subtitle lag after speed changes — preview and export share global ti
 
     const scene = scenes[globalTiming.slot.index]!;
     const previewChunk = resolveActiveSubtitleForScene(scene, previewTiming).activeChunk;
-    const exportChunk = resolveExportSubtitleDisplay(scene, previewTiming)?.activeChunk;
+    const exportChunk = resolveExportSubtitleDisplay(
+      scene as unknown as Parameters<typeof resolveExportSubtitleDisplay>[0],
+      previewTiming,
+    )?.activeChunk;
 
     assert.equal(previewChunk, exportChunk);
   }

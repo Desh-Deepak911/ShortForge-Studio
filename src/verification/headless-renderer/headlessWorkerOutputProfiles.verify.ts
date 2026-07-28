@@ -84,7 +84,7 @@ async function main() {
   });
 
   test("mutation-negative: push/index assignment cannot alter allowlists", () => {
-    const containers = HEADLESS_WORKER_PHASE3_SUPPORTED.containers as string[];
+    const containers = HEADLESS_WORKER_PHASE3_SUPPORTED.containers as unknown as string[];
     const before = containers.length;
     let threw = false;
     try {
@@ -96,7 +96,7 @@ async function main() {
     assert.equal(containers.includes("avi"), false);
 
     const profile = HEADLESS_OUTPUT_PROFILES["720p-webm-30"];
-    const codecs = profile.probeVideoCodecs as string[];
+    const codecs = profile.probeVideoCodecs as unknown as string[];
     const codecLen = codecs.length;
     try {
       codecs[0] = "mpeg2video";
@@ -268,8 +268,8 @@ async function main() {
     assert.equal(jobB.ok, true);
     if (!jobA.ok || !jobB.ok) return;
     assert.notEqual(
-      jobA.value.canonicalJob.requestFingerprint,
-      jobB.value.canonicalJob.requestFingerprint,
+      jobA.value.canonicalJob!.requestFingerprint,
+      jobB.value.canonicalJob!.requestFingerprint,
     );
   });
 
@@ -298,11 +298,11 @@ async function main() {
     assert.equal(jobA.ok && jobB.ok, true);
     if (!jobA.ok || !jobB.ok) return;
     assert.notEqual(
-      jobA.value.canonicalJob.requestFingerprint,
-      jobB.value.canonicalJob.requestFingerprint,
+      jobA.value.canonicalJob!.requestFingerprint,
+      jobB.value.canonicalJob!.requestFingerprint,
     );
-    assert.equal(jobA.value.canonicalRequest.rendererProfile.resolution, "1080p");
-    assert.equal(jobB.value.canonicalRequest.rendererProfile.resolution, "4k");
+    assert.equal(jobA.value.canonicalRequest!.rendererProfile.resolution, "1080p");
+    assert.equal(jobB.value.canonicalRequest!.rendererProfile.resolution, "4k");
   });
 
   await testAsync("idempotency does not silently merge across profiles", async () => {

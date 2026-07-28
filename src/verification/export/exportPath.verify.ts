@@ -23,10 +23,7 @@ console.log("exportPath");
 
 test("resolveExportPath selects WebM without rewriting format", () => {
   const result = resolveExportPath({
-    fileName: "story",
     format: "webm",
-    quality: "high",
-    resolution: "1080x1920",
   });
 
   assert.equal(result.path, "webm");
@@ -36,10 +33,7 @@ test("resolveExportPath selects WebM without rewriting format", () => {
 
 test("resolveExportPath selects MP4 without rewriting format", () => {
   const result = resolveExportPath({
-    fileName: "story",
     format: "mp4",
-    quality: "high",
-    resolution: "1080x1920",
   });
 
   assert.equal(result.path, "mp4");

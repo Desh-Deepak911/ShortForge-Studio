@@ -35,7 +35,7 @@ test("Fit / Fill / Zoom / Pan resolve from original framing, not a preview proxy
       url: "https://example.com/hi-res.jpg",
       source: "upload",
       transform: { x: 40, y: -20, scale: 1.5, rotation: 0 },
-      fitMode: "fill",
+      fitMode: "cover",
     },
     image: {
       url: "https://example.com/hi-res.jpg",

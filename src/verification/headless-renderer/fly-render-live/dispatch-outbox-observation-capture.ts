@@ -59,7 +59,7 @@ export async function captureMonotonicDispatchOutboxObservation(input: {
       return { ok: false, failClass: canonical.failClass };
     }
     const job = canonical.record;
-    const attempt = job.canonicalJob.attempt;
+    const attempt = job.canonicalJob!.attempt;
 
     const firstRead = await input.dispatchOutbox.getByJobAttemptAndOwner({
       jobId: input.jobId,

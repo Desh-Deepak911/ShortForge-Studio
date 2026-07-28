@@ -77,6 +77,7 @@ async function main(): Promise<void> {
           plan: cheapEnv.plan,
           strategySeed: cheapEnv.strategySeed,
           grounding: cheapEnv.grounding,
+          hookDirectiveBlock: "",
           modelCallKind: "initial",
         }),
       "strategy_seed_mismatch",
@@ -88,6 +89,7 @@ async function main(): Promise<void> {
           plan: cheapEnv.plan,
           strategySeed: balancedEnv.strategySeed,
           grounding: balancedEnv.grounding,
+          hookDirectiveBlock: "",
           modelCallKind: "initial",
         }),
       "retention_story_plan_mismatch",
@@ -118,6 +120,7 @@ async function main(): Promise<void> {
           plan: env.plan,
           strategySeed: otherSeed.seed,
           grounding: env.grounding,
+          hookDirectiveBlock: "",
           modelCallKind: "initial",
         }),
       "strategy_seed_mismatch",
@@ -164,8 +167,12 @@ async function main(): Promise<void> {
       JSON.stringify(built.candidate),
     ) as RetentionNarrationCandidate;
     const badText = "Spain  pressure keeps the short moving in section one.";
-    forged.segments[0] = { ...forged.segments[0]!, text: badText };
-    forged.assembledNarration = forged.assembledNarration.replace(
+    (forged.segments as RetentionNarrationCandidate["segments"][number][])[0] = {
+      ...forged.segments[0]!,
+      text: badText,
+    };
+    (forged as { assembledNarration: string }).assembledNarration =
+      forged.assembledNarration.replace(
       qualitativeSegmentText(0),
       badText,
     );
@@ -509,6 +516,7 @@ async function main(): Promise<void> {
       plan: env.plan,
       strategySeed: env.strategySeed,
       grounding: env.grounding,
+      hookDirectiveBlock: "",
       modelCallKind: "initial",
     });
     assert.equal(request.qualityMode, "cheap");
@@ -523,6 +531,7 @@ async function main(): Promise<void> {
       plan: env.plan,
       strategySeed: env.strategySeed,
       grounding: env.grounding,
+      hookDirectiveBlock: "",
       modelCallKind: "initial",
     });
     assert.equal(request.qualityMode, "balanced");
@@ -536,6 +545,7 @@ async function main(): Promise<void> {
       plan: env.plan,
       strategySeed: env.strategySeed,
       grounding: env.grounding,
+      hookDirectiveBlock: "",
       modelCallKind: "initial",
     });
     assert.equal(request.qualityMode, "best");
@@ -610,7 +620,7 @@ async function main(): Promise<void> {
       segments: env.plan.beatPlan.beats.map((b) => ({
         beatId: b.id,
         text: `Line for ${b.purpose}.`,
-        claimRefs: Object.freeze(["c-b", "c-a"] as string[]),
+        claimRefs: Object.freeze(["c-b", "c-a"] as unknown as string[]),
         factualRisk: false,
       })),
     });
@@ -722,12 +732,13 @@ async function main(): Promise<void> {
       const forged = JSON.parse(
         JSON.stringify(ok.candidate),
       ) as RetentionNarrationCandidate;
-      forged.segments[0] = {
+      (forged.segments as RetentionNarrationCandidate["segments"][number][])[0] = {
         ...forged.segments[0]!,
         text: claimText,
         claimRefs: ["unrelated-eligible"],
       };
-      forged.assembledNarration = forged.assembledNarration.replace(
+      (forged as { assembledNarration: string }).assembledNarration =
+        forged.assembledNarration.replace(
         qualitativeSegmentText(0),
         claimText,
       );
@@ -738,7 +749,8 @@ async function main(): Promise<void> {
         segments: forged.segments,
         assembledNarration: forged.assembledNarration,
       });
-      forged.candidateFingerprint = recomputedFp;
+      (forged as { candidateFingerprint: string }).candidateFingerprint =
+        recomputedFp;
       expectRetentionError(
         () =>
           assertRetentionNarrationCandidateCoherence(forged, {
@@ -879,6 +891,7 @@ async function main(): Promise<void> {
         plan: env.plan,
         strategySeed: env.strategySeed,
         grounding: env.grounding,
+        hookDirectiveBlock: "",
         modelCallKind: "initial",
       });
       assert.deepEqual(

@@ -557,7 +557,7 @@ test("QA-12 voiceover persistence hydrates review state for Build Storyboard", (
     scenes: [],
     voiceoverDurationMs: 28_500,
     voiceoverAudioBase64: "dGVzdC1hdWRpby1ieXRlcw==",
-  });
+  } as unknown as FootieScript);
 
   const hydrated = hydrateDraftScriptAudio(persistedScript);
   assert.match(hydrated.voiceoverUrl ?? "", /^blob:/);

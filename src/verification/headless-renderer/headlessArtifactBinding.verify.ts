@@ -454,7 +454,7 @@ async function main() {
         stored.value,
         "stale store version after finalize",
       );
-      assert.notEqual(canonicalRecord.canonicalJob.state, "succeeded");
+      assert.notEqual(canonicalRecord.canonicalJob!.state, "succeeded");
       assert.equal(canonicalRecord.artifactObjectBinding, null);
       assert.equal(stack.storage.testingCountFinalizedArtifacts(ownerId), 0);
     },
@@ -539,7 +539,7 @@ async function main() {
         stored.value,
         "delete failure schedules durable cleanup",
       );
-      assert.equal(canonicalRecord.canonicalJob.state, "cancelled");
+      assert.equal(canonicalRecord.canonicalJob!.state, "cancelled");
       assert.equal(canonicalRecord.artifactObjectBinding, null);
       assert.equal(stack.artifactCleanup.testingCountPendingForOwner(ownerId), 1);
       assert.ok(stack.storage.testingCountFinalizedArtifacts(ownerId) >= 1);

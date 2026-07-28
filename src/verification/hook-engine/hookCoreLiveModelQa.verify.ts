@@ -130,7 +130,7 @@ async function runCase(
         {
           expectedGenerationPath: expect.generationPath,
           expectedStrategyId: expect.strategyId,
-          expectedStrategySource: expect.strategySource,
+          expectedStrategySource: expect.strategySource as never,
         },
       );
 

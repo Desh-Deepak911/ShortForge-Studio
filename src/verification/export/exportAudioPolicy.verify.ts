@@ -95,7 +95,7 @@ test("silent mode prepares no stems", () => {
   const manifest = buildExportManifest({
     story,
     environment: CAPABLE_ENV,
-    options: { audioMode: "silent" },
+    audioMode: "silent",
   });
   // Force silent if builder chose voice due to leftover url
   const forced = {
@@ -114,7 +114,7 @@ test("voice shorter than project pads with silence", () => {
   const manifest = buildExportManifest({
     story: baseStory(),
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   const withVoice = {
     ...manifest,
@@ -143,7 +143,7 @@ test("voice near project end is accepted", () => {
   const manifest = buildExportManifest({
     story: baseStory(),
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   const withVoice = {
     ...manifest,
@@ -170,7 +170,7 @@ test("voice too long beyond tolerance blocks", () => {
   const manifest = buildExportManifest({
     story: baseStory(),
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   const withVoice = {
     ...manifest,
@@ -197,17 +197,18 @@ test("music looping uses loop-and-trim", () => {
   const story = baseStory({
     backgroundMusic: {
       enabled: true,
-      url: "https://example.com/music.mp3",
+      source: "upload",
+      fileUrl: "https://example.com/music.mp3",
       volume: 0.4,
       fadeIn: true,
       fadeOut: true,
-      ducking: true,
+      duckingEnabled: true,
     },
   } as Partial<FootieScript>);
   const manifest = buildExportManifest({
     story,
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   if (manifest.audio.mode !== "voice-with-music") {
     // Force music onto manifest for policy test
@@ -239,7 +240,7 @@ test("voice speed metadata only — generatedPlaybackRate is 1", () => {
   const manifest = buildExportManifest({
     story: baseStory(),
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   if (manifest.audio.voiceover) {
     assert.equal(manifest.audio.voiceover.generatedPlaybackRate, 1);

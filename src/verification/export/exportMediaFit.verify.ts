@@ -45,6 +45,7 @@ function sceneWithImage(fitMode: "fit" | "fill", mediaFit?: "contain" | "cover")
     durationMs: 3000,
     startMs: 0,
     endMs: 3000,
+    subtitle: "",
     image: {
       url: "https://example.com/photo.jpg",
       scale: 1,
@@ -172,6 +173,7 @@ async function main() {
       durationMs: 2000,
       startMs: 0,
       endMs: 2000,
+      subtitle: "",
       media: {
         type: "video",
         url: "blob:v",
@@ -190,6 +192,7 @@ async function main() {
       durationMs: 2000,
       startMs: 0,
       endMs: 2000,
+      subtitle: "",
       media: {
         type: "video",
         url: "blob:v",

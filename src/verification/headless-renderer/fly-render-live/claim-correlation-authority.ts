@@ -79,7 +79,7 @@ const IN_FLIGHT_STATES = new Set([
 function isTerminalJob(record: HeadlessCanonicalStoredJobRecord): boolean {
   return (
     record.stage === "canonical" &&
-    isHeadlessTerminalState(record.canonicalJob.state)
+    isHeadlessTerminalState(record.canonicalJob!.state)
   );
 }
 
@@ -105,7 +105,7 @@ export function classifyRenderClaimObservationAuthority(
     input.observationStartedAtMs;
 
   const hasActiveClaim =
-    job.claimToken != null && IN_FLIGHT_STATES.has(job.canonicalJob.state);
+    job.claimToken != null && IN_FLIGHT_STATES.has(job.canonicalJob!.state);
 
   const correlation = classifyRunOwnedDeliveryCorrelation({
     observationBoundaryMs,
@@ -226,8 +226,8 @@ export function buildAttributionFromTerminalJob(input: {
     return fromTelemetry;
   }
 
-  const state = input.job.canonicalJob.state;
-  const terminalReason = input.job.canonicalJob.terminalReason?.reasonId;
+  const state = input.job.canonicalJob!.state;
+  const terminalReason = input.job.canonicalJob!.terminalReason?.reasonId;
 
   const executionEvent = [...input.deliveryEvents]
     .filter(

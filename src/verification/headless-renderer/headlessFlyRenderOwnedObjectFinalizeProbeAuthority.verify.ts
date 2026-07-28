@@ -73,9 +73,9 @@ function buildCtx(
     projectId: randomUUID(),
     nowMs: NOW,
     sql: {
-      withClient: async (fn) =>
+      withClient: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
-      withTransaction: async (fn) =>
+      withTransaction: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
     } as never,
     jobStore: new MemoryHeadlessJobStoreAdapter(),
@@ -86,7 +86,7 @@ function buildCtx(
       s3Client: s3,
       authorizeOwner: () => true,
     }),
-    uploadCapability: null,
+    uploadCapability: undefined as never,
     downloadCapability: null,
     r2Config: CONFIG,
     createdJobIds: [],
@@ -459,10 +459,10 @@ async function main() {
   await test("r2 upload failure attributes r2_upload substage", async () => {
     const ctx = buildCtx(new MemoryHeadlessOwnedObjectStoreAdapter());
     const { payloads, staged } = await stageFullFixture(ctx);
-    ctx.io.writeUploadStream = async () => ({
+    ctx.io.writeUploadStream = (async () => ({
       ok: false as const,
       issues: [{ code: "STORAGE_UNAVAILABLE", message: "blocked" }],
-    });
+    })) as never;
     const chain = await runOwnedObjectFinalizeChain({
       ctx,
       staged: [staged[0]!],
@@ -551,7 +551,6 @@ async function main() {
       sceneId: "s",
       mediaItemId: "m",
       sourceDigest: `sha256:${"b".repeat(64)}`,
-      expectedMediaKind: "video",
     });
     const staging = await runOwnedObjectStagingRecordChain({
       ctx,

@@ -82,11 +82,11 @@ function proposalWithTexts(
 ) {
   return {
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, index) => ({
       beatId: beat.id,
       text: texts[index] ?? texts[texts.length - 1] ?? "Spain pressure advances.",
-      claimRefs: [] as string[],
+      claimRefs: [] as unknown as string[],
     })),
   };
 }
@@ -171,7 +171,7 @@ function openingPreservingRewriteComposer(
       hookClaimRefs: [],
       segments: request.orderedBeatIds.map((beatId, i) => {
         if (i === 0) {
-          return { beatId, text: first, claimRefs: [] as string[] };
+          return { beatId, text: first, claimRefs: [] as unknown as string[] };
         }
         const section = SECTION_WORDS[i] ?? "next";
         const seed =
@@ -183,7 +183,7 @@ function openingPreservingRewriteComposer(
         return {
           beatId,
           text: padWords(seed, target),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }),
     };
@@ -221,7 +221,7 @@ function eightyWordRewriteComposer(
           return {
             beatId,
             text: `${opening} ${body}`,
-            claimRefs: [] as string[],
+            claimRefs: [] as unknown as string[],
           };
         }
         const target = Math.max(5, base + (rem > 0 ? 1 : 0));
@@ -232,7 +232,7 @@ function eightyWordRewriteComposer(
             `Spain ${SECTION_WORDS[i] ?? "next"} pressure advances with decisive spoken focus tonight`,
             target,
           ),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }),
     };

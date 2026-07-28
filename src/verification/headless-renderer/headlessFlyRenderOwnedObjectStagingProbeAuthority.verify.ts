@@ -105,9 +105,9 @@ function buildCtx(
     projectId: randomUUID(),
     nowMs: NOW,
     sql: {
-      withClient: async (fn) =>
+      withClient: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
-      withTransaction: async (fn) =>
+      withTransaction: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
     } as never,
     jobStore: new MemoryHeadlessJobStoreAdapter(),
@@ -119,7 +119,7 @@ function buildCtx(
         issues: [{ code: "BLOCKED", message: "blocked" }],
       }),
     } as never,
-    uploadCapability: null,
+    uploadCapability: undefined as never,
     downloadCapability: null,
     r2Config: {
       accountId: "acct",
@@ -344,7 +344,6 @@ async function main() {
       sceneId: "s",
       mediaItemId: "m",
       sourceDigest: `sha256:${"a".repeat(64)}`,
-      expectedMediaKind: "video",
     });
     assert.ok(slotKey.length <= NEON_OWNED_OBJECT_SLOT_KEY_VARCHAR_LIMIT);
     const chain = await runOwnedObjectStagingRecordChain({

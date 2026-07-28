@@ -160,7 +160,7 @@ function readyBridge(
           hookDiagnostics: safeHook.hookDiagnostics,
         }
       : {}),
-  });
+  }) as unknown as RetentionHookBridgeResult;
 }
 
 function emptyCounts() {
@@ -202,7 +202,7 @@ function proposalWithTexts(
 ) {
   return {
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, index) => ({
       beatId: beat.id,
       text: texts[index] ?? texts[texts.length - 1] ?? "Spain pressure advances.",
@@ -655,7 +655,7 @@ async function main(): Promise<void> {
       diagnostics: Object.freeze({
         ...base.diagnostics,
         qualityMode: "balanced",
-      }),
+      }) as unknown as RetentionHookBridgeResult,
     });
     expectValidationError(
       () =>
@@ -674,7 +674,7 @@ async function main(): Promise<void> {
       diagnostics: Object.freeze({
         ...base.diagnostics,
         plannerAttempts: -1,
-      }),
+      }) as unknown as RetentionHookBridgeResult,
     });
     expectValidationError(
       () =>
@@ -693,7 +693,7 @@ async function main(): Promise<void> {
       diagnostics: Object.freeze({
         ...base.diagnostics,
         composerAttempts: Number.NaN,
-      }),
+      }) as unknown as RetentionHookBridgeResult,
     });
     expectValidationError(
       () =>
@@ -756,7 +756,7 @@ async function main(): Promise<void> {
         outcome: "hook_approved" as const,
         planFingerprint: env.plan.planFingerprint,
         candidateFingerprint: candidate.candidateFingerprint,
-      }),
+      }) as unknown as RetentionHookBridgeResult,
     });
     expectValidationError(
       () =>
@@ -844,7 +844,7 @@ async function main(): Promise<void> {
         ...emptyCounts(),
         initial_narration: 1,
         total: 1,
-      }),
+      }) as unknown as RetentionHookBridgeResult,
       events: [],
     });
     reject({
@@ -877,7 +877,7 @@ async function main(): Promise<void> {
         ...emptyCounts(),
         initial_narration: 1,
         total: 1,
-      }),
+      }) as unknown as RetentionHookBridgeResult,
     });
     reject({
       ...good,
@@ -1296,7 +1296,7 @@ async function main(): Promise<void> {
           planFingerprint: envBalanced.plan.planFingerprint,
           candidateFingerprint: balancedCandidate.candidateFingerprint,
         }),
-      }),
+      }) as unknown as RetentionHookBridgeResult,
       balancedCtx,
     );
 
@@ -1344,7 +1344,7 @@ async function main(): Promise<void> {
           planFingerprint: envBalanced.plan.planFingerprint,
           candidateFingerprint: balancedCandidate.candidateFingerprint,
         }),
-      }),
+      }) as unknown as RetentionHookBridgeResult,
       balancedCtx,
     );
 
@@ -1406,7 +1406,7 @@ async function main(): Promise<void> {
           planFingerprint: envFast.plan.planFingerprint,
           candidateFingerprint: fastCandidate.candidateFingerprint,
         }),
-      }),
+      }) as unknown as RetentionHookBridgeResult,
       fastCtx,
     );
   });
@@ -1903,6 +1903,9 @@ async function main(): Promise<void> {
     // Lexical forbidden-intro gate is evaluated against candidate opening text.
     const fitting = buildFinalCandidate(env.plan, env.grounding, env.strategySeed);
     const fittingBridge = readyBridge(fitting, env.plan);
+    if (fittingBridge.status !== "ready") {
+      throw new Error("expected ready Hook bridge");
+    }
     assert.equal(
       evaluateRetentionHardGates({
         contract: env.contract,

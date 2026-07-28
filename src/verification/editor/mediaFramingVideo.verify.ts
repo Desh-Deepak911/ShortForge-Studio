@@ -39,6 +39,7 @@ function baseVideoScene(overrides: Partial<FootieScene> = {}): FootieScene {
     duration: 5,
     durationMs: 5000,
     narration: "Video scene",
+    subtitle: "Video scene",
     media: {
       type: "video",
       url: "blob:video",
@@ -55,7 +56,12 @@ function baseVideoScene(overrides: Partial<FootieScene> = {}): FootieScene {
 }
 
 function baseScript(scene: FootieScene): FootieScript {
-  return { title: "Video framing", scenes: [scene] };
+  return {
+    title: "Video framing",
+    narration: "Video scene",
+    totalDuration: scene.duration,
+    scenes: [scene],
+  };
 }
 
 console.log("\nmedia-framing-video\n");

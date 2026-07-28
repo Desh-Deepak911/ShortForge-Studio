@@ -29,14 +29,6 @@ test("display status maps preview lifecycle to creator labels", () => {
   assert.equal(
     resolveResearchPreviewDisplayStatus({
       status: "success",
-      researchContext: {
-        mode: "story",
-        topic: "Test",
-        summary: "",
-        facts: ["One fact"],
-        warnings: [],
-        source: "api-football",
-      },
     }),
     "Ready",
   );

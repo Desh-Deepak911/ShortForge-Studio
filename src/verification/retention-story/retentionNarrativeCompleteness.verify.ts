@@ -69,7 +69,7 @@ function candidateFromTexts(
   const mapped = beats.map((beat, i) => ({
     beatId: beat.id,
     text: texts[i] ?? texts[texts.length - 1] ?? "Incomplete.",
-    claimRefs: [] as string[],
+    claimRefs: [] as unknown as string[],
   }));
   return buildRetentionNarrationCandidateFromProposal({
     proposal: {

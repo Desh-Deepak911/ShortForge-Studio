@@ -44,6 +44,7 @@ function imageScene(): FootieScene {
     duration: 3,
     durationMs: 3000,
     narration: "Image",
+    subtitle: "Image",
     image: {
       url: "blob:img",
       x: 108,
@@ -75,6 +76,7 @@ function videoScene(): FootieScene {
     duration: 4,
     durationMs: 4000,
     narration: "Video",
+    subtitle: "Video",
     media: {
       type: "video",
       url: "blob:vid",
@@ -91,6 +93,8 @@ function story(): FootieScript {
   const scenes = [imageScene(), videoScene()];
   return {
     title: "Parity",
+    narration: "Image Video",
+    totalDuration: 7,
     scenes,
     timelineItems: ensureTimelineItems(scenes),
   };
@@ -212,7 +216,12 @@ test("structural: framing commits through StoryDocument helpers", () => {
 
 test("committed framing survives script round-trip fields", () => {
   const script = applyMediaFramingSettings(
-    { title: "t", scenes: [imageScene()] },
+    {
+      title: "t",
+      narration: "Image",
+      totalDuration: 3,
+      scenes: [imageScene()],
+    },
     "img-1",
     { x: 200, y: -100, scale: 1.5 },
   );

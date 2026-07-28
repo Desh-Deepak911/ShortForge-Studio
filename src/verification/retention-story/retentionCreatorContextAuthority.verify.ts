@@ -67,7 +67,7 @@ function minimalAssembled(researchText: string): AssembledContext {
         normalized: "argentina versus england",
         tokens: ["argentina", "versus", "england"],
       },
-    } as AssembledContext["intent"],
+    } as unknown as AssembledContext["intent"],
     entities: [],
     verifiedFacts: [
       {
@@ -115,7 +115,7 @@ function fittingProposal(
   let rem = targetTotal - base * n;
   return {
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, i) => {
       const target = Math.max(minPer, base + (rem > 0 ? 1 : 0));
       if (rem > 0) rem -= 1;
@@ -129,7 +129,7 @@ function fittingProposal(
         return {
           beatId: beat.id,
           text: joinOpeningAndBody(open, body),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }
       const seed =
@@ -139,7 +139,7 @@ function fittingProposal(
       return {
         beatId: beat.id,
         text: padSpokenWords(seed, target),
-        claimRefs: [] as string[],
+        claimRefs: [] as unknown as string[],
       };
     }),
   };
@@ -498,12 +498,16 @@ async function main(): Promise<void> {
     // Force a rewrite-eligible weak editorial path when possible; otherwise
     // prove post-rewrite call site still accepts the same authority.
     const bridge = readyBridgeWithAuthority(candidate, env.plan, "best", env.ledger);
-    const rewriteComposer: RetentionBodyRewriteCallback = async ({ candidate: c }) => ({
-      bodyText: c.assembledNarration
-        .split(/(?<=[.!?])\s+/)
-        .slice(1)
-        .join(" ")
-        .trim() || c.assembledNarration,
+    const rewriteComposer: RetentionBodyRewriteCallback = async ({
+      currentCandidate,
+    }) => ({
+      title: "Argentina versus England",
+      hookClaimRefs: [],
+      segments: currentCandidate.segments.map((segment) => ({
+        beatId: segment.beatId,
+        text: segment.text,
+        claimRefs: [...segment.claimRefs],
+      })),
     });
     const terminal = await runRetentionTerminalValidation({
       contract: env.contract,

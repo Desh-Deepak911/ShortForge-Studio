@@ -129,6 +129,7 @@ async function main() {
       durationMs: 3000,
       startMs: 0,
       endMs: 3000,
+      subtitle: "",
       media: videoMedia,
     };
     const a = resolveExportSceneMediaPlaybackState(scene, 500, 3000);
@@ -153,6 +154,7 @@ async function main() {
       durationMs: 3000,
       startMs: 0,
       endMs: 3000,
+      subtitle: "",
       media: videoMedia,
     };
     const first = resolveExportSceneMediaPlaybackState(scene, 1200, 3000);
@@ -240,11 +242,14 @@ async function main() {
     let rvfcMediaTime = 14.5;
     let seekIssued = 0;
     let rvfcDeliveries = 0;
+    let paused = true;
     const listeners = new Map<string, Set<() => void>>();
     const video = {
       muted: true,
       volume: 0,
-      paused: true,
+      get paused() {
+        return paused;
+      },
       readyState: 2,
       get currentTime() {
         return currentTime;
@@ -256,7 +261,7 @@ async function main() {
         queueMicrotask(() => listeners.get("seeked")?.forEach((fn) => fn()));
       },
       pause() {
-        this.paused = true;
+        paused = true;
       },
       addEventListener(type: string, fn: () => void) {
         if (!listeners.has(type)) listeners.set(type, new Set());
@@ -322,6 +327,7 @@ async function main() {
       durationMs: 5000,
       startMs: 0,
       endMs: 5000,
+      subtitle: "",
       media: {
         type: "video",
         url: "blob:long",

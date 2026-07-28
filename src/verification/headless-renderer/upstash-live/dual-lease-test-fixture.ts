@@ -264,9 +264,9 @@ export async function createQueuedCanonicalJob(input?: {
     throw new Error("expected canonical job");
   }
   const record = recordResult.value;
-  if (record.canonicalJob.state !== "queued" || record.claimToken != null) {
+  if (record.canonicalJob!.state !== "queued" || record.claimToken != null) {
     throw new Error(
-      `expected queued unclaimed, got ${record.canonicalJob.state} claim=${record.claimToken}`,
+      `expected queued unclaimed, got ${record.canonicalJob!.state} claim=${record.claimToken}`,
     );
   }
 
@@ -278,7 +278,7 @@ export async function createQueuedCanonicalJob(input?: {
 
   const deliveryId = stableHeadlessDeliveryId(
     record.jobId,
-    record.canonicalJob.attempt,
+    record.canonicalJob!.attempt,
   );
   // Legacy createJob path: ensure durable dispatch intent for outbox authority.
   const { ensureDispatchIntentForQueuedJob } = await import(
@@ -301,7 +301,7 @@ export async function createQueuedCanonicalJob(input?: {
     deliveryId,
     jobId: record.jobId,
     ownerId,
-    attempt: record.canonicalJob.attempt,
+    attempt: record.canonicalJob!.attempt,
     enqueuedAtMs: nowMs,
     deliveryKind: "render",
   });

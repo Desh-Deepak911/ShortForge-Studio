@@ -58,6 +58,7 @@ function sixSceneStory(): FootieScript {
         source: "upload" as const,
         transform: { x: 0, y: 0, scale: 1, rotation: 0 },
         motion: {
+          version: 1 as const,
           preset: "slow-zoom-in" as const,
           intensity: 0.4,
           startMs: 0,

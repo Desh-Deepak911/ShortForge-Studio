@@ -188,7 +188,7 @@ test("fit/fill/position/zoom controls still work alongside motion", () => {
     x: 40,
     y: -20,
   });
-  const sceneB = getSceneImage(afterTransform.find((s) => s.id === "b"));
+  const sceneB = getSceneImage(afterTransform.find((s) => s.id === "b")!);
 
   assert.equal(sceneB?.scale, 2.4);
   assert.equal(sceneB?.fitMode, "fit");

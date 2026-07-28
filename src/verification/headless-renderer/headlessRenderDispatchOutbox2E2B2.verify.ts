@@ -77,7 +77,7 @@ async function main() {
     const outbox = fx.stack.dispatchOutbox;
     const row = await outbox.getByJobAttemptAndOwner({
       jobId: fx.record.jobId,
-      attempt: fx.record.canonicalJob.attempt,
+      attempt: fx.record.canonicalJob!.attempt,
       ownerId: fx.ownerId,
     });
     // createJob path may not promote via provisional — ensure if missing
@@ -86,7 +86,7 @@ async function main() {
     }
     const again = await outbox.getByJobAttemptAndOwner({
       jobId: fx.record.jobId,
-      attempt: fx.record.canonicalJob.attempt,
+      attempt: fx.record.canonicalJob!.attempt,
       ownerId: fx.ownerId,
     });
     assert.equal(again.ok, true);
@@ -94,7 +94,7 @@ async function main() {
     assert.equal(again.value.state, "pending");
     assert.equal(
       again.value.intent.deliveryId,
-      stableHeadlessDeliveryId(fx.record.jobId, fx.record.canonicalJob.attempt),
+      stableHeadlessDeliveryId(fx.record.jobId, fx.record.canonicalJob!.attempt),
     );
   });
 
@@ -116,7 +116,7 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const first = await fx.stack.dispatchOutbox.getByJobAttemptAndOwner({
       jobId: fx.record.jobId,
-      attempt: fx.record.canonicalJob.attempt,
+      attempt: fx.record.canonicalJob!.attempt,
       ownerId: fx.ownerId,
     });
     assert.ok(first.ok && first.value);
@@ -143,7 +143,7 @@ async function main() {
       jobId: fx.record.jobId,
       ownerId: fx.ownerId,
       projectId: fx.projectId,
-      attempt: fx.record.canonicalJob.attempt,
+      attempt: fx.record.canonicalJob!.attempt,
       deliveryId: "dlv:forged:999",
       nowMs: fx.nowMs + 3,
     });
@@ -155,7 +155,7 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     const result = await dispatchRenderOutboxIntentOnce({
       outbox: fx.stack.dispatchOutbox,
@@ -181,7 +181,7 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     await dispatchRenderOutboxIntentOnce({
       outbox: fx.stack.dispatchOutbox,
@@ -215,7 +215,7 @@ async function main() {
     };
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     await dispatchRenderOutboxIntentOnce({
       outbox: fx.stack.dispatchOutbox,
@@ -244,7 +244,7 @@ async function main() {
     fx.streamQueue.testingFailNextEnqueue();
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     const result = await dispatchRenderOutboxIntentOnce({
       outbox: fx.stack.dispatchOutbox,
@@ -273,7 +273,7 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     const claimed = await fx.stack.dispatchOutbox.claimDue({
       dispatchId: deliveryId,
@@ -299,7 +299,7 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     const claimed = await fx.stack.dispatchOutbox.claimDue({
       dispatchId: deliveryId,
@@ -314,7 +314,7 @@ async function main() {
       deliveryKind: "render",
       jobId: fx.record.jobId,
       ownerId: fx.ownerId,
-      attempt: fx.record.canonicalJob.attempt,
+      attempt: fx.record.canonicalJob!.attempt,
       deliveryId,
       enqueuedAtMs: fx.nowMs + 11,
     });
@@ -344,7 +344,7 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     const a = await fx.stack.dispatchOutbox.claimDue({
       dispatchId: deliveryId,
@@ -378,7 +378,7 @@ async function main() {
     // storeVersion bumped — refresh outbox ensure already done
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     const result = await dispatchRenderOutboxIntentOnce({
       outbox: fx.stack.dispatchOutbox,
@@ -398,14 +398,14 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const row = await fx.stack.dispatchOutbox.getByJobAttemptAndOwner({
       jobId: fx.record.jobId,
-      attempt: fx.record.canonicalJob.attempt,
+      attempt: fx.record.canonicalJob!.attempt,
       ownerId: fx.ownerId,
     });
     assert.ok(row.ok && row.value);
     if (!row.ok || !row.value) return;
     assert.equal(
       row.value.intent.deliveryId,
-      `dlv:${fx.record.jobId}:${fx.record.canonicalJob.attempt}`,
+      `dlv:${fx.record.jobId}:${fx.record.canonicalJob!.attempt}`,
     );
     assert.equal(row.value.intent.dispatchId, row.value.intent.deliveryId);
   });
@@ -433,7 +433,7 @@ async function main() {
     await ensureOutboxForFixture(fx);
     const deliveryId = stableHeadlessDeliveryId(
       fx.record.jobId,
-      fx.record.canonicalJob.attempt,
+      fx.record.canonicalJob!.attempt,
     );
     let xadds = 0;
     const countingQueue: Pick<HeadlessStreamQueuePort, "enqueueRender"> = {

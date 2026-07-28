@@ -65,7 +65,11 @@ function targetFor(
 ) {
   const resolved = resolveHeadlessRenderTarget(profile);
   assert.equal(resolved.ok, true);
-  if (!resolved.ok) throw new Error(resolved.message);
+  if (!resolved.ok) {
+    throw new Error(
+      String((resolved as { message?: unknown }).message ?? "target failed"),
+    );
+  }
   return resolved.target;
 }
 
@@ -536,7 +540,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(badCodec.ok, false);
 
@@ -584,7 +588,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(wrongContainer.ok, false);
 
@@ -635,7 +639,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(missingAudioFacts.ok, false);
 
@@ -677,7 +681,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(buildMismatch.ok, false);
   });
@@ -783,7 +787,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(built.ok, true, built.ok ? "" : built.message);
     if (!built.ok) return;
@@ -924,7 +928,7 @@ async function main() {
     );
     if (!expiredQueued.ok || expiredQueued.value.kind !== "failed_expired") return;
     assert.equal(
-      expiredQueued.value.record.canonicalJob.terminalReason?.reasonId,
+      expiredQueued.value.record.canonicalJob!.terminalReason?.reasonId,
       "CLAIM_LEASE_EXPIRED",
     );
 
@@ -1010,12 +1014,12 @@ async function main() {
     assert.equal(claimed2.ok && claimed2.value.kind === "claimed", true);
     if (!claimed2.ok || claimed2.value.kind !== "claimed") return;
 
-    const tRender = Math.max(clock + 1, claimed2.value.record.canonicalJob.updatedAtMs + 1);
+    const tRender = Math.max(clock + 1, claimed2.value.record.canonicalJob!.updatedAtMs + 1);
     const stepped = applyHeadlessJobTransition({
       jobValue: claimed2.value.record.canonicalJob,
       requestValue: claimed2.value.record.canonicalRequest,
       toState: "rendering",
-      attempt: claimed2.value.record.canonicalJob.attempt,
+      attempt: claimed2.value.record.canonicalJob!.attempt,
       updatedAtMs: tRender,
       progress: { percent: 10, stage: "rendering", updatedAtMs: tRender },
     });
@@ -1083,7 +1087,7 @@ async function main() {
     mkdir(framesDir, { recursive: true });
     for (let i = 0; i < 8; i++) {
       const out = pathJoin(framesDir, `frame_${String(i).padStart(6, "0")}.png`);
-      const r = spawnSync(
+      const r: { status: number | null } = spawnSync(
         bins.ffmpegExecutable,
         [
           "-y",
@@ -1270,7 +1274,7 @@ async function main() {
           rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
           audioChannels: null,
           audioSampleRateHz: null,
-        },
+        } as never,
       });
       assert.equal(built.ok, false);
     }
@@ -1318,7 +1322,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(ok.ok, true);
     if (!ok.ok) return;
@@ -1507,7 +1511,7 @@ async function main() {
       return {
         parentId,
         parentIdempotency: expired.value.record.idempotencyAuthorityKey,
-        parentAttempt: expired.value.record.canonicalJob.attempt,
+        parentAttempt: expired.value.record.canonicalJob!.attempt,
         request: expired.value.record.canonicalRequest,
       };
     };
@@ -1583,8 +1587,8 @@ async function main() {
       if (!stored.ok || stored.value.kind !== "created") {
         throw new Error("strand create");
       }
-      assert.equal(stored.value.record.canonicalJob.state, state);
-      return stored.value.record.canonicalJob.jobId;
+      assert.equal(stored.value.record.canonicalJob!.state, state);
+      return stored.value.record.canonicalJob!.jobId;
     };
 
     for (const crashState of ["created", "materializing", "queued"] as const) {
@@ -1608,7 +1612,7 @@ async function main() {
       const child = await stack.jobStore.getByJobIdAndOwner(childId, ownerId);
       assert.equal(child.ok, true);
       if (!child.ok) return;
-      assert.equal(child.value.canonicalJob.state, "queued");
+      assert.equal(child.value.canonicalJob!.state, "queued");
       assert.equal(child.value.claimToken, null);
       // Repeat recoverDispatch is idempotent.
       const again = await stack.service.recoverDispatch({

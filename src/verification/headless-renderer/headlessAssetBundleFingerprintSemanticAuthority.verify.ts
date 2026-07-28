@@ -69,7 +69,7 @@ function descriptor(input: {
       sceneId: "scene-1",
       mediaItemId: "item-1",
       sourceDigest: input.digest,
-      classification: "upload",
+      classification: "other",
     },
     contentDigest: `sha256:${"aa".repeat(32)}`,
     byteLength: 100,
@@ -237,7 +237,7 @@ async function main() {
         createdJobIds: [],
         createdProjectIds: [],
         createdR2Locators: [],
-      },
+      } as never,
       payloads,
       jobId: draftCtx.jobId,
       operationId: draftCtx.operationId,
@@ -257,7 +257,7 @@ async function main() {
         createdJobIds: [],
         createdProjectIds: [],
         createdR2Locators: [],
-      },
+      } as never,
       staged: staged.staged,
       payloads,
     });
@@ -303,12 +303,12 @@ async function main() {
     assert.equal(materialized.ok, true);
     if (!materialized.ok) throw new Error("materialize failed");
     assert.equal(
-      materialized.value.canonicalRequest.assetBundle.fingerprint,
+      materialized.value.canonicalRequest!.assetBundle.fingerprint,
       draftCtx.draft.snapshotClaim.assetBundleFingerprintClaim,
     );
     assert.equal(
       verifyHeadlessAssetBundleFingerprintCoherence(
-        materialized.value.canonicalRequest.assetBundle,
+        materialized.value.canonicalRequest!.assetBundle,
       ),
       true,
     );

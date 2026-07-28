@@ -102,7 +102,6 @@ function fixStory(): FootieScript {
           url: "https://example.com/a.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
       {
@@ -120,7 +119,6 @@ function fixStory(): FootieScript {
           url: "https://example.com/b.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
     ],
@@ -133,7 +131,7 @@ async function seedReadyProvisional(store: MemoryHeadlessJobStoreAdapter) {
     story: fixStory(),
     environment: CAPABLE_ENV,
     audioMode: "with-voice",
-  }) as ExportManifestV3;
+  }) as unknown as ExportManifestV3;
   const projectId = manifest.project.projectId;
   const stack = composeTestHeadlessControlPlane({
     principal: { ownerId, sessionId: "sess-promo-attr" },
@@ -239,7 +237,11 @@ async function seedReadyProvisional(store: MemoryHeadlessJobStoreAdapter) {
     expiresAtMs: CLOCK + 60 * 60 * 1000,
   });
   assert.equal(materialize.ok, true);
-  if (!materialize.ok) throw new Error(materialize.message);
+  if (!materialize.ok) {
+    throw new Error(
+      String((materialize as { message?: unknown }).message ?? "materialize failed"),
+    );
+  }
 
   const created = await store.createProvisionalIfAbsent({
     idempotencyAuthorityKey: idempotency.fingerprint,
@@ -538,7 +540,7 @@ async function main() {
             ownerId: record.ownerId,
             expectedStoreVersion: record.storeVersion,
             expectedOperationId: record.operationId,
-            canonicalJob: { ...pair.job, state: "running" },
+            canonicalJob: { ...pair.job, state: "rendering" },
             canonicalRequest: pair.request,
           },
         }),

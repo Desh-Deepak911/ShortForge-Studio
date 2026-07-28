@@ -1191,7 +1191,7 @@ printf '%s\\n' "verify_first=\${FLY_STAGING_VERIFY_FIRST_TEMPLATE}"
     assert.match(tmpOrchRun.stdout, new RegExp(`root=${ROOT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
     assert.match(tmpOrchRun.stdout, new RegExp(`verify_first=${VERIFY_FIRST_TEMPLATE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 
-    const outsideEnv: Record<string, string> = {
+    const outsideEnv: NodeJS.ProcessEnv = {
       ...process.env,
       FLY_STAGING_COMMON_DIR: SCRIPTS,
     };

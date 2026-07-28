@@ -165,6 +165,7 @@ test("2. Legacy story produces one media item", () => {
     startMs: 0,
     endMs: 3000,
     durationMs: 3000,
+    subtitle: "",
     media: imageMedia("https://example.com/legacy.jpg"),
   };
   const manifest = buildExportManifest({
@@ -301,7 +302,9 @@ test("8. Manifest is deeply immutable", () => {
     multiImageScenesEnabled: true,
   });
   assert.throws(() => {
-    (manifest.scenes[0]!.mediaTimeline as { items: unknown[] }).items.push({});
+    (
+      manifest.scenes[0]!.mediaTimeline as unknown as { items: unknown[] }
+    ).items.push({});
   });
 });
 
@@ -510,6 +513,7 @@ test("25. Legacy Preview/Export parity remains intact", () => {
     startMs: 0,
     endMs: 4000,
     durationMs: 4000,
+    subtitle: "",
     media: imageMedia("https://example.com/one.jpg", {
       transform: { x: 5, y: 6, scale: 1.1, rotation: 2 },
     }),
@@ -817,7 +821,6 @@ test("8D.1-18. Compatibility-media mismatch is rejected", () => {
     positionY: 0,
     zoom: 1,
     rotationDeg: 0,
-    motion: null,
   } as never;
   const result = validateExportManifest(bad);
   assert.equal(result.ok, false);
@@ -872,7 +875,10 @@ function assertFailClosedMalformed(
     mutate(bad);
     const before = JSON.stringify(bad);
 
-    let validation = { ok: true, issues: [] as { code: string }[] };
+    let validation: ReturnType<typeof validateExportManifest> = {
+      ok: true,
+      issues: [],
+    };
     assert.doesNotThrow(() => {
       validation = validateExportManifest(bad);
     });
@@ -994,7 +1000,6 @@ assertFailClosedMalformed(
       positionY: 0,
       zoom: 1,
       rotationDeg: 0,
-      motion: null,
     };
     (manifest.scenes[0]!.mediaTimeline.items[0] as { media: unknown }).media = videoMedia;
     (manifest.scenes[0] as { media: unknown }).media = videoMedia;
@@ -1024,7 +1029,6 @@ assertFailClosedMalformed(
       positionY: 0,
       zoom: 1,
       rotationDeg: 0,
-      motion: null,
     };
   },
   "INVALID_MEDIA_FIT_MODE",
@@ -1086,7 +1090,10 @@ assertFailClosedMalformed(
 
 test("8D.1A non-object manifest never throws and blocks", () => {
   for (const value of [null, undefined, 12, "manifest", true]) {
-    let validation = { ok: true, issues: [] as { code: string }[] };
+    let validation: ReturnType<typeof validateExportManifest> = {
+      ok: true,
+      issues: [],
+    };
     assert.doesNotThrow(() => {
       validation = validateExportManifest(value);
     });

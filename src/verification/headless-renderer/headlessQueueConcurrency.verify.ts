@@ -54,7 +54,7 @@ async function main() {
       deliveryId: fx.deliveryId,
       jobId: fx.record.jobId,
       ownerId: fx.ownerId,
-      attempt: fx.record.canonicalJob.attempt,
+      attempt: fx.record.canonicalJob!.attempt,
       enqueuedAtMs: fx.nowMs + 20,
       deliveryKind: "render",
     });

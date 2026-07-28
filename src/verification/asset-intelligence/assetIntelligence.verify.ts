@@ -153,9 +153,11 @@ test("legacy SI search queries are preserved on scene plans", () => {
   let preservedCount = 0;
 
   for (let index = 0; index < input.mappedScenes.length; index += 1) {
-    const scene = input.mappedScenes[index];
+    const scene: NonNullable<AssetIntelligenceInput["mappedScenes"]>[number] =
+      input.mappedScenes[index]!;
     const plan = result.sceneAssetPlans[index];
-    const expectedLegacy = scene.assetSearchQuery?.trim() || scene.mediaHints.searchQuery?.trim();
+    const expectedLegacy: string | undefined =
+      scene.assetSearchQuery?.trim() || scene.mediaHints.searchQuery?.trim();
 
     if (!expectedLegacy) {
       continue;

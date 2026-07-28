@@ -183,19 +183,19 @@ async function waitForClaimObservation(
     const job = jobResult.value;
     const inFlight =
       job.claimToken != null &&
-      (job.canonicalJob.state === "queued" ||
-        job.canonicalJob.state === "rendering" ||
-        job.canonicalJob.state === "encoding" ||
-        job.canonicalJob.state === "validating" ||
-        job.canonicalJob.state === "uploading");
+      (job.canonicalJob!.state === "queued" ||
+        job.canonicalJob!.state === "rendering" ||
+        job.canonicalJob!.state === "encoding" ||
+        job.canonicalJob!.state === "validating" ||
+        job.canonicalJob!.state === "uploading");
     if (inFlight) {
       await new Promise((r) => setTimeout(r, 500));
       continue;
     }
     if (
-      job.canonicalJob.state === "succeeded" ||
-      job.canonicalJob.state === "failed" ||
-      job.canonicalJob.state === "cancelled"
+      job.canonicalJob!.state === "succeeded" ||
+      job.canonicalJob!.state === "failed" ||
+      job.canonicalJob!.state === "cancelled"
     ) {
       return true;
     }
@@ -559,8 +559,8 @@ export const DEFAULT_FLY_RENDER_LIVE_CASE_RUNNERS: Readonly<
       if (
         job != null &&
         job.stage === "canonical" &&
-        (job.canonicalJob.state === "failed" ||
-          job.canonicalJob.state === "cancelled")
+        (job.canonicalJob!.state === "failed" ||
+          job.canonicalJob!.state === "cancelled")
       ) {
         const attribution = await observeExecutionAttribution(ctx);
         const sanitized = sanitizeClaimedRenderExecutionAttributionSnapshot(
@@ -724,7 +724,7 @@ export const DEFAULT_FLY_RENDER_LIVE_CASE_RUNNERS: Readonly<
       if (
         !job.ok ||
         job.value.stage !== "canonical" ||
-        job.value.canonicalJob.state !== "succeeded"
+        job.value.canonicalJob!.state !== "succeeded"
       ) {
         return fail("job.succeeded_cas", "JOB_SUCCEEDED_CAS_FAILED");
       }
@@ -751,8 +751,8 @@ export const DEFAULT_FLY_RENDER_LIVE_CASE_RUNNERS: Readonly<
         if (
           job.ok &&
           job.value.stage === "canonical" &&
-          (job.value.canonicalJob.state === "failed" ||
-            job.value.canonicalJob.state === "cancelled")
+          (job.value.canonicalJob!.state === "failed" ||
+            job.value.canonicalJob!.state === "cancelled")
         ) {
           const attribution = sanitizeClaimedRenderExecutionAttributionSnapshot(
             await observeExecutionAttribution(ctx),
@@ -888,8 +888,8 @@ export const DEFAULT_FLY_RENDER_LIVE_CASE_RUNNERS: Readonly<
         !second.ok ||
         first.value.stage !== "canonical" ||
         second.value.stage !== "canonical" ||
-        first.value.canonicalJob.state !== "succeeded" ||
-        second.value.canonicalJob.state !== "succeeded" ||
+        first.value.canonicalJob!.state !== "succeeded" ||
+        second.value.canonicalJob!.state !== "succeeded" ||
         first.value.storeVersion !== second.value.storeVersion
       ) {
         return fail("job.terminal_immutability", "JOB_TERMINAL_MUTATED");

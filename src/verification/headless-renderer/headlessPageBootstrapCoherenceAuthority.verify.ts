@@ -110,7 +110,7 @@ async function buildProviderChainFixture() {
       createdJobIds: [],
       createdProjectIds: [],
       createdR2Locators: [],
-    },
+    } as never,
     payloads,
     jobId: draftCtx.jobId,
     operationId: draftCtx.operationId,
@@ -131,7 +131,7 @@ async function buildProviderChainFixture() {
       createdJobIds: [],
       createdProjectIds: [],
       createdR2Locators: [],
-    },
+    } as never,
     staged: staged.staged,
     payloads,
   });
@@ -155,7 +155,11 @@ async function buildProviderChainFixture() {
     expiresAtMs: CLOCK + 7_200_000,
   });
   assert.equal(provisional.ok, true);
-  if (!provisional.ok) throw new Error(provisional.message);
+  if (!provisional.ok) {
+    throw new Error(
+      String((provisional as { message?: unknown }).message ?? "provisional failed"),
+    );
+  }
 
   const created = await jobStore.createProvisionalIfAbsent({
     idempotencyAuthorityKey: draftCtx.draft.idempotencyAuthorityKey,
@@ -181,7 +185,10 @@ async function buildProviderChainFixture() {
   });
   assert.equal(materialized.ok, true);
   if (!materialized.ok) {
-    throw new Error(`${materialized.issues[0]?.code}: ${materialized.issues[0]?.message}`);
+    const issues = (materialized as {
+      issues?: readonly { code?: string; message?: string }[];
+    }).issues;
+    throw new Error(`${issues?.[0]?.code}: ${issues?.[0]?.message}`);
   }
 
   return { draftCtx, materialized, jobStore, ownedObjectStore, io };
@@ -224,7 +231,7 @@ async function main() {
 
   await test("asset bundle fingerprint excludes storage locator identity", async () => {
     const { materialized } = await buildProviderChainFixture();
-    const bundle = materialized.value.canonicalRequest.assetBundle;
+    const bundle = materialized.value.canonicalRequest!.assetBundle;
     const rebound = buildHeadlessAssetBundleFingerprint(bundle.bundleId, bundle.assets);
     assert.equal(rebound.ok, true);
     if (!rebound.ok) throw new Error("fingerprint failed");
@@ -267,7 +274,7 @@ async function main() {
   await test("provider-shaped chain materializes assets with success attribution", async () => {
     const { materialized, draftCtx, ownedObjectStore, jobStore, io } =
       await buildProviderChainFixture();
-    const allowed = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const allowed = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (a) => a.storageLocator,
     );
     const storage = createR2JobBoundStorageAdapter({
@@ -293,14 +300,18 @@ async function main() {
     const result = await materializeOwnedAssets({
       storage,
       ownerId: draftCtx.ownerId,
-      bundle: materialized.value.canonicalRequest.assetBundle,
+      bundle: materialized.value.canonicalRequest!.assetBundle,
       workspace,
       nowMs: CLOCK,
       maxTotalAssetBytes: 32 * 1024 * 1024,
     });
     workspace.cleanup();
     assert.equal(result.ok, true);
-    if (!result.ok) throw new Error(result.message);
+    if (!result.ok) {
+      throw new Error(
+        String((result as { message?: unknown }).message ?? "materialize failed"),
+      );
+    }
     assert.equal(
       result.sourceBindingAttribution.sourceBindingSubstage,
       "binding_resolution_complete",
@@ -403,21 +414,21 @@ async function main() {
 
   await test("incoherent bundle record fails validateHeadlessAssetBundle", async () => {
     const { materialized } = await buildProviderChainFixture();
-    const bundle = materialized.value.canonicalRequest.assetBundle;
+    const bundle = materialized.value.canonicalRequest!.assetBundle;
     const tampered = {
       ...bundle,
       fingerprint: "hab:sha256:" + "00".repeat(32),
     };
     const validated = validateHeadlessAssetBundle(
       tampered,
-      materialized.value.canonicalRequest.manifest,
+      materialized.value.canonicalRequest!.manifest,
     );
     assert.equal(validated.ok, false);
   });
 
   await test("rebind preserves bundle fingerprint when only locators drift", async () => {
     const { materialized, draftCtx } = await buildProviderChainFixture();
-    const driftedAssets = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const driftedAssets = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (row, index) =>
         index === 0
           ? {
@@ -431,8 +442,8 @@ async function main() {
           : row,
     );
     const rebound = finalizeHeadlessAssetBundle({
-      bundleId: materialized.value.canonicalRequest.assetBundle.bundleId,
-      manifest: materialized.value.canonicalRequest.manifest,
+      bundleId: materialized.value.canonicalRequest!.assetBundle.bundleId,
+      manifest: materialized.value.canonicalRequest!.manifest,
       assets: driftedAssets,
     });
     assert.equal(rebound.ok, true);

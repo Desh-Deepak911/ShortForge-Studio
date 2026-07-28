@@ -202,14 +202,14 @@ async function main() {
             return {
               beatId,
               text: "Why does Spain pressure matter?",
-              claimRefs: [] as string[],
+              claimRefs: [] as unknown as string[],
             };
           }
           if (i === n - 1) {
             return {
               beatId,
               text: "Spain pressure closes this preview decisively tonight.",
-              claimRefs: [] as string[],
+              claimRefs: [] as unknown as string[],
             };
           }
           const beat = request.beats.find((b) => b.beatId === beatId);
@@ -227,12 +227,12 @@ async function main() {
           return {
             beatId,
             text: "Spain tactical pressure advances with clear spoken focus.",
-            claimRefs: [] as string[],
+            claimRefs: [] as unknown as string[],
           };
         });
         return {
           title: "Spain vs France premise review",
-          hookClaimRefs: [] as string[],
+          hookClaimRefs: [] as unknown as string[],
           segments,
         };
       },
@@ -629,7 +629,7 @@ async function main() {
                 8,
               ),
             ),
-            claimRefs: [] as string[],
+            claimRefs: [] as unknown as string[],
           };
         }
         const section = SECTION_WORDS[i] ?? "next";
@@ -641,12 +641,12 @@ async function main() {
               : `Spain ${section} pressure advances with clear focus`,
             8,
           ),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       });
       return {
         title: "Spain pressure story",
-        hookClaimRefs: [] as string[],
+        hookClaimRefs: [] as unknown as string[],
         segments,
       };
     };

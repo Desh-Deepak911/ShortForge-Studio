@@ -290,8 +290,8 @@ function validateFingerprint(
   return {
     ok: true,
     fingerprint: {
-      migrationIds: migrationIds as string[],
-      checksumPrefixes: checksumPrefixes as string[],
+      migrationIds: migrationIds as unknown as string[],
+      checksumPrefixes: checksumPrefixes as unknown as string[],
     },
   };
 }

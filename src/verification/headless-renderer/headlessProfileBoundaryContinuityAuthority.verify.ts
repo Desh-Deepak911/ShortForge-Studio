@@ -541,7 +541,7 @@ async function main() {
       owningBoundaryIngestionFailure: null,
       boundaryEmissionClassification: null,
       notes: ["fixture"],
-    });
+    } as never);
     assert.equal(assertExecutionProbeEvidenceSafe(md).ok, true);
     assert.match(md, /sequence_coherence=ok/);
     assert.match(md, /last_observed_boundary=chromium_session_cleanup/);
