@@ -6,7 +6,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { resolveExportFrameFromMasterTimeline } from "@/features/export/services/video-render.service";
+import {
+  buildFootieExportPayload,
+  resolveExportFrameFromMasterTimeline,
+} from "@/features/export/services";
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import {
   buildPreviewMasterTimeline,
@@ -265,14 +268,15 @@ function assertPreviewExportCaptionParity(
   timeMs: number,
   label: string,
 ): void {
-  const scenes = script.scenes;
-  const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
+  const previewScenes = script.scenes;
+  const exportScenes = buildFootieExportPayload(script).scenes;
+  const exportSceneById = new Map(exportScenes.map((scene) => [scene.id, scene]));
 
-  const preview = resolvePreviewPlaybackState(previewTimeline, scenes, timeMs);
+  const preview = resolvePreviewPlaybackState(previewTimeline, previewScenes, timeMs);
   const exportFrame = resolveExportFrameFromMasterTimeline(
     exportTimeline,
-    scenes,
-    sceneById,
+    exportScenes,
+    exportSceneById,
     timeMs,
   );
 
@@ -527,14 +531,14 @@ test("6. preview/export comparison", () => {
   );
 });
 
-test("structural: preview/export wired to resolveCaptionAnimationState", () => {
+test("structural: preview/export wired through caption animation adapters", () => {
   const previewUtils = readSrc("src/features/preview/utils/preview-master-timeline.utils.ts");
   const exportSubtitle = readSrc("src/features/export/utils/export-subtitle.utils.ts");
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const effectPreview = readSrc("src/features/editor/components/subtitleEffectPreview.tsx");
 
-  assert.match(previewUtils, /resolveCaptionAnimationState/);
-  assert.match(exportSubtitle, /resolveCaptionAnimationState/);
+  assert.match(previewUtils, /resolvePreviewCaptionAnimation/);
+  assert.match(exportSubtitle, /resolveExportCaptionAnimation/);
   assert.match(canvasUtils, /display\.animationState/);
   assert.match(effectPreview, /captionAnimationState/);
 });

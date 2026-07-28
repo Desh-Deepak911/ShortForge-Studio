@@ -7,7 +7,10 @@ import { join } from "node:path";
 
 import { buildMasterTimeline, TIMELINE_END_BUFFER_MS, TIMELINE_SUBTITLE_FINAL_READABLE_HOLD_MS } from "@/features/timeline-intelligence/build-master-timeline";
 import { buildTimelineDevDiagnostics } from "@/features/timeline-intelligence/timeline-diagnostics.dev.utils";
-import type { CaptionAnimationTimelineEvent } from "@/features/timeline-intelligence/timeline.types";
+import type {
+  CaptionAnimationTimelineEvent,
+  TransitionTimelineEvent,
+} from "@/features/timeline-intelligence/timeline.types";
 import {
   getTimelineContentEndMs,
   getTimelineTrackByType,
@@ -287,7 +290,8 @@ test("6. video with transitions", () => {
   assert.ok(transition.startMs < transition.endMs, "transition has positive duration");
   assert.ok(timeline.transitionDurationMs > 0, "transition union span recorded");
 
-  const meta = transition.metadata;
+  assert.equal(transition.type, "transition");
+  const meta = (transition as TransitionTimelineEvent).metadata;
   assert.equal(meta.fromSceneId, "s1");
   assert.equal(meta.toSceneId, "s2");
   assert.equal(meta.transitionType, "fade");
