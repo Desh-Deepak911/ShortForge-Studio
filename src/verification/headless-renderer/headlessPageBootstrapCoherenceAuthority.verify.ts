@@ -48,7 +48,9 @@ import { runOwnedObjectFinalizeChain } from "./fly-render-live/owned-object-fina
 import { runOwnedObjectStagingRecordChain } from "./fly-render-live/owned-object-staging-chain";
 import { buildLiveDraft } from "./neon-live/live-fixtures";
 
-const PROBE_EVIDENCE_SHA =
+const CURRENT_PROBE_EVIDENCE_SHA =
+  "c7f944dba578539ad4f3ebc2431f38fb60640c041cb582bb28e239067adf500a";
+const PRE_8H_PROBE_EVIDENCE_SHA =
   "a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33";
 const PRIOR_BOOTSTRAP_FAIL_EVIDENCE_SHA =
   "aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0";
@@ -193,13 +195,13 @@ async function main() {
   await test("execution probe evidence archived byte-identically", () => {
     assert.equal(
       sha256File("docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"),
-      PROBE_EVIDENCE_SHA,
+      CURRENT_PROBE_EVIDENCE_SHA,
     );
     assert.equal(
       sha256File(
         "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33.md",
       ),
-      PROBE_EVIDENCE_SHA,
+      PRE_8H_PROBE_EVIDENCE_SHA,
     );
     assert.equal(
       sha256File(
