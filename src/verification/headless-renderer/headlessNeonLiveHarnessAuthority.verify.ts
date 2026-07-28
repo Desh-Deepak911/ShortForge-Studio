@@ -25,6 +25,10 @@ import {
 } from "./neon-live/required-cases";
 import { discoverHeadlessMigrationSources } from "@/features/headless-renderer/control-plane/migrations/migration-catalog";
 import { checksumPrefix } from "./neon-live/evidence";
+import type {
+  HeadlessSqlClient,
+  HeadlessSqlExecutor,
+} from "@/features/headless-renderer/control-plane/runtime/sql-client";
 
 let passed = 0;
 
@@ -51,18 +55,18 @@ function okPreflight() {
     }) as const;
 }
 
-function noopSql() {
+function noopSql(): HeadlessSqlExecutor {
+  const client: HeadlessSqlClient = {
+    query: async <Row extends Record<string, unknown>>() => ({
+      rows: [] as Row[],
+      rowCount: 0,
+    }),
+  };
   return {
-    withClient: async <T>(
-      fn: (c: {
-        query: () => Promise<{ rows: unknown[]; rowCount: number }>;
-      }) => Promise<T>,
-    ) => fn({ query: async () => ({ rows: [], rowCount: 0 }) }),
-    withTransaction: async <T>(
-      fn: (c: {
-        query: () => Promise<{ rows: unknown[]; rowCount: number }>;
-      }) => Promise<T>,
-    ) => fn({ query: async () => ({ rows: [], rowCount: 0 }) }),
+    withClient: async <T>(fn: (c: HeadlessSqlClient) => Promise<T>) =>
+      fn(client),
+    withTransaction: async <T>(fn: (c: HeadlessSqlClient) => Promise<T>) =>
+      fn(client),
   };
 }
 
