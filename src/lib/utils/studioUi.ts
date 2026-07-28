@@ -681,6 +681,13 @@ export const studioSyncStatusCard =
 export const studioSyncStatusStep =
   "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 rounded-lg bg-surface/25 px-2.5 py-2 ring-1 ring-border/15";
 
+/** Editor workflow status popover — opaque, portaled above workspace chrome. */
+export const studioWorkflowStatusPopoverPanel =
+  "fixed z-[70] flex flex-col overflow-hidden rounded-2xl border border-border/45 bg-surface shadow-[0_20px_48px_-16px_rgba(0,0,0,0.85)] ring-1 ring-border/40";
+
+/** Scroll host for long workflow status content. */
+export const studioWorkflowStatusPopoverScroll = `min-h-0 flex-1 overflow-y-auto overscroll-contain p-3.5 ${studioScrollbarVertical}`;
+
 /** Workspace secondary tab track — caption workspace, nested editors. */
 export const studioWorkspaceTabTrack =
   "flex w-full rounded-[0.7rem] bg-surface/35 p-0.5 ring-1 ring-border/25";
