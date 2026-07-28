@@ -1044,7 +1044,8 @@ function isPost007VersionedImageRecord(
     record.recordId === "post_007_8i4_artifact_binding_cleanup_correction_historical" ||
     record.recordId === "post_007_8i5_object_key_binding_validation_historical" ||
     record.recordId === "post_007_staging_runtime_observed_baseline_historical" ||
-    record.recordId === "post_007_2g12_real_video_motion_current"
+    record.recordId === "post_007_2g12_real_video_motion_historical" ||
+    record.recordId === "post_007_2g20_manifest_contract_alignment_current"
   );
 }
 
