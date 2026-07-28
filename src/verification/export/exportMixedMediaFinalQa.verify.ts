@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { mapSceneToExport } from "@/features/export/services/export-payload.service";
 import {
   resolveExpectedSilentVisualDurationSec,
   shouldNormalizeSilentVisualTiming,
@@ -186,18 +187,20 @@ async function main() {
   await test("captions progress across all scenes including after videos", () => {
     const scenes = buildMixedMediaQaScenes();
     for (const scene of scenes) {
-      const state = getExportSubtitleChunkState(scene, {
+      const state = getExportSubtitleChunkState(mapSceneToExport(scene), {
         sceneElapsedMs: Math.floor((scene.durationMs ?? 1000) / 2),
         sceneDurationMs: scene.durationMs ?? 1000,
       });
       assert.ok(state.chunk.trim().length > 0, scene.id);
     }
     const final = scenes.find((s) => s.id === "img-final-fit")!;
-    const nearEnd = getExportSubtitleChunkState(final, {
+    const exportFinal = mapSceneToExport(final);
+    const nearEnd = getExportSubtitleChunkState(exportFinal, {
       sceneElapsedMs: (final.durationMs ?? 3000) - 1,
       sceneDurationMs: final.durationMs ?? 3000,
     });
-    assert.match(nearEnd.chunk, /Final fit|closing caption/i);
+    assert.equal(nearEnd.chunk, exportFinal.subtitleChunks.at(-1));
+    assert.ok(nearEnd.chunk.length > 0);
   });
 
   await test("final caption completes within final 200ms of project", () => {
@@ -207,7 +210,7 @@ async function main() {
     assert.equal(active!.scene.id, "img-final-fit");
     const scenes = buildMixedMediaQaScenes();
     const final = scenes.find((s) => s.id === "img-final-fit")!;
-    const state = getExportSubtitleChunkState(final, {
+    const state = getExportSubtitleChunkState(mapSceneToExport(final), {
       sceneElapsedMs: active!.sceneElapsedMs,
       sceneDurationMs: final.durationMs ?? 3000,
     });
