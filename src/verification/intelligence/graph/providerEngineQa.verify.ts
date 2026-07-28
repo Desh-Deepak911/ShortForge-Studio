@@ -453,7 +453,7 @@ async function runQa() {
 
   await test("gate — no regressions in existing research verify contracts", () => {
     const serviceVerify = readSrc("src/verification/football/footballResearchService.verify.ts");
-    const topScorersVerify = readSrc("src/verification/research/topScorersResearch.verify.ts");
+    const topScorersVerify = readSrc("src/verification/intelligence/research/topScorersResearch.verify.ts");
     const executeQuery = readSrc("src/features/intelligence/planner/execute-intelligence-query.ts");
     assert.match(serviceVerify, /executeIntelligenceQuery/);
     assert.match(executeQuery, /buildCautiousIntelligenceExecutionFailure/);

@@ -47,7 +47,7 @@ import {
   padSpokenWords,
 } from "./retentionSpokenFixtureText";
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, "../../..");
 const REWRITE_ROOT = path.join(ROOT, "features/retention-story/rewrite");
 const PUBLIC_INDEX = path.join(ROOT, "features/retention-story/index.ts");
 

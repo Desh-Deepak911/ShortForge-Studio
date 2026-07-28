@@ -52,7 +52,7 @@ import {
 } from "@/features/retention-story";
 import { SCRIPT_MODES } from "@/types/footiebitz";
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, "../../..");
 const PLANNING_ROOT = path.join(ROOT, "features/retention-story/planning");
 
 const SAFE_BEAT_FIELDS = {

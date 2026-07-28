@@ -16,7 +16,7 @@ import {
   type RetentionValidationSummary,
 } from "@/features/retention-story";
 
-import { assertHookLiveSuccessEnvelope } from "../hook-engine/assertHookLiveEnvelope";
+import { assertHookLiveSuccessEnvelope } from "../hook/assertHookLiveEnvelope";
 import { assertRetentionLiveGenerationDisposition } from "./assertRetentionLiveGenerationDisposition";
 import type { RetentionGenerationDispositionSummary } from "@/features/retention-story";
 

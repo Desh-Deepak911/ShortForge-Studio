@@ -58,10 +58,10 @@ import {
   buildTerminalHookAuthority,
   deriveSafeHookEnvelopeFromAuthority,
   toHookTerminalEvidence,
-} from "../retention-story/retentionStoryReadyBridge";
+} from "../retention/retentionStoryReadyBridge";
 import {
   SECTION_WORDS,
-} from "../retention-story/retentionStoryCoherentEnvelope";
+} from "../retention/retentionStoryCoherentEnvelope";
 
 const ROOT = process.cwd();
 

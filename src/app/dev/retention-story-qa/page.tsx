@@ -32,7 +32,7 @@ import {
 import {
   RETENTION_STORY_GOLDEN_PROJECTS,
   type RetentionStoryGoldenId,
-} from "@/verification/retention-story/goldens";
+} from "@/verification/story/retention/goldens";
 
 const EVIDENCE_OPTIONS: readonly EvidenceCheckResult[] = [
   "not-tested",

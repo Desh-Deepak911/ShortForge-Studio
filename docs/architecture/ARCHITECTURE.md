@@ -503,7 +503,7 @@ User Brief → Intent → Entity/Competition Resolution → Provider Registry �
 ```
 
 **Modules:** `src/features/intelligence/`, `src/features/research/`  
-**Story structure QA:** `src/verification/research/storyStructureIntelligenceQa.verify.ts`  
+**Story structure QA:** `src/verification/intelligence/research/storyStructureIntelligenceQa.verify.ts`  
 Prompt Intelligence is the primary production prompt path; Graph Context is fallback.
 
 Deep dive: [README.md — Intelligence Runtime](../../README.md#intelligence-runtime)

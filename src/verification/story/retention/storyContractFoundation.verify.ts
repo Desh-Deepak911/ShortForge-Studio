@@ -48,7 +48,7 @@ function productionOpaqueResearchIdentity(seed: string): string {
   return identity;
 }
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, "../../..");
 const MODULE_ROOT = path.join(ROOT, "features/retention-story");
 
 let passed = 0;

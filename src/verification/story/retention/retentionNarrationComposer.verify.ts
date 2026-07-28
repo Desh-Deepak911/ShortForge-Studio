@@ -29,7 +29,7 @@ import {
   qualitativeSegmentText,
 } from "./retentionStoryCoherentEnvelope";
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, "../../..");
 const COMPOSITION_ROOT = path.join(ROOT, "features/retention-story/composition");
 const RECONCILE_FILE = path.join(
   COMPOSITION_ROOT,
