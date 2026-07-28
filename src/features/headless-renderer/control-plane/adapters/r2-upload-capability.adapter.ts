@@ -37,8 +37,13 @@ import type {
 } from "../ports/upload-capability.port";
 import { cpFail, cpOk } from "../types/control-plane.types";
 
-export const HEADLESS_UPLOAD_CAPABILITY_DEFAULT_TTL_MS = 120_000;
-export const HEADLESS_UPLOAD_CAPABILITY_MAX_TTL_MS = 300_000;
+/**
+ * Browser uploads are intentionally sequential today. Keep the signed PUT
+ * lifetime aligned with the staging upload lease so later objects in a
+ * multi-asset export do not expire while earlier video sources are uploading.
+ */
+export const HEADLESS_UPLOAD_CAPABILITY_DEFAULT_TTL_MS = 10 * 60_000;
+export const HEADLESS_UPLOAD_CAPABILITY_MAX_TTL_MS = 10 * 60_000;
 
 export type CreatePresignedPutUrl = (input: {
   bucket: string;
