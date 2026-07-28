@@ -25,6 +25,7 @@ modules — it is never imported by production routes.
 | `headless-renderer/evidence/` | Evidence writing/parsing, telemetry, postmortem, and observer attribution |
 | `headless-renderer/platform/` | Fly staging, hosted worker packaging, import boundaries, and product integration |
 | `headless-renderer/support/` | Shared headless verification fixtures and assertion helpers |
+| `support/` | Cross-domain verification utilities (for example shared evidence SHA helpers) |
 | `features/` | Mirrored feature-domain verification (see structure note below) |
 | `story/retention/` | Retention planning and production integration |
 | `story/hook/` | Hook planning, validation, streaming, safety, and persistence |
@@ -61,6 +62,10 @@ updated. Runtime-coupled exceptions (none in this batch) would remain co-located
 `src/features/`. The five deferred flat headless-renderer root tests from Batch 2 were
 classified into domain owners; the headless-renderer root now contains no unclassified flat
 `*.verify.ts` files.
+
+## Structure note (Batch 4 — repository structure final)
+
+Deferred living documents at `docs/` root were filed under `docs/architecture/` (contracts and audits) and `docs/archive/sprints/` (sprint history). The headless evidence migration audit JSON lives at `docs/evidence/headless/EVIDENCE_MIGRATION_REPORT.json`. Identical verification SHA helpers were consolidated under `src/verification/support/evidence-hash` without changing hash outputs.
 
 ## File conventions
 
@@ -187,3 +192,4 @@ Checklist:
 | `tsconfig.json` | Excludes `**/*.verify.ts` from the production build |
 | `tsconfig.verify.json` | Strictly typechecks verification sources |
 | `scripts/run-verification.mjs` | Discovers and runs domain verification batches |
+| `src/verification/support/evidence-hash` | Shared `sha256Bytes` / `sha256FileSync` helpers for evidence authority tests |

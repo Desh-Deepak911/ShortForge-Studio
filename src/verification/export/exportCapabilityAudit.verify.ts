@@ -41,7 +41,7 @@ function main() {
     "docs/product/EXPORT_TIMING_MODEL.md",
     "docs/product/EXPORT_CAPABILITIES.md",
     "docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md",
-    "docs/EXPORT_RELIABILITY_SPRINT.md",
+    "docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md",
   ];
 
   test("required audit docs exist", () => {
@@ -60,7 +60,7 @@ function main() {
   });
 
   test("reliability sprint gates 6B on EXPORT_CONTRACT", () => {
-    const body = read("docs/EXPORT_RELIABILITY_SPRINT.md");
+    const body = read("docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md");
     assert.match(body, /EXPORT_CONTRACT\.md/);
     assert.match(body, /may begin only after/i);
   });
@@ -100,7 +100,7 @@ function main() {
   });
 
   test("reliability sprint lists 6B–6I phases", () => {
-    const body = read("docs/EXPORT_RELIABILITY_SPRINT.md");
+    const body = read("docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md");
     for (const phase of ["6B", "6C", "6D", "6E", "6F", "6G", "6H", "6I"]) {
       assert.match(body, new RegExp(phase));
     }

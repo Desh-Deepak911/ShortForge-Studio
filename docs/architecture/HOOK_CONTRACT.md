@@ -5,7 +5,7 @@
 Applies to: Sprint 7B and all future Hook Engine work
 Derived from: [`HOOK_ARCHITECTURE_AUDIT.md`](./HOOK_ARCHITECTURE_AUDIT.md)
 Owner: Provocative Hook Architecture
-Navigation: [`MASTER_ARCHITECTURE.md`](../MASTER_ARCHITECTURE.md)
+Navigation: [`MASTER_ARCHITECTURE.md`](../../MASTER_ARCHITECTURE.md)
 Implementation: Sprint **7A**–**7D** complete and accepted (incl. 7D.1–7D.3); Sprint **7E** Hook Golden QA — **in progress**; Hook system **not frozen** until the final evidence-based decision
 
 > This document defines the minimum correctness, ownership, precedence, lifecycle, safety, and fallback guarantees for the Provocative Hook Engine.
@@ -692,7 +692,7 @@ All templates eventually integrate through **one canonical hook adapter**, not t
 ## Related documents
 
 - [`HOOK_ARCHITECTURE_AUDIT.md`](./HOOK_ARCHITECTURE_AUDIT.md) — evidence audit
-- [`MASTER_ARCHITECTURE.md`](../MASTER_ARCHITECTURE.md) — project index
-- [`STUDIO_INTELLIGENCE.md`](./STUDIO_INTELLIGENCE.md) — SI v1 (downstream visual/scene hooks; SI-owned strategies)
-- [`GENERATION.md`](./GENERATION.md) — generation pipeline (supporting)
+- [`MASTER_ARCHITECTURE.md`](../../MASTER_ARCHITECTURE.md) — project index
+- [`STUDIO_INTELLIGENCE.md`](../product/STUDIO_INTELLIGENCE.md) — SI v1 (downstream visual/scene hooks; SI-owned strategies)
+- [`GENERATION.md`](../product/GENERATION.md) — generation pipeline (supporting)
 - [`EXPORT_CONTRACT.md`](./EXPORT_CONTRACT.md) — export remains downstream and untouched by Hook Engine

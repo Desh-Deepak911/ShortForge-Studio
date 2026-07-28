@@ -266,7 +266,7 @@ Sprint 7 — Provocative Hook
 7E — QA and freeze
 ```
 
-**References:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) · [docs/HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) · [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) (Status: **Accepted after Sprint 7A**) · Freeze: [docs/qa/hook-engine-sprint-7-freeze.md](./docs/qa/hook-engine-sprint-7-freeze.md) · Module: `src/features/hook-engine/` · Verify: `npm run test:hook-sprint` · `npm run test:hook-style-selector` · `npm run test:hook-core-live-qa` (gated) · gated research live: `npm run test:hook-live-qa`
+**References:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) · [docs/architecture/HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md) · [docs/architecture/HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) (Status: **Accepted after Sprint 7A**) · Freeze: [docs/qa/hook-engine-sprint-7-freeze.md](./docs/qa/hook-engine-sprint-7-freeze.md) · Module: `src/features/hook-engine/` · Verify: `npm run test:hook-sprint` · `npm run test:hook-style-selector` · `npm run test:hook-core-live-qa` (gated) · gated research live: `npm run test:hook-live-qa`
 
 **7B (accepted):** strategy library + 7B.1 hardening (`evidence_led_surprise` intent gate; tamper-resistant plans; hardened normalization; coherent opening pairs at 2.4 wps).
 
@@ -406,7 +406,7 @@ Sprint 10 — Retention Story Intelligence v1
 Sprint 11 — Headless Renderer                 ← ready to begin
 ```
 
-**Artifacts:** [docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) (accepted) · [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) (**Frozen after Sprint 10H.5C**) · Freeze ledger: [docs/qa/retention-story-sprint-10-freeze.md](./docs/qa/retention-story-sprint-10-freeze.md) · Module: `src/features/retention-story/` (`domain/` · `grounding/` · `strategy/` · `planning/` · `composition/` · `budget/` · `integration/` · `validation/` · `rewrite/` · `production/` · `presentation/`) · Verify: `npm run test:retention-story-sprint` · `npm run test:retention-story-live-qa` (gated) · `/dev/retention-story-qa`.
+**Artifacts:** [docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) (accepted) · [docs/architecture/RETENTION_STORY_CONTRACT.md](./docs/architecture/RETENTION_STORY_CONTRACT.md) (**Frozen after Sprint 10H.5C**) · Freeze ledger: [docs/qa/retention-story-sprint-10-freeze.md](./docs/qa/retention-story-sprint-10-freeze.md) · Module: `src/features/retention-story/` (`domain/` · `grounding/` · `strategy/` · `planning/` · `composition/` · `budget/` · `integration/` · `validation/` · `rewrite/` · `production/` · `presentation/`) · Verify: `npm run test:retention-story-sprint` · `npm run test:retention-story-live-qa` (gated) · `/dev/retention-story-qa`.
 
 **10D note (accepted):** Planning layer — deterministic beat plan, pacing budgets, compression goals, hook handoff, plan fingerprint + coherence assertion. Fast path is fully deterministic (**zero planner calls**); Balanced/Studio use an **injected planner, at most one call**, with no silent Fast downgrade. Still unwired from generation.
 
@@ -530,10 +530,10 @@ Architecture detail: [ARCHITECTURE.md](./ARCHITECTURE.md) · Product overview: [
 | Document | Description |
 |----------|-------------|
 | [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) | **Start here** — master architecture index |
-| [docs/HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) | Sprint 7A hook evidence audit |
-| [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | Formal Hook Contract (**Accepted after Sprint 7A**) |
-| [docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) | Sprint 10A Retention Story evidence audit |
-| [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) | Formal Retention Story Contract (**Accepted after Sprint 10A.2**) |
+| [docs/architecture/HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md) | Sprint 7A hook evidence audit |
+| [docs/architecture/HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) | Formal Hook Contract (**Accepted after Sprint 7A**) |
+| [docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) | Sprint 10A Retention Story evidence audit |
+| [docs/architecture/RETENTION_STORY_CONTRACT.md](./docs/architecture/RETENTION_STORY_CONTRACT.md) | Formal Retention Story Contract (**Accepted after Sprint 10A.2**) |
 | [README.md](./README.md) | Features, workflows, getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and pipelines |
 | [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |

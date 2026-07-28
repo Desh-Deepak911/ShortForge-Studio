@@ -1,6 +1,6 @@
 /**
  * Hook Engine domain types — Sprint 7B.1.
- * Semantic boundaries: docs/HOOK_CONTRACT.md (Accepted after Sprint 7A).
+ * Semantic boundaries: docs/architecture/HOOK_CONTRACT.md (Accepted after Sprint 7A).
  */
 
 import type { CreatorTemplateId } from "@/features/creator-templates/creator-template.types";

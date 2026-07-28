@@ -10,7 +10,7 @@
 **10E / 10E.1 / 10E.1A:** **Complete and accepted** (`composition/` · `budget/` · `integration/` · `npm run test:retention-story-composer` · `npm run test:retention-hook-bridge` · `npm run test:retention-generation-budget`) — asserted-seed sole controlling-idea claim authority; scenes-only ledger validated before early return. **Not** production-route-activated; no Retention Validator / rewrite / commit gating (10F–10H).
 **10F / 10F.1 / 10F.1A / 10F.1B / 10F.1C / 10F.2 / 10F.2A / 10F.3 / 10F.3A / 10F.3B:** **Validator + Studio rewrite + terminal Hook authority + production hardening accepted** (`validation/` · `rewrite/` · `production/` · `npm run test:retention-story-validator` · `npm run test:retention-story-rewrite` · `npm run test:retention-terminal-validation` · `npm run test:retention-production-integration`) — canonical Retention production orchestrator; commit-gate live ledger semantic equality; call-kind-aware output-token budgets; failure envelopes never carry plan/validation snapshots; **total fail-closed safe Hook diagnostics terminal coherence**; private-data-free exception boundary.
 **10G / 10G.1 / 10G.1A:** **Explainability + Story Strategy UI + persistence authority accepted** (`presentation/` · Create Story Strategy selector · Review Story intelligence · total persistence validators · `npm run test:retention-story-ui`) — duration-compatible Auto / Retention-first / Standard; linked plan/validation explainability; draft-load sanitization; **total fail-closed validator exception boundary** (hostile getters/Proxies); privacy-safe.
-**10H–10H.5C:** **Complete and accepted — Sprint 10 frozen** (`npm run test:retention-story-sprint` · 435-cell Flexible reliability matrix · 13/13 Core live-model cases · operator-confirmed local Create/Review/persistence/audio-first Pass · [freeze ledger](./qa/retention-story-sprint-10-freeze.md)). Evidence Surprise / live research remains capability-gated.
+**10H–10H.5C:** **Complete and accepted — Sprint 10 frozen** (`npm run test:retention-story-sprint` · 435-cell Flexible reliability matrix · 13/13 Core live-model cases · operator-confirmed local Create/Review/persistence/audio-first Pass · [freeze ledger](../qa/retention-story-sprint-10-freeze.md)). Evidence Surprise / live research remains capability-gated.
 **Sprint 11:** Headless Renderer — **ready to begin**
 
 This contract defines the frozen Retention Story Intelligence v1 authority for concise Shorts (primary retention target **25–35 seconds**), with extensible format strategies for longer envelopes.
@@ -1144,5 +1144,5 @@ Implementation begins at **10B**. Production-ready / freeze remains gated on 10E
 
 - [RETENTION_STORY_ARCHITECTURE_AUDIT.md](./RETENTION_STORY_ARCHITECTURE_AUDIT.md) — accepted evidence
 - [HOOK_CONTRACT.md](./HOOK_CONTRACT.md)
-- [MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md)
-- [ROADMAP.md](../ROADMAP.md)
+- [MASTER_ARCHITECTURE.md](../../MASTER_ARCHITECTURE.md)
+- [ROADMAP.md](../../ROADMAP.md)

@@ -4,8 +4,8 @@
  */
 
 import assert from "node:assert/strict";
+import { sha256Bytes } from "../../support/evidence-hash";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
   chmodSync,
   copyFileSync,
@@ -72,9 +72,6 @@ const PRODUCTION_BUILD_INFO_SHA =
 
 let passed = 0;
 
-function sha256(value: Buffer | string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
 
 async function test(name: string, fn: () => void | Promise<void>) {
   await fn();
@@ -120,12 +117,12 @@ async function main() {
       "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012.md",
     );
     assert.ok(existsSync(archive));
-    assert.equal(sha256(readFileSync(archive)), EVIDENCE_8F6F_SHA);
+    assert.equal(sha256Bytes(readFileSync(archive)), EVIDENCE_8F6F_SHA);
   });
 
   await test("prior accepted evidence archives preserved", () => {
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -136,7 +133,7 @@ async function main() {
       EVIDENCE_8F6E_SHA,
     );
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -147,7 +144,7 @@ async function main() {
       EXECUTION_PROBE_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
+      sha256Bytes(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
       PAGE_DIAG_SHA,
     );
   });
@@ -521,11 +518,11 @@ async function main() {
 
   await test("production worker artifacts unchanged", () => {
     assert.equal(
-      sha256(readFileSync(path.join(DIST, "hosted-worker.js"))),
+      sha256Bytes(readFileSync(path.join(DIST, "hosted-worker.js"))),
       PRODUCTION_WORKER_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(DIST, "BUILD_INFO.json"))),
+      sha256Bytes(readFileSync(path.join(DIST, "BUILD_INFO.json"))),
       PRODUCTION_BUILD_INFO_SHA,
     );
   });

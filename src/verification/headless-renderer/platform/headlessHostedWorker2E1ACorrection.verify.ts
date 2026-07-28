@@ -4,7 +4,7 @@
  */
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { sha256Bytes } from "../../support/evidence-hash";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -34,9 +34,6 @@ function test(name: string, fn: () => void) {
   console.log(`  ✓ ${name}`);
 }
 
-function sha256(buf: Buffer | string): string {
-  return createHash("sha256").update(buf).digest("hex");
-}
 
 function parseVmBlocks(fly: string): Array<{
   processes: string[];
@@ -204,18 +201,18 @@ function main() {
     const workerA = readFileSync(path.join(DIST, "hosted-worker.js"));
     const pageA = readFileSync(path.join(DIST, "page-render.iife.js"));
     const infoA = readFileSync(path.join(DIST, "BUILD_INFO.json"));
-    const shaWorkerA = sha256(workerA);
-    const shaPageA = sha256(pageA);
-    const shaInfoA = sha256(infoA);
+    const shaWorkerA = sha256Bytes(workerA);
+    const shaPageA = sha256Bytes(pageA);
+    const shaInfoA = sha256Bytes(infoA);
 
     const b = run();
     assert.equal(b.status, 0, b.stderr || b.stdout);
     const workerB = readFileSync(path.join(DIST, "hosted-worker.js"));
     const pageB = readFileSync(path.join(DIST, "page-render.iife.js"));
     const infoB = readFileSync(path.join(DIST, "BUILD_INFO.json"));
-    assert.equal(sha256(workerB), shaWorkerA);
-    assert.equal(sha256(pageB), shaPageA);
-    assert.equal(sha256(infoB), shaInfoA);
+    assert.equal(sha256Bytes(workerB), shaWorkerA);
+    assert.equal(sha256Bytes(pageB), shaPageA);
+    assert.equal(sha256Bytes(infoB), shaInfoA);
     assert.equal(
       infoB.toString("utf8"),
       serializeHeadlessHostedBuildManifest(

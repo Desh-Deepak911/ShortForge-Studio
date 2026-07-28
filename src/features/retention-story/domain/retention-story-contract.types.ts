@@ -1,6 +1,6 @@
 /**
  * Retention Story Contract types — Sprint 10B.
- * Implements accepted shapes from docs/RETENTION_STORY_CONTRACT.md.
+ * Implements accepted shapes from docs/architecture/RETENTION_STORY_CONTRACT.md.
  */
 
 import type { CreatorTemplateId } from "@/features/creator-templates/creator-template.types";

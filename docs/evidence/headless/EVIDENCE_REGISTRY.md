@@ -318,6 +318,7 @@ Authority tests under `src/verification/headless-renderer/**` bind canonical evi
 - Evidence bytes are immutable after acceptance.
 - 20 redundant byte-identical physical copies removed; retired names preserved as aliases above.
 - Duplicate groups before: 18; after: 0.
+- Batch 4 repository-structure migration audit: [`EVIDENCE_MIGRATION_REPORT.json`](./EVIDENCE_MIGRATION_REPORT.json) (relocated from `scripts/headless-evidence-migration-report.json`; static audit output only).
 
 ## Intentionally retained non-identical files
 

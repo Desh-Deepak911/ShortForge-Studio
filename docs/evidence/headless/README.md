@@ -16,3 +16,5 @@
 | Neon live | [current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md](./current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md) |
 
 See [EVIDENCE_REGISTRY.md](./EVIDENCE_REGISTRY.md) for the full move map and retired duplicate aliases.
+
+Machine-readable migration output: [EVIDENCE_MIGRATION_REPORT.json](./EVIDENCE_MIGRATION_REPORT.json).

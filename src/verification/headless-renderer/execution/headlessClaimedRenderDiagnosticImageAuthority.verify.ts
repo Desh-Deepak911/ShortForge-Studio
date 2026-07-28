@@ -4,7 +4,7 @@
  */
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { sha256Bytes } from "../../support/evidence-hash";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,9 +61,6 @@ const EVIDENCE_8F6B_SHA =
 const EVIDENCE_8F6C_SHA =
   "e6f1268c9e9ec974dfa507811aee37e26144b8305b9114efc810202599dbafce";
 
-function sha256(value: Buffer | string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
 
 let passed = 0;
 
@@ -96,7 +93,7 @@ async function main() {
 
   await test("prior evidence SHAs preserved byte-identically", () => {
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -107,7 +104,7 @@ async function main() {
       EVIDENCE_8F6C_SHA,
     );
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -118,11 +115,11 @@ async function main() {
       EVIDENCE_8F6B_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
+      sha256Bytes(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
       EXECUTION_PROBE_CURRENT_PASS_SHA,
     );
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -133,7 +130,7 @@ async function main() {
       EXECUTION_PROBE_PRIOR_FAIL_SHA,
     );
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -144,7 +141,7 @@ async function main() {
       EXECUTION_PROBE_CURRENT_FAIL_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
+      sha256Bytes(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
       PAGE_DIAGNOSTIC_PASS_EVIDENCE_SHA,
     );
   });
@@ -428,15 +425,15 @@ async function main() {
     assert.ok(existsSync(path.join(DIST, "page-render.iife.js")));
     assert.ok(existsSync(path.join(DIST, "BUILD_INFO.json")));
     assert.equal(
-      sha256(readFileSync(path.join(DIST, "hosted-worker.js"))),
+      sha256Bytes(readFileSync(path.join(DIST, "hosted-worker.js"))),
       PRODUCTION_WORKER_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(DIST, "page-render.iife.js"))),
+      sha256Bytes(readFileSync(path.join(DIST, "page-render.iife.js"))),
       PRODUCTION_PAGE_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(DIST, "BUILD_INFO.json"))),
+      sha256Bytes(readFileSync(path.join(DIST, "BUILD_INFO.json"))),
       PRODUCTION_BUILD_INFO_SHA,
     );
   });
