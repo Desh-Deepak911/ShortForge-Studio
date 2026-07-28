@@ -17,7 +17,7 @@ import {
 import type { OwnedObjectFinalizeSubstageResult } from "./owned-object-finalize-chain";
 
 export const FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md";
 
 export function defaultFlyRenderOwnedObjectFinalizeProbeEvidencePath(
   cwd: string = process.cwd(),
@@ -63,7 +63,7 @@ export function createNotTestedFlyRenderOwnedObjectFinalizeProbeEvidence(
     "Gate off — no Neon or R2 connection attempted.",
     "Prior PASS/FAIL finalize probe evidence must not be overwritten by gate-off runs.",
     "Stops before reconciliation, promotion, outbox, or enqueue.",
-    "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+    "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
   ],
 ): FlyRenderOwnedObjectFinalizeProbeEvidenceDocument {
   return {

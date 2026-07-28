@@ -30,7 +30,7 @@ import {
 } from "./owning-boundary-probe-authority";
 
 export const FLY_RENDER_EXECUTION_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md";
 
 export function defaultFlyRenderExecutionProbeEvidencePath(
   cwd: string = process.cwd(),
@@ -106,7 +106,7 @@ export function createNotTestedFlyRenderExecutionProbeEvidence(
   notes: readonly string[] = [
     "Gate off — no Neon, R2, Upstash, or Fly connection attempted.",
     "Prior PASS/FAIL execution probe evidence must not be overwritten by gate-off runs.",
-    "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+    "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
   ],
 ): FlyRenderExecutionProbeEvidenceDocument {
   return {

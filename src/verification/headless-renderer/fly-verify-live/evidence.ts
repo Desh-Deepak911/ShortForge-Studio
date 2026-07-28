@@ -38,10 +38,10 @@ export type FlyVerifyLiveEvidenceDocument = {
 };
 
 export const FLY_VERIFY_LIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md";
 
 export const FLY_VERIFY_FIRST_PASS_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_PHASE2E2D7A_FLY_STAGING_VERIFY_FIRST_PASS_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_PHASE2E2D7A_FLY_STAGING_VERIFY_FIRST_PASS_EVIDENCE.md";
 
 export function defaultFlyVerifyLiveEvidencePath(
   cwd: string = process.cwd(),

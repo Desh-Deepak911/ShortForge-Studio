@@ -201,18 +201,18 @@ async function main() {
 
   await test("execution probe evidence archived byte-identically", () => {
     assert.equal(
-      sha256File("docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"),
+      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"),
       CURRENT_PROBE_EVIDENCE_SHA,
     );
     assert.equal(
       sha256File(
-        "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33.md",
+        "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33.md",
       ),
       PRE_8H_PROBE_EVIDENCE_SHA,
     );
     assert.equal(
       sha256File(
-        "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0.md",
+        "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0.md",
       ),
       PRIOR_BOOTSTRAP_FAIL_EVIDENCE_SHA,
     );

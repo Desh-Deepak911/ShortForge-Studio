@@ -17,7 +17,7 @@ import {
 import { assertUpstashEvidencePrivacyStructure } from "./evidence-privacy-authority";
 
 export const UPSTASH_CLAIM_ACK_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.md";
 
 export function defaultUpstashClaimAckProbeEvidencePath(
   cwd: string = process.cwd(),
@@ -74,7 +74,7 @@ export function createNotTestedUpstashClaimAckProbeEvidence(
   notes: readonly string[] = [
     "Gate off — no Neon or Upstash connection attempted.",
     "Prior PASS/FAIL claim/ACK-probe evidence must not be overwritten by gate-off runs.",
-    "Does not overwrite docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.",
+    "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.",
   ],
 ): UpstashClaimAckProbeEvidenceDocument {
   return {

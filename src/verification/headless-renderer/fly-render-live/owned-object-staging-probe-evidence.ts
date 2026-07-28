@@ -17,7 +17,7 @@ import {
 import type { OwnedObjectStagingSubstageResult } from "./owned-object-staging-chain";
 
 export const FLY_RENDER_OWNED_OBJECT_STAGING_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md";
 
 export function defaultFlyRenderOwnedObjectStagingProbeEvidencePath(
   cwd: string = process.cwd(),
@@ -62,7 +62,7 @@ export function createNotTestedFlyRenderOwnedObjectStagingProbeEvidence(
     "Gate off — no Neon connection attempted.",
     "Prior PASS/FAIL staging probe evidence must not be overwritten by gate-off runs.",
     "Stops before R2 upload, reconciliation, promotion, outbox, or enqueue.",
-    "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+    "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
   ],
 ): FlyRenderOwnedObjectStagingProbeEvidenceDocument {
   return {

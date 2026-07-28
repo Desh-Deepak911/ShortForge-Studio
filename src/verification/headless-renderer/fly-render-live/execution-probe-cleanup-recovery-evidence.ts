@@ -75,7 +75,7 @@ export function renderFlyRenderExecutionProbeCleanupRecoveryEvidenceMarkdown(
 export function defaultFlyRenderExecutionProbeCleanupRecoveryEvidencePath(): string {
   return path.resolve(
     import.meta.dirname,
-    "../../../../docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md",
+    "../../../../docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md",
   );
 }
 

@@ -36,7 +36,7 @@ export type UpstashLiveEvidenceDocument = {
 };
 
 export const UPSTASH_LIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md";
 
 export function defaultUpstashLiveEvidencePath(
   cwd: string = process.cwd(),

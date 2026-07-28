@@ -341,7 +341,7 @@ WHERE p.owner_id LIKE 'frl_owner_%'
 }
 
 export const FLY_RENDER_LIVE_CLEANUP_RECOVERY_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_LIVE_CLEANUP_RECOVERY_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_CLEANUP_RECOVERY_EVIDENCE.md";
 
 export function isFlyRenderLiveCleanupRecoveryGateOn(
   env: NodeJS.ProcessEnv | Record<string, unknown>,

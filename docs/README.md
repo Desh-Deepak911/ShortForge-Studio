@@ -5,7 +5,7 @@ This directory contains two different kinds of records:
 1. **Living documentation** — product, architecture, and operations guidance that may evolve.
 2. **Immutable QA evidence** — filenames, contents, and SHA-256 values that verification authority may bind.
 
-Evidence authority is more important than a visually flat tree. Files beginning with `HEADLESS_` and historical `pre-*` / `pre-run-*` snapshots **remain at their existing paths** because verification code can bind to an exact path or hash. Do not rename, move, rewrite, or deduplicate those files without a full path-and-SHA migration audit.
+Evidence authority is more important than a visually flat tree. Headless renderer evidence lives under structured paths below; verification code binds canonical paths and SHA-256 values. Do not rename, move, rewrite, or deduplicate evidence without a full path-and-SHA migration audit.
 
 ## Product
 
@@ -44,23 +44,31 @@ Local QA notes and sprint freeze ledgers: [qa/](qa/).
 
 ## Headless renderer evidence
 
-Files beginning with `HEADLESS_` form the renderer implementation and certification ledger at **stable root paths** under `docs/`.
+Structured evidence index: [evidence/headless/README.md](evidence/headless/README.md) · full registry: [evidence/headless/EVIDENCE_REGISTRY.md](evidence/headless/EVIDENCE_REGISTRY.md)
 
-Current evidence entry points (paths unchanged):
+| Kind | Location |
+| --- | --- |
+| Current official evidence | [evidence/headless/current/](evidence/headless/current/) |
+| Historical / archived evidence | [evidence/headless/archive/](evidence/headless/archive/) |
+| Architecture & authority | [architecture/headless/](architecture/headless/) |
+| Operations & runbooks | [operations/headless/](operations/headless/) |
+| Sprint / phase reports | [archive/sprints/headless/](archive/sprints/headless/) |
 
-- [HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md](HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md)
-- [HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md](HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md)
-- [HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md](HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md)
-- [HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md](HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md)
-- [HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md](HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md)
-- [HEADLESS_11E_NEON_LIVE_EVIDENCE.md](HEADLESS_11E_NEON_LIVE_EVIDENCE.md)
+Current evidence entry points:
+
+- [HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md)
+- [HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md)
+- [HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md)
+- [HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md)
+- [HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md)
+- [HEADLESS_11E_NEON_LIVE_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md)
 
 Naming conventions:
 
-- `*.pre-*` and `*.pre-run-*` are byte-preserved historical snapshots.
-- `*EVIDENCE.md` without a historical suffix is the current official record for that harness.
+- `*.pre-*` and `*.pre-run-*` are byte-preserved historical snapshots under `evidence/headless/archive/`.
+- `*EVIDENCE.md` without a historical suffix in `current/` is the active official record for that harness.
 - `*POSTMORTEM*` and `*CORRECTION*` explain a failure boundary or the correction that followed.
-- Phase documents (`HEADLESS_11E_PHASE*`) are implementation authorities and should be read chronologically.
+- Phase documents (`HEADLESS_11E_PHASE*`) in `architecture/headless/` are implementation authorities and should be read chronologically.
 
 ## Historical / refactor archive
 

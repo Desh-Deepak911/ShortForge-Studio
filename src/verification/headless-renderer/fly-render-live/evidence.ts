@@ -54,7 +54,7 @@ export type FlyRenderLiveEvidenceDocument = {
 };
 
 export const FLY_RENDER_LIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md";
 
 export function defaultFlyRenderLiveEvidencePath(
   cwd: string = process.cwd(),

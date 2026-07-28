@@ -17,7 +17,7 @@ import {
 } from "./terminal-attribution";
 
 export const UPSTASH_TERMINAL_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_UPSTASH_TERMINAL_PROBE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_TERMINAL_PROBE.md";
 
 export function defaultUpstashTerminalProbeEvidencePath(
   cwd: string = process.cwd(),
@@ -60,7 +60,7 @@ export function createNotTestedUpstashTerminalProbeEvidence(
   notes: readonly string[] = [
     "Gate off — no Neon or Upstash connection attempted.",
     "Prior PASS/FAIL terminal-probe evidence must not be overwritten by gate-off runs.",
-    "Does not overwrite docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.",
+    "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.",
   ],
 ): UpstashTerminalProbeEvidenceDocument {
   return {

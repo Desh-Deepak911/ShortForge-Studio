@@ -3,7 +3,7 @@
  * SAME DEFAULT_UPSTASH_LIVE_CASE_RUNNERS as the official harness — no stubs.
  * Gate: HEADLESS_UPSTASH_QA_PROGRESSIVE=1
  * Optional: HEADLESS_UPSTASH_QA_PROGRESSIVE_STOP_AFTER=<caseId>
- * Evidence: docs/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.md
+ * Evidence: docs/evidence/headless/current/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.md
  * Never overwrites official LIVE_EVIDENCE. Never migrates.
  */
 
@@ -471,7 +471,7 @@ export async function runUpstashProgressiveHarness(
       "Progressive harness — same DEFAULT_UPSTASH_LIVE_CASE_RUNNERS as official.",
       "Harness never migrates and never uses DATABASE_URL_UNPOOLED.",
       "Matrix stops on first failure; remaining cases are NOT_TESTED.",
-      "Does not overwrite docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.",
+      "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.",
       "QA-isolated pending clear does not prove production-group pending removal.",
       "consume.claim.ack uses production-group isolation authority.",
       stopAfter != null

@@ -17,7 +17,7 @@ import {
 export type { NeonProgressiveDiagnosticDocument } from "./progressive-evidence-authority";
 
 export const NEON_PROGRESSIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.md";
+  "docs/evidence/headless/current/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.md";
 
 export function defaultNeonProgressiveEvidencePath(
   cwd: string = process.cwd(),

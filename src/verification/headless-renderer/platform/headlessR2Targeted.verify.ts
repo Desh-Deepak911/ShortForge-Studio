@@ -5,7 +5,7 @@
  * Gate-off (default): NOT_TESTED, exit 0, zero Neon/R2 connections.
  * Gate-on requires HEADLESS_R2_QA_TARGETED=1 + DATABASE_URL + R2 configured.
  * NEVER migrates. NEVER uses DATABASE_URL_UNPOOLED.
- * NEVER writes official docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md.
+ * NEVER writes official docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md.
  */
 
 import { runR2TargetedHarness } from "../r2-targeted/run-r2-targeted-harness";

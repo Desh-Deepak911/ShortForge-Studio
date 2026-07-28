@@ -305,7 +305,7 @@ WHERE owner_id = $1
 }
 
 export const FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md";
 
 export async function countGlobalExecutionProbeNeonLeftovers(input: {
   readonly sql: HeadlessSqlExecutor;

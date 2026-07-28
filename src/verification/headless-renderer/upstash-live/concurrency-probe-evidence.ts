@@ -18,7 +18,7 @@ import {
 import { assertUpstashEvidencePrivacyStructure } from "./evidence-privacy-authority";
 
 export const UPSTASH_CONCURRENCY_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.md";
 
 export function defaultUpstashConcurrencyProbeEvidencePath(
   cwd: string = process.cwd(),

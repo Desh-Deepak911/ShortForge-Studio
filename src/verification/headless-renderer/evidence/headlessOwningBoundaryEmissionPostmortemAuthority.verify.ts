@@ -79,7 +79,7 @@ async function main() {
   await test("accepted probe and diagnostic evidence SHAs remain byte-identical", () => {
     assert.equal(
       createHash("sha256")
-        .update(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md")))
+        .update(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md")))
         .digest("hex"),
       CURRENT_PROBE_PASS_SHA,
     );
@@ -89,7 +89,7 @@ async function main() {
           readFileSync(
             path.join(
               ROOT,
-              `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-${ARCHIVED_PROBE_FAIL_SHA_8I52C}.md`,
+              `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-${ARCHIVED_PROBE_FAIL_SHA_8I52C}.md`,
             ),
           ),
         )
@@ -102,7 +102,7 @@ async function main() {
           readFileSync(
             path.join(
               ROOT,
-              `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${PRIOR_BOUNDARY_PROBE_FAIL_SHA}.md`,
+              `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${PRIOR_BOUNDARY_PROBE_FAIL_SHA}.md`,
             ),
           ),
         )
@@ -115,7 +115,7 @@ async function main() {
           readFileSync(
             path.join(
               ROOT,
-              `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${PRIOR_BOOTSTRAP_FAIL_SHA}.md`,
+              `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${PRIOR_BOOTSTRAP_FAIL_SHA}.md`,
             ),
           ),
         )
@@ -128,7 +128,7 @@ async function main() {
           readFileSync(
             path.join(
               ROOT,
-              `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${PRE_RUN_ARCHIVE_SHA}.md`,
+              `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${PRE_RUN_ARCHIVE_SHA}.md`,
             ),
           ),
         )
@@ -137,7 +137,7 @@ async function main() {
     );
     assert.equal(
       createHash("sha256")
-        .update(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md")))
+        .update(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md")))
         .digest("hex"),
       DIAG_PASS_SHA,
     );

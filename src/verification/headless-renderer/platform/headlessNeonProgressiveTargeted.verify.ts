@@ -4,7 +4,7 @@
  * Gate: HEADLESS_NEON_QA_PROGRESSIVE=1 + DATABASE_URL
  * Stop: HEADLESS_NEON_QA_PROGRESSIVE_STOP_AFTER=<required case id>
  *
- * Writes docs/HEADLESS_11E_NEON_PROGRESSIVE_TARGETED_2B2D2.md
+ * Writes docs/evidence/headless/current/HEADLESS_11E_NEON_PROGRESSIVE_TARGETED_2B2D2.md
  * Does not overwrite official progressive or live evidence.
  * Does not claim exact-29 progressive PASS.
  */

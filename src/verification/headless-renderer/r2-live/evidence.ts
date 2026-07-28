@@ -29,7 +29,7 @@ export type R2LiveEvidenceDocument = {
 };
 
 export const R2_LIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md";
 
 export function defaultR2LiveEvidencePath(
   cwd: string = process.cwd(),

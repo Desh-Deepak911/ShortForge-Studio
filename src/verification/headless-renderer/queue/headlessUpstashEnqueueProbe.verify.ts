@@ -4,7 +4,7 @@
  *
  * Gate: HEADLESS_UPSTASH_QA_ENQUEUE_PROBE=1 + DATABASE_URL + Upstash REST+TCP + staging
  * Gate-off: zero connections; preserve prior evidence; NOT_TESTED.
- * Never overwrites docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.
+ * Never overwrites docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.
  */
 
 import { runUpstashEnqueueProbe } from "../upstash-live/enqueue-probe";

@@ -2,7 +2,7 @@
  * Gated R2 targeted QA harness — minimum same-snapshot chain.
  * Migration apply is a separate operator action; this harness NEVER migrates.
  * NEVER uses DATABASE_URL_UNPOOLED for QA.
- * NEVER writes official docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md.
+ * NEVER writes official docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md.
  *
  * Gate: HEADLESS_R2_QA_TARGETED=1
  * Preserve: HEADLESS_R2_QA_PRESERVE=1
@@ -442,7 +442,7 @@ export async function runR2TargetedHarness(
     notes: [
       R2_TARGETED_PLACEHOLDER_SUCCESS_BAN,
       "Harness never migrates and never uses the migrate-only unpooled connection.",
-      "Never writes official docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md.",
+      "Never writes official docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md.",
       "Matrix stops on first failure; remaining cases are NOT_TESTED.",
     ],
   };

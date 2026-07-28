@@ -10,7 +10,7 @@ import type { NeonLiveCaseEvidence } from "./evidence";
 import type { ProgressiveSafeStage } from "./injection";
 
 export const NEON_TARGETED_PROGRESSIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_NEON_PROGRESSIVE_TARGETED_2B2D2.md";
+  "docs/evidence/headless/current/HEADLESS_11E_NEON_PROGRESSIVE_TARGETED_2B2D2.md";
 
 export function defaultNeonTargetedProgressiveEvidencePath(
   cwd: string = process.cwd(),
