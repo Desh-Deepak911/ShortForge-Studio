@@ -253,7 +253,7 @@ test("Video inspector shows editable trim controls", () => {
   assert.match(videoInspector, /Reset Trim/);
   assert.doesNotMatch(videoInspector, /id: "trim"/);
   assert.equal(
-    SCENE_VIDEO_COMING_SOON_CONTROLS.some((control) => control.id === "trim"),
+    SCENE_VIDEO_COMING_SOON_CONTROLS.some((control) => (control.id as string) === "trim"),
     false,
   );
 });
@@ -431,9 +431,9 @@ test("Export becomes dirty", () => {
 test("Image scene does not show trim controls", () => {
   const inspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
   assert.match(inspector, /isVideoMedia && sceneMedia\?\.type === "video"/);
-  assert.equal(isSceneVideoTrimEditorAvailable({ type: "image", url: "x" }), false);
+  assert.equal(isSceneVideoTrimEditorAvailable({ type: "image", durationMs: undefined }), false);
   assert.equal(
-    buildVideoTrimPatch(baseScene({ media: { type: "image", url: "x" } }), {
+    buildVideoTrimPatch(baseScene({ media: { type: "image", url: "x", durationMs: undefined } }), {
       trimStartMs: 0,
       trimEndMs: 1000,
     }),
@@ -442,7 +442,7 @@ test("Image scene does not show trim controls", () => {
 });
 
 test("Missing duration disables trim controls", () => {
-  assert.equal(isSceneVideoTrimEditorAvailable({ type: "video", url: "blob:x" }), false);
+  assert.equal(isSceneVideoTrimEditorAvailable({ type: "video", durationMs: undefined }), false);
   const validation = validateSceneVideoTrimDraft("0", "1", 0);
   assert.equal(validation.ok, false);
   const videoInspector = readSrc(

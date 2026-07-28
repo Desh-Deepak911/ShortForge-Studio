@@ -50,7 +50,7 @@ const baseInput = {
   scriptMode: "match_recap" as const,
   templateId: "transfer_news" as const,
   exportProfileId: "youtube_shorts" as const,
-  platforms: ["youtube_shorts", "instagram_reels", "x_video"] as const,
+  platforms: ["youtube_shorts", "instagram_reels", "x_video"] as import("@/features/publishing").PublishingPlatform[],
 };
 
 console.log("publishing-package");
@@ -92,7 +92,7 @@ test("copy assets returned per platform from metadata", () => {
   const pkg = createPublishingPackage({
     ...baseInput,
     metadata: {
-      common: { hook: "What a finish!", keywords: ["haaland", "derby"], callToAction: "Follow for more" },
+      common: { hook: "What a finish!", keywords: ["haaland", "derby"], thumbnailText: "Haaland Derby Winner", callToAction: "Follow for more" },
       youtube: {
         title: "Haaland wins the derby",
         description: "Full recap of the Manchester derby.",

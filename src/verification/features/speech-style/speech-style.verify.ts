@@ -69,7 +69,7 @@ function collectSpeechStyleSources(dir: string): string[] {
   return files;
 }
 
-function buildScriptWithVoiceover(overrides: Record<string, unknown> = {}) {
+function buildScriptWithVoiceover(overrides: Record<string, unknown> = {}): import("@/features/story/types").FootieScript {
   return {
     title: "Speech Style QA",
     narration: "Arsenal score late to win the derby.",
@@ -80,13 +80,13 @@ function buildScriptWithVoiceover(overrides: Record<string, unknown> = {}) {
     voiceoverVoiceSettings: {
       voice: "alloy",
       speed: 1,
-      stylePreset: "neutral",
+      stylePreset: "neutral" as const,
       expressiveDelivery: false,
     },
     voiceSettings: {
       voice: "alloy",
       speed: 1,
-      stylePreset: "neutral",
+      stylePreset: "neutral" as const,
       expressiveDelivery: false,
     },
     ...overrides,

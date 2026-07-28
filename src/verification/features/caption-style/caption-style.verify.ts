@@ -596,7 +596,7 @@ test("preview and export effect parity preserved", () => {
     shadowBlur: 0,
     shadowOffsetX: 0,
     shadowOffsetY: 0,
-  } as CanvasRenderingContext2D;
+  } as unknown as CanvasRenderingContext2D;
 
   assert.match(String(preview.WebkitTextStroke), /#111111/);
   assert.match(String(preview.textShadow), new RegExp(`${8 * PREVIEW_CAPTION_STYLE_UI_SCALE}px`));
@@ -650,8 +650,8 @@ test("effect presentation edits mark export dirty only", () => {
   });
   const classification = classifyStoryPatch(prev, next);
   assert.ok(classification.classes.includes("caption_style"));
-  assert.equal(classification.classes.includes("narration"), false);
-  assert.equal(classification.classes.includes("voice"), false);
+  assert.equal(classification.classes.includes("narration" as import("@/features/editor/story-patches").StoryPatchClass), false);
+  assert.equal(classification.classes.includes("voice" as import("@/features/editor/story-patches").StoryPatchClass), false);
 });
 
 test("legacy stories remain visually unchanged without stored caption style", () => {

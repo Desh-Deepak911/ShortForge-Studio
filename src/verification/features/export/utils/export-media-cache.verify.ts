@@ -58,7 +58,7 @@ function createMockImage(url: string): HTMLImageElement {
 }
 
 function createMockVideo(url: string): HTMLVideoElement {
-  return {
+  const video = {
     src: url,
     muted: true,
     defaultMuted: true,
@@ -66,12 +66,13 @@ function createMockVideo(url: string): HTMLVideoElement {
     paused: true,
     duration: 5,
     readyState: 1,
-    pause() {
+    pause(this: { paused: boolean }) {
       this.paused = true;
     },
     load() {},
     removeAttribute() {},
-  } as unknown as HTMLVideoElement;
+  };
+  return video as unknown as HTMLVideoElement;
 }
 
 function createLoaders(options?: {

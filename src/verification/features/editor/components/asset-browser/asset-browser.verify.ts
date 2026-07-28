@@ -80,8 +80,8 @@ function buildHandoffContexts(sceneId = "scene-1", sceneIndex = 0) {
     sceneIndex,
     visualIntent: "match_action",
     semanticSlot: "climax",
-    rankedProviderIds: ["pexels", "mock"] as const,
-  };
+    rankedProviderIds: ["pexels", "mock" as import("@/features/asset-intelligence").AssetProviderId],
+  } satisfies import("@/features/editor/components/asset-browser/asset-browser.types").AssetBrowserInitialSearchContext;
 
   const searchContext = {
     storyId: "story-browser-attach",
@@ -92,6 +92,7 @@ function buildHandoffContexts(sceneId = "scene-1", sceneIndex = 0) {
       sceneIndex,
       confidence: "high" as const,
       reasoning: [],
+      rejectedCandidates: [],
       topRecommendation: {
         query: "Lionel Messi celebration",
         entityIds: [],
@@ -102,7 +103,7 @@ function buildHandoffContexts(sceneId = "scene-1", sceneIndex = 0) {
         reasons: [],
         reasonLabels: [],
         tags: [],
-        rank: 1,
+        rank: 1 as const,
       },
       alternatives: [],
     },
@@ -111,8 +112,9 @@ function buildHandoffContexts(sceneId = "scene-1", sceneIndex = 0) {
       sceneIndex,
       query: "Lionel Messi celebration",
       rankedProviders: [],
+      planningOnly: true as const,
     },
-  };
+  } satisfies import("@/features/editor/components/asset-browser/asset-browser.types").AssetBrowserSearchContext;
 
   return { initialSearchContext, searchContext };
 }
@@ -485,15 +487,16 @@ async function runAssetBrowserTests(): Promise<void> {
         tags: [],
         visualIntent: "match_action",
         semanticRole: "climax",
-        rank: 1,
+        rank: 1 as const,
       },
       providerResult: {
         sceneId: "scene-2",
         sceneIndex: 2,
         query: "Lionel Messi celebration",
+        planningOnly: true as const,
         rankedProviders: [
-          { providerId: "pexels", priority: "primary", score: 0.9, reasons: [] },
-          { providerId: "mock", priority: "fallback", score: 0.5, reasons: [] },
+          { providerId: "pexels", priority: "primary", score: 0.9, reasons: [], capabilitiesMatched: [], planningOnly: true },
+          { providerId: "mock" as import("@/features/asset-intelligence").AssetProviderId, priority: "fallback", score: 0.5, reasons: [], capabilitiesMatched: [], planningOnly: true },
         ],
       },
     });
@@ -566,6 +569,7 @@ async function runAssetBrowserTests(): Promise<void> {
               sceneIndex: 0,
               confidence: "high",
               reasoning: [],
+              rejectedCandidates: [],
               topRecommendation: {
                 query: "Lionel Messi celebration",
                 entityIds: [],
@@ -576,7 +580,7 @@ async function runAssetBrowserTests(): Promise<void> {
                 reasons: [],
                 reasonLabels: [],
                 tags: [],
-                rank: 1,
+                rank: 1 as const,
               },
               alternatives: [],
             },
@@ -585,6 +589,7 @@ async function runAssetBrowserTests(): Promise<void> {
               sceneIndex: 0,
               query: "Lionel Messi celebration",
               rankedProviders: [],
+              planningOnly: true,
             },
           },
         }),
@@ -614,7 +619,7 @@ async function runAssetBrowserTests(): Promise<void> {
         reasons: [],
         reasonLabels: [],
         tags: [],
-        rank: 1,
+        rank: 1 as const,
       },
     });
     const sceneB = buildAssetBrowserInitialSearchContext({
@@ -631,7 +636,7 @@ async function runAssetBrowserTests(): Promise<void> {
         reasons: [],
         reasonLabels: [],
         tags: [],
-        rank: 1,
+        rank: 1 as const,
       },
     });
 

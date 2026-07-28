@@ -169,7 +169,7 @@ async function runVoicePreviewTests() {
     const fakeMp3 = new ArrayBuffer(8);
     setVoicePreviewTtsGeneratorForTests(async () => fakeMp3);
 
-    const request = { voice: "nova", speed: 1, sampleText: DEFAULT_VOICE_PREVIEW_SAMPLE_TEXT, stylePreset: "neutral" as const, expressiveDelivery: false };
+    const request = { voice: "nova", speed: 1 as const, sampleText: DEFAULT_VOICE_PREVIEW_SAMPLE_TEXT, stylePreset: "neutral" as const, expressiveDelivery: false };
 
     const first = await generateVoicePreview(request);
     assert.equal(first.cacheHit, false);

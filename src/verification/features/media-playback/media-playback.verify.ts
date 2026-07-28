@@ -776,11 +776,11 @@ test("missing source duration handled safely", () => {
 });
 
 test("export fingerprint changes when trim changes", () => {
-  const settings = {
-    format: "mp4" as const,
-    quality: "standard" as const,
-    includeSubtitles: true,
-    includeWatermark: false,
+  const settings: import("@/features/story/types").ExportSettings = {
+    fileName: "trim-export",
+    format: "mp4",
+    quality: "standard",
+    resolution: "1080x1920",
   };
   const base = buildTrimScript({
     type: "video",
@@ -790,11 +790,21 @@ test("export fingerprint changes when trim changes", () => {
     trimEndMs: 12_000,
     muted: true,
   });
-  const before = buildExportFingerprint({ script: base, settings });
+  const before = buildExportFingerprint({
+    script: base,
+    exportSettings: settings,
+    includeNarration: true,
+    includeBackgroundMusic: false,
+  });
   const patch = buildVideoTrimPatch(base.scenes[0]!, { trimStartMs: 3000, trimEndMs: 7000 });
   assert.ok(patch);
   const afterScript = applySceneUpdate(base, "scene-1", patch!.patch);
-  const after = buildExportFingerprint({ script: afterScript, settings });
+  const after = buildExportFingerprint({
+    script: afterScript,
+    exportSettings: settings,
+    includeNarration: true,
+    includeBackgroundMusic: false,
+  });
   assert.notEqual(before, after);
 });
 

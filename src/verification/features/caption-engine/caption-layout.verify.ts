@@ -245,7 +245,8 @@ test("preview resolves layout from live script scene during playback", () => {
   const resolved = resolvePreviewCaptionLayoutForScene(staleScene, script, 0);
   assert.equal(resolved.anchor, "center");
   assert.equal(resolved.usesLegacyBottomCenter, false);
-  assert.equal(resolvePreviewCaptionLayoutScene(script, staleScene, 0).captionLayout?.anchor, "center");
+  const layoutScene = resolvePreviewCaptionLayoutScene(script, staleScene, 0) as unknown as typeof liveScene;
+  assert.equal(layoutScene.captionLayout?.anchor, "center");
 });
 
 test("project default layout applies when preview scene snapshot is stale", () => {

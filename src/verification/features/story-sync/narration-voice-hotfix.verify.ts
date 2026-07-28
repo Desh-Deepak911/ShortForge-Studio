@@ -437,7 +437,7 @@ test("getCanonicalVoiceover prefers persisted base64 over stale blob URL", () =>
         subtitleText: "Spoken.",
       },
     ],
-  });
+  } as import("@/features/story/types").FootieScript & { voiceoverAudioBase64: string });
 
   const canonical = getCanonicalVoiceover(script);
   assert.ok(canonical?.url);

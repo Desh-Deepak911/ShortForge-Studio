@@ -237,7 +237,7 @@ test("caption layout/style/animation edits keep narration and voice clean", () =
     ...prev,
     scenes: prev.scenes.map((scene) =>
       scene.id === "s1"
-        ? { ...scene, captionLayout: { anchor: "bottom-center", offsetX: 0, offsetY: -12 } }
+        ? { ...scene, captionLayout: { anchor: "bottom_center", offsetX: 0, offsetY: -12 } }
         : scene,
     ),
   });

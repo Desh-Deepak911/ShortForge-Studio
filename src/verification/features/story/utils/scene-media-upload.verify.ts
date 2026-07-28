@@ -263,10 +263,10 @@ test("applySceneUpdate remove patch clears all media fields", () => {
       image: createSceneImageFromUrl("blob:image"),
       uploadedImage: "legacy",
       assetAttachment: {
-        attachSource: "manual",
+        attachSource: "manual" as import("@/features/asset-attach").AssetAttachSource,
         normalizedAssetId: "asset-1",
         attachedAt: "2026-01-01T00:00:00.000Z",
-      },
+      } as import("@/features/asset-attach").AssetAttachMetadata,
       media: { type: "image", url: "blob:image", source: "upload" },
     }),
   ]);

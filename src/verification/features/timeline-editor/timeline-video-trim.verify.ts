@@ -374,8 +374,8 @@ test("Scene duration remains unchanged", () => {
   const before = scene.durationMs;
   const result = buildVideoTrimPatch(scene, { trimStartMs: 2000, trimEndMs: 7000 });
   assert.ok(result);
-  assert.equal(result!.patch.duration, undefined);
-  assert.equal(result!.patch.durationMs, undefined);
+  assert.equal((result!.patch as { duration?: unknown }).duration, undefined);
+  assert.equal((result!.patch as { durationMs?: unknown }).durationMs, undefined);
   assert.equal(before, 5000);
 });
 
@@ -545,8 +545,8 @@ test("Keyboard trim leaves scene duration unchanged", () => {
   const scene = videoScene();
   const result = buildVideoTrimPatch(scene, { trimStartMs: 1500, trimEndMs: 7500 });
   assert.ok(result);
-  assert.equal(result!.patch.duration, undefined);
-  assert.equal(result!.patch.durationMs, undefined);
+  assert.equal((result!.patch as { duration?: unknown }).duration, undefined);
+  assert.equal((result!.patch as { durationMs?: unknown }).durationMs, undefined);
 });
 
 test("Window blur cancels trim session", () => {

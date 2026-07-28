@@ -50,6 +50,8 @@ function makeEvent(effect: "fade-up" | "typewriter" | "highlight"): CaptionAnima
     type: "caption-animation",
     startMs: 0,
     endMs: 3000,
+    durationMs: 3000,
+    source: "derived-caption-animation",
     metadata: {
       sceneId: "scene-1",
       sceneIndex: 0,
@@ -264,7 +266,10 @@ test("set project default motion preset writes defaultCaptionAnimation only", ()
     ],
   };
 
-  const patch = buildProjectDefaultMotionPresetPatch(script.scenes[0]!, script);
+  const patch = buildProjectDefaultMotionPresetPatch(
+    script.scenes[0]!,
+    script as Pick<import("@/features/story/types").FootieScript, "defaultCaptionAnimation">,
+  );
   assert.ok(patch);
   assert.equal(patch!.defaultCaptionAnimation.motionPresetId, "news-bbc");
   assert.equal(patch!.defaultCaptionAnimation.preset, "fade");

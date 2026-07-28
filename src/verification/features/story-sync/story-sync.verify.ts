@@ -260,7 +260,7 @@ function buildStory(scenes: FootieScene[], narration = "Original narration."): F
     totalDuration,
     voiceoverUrl: "blob:voice",
     voiceoverDurationMs: totalDuration * 1000,
-    backgroundMusic: { enabled: true, volume: 0.4, source: "library" },
+    backgroundMusic: { enabled: true, volume: 0.4, source: "library", duckingEnabled: true, fadeIn: true, fadeOut: true },
   });
 }
 

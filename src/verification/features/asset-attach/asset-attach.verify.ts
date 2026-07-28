@@ -130,13 +130,13 @@ async function runAssetAttachTests() {
 
   test("builds attach metadata with handoff and materialization fields", () => {
     const asset = buildSampleAsset();
-    const handoff = {
+    const handoff: import("@/features/asset-attach").AssetAttachHandoff = {
       storyId: "story-attach-qa",
       sceneIndex: 1,
       recommendationQuery: "football celebration",
       semanticSlot: "hero",
       visualIntent: "energetic",
-      rankedProviderIds: ["pexels", "mock"] as const,
+      rankedProviderIds: ["pexels", "mock" as import("@/features/asset-intelligence").AssetProviderId],
       planningScriptHash: "hash-123",
     };
 

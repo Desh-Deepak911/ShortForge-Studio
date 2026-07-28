@@ -55,6 +55,7 @@ function baseScript(scenes: FootieScene[]): FootieScript {
   return {
     title: "Story",
     narration: "Narration",
+    totalDuration: scenes.reduce((sum, scene) => sum + scene.duration, 0),
     scenes,
   };
 }

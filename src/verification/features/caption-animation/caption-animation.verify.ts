@@ -61,6 +61,8 @@ function makeEvent(
     type: "caption-animation",
     startMs: animationStartMs,
     endMs: subtitleEndMs,
+    durationMs: subtitleEndMs - animationStartMs,
+    source: "derived-caption-animation",
     metadata: {
       sceneId: "scene-1",
       sceneIndex: 0,

@@ -411,7 +411,7 @@ test("buildSceneCaptionPresetPatch updates captionPreset and fallback subtitleEf
     captionPreset: "news",
     subtitleEffect: "highlight",
   });
-  assert.deepEqual(buildSceneCaptionPresetPatch("unknown"), {
+  assert.deepEqual(buildSceneCaptionPresetPatch("unknown" as import("@/features/caption-engine/caption-engine.types").CaptionPresetId), {
     captionPreset: DEFAULT_CAPTION_PRESET,
     subtitleEffect: "fade-up",
   });

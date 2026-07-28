@@ -46,7 +46,11 @@ function readSrc(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
-function makeScene(id: string, durationSec: number): FootieScene {
+function makeScene(
+  id: string,
+  durationSec: number,
+  overrides: Partial<FootieScene> = {},
+): FootieScene {
   const durationMs = durationSec * 1000;
   return {
     id,
@@ -69,6 +73,7 @@ function makeScene(id: string, durationSec: number): FootieScene {
       fitMode: "fit",
       imageMotion: { type: "none", intensity: "subtle" },
     },
+    ...overrides,
   };
 }
 

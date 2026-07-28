@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { buildMasterTimeline } from "@/features/timeline-intelligence/build-master-timeline";
+import type { SubtitleTimelineEventMetadata } from "@/features/timeline-intelligence/timeline.types";
 import type { FootieScene, FootieScript } from "@/features/story/types";
 import { recalculateSceneTimings } from "@/features/story/utils";
 import { getSubtitleChunkDurationMs, splitSubtitleChunks } from "@/features/story/utils/subtitle.utils";
@@ -28,7 +29,6 @@ import {
   SUBTITLE_TIMING_LEAD_IN_MS,
   SUBTITLE_TIMING_MAX_CHUNK_DURATION_MS,
   SUBTITLE_TIMING_MIN_CHUNK_MS,
-  splitSubtitleChunks,
   splitSubtitleChunksForWordWeightedTiming,
   wordWeightedSubtitleTimingStrategy,
 } from "@/features/subtitle-timing";
@@ -717,12 +717,12 @@ test("preview and export share subtitle timing strategy resolution", () => {
     previewSubtitles.map((event) => ({
       startMs: event.startMs,
       endMs: event.endMs,
-      text: event.metadata.text,
+      text: (event.metadata as SubtitleTimelineEventMetadata).text,
     })),
     exportSubtitles.map((event) => ({
       startMs: event.startMs,
       endMs: event.endMs,
-      text: event.metadata.text,
+      text: (event.metadata as SubtitleTimelineEventMetadata).text,
     })),
   );
 });

@@ -62,15 +62,16 @@ function test(name: string, fn: () => void) {
 }
 
 function buildScene(partial: Partial<FootieScene> & Pick<FootieScene, "id">): FootieScene {
+  const { id, ...rest } = partial;
   return {
-    id: partial.id,
-    start: partial.start ?? 0,
-    end: partial.end ?? 5,
-    duration: partial.duration ?? 5,
-    subtitle: partial.subtitle ?? "Scene subtitle",
-    sceneType: partial.sceneType ?? "context",
-    narration: partial.narration ?? "Scene narration excerpt.",
-    ...partial,
+    start: rest.start ?? 0,
+    end: rest.end ?? 5,
+    duration: rest.duration ?? 5,
+    subtitle: rest.subtitle ?? "Scene subtitle",
+    sceneType: rest.sceneType ?? "context",
+    narration: rest.narration ?? "Scene narration excerpt.",
+    ...rest,
+    id,
   };
 }
 
@@ -150,6 +151,7 @@ function buildIdentityMockPlanning(
         sceneIndex: scene.sceneIndex,
         query: scene.query,
         rankedProviders: [],
+        planningOnly: true,
       })),
       diagnostics: {
         providerCoverage: 1,
@@ -195,7 +197,9 @@ test("reorder detection", () => {
     buildScene({ id: "3", subtitle: "Ending", sceneType: "ending" }),
   ];
   const prev = buildScript(baseScenes);
-  const reordered = reorderTimelineScene(prev, "3", 0).script;
+  const reorderResult = reorderTimelineScene(prev, "3", 0);
+  assert.ok(reorderResult);
+  const reordered = reorderResult.script;
 
   const events = detectStoryChanges(prev, reordered);
   assert.ok(hasChangeType(events, "scene.reorder"));
@@ -370,7 +374,9 @@ test("scene ID preservation on reorder", () => {
     buildScene({ id: "beta" }),
     buildScene({ id: "gamma" }),
   ]);
-  const next = reorderTimelineScene(prev, "gamma", 0).script;
+  const reorderResult = reorderTimelineScene(prev, "gamma", 0);
+  assert.ok(reorderResult);
+  const next = reorderResult.script;
 
   assert.ok(sceneIdsPreservedOnReorder(prev, next));
   assert.deepEqual(

@@ -153,6 +153,8 @@ function seedImageCache(scene: FootieScene): ExportMediaCache {
   cache.assets.set(scene.id, {
     kind: "image",
     sceneId: scene.id,
+    mediaItemId: scene.id,
+    cacheKey: `${scene.id}:image`,
     url: image.src,
     element: image,
     status: "ready",
@@ -166,6 +168,8 @@ function seedVideoCache(scene: FootieScene): ExportMediaCache {
   const asset: ExportVideoAsset = {
     kind: "video",
     sceneId: scene.id,
+    mediaItemId: scene.id,
+    cacheKey: `${scene.id}:video`,
     url: element.src,
     element,
     durationMs: scene.media?.durationMs ?? 5000,
@@ -394,6 +398,8 @@ async function run() {
     cache.assets.set(scene.id, {
       kind: "video",
       sceneId: scene.id,
+      mediaItemId: scene.id,
+      cacheKey: `${scene.id}:video`,
       url: "blob:clip",
       element: hanging,
       durationMs: 5000,
