@@ -4,8 +4,8 @@
  */
 
 import assert from "node:assert/strict";
+import { sha256Bytes } from "../../support/evidence-hash";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
   chmodSync,
   copyFileSync,
@@ -69,9 +69,6 @@ const PAGE_DIAG_SHA =
 
 let passed = 0;
 
-function sha256(value: Buffer | string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
 
 async function test(name: string, fn: () => void | Promise<void>) {
   await fn();
@@ -156,7 +153,7 @@ async function main() {
 
   await test("8F.6E and prior probe evidence preserved byte-identically", () => {
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -167,7 +164,7 @@ async function main() {
       EVIDENCE_8F6E_SHA,
     );
     assert.equal(
-      sha256(
+      sha256Bytes(
         readFileSync(
           path.join(
             ROOT,
@@ -178,11 +175,11 @@ async function main() {
       EVIDENCE_8F6F_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
+      sha256Bytes(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
       EXECUTION_PROBE_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
+      sha256Bytes(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
       PAGE_DIAG_SHA,
     );
   });

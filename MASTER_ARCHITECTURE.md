@@ -77,12 +77,12 @@ Claims below are **repository-evidence only**. Do not treat marketing version li
 | Audio Mixer v1 | [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md), ROADMAP 3.9.2 | **Complete and frozen** |
 | Shared Media Motion | [docs/product/SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) | Production path after 4.2C → Sprint 5; **manual freeze sign-off blank** |
 | Persistent Media Framing | [docs/product/MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) | Canonical framing via `resolveSceneMediaFraming()` |
-| Export Reliability | [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md), [docs/EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md) | **Sprint 6A–6F.1 Implemented** (contract Accepted after 6A) |
+| Export Reliability | [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md), [docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md](./docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md) | **Sprint 6A–6F.1 Implemented** (contract Accepted after 6A) |
 | Export freeze | [docs/qa/export-reliability-freeze.md](./docs/qa/export-reliability-freeze.md) | **`EXPORT RELIABILITY FREEZE: APPROVED`** for **720p / Chromium-first / WebM primary** (2026-07-11, automated evidence) |
 
 ### Latest completed architectural milestone
 
-**Export Reliability Sprint 6F.1** — options-only `ExportSession`, fresh manifest every attempt, capability-gated 1080p approval. Primary docs: [EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md), [EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md), [qa/export-1080p-results.md](./docs/qa/export-1080p-results.md).
+**Export Reliability Sprint 6F.1** — options-only `ExportSession`, fresh manifest every attempt, capability-gated 1080p approval. Primary docs: [EXPORT_RELIABILITY_SPRINT.md](./docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md), [EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md), [qa/export-1080p-results.md](./docs/qa/export-1080p-results.md).
 
 ### Current frozen systems (summary)
 
@@ -96,7 +96,7 @@ See [§9](#9-frozen-systems-and-regression-boundaries) for the full list. Headli
 
 ### Current roadmap entry point — Sprint 11 Headless Renderer
 
-**Sprints 7–10 are frozen.** Sprint 10 Retention Story Intelligence v1 passed deterministic Golden/authority QA, the 435-cell Flexible matrix, the final 13/13 Core live-model matrix, and operator-confirmed local Create/Review/persistence/audio-first sign-off. Production narration paths share `runRetentionProductionNarration`; Evidence Surprise remains capability-gated. See [the Sprint 10 freeze ledger](./docs/qa/retention-story-sprint-10-freeze.md) and [the Retention contract](./docs/RETENTION_STORY_CONTRACT.md). **Current entry point: Sprint 11E Phase 2E.1 — Fly hosted-worker foundation implemented locally; Upstash staging-accepted; Neon/R2 accepted; Fly deploy NOT STARTED; production routes configuration-blocked; browser remains production default.**
+**Sprints 7–10 are frozen.** Sprint 10 Retention Story Intelligence v1 passed deterministic Golden/authority QA, the 435-cell Flexible matrix, the final 13/13 Core live-model matrix, and operator-confirmed local Create/Review/persistence/audio-first sign-off. Production narration paths share `runRetentionProductionNarration`; Evidence Surprise remains capability-gated. See [the Sprint 10 freeze ledger](./docs/qa/retention-story-sprint-10-freeze.md) and [the Retention contract](./docs/architecture/RETENTION_STORY_CONTRACT.md). **Current entry point: Sprint 11E Phase 2E.1 — Fly hosted-worker foundation implemented locally; Upstash staging-accepted; Neon/R2 accepted; Fly deploy NOT STARTED; production routes configuration-blocked; browser remains production default.**
 
 | Phase | Status |
 |-------|--------|
@@ -236,10 +236,10 @@ Sources: [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTR
 | Export capability | `src/features/export/domain/` + `capabilities/` | `ExportCapabilityResult` | Preflight UI | `prepareExportRequest` gate | [docs/product/EXPORT_CAPABILITIES.md](./docs/product/EXPORT_CAPABILITIES.md) | `test:export-capability-*` | Authoritative |
 | Export output validation | `src/features/export/validation/` | `ExportArtifactValidation` | N/A | `validateFinalExportArtifact` | EXPORT_CONTRACT / AUDIO_AND_FORMATS | `test:export-final-artifact` | Authoritative |
 | QA fixtures | `src/features/export/qa/` + `src/verification/` | Golden A–G | `/dev/export-qa` | Semantic goldens | [docs/qa/](./docs/qa/) | `test:export-golden-*`, export-reliability | Authoritative for recorded evidence |
-| Final spoken hook | Opening span of `FootieScript.narration` (story generation commits) | `FootieScript.narration` — **not** a second narration field | N/A (story text) | Snapshotted with narration into export | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) (**Accepted**) | Sprint 7E (future) | Contract accepted; generation integration in 7D |
-| Hook planning / strategy library | `src/features/hook-engine/` (`domain/`, `strategies/`) | `NormalizedHookRequest`, `HookPlan`, `HookPlanSnapshot`, `resolveHookStrategy` | N/A | Must not patch export runtime | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md), [HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) | `test:hook-strategy-library` | **7B accepted** |
-| Hook validation / repair | `src/features/hook-engine/` (`validation/`, `repair/`) | `HookCandidate`, `HookValidationResult`, `HookSelection`, `HookDiagnostics`, `runBoundedHookRepair`, `activePlan` | N/A | Must not patch export runtime | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | `test:hook-validator` | **7C accepted** |
-| Hook generation integration | `src/features/hook-engine/integration/` + story services + `/api/generate-script` | `HookGenerationContext`, `HookDirective`, `approvedNarration`, response `hookPlan` | Optional `StoryCreationBrief.hookPlan` snapshot | Upstream of VO/scenes | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | `test:hook-sprint` · `test:hook-core-live-qa` | **7E complete — Core frozen**; Evidence Surprise live capability-gated |
+| Final spoken hook | Opening span of `FootieScript.narration` (story generation commits) | `FootieScript.narration` — **not** a second narration field | N/A (story text) | Snapshotted with narration into export | [HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) (**Accepted**) | Sprint 7E (future) | Contract accepted; generation integration in 7D |
+| Hook planning / strategy library | `src/features/hook-engine/` (`domain/`, `strategies/`) | `NormalizedHookRequest`, `HookPlan`, `HookPlanSnapshot`, `resolveHookStrategy` | N/A | Must not patch export runtime | [HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md), [HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md) | `test:hook-strategy-library` | **7B accepted** |
+| Hook validation / repair | `src/features/hook-engine/` (`validation/`, `repair/`) | `HookCandidate`, `HookValidationResult`, `HookSelection`, `HookDiagnostics`, `runBoundedHookRepair`, `activePlan` | N/A | Must not patch export runtime | [HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) | `test:hook-validator` | **7C accepted** |
+| Hook generation integration | `src/features/hook-engine/integration/` + story services + `/api/generate-script` | `HookGenerationContext`, `HookDirective`, `approvedNarration`, response `hookPlan` | Optional `StoryCreationBrief.hookPlan` snapshot | Upstream of VO/scenes | [HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) | `test:hook-sprint` · `test:hook-core-live-qa` | **7E complete — Core frozen**; Evidence Surprise live capability-gated |
 | Visual / scene hook (SI) | `src/features/studio-intelligence/` | `NarrativeBeatType = "hook"`, `hook_opener`, SI-only `StoryStrategyHookStrategy` | Scene/visual planning | Derived excerpts only | [STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) | SI verifies | Downstream of narration — not spoken authority |
 | Publishing/social metadata hook | Publishing metadata utils (`buildStyleHook`) | Derived packaging copy | N/A | N/A | HOOK_CONTRACT §13 | Publishing verifies (existing) | Outside Hook Engine |
 
@@ -368,7 +368,7 @@ Sources: [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTR
 - **Subdomains:** `domain/`, `runtime/`, `session/`, `validation/`, `formats/`, `audio/`, `timing/`, `chunking/`, `capabilities/`, `qa/`
 - **Docs (authoritative set):**
   - [EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md)
-  - [EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md)
+  - [EXPORT_RELIABILITY_SPRINT.md](./docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md)
   - [EXPORT_RENDERER_ARCHITECTURE.md](./docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md)
   - [EXPORT_AUDIO_AND_FORMATS.md](./docs/product/EXPORT_AUDIO_AND_FORMATS.md)
   - [EXPORT_CAPABILITIES.md](./docs/product/EXPORT_CAPABILITIES.md)
@@ -386,7 +386,7 @@ Sources: [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTR
 - **Status:** Contract **Accepted after Sprint 7A**. Sprint **7B–7D Complete — accepted**. Sprint **7E Complete — Core Hook frozen** (Evidence Surprise live provider path capability-gated).
 - **Module:** [`src/features/hook-engine/`](./src/features/hook-engine/) — `domain/`, `strategies/`, `validation/` (extract, candidate, validate, selection, diagnostics), `repair/` (`runBoundedHookRepair`)
 - **Public API:** [`src/features/hook-engine/index.ts`](./src/features/hook-engine/index.ts)
-- **Docs:** [HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md), [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md)
+- **Docs:** [HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md), [HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md)
 - **Verification:** `npm run test:hook-strategy-library` · `npm run test:hook-validator`
 - **Rules:** Final spoken hook = opening span of `FootieScript.narration` (story generation commits). Runtime `HookPlan` ephemeral; accepted snapshot may persist on brief as `hookPlan`. No SI imports. Production narration paths use canonical adapter. `evidence_surprise` requires explicit PI `evidenceLedSurprise` beat policy + eligible claim refs (not inferred from ordinary evidence-bearing openings). Max one automated repair per narration attempt. Legacy `generateFootieScript` unreachable from production route.
 
@@ -544,7 +544,7 @@ Export adapter
 Manifest-only offline rendering
 ```
 
-**Product rule** ([EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md)):
+**Product rule** ([EXPORT_RELIABILITY_SPRINT.md](./docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md)):
 
 > Anything supported in Preview must export with equivalent semantics or be blocked with an explicit capability message before export begins.
 
@@ -788,7 +788,7 @@ Statuses use repository evidence only.
 
 | Phase | Status | Purpose | Architectural outcome | Canonical documentation | Primary implementation area | Verification / QA | Known remaining debt |
 |-------|--------|---------|----------------------|-------------------------|-----------------------------|-------------------|----------------------|
-| **7A** | **Complete — contract accepted** | Audit + formal Hook Contract | Ownership, fingerprints, SI/publishing boundaries accepted | [HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md), [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | Docs | Link/symbol checks | — |
+| **7A** | **Complete — contract accepted** | Audit + formal Hook Contract | Ownership, fingerprints, SI/publishing boundaries accepted | [HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md), [HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) | Docs | Link/symbol checks | — |
 | **7B** | **Complete — accepted** | Immutable Hook Strategy Library | Deterministic resolution + `hr:`/`hp:` fingerprints + tamper-resistant `HookPlan` + evidence intent gate | HOOK_CONTRACT | `src/features/hook-engine/` | `test:hook-strategy-library` | Accepted with 7B.1; no generation integration |
 | **7C** | **Complete — accepted** | Hook Validator + one repair | Opening-span extract; claim-trace; opening maxima; ≤1 repair; authoritative fallback plan | HOOK_CONTRACT | `hook-engine/validation/`, `repair/` | `test:hook-validator` | 7C.1/7C.2 hardened |
 | **7D** | **Complete — accepted** | Canonical adapter on all narration paths | One hook adapter; no silent partial support; legacy route fallback retired | HOOK_CONTRACT | `hook-engine/integration/` + story + route | `test:hook-integration` | Accepted with 7D.1–7D.3 |
@@ -866,7 +866,7 @@ Legend:
 |----------|---------|-----------------|----------------|---------------|----------------|
 | [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) | Canonical navigation index | **Authoritative (index)** | Current | — | Every major sprint |
 | [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) | Export guarantees | **Authoritative** | Current (6B–6F.1) | — | Any export contract change |
-| [docs/EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md) | Export sprint plan / backlog | **Authoritative** | Current | — | Phase status changes |
+| [docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md](./docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md) | Export sprint plan / backlog | **Authoritative** | Current | — | Phase status changes |
 | [docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md](./docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md) | Production renderer | **Authoritative** | Current (chunked-browser-v1) | — | Renderer changes |
 | [docs/product/EXPORT_AUDIO_AND_FORMATS.md](./docs/product/EXPORT_AUDIO_AND_FORMATS.md) | Audio/format adapters | **Authoritative** | Current (6E) | — | Format/audio policy changes |
 | [docs/product/EXPORT_CAPABILITIES.md](./docs/product/EXPORT_CAPABILITIES.md) | Capability inventory | Current supporting | Updated for 6F/6F.1 | — | Capability matrix changes |
@@ -896,10 +896,10 @@ Legend:
 | [docs/qa/export-preview-parity-matrix.md](./docs/qa/export-preview-parity-matrix.md) | 6A parity audit | Historical + still useful | Actions recommend 6B/6C partly done | EXPORT_CONTRACT status table | Parity re-audit |
 | [docs/qa/mixed-media-export-freeze.md](./docs/qa/mixed-media-export-freeze.md) | Manual mixed-media checklist | Current supporting | Unchecked; no verdict | — | Manual freeze attempt |
 | [docs/qa/shared-media-motion-sprint-5.md](./docs/qa/shared-media-motion-sprint-5.md) | Motion freeze checklist | Current supporting | Candidate; unsigned | — | Motion freeze decision |
-| [docs/HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) | Sprint 7A evidence audit | **Authoritative for audit evidence** | Current (7A) | — | After any generation-path change affecting hooks |
-| [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | Formal Hook Contract | **Accepted after Sprint 7A** | 7A–7E Core frozen; Evidence Surprise live capability-gated | — | Every Hook Engine change |
-| [docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) | Sprint 10A evidence audit | **Accepted** | Accepted (10A) | RETENTION_STORY_CONTRACT | After generation-path changes affecting story planning |
-| [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) | Formal Retention Story Contract | **Accepted after Sprint 10A.2** | 10B module implemented; not production-ready/frozen; generation unwired | `src/features/retention-story/` | Every Retention Story Intelligence change |
+| [docs/architecture/HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md) | Sprint 7A evidence audit | **Authoritative for audit evidence** | Current (7A) | — | After any generation-path change affecting hooks |
+| [docs/architecture/HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) | Formal Hook Contract | **Accepted after Sprint 7A** | 7A–7E Core frozen; Evidence Surprise live capability-gated | — | Every Hook Engine change |
+| [docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) | Sprint 10A evidence audit | **Accepted** | Accepted (10A) | RETENTION_STORY_CONTRACT | After generation-path changes affecting story planning |
+| [docs/architecture/RETENTION_STORY_CONTRACT.md](./docs/architecture/RETENTION_STORY_CONTRACT.md) | Formal Retention Story Contract | **Accepted after Sprint 10A.2** | 10B module implemented; not production-ready/frozen; generation unwired | `src/features/retention-story/` | Every Retention Story Intelligence change |
 | [docs/operations/ENV_AND_FEATURE_FLAGS.md](./docs/operations/ENV_AND_FEATURE_FLAGS.md) | Env / feature-flag ledger | Supporting tracker | Multi-image flag retired 8E.3; multi-image default | scene-media-sprint-8-freeze | Any env or client-gate change |
 | [docs/qa/hook-engine-sprint-7-freeze.md](./docs/qa/hook-engine-sprint-7-freeze.md) | Sprint 7 freeze evidence | **Authoritative for freeze verdict** | AWAITING LIVE-MODEL SIGN-OFF | hook-live-model-results | After live smoke or defect |
 | [docs/qa/hook-live-model-results.md](./docs/qa/hook-live-model-results.md) | Live-model smoke log | **Authoritative for live honesty** | All rows Not tested until HOOK_LIVE_QA=1 | — | Each live run |
@@ -935,7 +935,7 @@ Sprint 7 — Provocative Hook
 7E — QA and freeze                                      ← Complete — Core frozen; Evidence Surprise live capability-gated
 ```
 
-**Docs:** [HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) · [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) (**Accepted after Sprint 7A**)
+**Docs:** [HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md) · [HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) (**Accepted after Sprint 7A**)
 **Module:** [`src/features/hook-engine/`](./src/features/hook-engine/)
 **Verify:** `npm run test:hook-strategy-library` · `npm run test:hook-validator` · `npm run test:hook-integration`
 
@@ -1000,9 +1000,9 @@ EXPORTMANIFEST V3 / RENDERER CONTRACT 9C: FROZEN
 
 | Phase | Status |
 |-------|--------|
-| **10A** — Architecture Audit + Formal Contract | **Accepted** — [RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) |
+| **10A** — Architecture Audit + Formal Contract | **Accepted** — [RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) |
 | **10A.1** — Contract Authority Hardening | **Accepted** |
-| **10A.2** — Contract Final Coherence | **Accepted** — [RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) |
+| **10A.2** — Contract Final Coherence | **Accepted** — [RETENTION_STORY_CONTRACT.md](./docs/architecture/RETENTION_STORY_CONTRACT.md) |
 | **10B** — Story Contract + Format Strategy Foundation | **Complete and accepted** — `npm run test:retention-story-contract` |
 | **10C** — Controlling Idea + Emotional Arc | **Complete and accepted** (10C.1 / 10C.1A) — `strategy/` · `npm run test:retention-story-strategy` |
 | **10D** — Retention Beat + Pacing Intelligence | **Complete and accepted** (unwired) — `planning/` · `npm run test:retention-story-planning` |
@@ -1138,11 +1138,11 @@ Also:
 | Need | Go to |
 |------|-------|
 | Export contract | [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) |
-| Export sprint plan | [docs/EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md) |
-| Hook audit (7A) | [docs/HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) |
-| Hook contract (Accepted) | [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) |
-| Retention Story audit (10A) | [docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) |
-| Retention Story contract (10A) | [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) |
+| Export sprint plan | [docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md](./docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md) |
+| Hook audit (7A) | [docs/architecture/HOOK_ARCHITECTURE_AUDIT.md](./docs/architecture/HOOK_ARCHITECTURE_AUDIT.md) |
+| Hook contract (Accepted) | [docs/architecture/HOOK_CONTRACT.md](./docs/architecture/HOOK_CONTRACT.md) |
+| Retention Story audit (10A) | [docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) |
+| Retention Story contract (10A) | [docs/architecture/RETENTION_STORY_CONTRACT.md](./docs/architecture/RETENTION_STORY_CONTRACT.md) |
 | Retention Story module (10B) | [src/features/retention-story/](./src/features/retention-story/) |
 | Hook Engine module | [src/features/hook-engine/](./src/features/hook-engine/) |
 | Motion | [docs/product/SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) |

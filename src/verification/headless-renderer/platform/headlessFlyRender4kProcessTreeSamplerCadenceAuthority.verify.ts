@@ -3,7 +3,7 @@
  */
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { sha256FileSync } from "../../support/evidence-hash";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -37,22 +37,12 @@ async function main() {
   );
 
   await test("8K.4 FAIL evidence SHA frozen at cf84dd66", () => {
-    const evidencePath = path.join(
-      process.cwd(),
-      "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md",
-    );
-    const raw = readFileSync(evidencePath, "utf8");
-    const sha = createHash("sha256").update(raw, "utf8").digest("hex");
+    const sha = sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md");
     assert.equal(sha, HOSTED_4K_CAPACITY_FAIL_EVIDENCE_SHA_8K4);
   });
 
   await test("8K.3 FAIL archive preserved at c40ce8a6", () => {
-    const archivePath = path.join(
-      process.cwd(),
-      "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k3-c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03.md",
-    );
-    const raw = readFileSync(archivePath, "utf8");
-    const sha = createHash("sha256").update(raw, "utf8").digest("hex");
+    const sha = sha256FileSync("docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k3-c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03.md");
     assert.equal(sha, FLY_RENDER_4K_CAPACITY_ARCHIVED_FAIL_EVIDENCE_SHA_8K3);
   });
 

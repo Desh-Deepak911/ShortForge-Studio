@@ -633,7 +633,7 @@ Pipeline:
 
 Quality presets: `export-quality.utils.ts` (720p, 1080p, 1440p, 4K vertical @ 30 fps).
 
-Related: [`EXPORT_ARCHITECTURE_AUDIT.md`](EXPORT_ARCHITECTURE_AUDIT.md), [`EXPORT_RELIABILITY_SPRINT.md`](../EXPORT_RELIABILITY_SPRINT.md).
+Related: [`EXPORT_ARCHITECTURE_AUDIT.md`](EXPORT_ARCHITECTURE_AUDIT.md), [`EXPORT_RELIABILITY_SPRINT.md`](../archive/sprints/EXPORT_RELIABILITY_SPRINT.md).
 
 ### Subtitle renderer
 

@@ -114,4 +114,4 @@ NEXT_PUBLIC_SHORTFORGE_EXPORT_ALLOW_1080P_BROWSER=1
 - `docs/qa/export-preview-parity-matrix.md`
 - `docs/product/EXPORT_TIMING_MODEL.md`
 - `docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md`
-- `docs/EXPORT_RELIABILITY_SPRINT.md`
+- `docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md`

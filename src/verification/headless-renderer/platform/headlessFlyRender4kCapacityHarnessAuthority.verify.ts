@@ -4,7 +4,7 @@
  */
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { sha256FileSync } from "../../support/evidence-hash";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -136,42 +136,22 @@ async function main() {
   });
 
   await test("official 720p render-live PASS evidence byte-identical", () => {
-    const evidencePath = path.join(
-      process.cwd(),
-      "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md",
-    );
-    const raw = readFileSync(evidencePath, "utf8");
-    const sha = createHash("sha256").update(raw, "utf8").digest("hex");
+    const sha = sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md");
     assert.equal(sha, OFFICIAL_RENDER_LIVE_PASS_SHA);
   });
 
   await test("official 8K.1 4K capacity FAIL archive byte-identical", () => {
-    const evidencePath = path.join(
-      process.cwd(),
-      "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-a1475a6e3b329d9db8a7a51f8d0d0a31d6a56e7ebb4d631661d9dadee3280ee1.md",
-    );
-    const raw = readFileSync(evidencePath, "utf8");
-    const sha = createHash("sha256").update(raw, "utf8").digest("hex");
+    const sha = sha256FileSync("docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-a1475a6e3b329d9db8a7a51f8d0d0a31d6a56e7ebb4d631661d9dadee3280ee1.md");
     assert.equal(sha, OFFICIAL_4K_CAPACITY_FAIL_SHA_8K1);
   });
 
   await test("official 8K.3 4K capacity FAIL archive byte-identical", () => {
-    const evidencePath = path.join(
-      process.cwd(),
-      "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k3-c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03.md",
-    );
-    const raw = readFileSync(evidencePath, "utf8");
-    const sha = createHash("sha256").update(raw, "utf8").digest("hex");
+    const sha = sha256FileSync("docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k3-c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03.md");
     assert.equal(sha, OFFICIAL_4K_CAPACITY_FAIL_SHA_8K3);
   });
 
   await test("official 8K.4 4K capacity FAIL evidence byte-identical", () => {
-    const evidencePath = path.join(
-      process.cwd(),
-      "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md",
-    );
-    const raw = readFileSync(evidencePath, "utf8");
-    const sha = createHash("sha256").update(raw, "utf8").digest("hex");
+    const sha = sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md");
     assert.equal(sha, OFFICIAL_4K_CAPACITY_FAIL_SHA_8K4);
   });
 

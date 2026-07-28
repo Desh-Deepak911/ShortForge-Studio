@@ -6,7 +6,7 @@
  */
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { sha256Bytes } from "../../support/evidence-hash";
 import {
   existsSync,
   readFileSync,
@@ -54,9 +54,6 @@ function test(name: string, fn: () => void | Promise<void>) {
     });
 }
 
-function sha256(buf: Buffer | string): string {
-  return createHash("sha256").update(buf).digest("hex");
-}
 
 function validHostedEnv(
   mode: "verify" | "render",
@@ -397,9 +394,9 @@ async function main() {
   });
 
   // Capture digests for the completion report.
-  const workerSha = sha256(readFileSync(path.join(DIST, "hosted-worker.js")));
-  const pageSha = sha256(readFileSync(path.join(DIST, "page-render.iife.js")));
-  const infoSha = sha256(readFileSync(path.join(DIST, "BUILD_INFO.json")));
+  const workerSha = sha256Bytes(readFileSync(path.join(DIST, "hosted-worker.js")));
+  const pageSha = sha256Bytes(readFileSync(path.join(DIST, "page-render.iife.js")));
+  const infoSha = sha256Bytes(readFileSync(path.join(DIST, "BUILD_INFO.json")));
   console.log(`  · sha256 hosted-worker.js=${workerSha}`);
   console.log(`  · sha256 page-render.iife.js=${pageSha}`);
   console.log(`  · sha256 BUILD_INFO.json=${infoSha}`);

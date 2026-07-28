@@ -27,6 +27,9 @@ Evidence authority is more important than a visually flat tree. Headless rendere
 | Export contract | [architecture/EXPORT_CONTRACT.md](architecture/EXPORT_CONTRACT.md) |
 | Export renderer | [architecture/EXPORT_RENDERER_ARCHITECTURE.md](architecture/EXPORT_RENDERER_ARCHITECTURE.md) |
 | Export audit | [architecture/EXPORT_ARCHITECTURE_AUDIT.md](architecture/EXPORT_ARCHITECTURE_AUDIT.md) |
+| Hook contract | [architecture/HOOK_CONTRACT.md](architecture/HOOK_CONTRACT.md), [architecture/HOOK_ARCHITECTURE_AUDIT.md](architecture/HOOK_ARCHITECTURE_AUDIT.md) |
+| Retention Story contract | [architecture/RETENTION_STORY_CONTRACT.md](architecture/RETENTION_STORY_CONTRACT.md), [architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md](architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) |
+| Headless renderer authority | [architecture/headless/](architecture/headless/) |
 
 Root companions: [../MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md), [../ARCHITECTURE.md](../ARCHITECTURE.md), [../ROADMAP.md](../ROADMAP.md).
 
@@ -73,6 +76,9 @@ Naming conventions:
 ## Historical / refactor archive
 
 - [archive/refactor/REPOSITORY_REFACTOR_FINAL_AUDIT.md](archive/refactor/REPOSITORY_REFACTOR_FINAL_AUDIT.md)
+- [archive/refactor/REPOSITORY_STRUCTURE_FINAL_AUDIT.md](archive/refactor/REPOSITORY_STRUCTURE_FINAL_AUDIT.md)
+- Sprint history (non-headless): [archive/sprints/EXPORT_RELIABILITY_SPRINT.md](archive/sprints/EXPORT_RELIABILITY_SPRINT.md)
+- Headless sprint history: [archive/sprints/headless/](archive/sprints/headless/)
 
 ## Maintenance rules
 

@@ -58,7 +58,7 @@ Do **not** fabricate device results. Mark gaps as `Not tested`.
 - Semantic goldens: `src/verification/export/goldens/`
 - Device QA harness: `/dev/export-qa` (development only)
 - Device results log: [`export-device-results.md`](./export-device-results.md)
-- Architecture: [`../EXPORT_RELIABILITY_SPRINT.md`](../EXPORT_RELIABILITY_SPRINT.md)
+- Architecture: [`../archive/sprints/EXPORT_RELIABILITY_SPRINT.md`](../archive/sprints/EXPORT_RELIABILITY_SPRINT.md)
 
 ## Freeze decision
 

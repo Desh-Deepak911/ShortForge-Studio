@@ -4,7 +4,7 @@
  */
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { sha256FileSync } from "../../support/evidence-hash";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -164,11 +164,6 @@ const SIX_MIGRATION_IDS =
 
 let passed = 0;
 
-function sha256File(relativePath: string): string {
-  return createHash("sha256")
-    .update(readFileSync(path.join(ROOT, relativePath)))
-    .digest("hex");
-}
 
 async function test(name: string, fn: () => void | Promise<void>) {
   await fn();
@@ -1234,25 +1229,25 @@ async function main() {
 
   await test("official evidence SHAs remain byte-identical", () => {
     assert.equal(
-      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md"),
+      sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md", ROOT),
       OFFICIAL_EVIDENCE_SHAS.verifyLivePass,
     );
     assert.equal(
-      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md"),
+      sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md", ROOT),
       OFFICIAL_EVIDENCE_SHAS.renderLivePass,
     );
     assert.equal(
-      sha256File(
+      sha256FileSync(
         "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01.md",
       ),
       OFFICIAL_EVIDENCE_SHAS.renderLiveFailArchived8J,
     );
     assert.equal(
-      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md"),
+      sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md", ROOT),
       OFFICIAL_EVIDENCE_SHAS.ownedObjectStagingPass,
     );
     assert.equal(
-      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md"),
+      sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md", ROOT),
       OFFICIAL_EVIDENCE_SHAS.ownedObjectFinalizePass,
     );
   });

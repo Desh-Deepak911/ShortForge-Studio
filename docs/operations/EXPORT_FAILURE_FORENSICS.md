@@ -40,5 +40,5 @@ Estimated JPEG sequence alone is hundreds of MB in FFmpeg MEMFS, plus raw WebM +
 - `docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md`
 - `docs/product/EXPORT_CAPABILITIES.md`
 - `docs/product/EXPORT_TIMING_MODEL.md`
-- `docs/EXPORT_RELIABILITY_SPRINT.md`
+- `docs/archive/sprints/EXPORT_RELIABILITY_SPRINT.md`
 - `docs/qa/export-preview-parity-matrix.md`

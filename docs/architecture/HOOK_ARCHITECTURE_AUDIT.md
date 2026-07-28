@@ -6,7 +6,7 @@
 **Not claimed:** Hook Engine implementation, contract acceptance, or Sprint 7B–7E delivery
 
 > Companion contract: [`HOOK_CONTRACT.md`](./HOOK_CONTRACT.md) — **Proposed — awaiting architecture acceptance before Sprint 7 implementation**.
-> Navigation index: [`MASTER_ARCHITECTURE.md`](../MASTER_ARCHITECTURE.md).
+> Navigation index: [`MASTER_ARCHITECTURE.md`](../../MASTER_ARCHITECTURE.md).
 
 ---
 
@@ -451,7 +451,7 @@ The Hook Architecture Audit is **approved**. Remaining architectural decisions (
 ## Related documents
 
 - [`HOOK_CONTRACT.md`](./HOOK_CONTRACT.md)
-- [`MASTER_ARCHITECTURE.md`](../MASTER_ARCHITECTURE.md)
-- [`STUDIO_INTELLIGENCE.md`](./STUDIO_INTELLIGENCE.md)
-- [`GENERATION.md`](./GENERATION.md)
+- [`MASTER_ARCHITECTURE.md`](../../MASTER_ARCHITECTURE.md)
+- [`STUDIO_INTELLIGENCE.md`](../product/STUDIO_INTELLIGENCE.md)
+- [`GENERATION.md`](../product/GENERATION.md)
 - [`DATA_MODEL.md`](./DATA_MODEL.md)
