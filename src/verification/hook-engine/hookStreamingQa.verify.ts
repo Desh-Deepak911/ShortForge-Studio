@@ -107,7 +107,6 @@ function jsonSuccessEnvelope(fp = "hr:stream1", plan = "hp:stream1"): GenerateSc
   return {
     success: true,
     data: {
-      id: "s1",
       title: "Stream Title",
       narration: "City derby night erupts. Body continues.",
       totalDuration: 30,
@@ -153,7 +152,7 @@ async function main() {
       async () => {
         const json = jsonSuccessEnvelope();
         const events: GenerateScriptStreamEvent[] = [
-          { type: "progress", step: 1, label: "Writing script..." },
+          { type: "progress", step: 1, label: "Writing your story..." },
           {
             type: "complete",
             success: true,
@@ -191,8 +190,8 @@ async function main() {
       async () => {
         const steps: number[] = [];
         const events: GenerateScriptStreamEvent[] = [
-          { type: "progress", step: 1, label: "Writing script..." },
-          { type: "progress", step: 2, label: "Generating narration..." },
+          { type: "progress", step: 1, label: "Writing your story..." },
+          { type: "progress", step: 2, label: "Creating narration..." },
           {
             type: "complete",
             success: true,
@@ -213,7 +212,7 @@ async function main() {
       async () => {
         const steps: number[] = [];
         const events: GenerateScriptStreamEvent[] = [
-          { type: "progress", step: 1, label: "Writing script..." },
+          { type: "progress", step: 1, label: "Writing your story..." },
           { type: "error", error: "boom", hookDiagnostics: SAMPLE_DIAGNOSTICS },
         ];
         const streamed = await consumeGenerateScriptStream(
@@ -253,7 +252,6 @@ async function main() {
             type: "complete",
             success: true,
             data: {
-              id: "utf",
               title: "UTF",
               narration,
               totalDuration: 30,
@@ -276,8 +274,8 @@ async function main() {
       async () => {
         const steps: number[] = [];
         const blob = eventsToNdjson([
-          { type: "progress", step: 1, label: "A" },
-          { type: "progress", step: 2, label: "B" },
+          { type: "progress", step: 1, label: "Writing your story..." },
+          { type: "progress", step: 2, label: "Creating narration..." },
           {
             type: "complete",
             success: true,
@@ -358,7 +356,6 @@ async function main() {
                     type: "complete",
                     success: true,
                     data: {
-                      id: `id-${i}`,
                       title: `T${i}`,
                       narration: `City derby night erupts. Stream ${i}.`,
                       totalDuration: 30,
@@ -417,7 +414,7 @@ async function main() {
         // Documents client consumer behavior only: first complete/error ends consumption.
         // Route-side uniqueness is covered by the terminal-controller suite below.
         const events: GenerateScriptStreamEvent[] = [
-          { type: "progress", step: 1, label: "A" },
+          { type: "progress", step: 1, label: "Writing your story..." },
           {
             type: "complete",
             success: true,
@@ -454,7 +451,7 @@ async function main() {
           enqueued.push(e),
         );
         assert.equal(
-          gate.emit({ type: "progress", step: 1, label: "Writing script..." })
+          gate.emit({ type: "progress", step: 1, label: "Writing your story..." })
             .accepted,
           true,
         );
@@ -516,7 +513,7 @@ async function main() {
         const after = gate.emit({
           type: "progress",
           step: 2,
-          label: "late",
+          label: "Creating narration...",
         });
         assert.equal(after.accepted, false);
         if (!after.accepted) assert.equal(after.reason, "progress_after_terminal");
@@ -534,7 +531,7 @@ async function main() {
         assert.equal(a.phase, "complete");
         assert.equal(b.phase, "open");
         assert.equal(
-          b.emit({ type: "progress", step: 1, label: "Writing script..." }).accepted,
+          b.emit({ type: "progress", step: 1, label: "Writing your story..." }).accepted,
           true,
         );
         assert.equal(aEvents.length, 1);
