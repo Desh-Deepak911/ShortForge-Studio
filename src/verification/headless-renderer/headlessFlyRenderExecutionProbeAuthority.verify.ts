@@ -40,6 +40,7 @@ import {
   HEADLESS_FLY_STAGING_POST_007_8I2_POST_FRAME_ATTRIBUTION_PROSPECTIVE_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_POST_007_8I3_ARTIFACT_BINDING_COHERENCE_PROSPECTIVE_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_POST_007_8F_TELEMETRY_HISTORICAL_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_POST_007_PRE_TELEMETRY_HISTORICAL_IMAGE_DIGEST,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
@@ -495,17 +496,31 @@ async function main() {
     assert.equal(historical8i3.overall, "FAIL");
     assert.equal(historical8i3.connectionFactoryCalls, 0);
 
-    const telemetry = await runFlyRenderExecutionProbe({
+    const historical8i5 = await runFlyRenderExecutionProbe({
       env,
       forceGateOn: true,
       evidencePath: tempExecutionProbeEvidencePath(),
       renderMachineImageDigestSha256:
         HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
+      connectionProbe: () => {
+        throw new Error("provider contact forbidden");
+      },
+    });
+    assert.equal(historical8i5.exitCode, 1);
+    assert.equal(historical8i5.overall, "FAIL");
+    assert.equal(historical8i5.connectionFactoryCalls, 0);
+
+    const current2g12 = await runFlyRenderExecutionProbe({
+      env,
+      forceGateOn: true,
+      evidencePath: tempExecutionProbeEvidencePath(),
+      renderMachineImageDigestSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
       connectionProbe: () => {},
     });
-    assert.equal(telemetry.exitCode, 1);
-    assert.equal(telemetry.overall, "FAIL");
-    assert.equal(telemetry.connectionFactoryCalls, 1);
+    assert.equal(current2g12.exitCode, 1);
+    assert.equal(current2g12.overall, "FAIL");
+    assert.equal(current2g12.connectionFactoryCalls, 1);
   });
 
   await test("execution probe gate-on without render digest fails telemetry authority closed", async () => {
