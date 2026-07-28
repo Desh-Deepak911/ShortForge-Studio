@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 import { MemoryHeadlessOwnedObjectStoreAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-owned-object-store.adapter";
 import {
+  HEADLESS_UPLOAD_CAPABILITY_DEFAULT_TTL_MS,
   R2UploadCapabilityAdapter,
   type CreatePresignedPutUrl,
 } from "@/features/headless-renderer/control-plane/adapters/r2-upload-capability.adapter";
@@ -89,6 +90,11 @@ async function main() {
     assert.equal(observed.objectKey, OBJECT_KEY);
     assert.equal(observed.contentType, "application/json");
     assert.equal(observed.contentLength, 42);
+    assert.equal(
+      observed.expiresInSeconds,
+      HEADLESS_UPLOAD_CAPABILITY_DEFAULT_TTL_MS / 1000,
+    );
+    assert.equal(issued.value.expiresAtMs, 2000 + 10 * 60_000);
     assert.equal(issued.value.requiredHeaders["Content-Type"], "application/json");
     assert.equal(issued.value.requiredHeaders["Content-Length"], "42");
   });
