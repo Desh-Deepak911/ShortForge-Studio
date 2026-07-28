@@ -508,7 +508,10 @@ async function main() {
 
   await test("probe evidence markdown includes sequence coherence and privacy-safe fields", () => {
     const telemetry = createCollectingProviderBackedBoundaryTelemetry();
-    for (const id of OWNING_BOUNDARY_EVENT_IDS) {
+    const chromiumIdx = OWNING_BOUNDARY_EVENT_IDS.indexOf(
+      "chromium_session_cleanup",
+    );
+    for (const id of OWNING_BOUNDARY_EVENT_IDS.slice(0, chromiumIdx + 1)) {
       telemetry.emit(id);
     }
     const probeEvidence = buildProbeOwningBoundaryEvidence({
@@ -542,6 +545,25 @@ async function main() {
     assert.equal(assertExecutionProbeEvidenceSafe(md).ok, true);
     assert.match(md, /sequence_coherence=ok/);
     assert.match(md, /last_observed_boundary=chromium_session_cleanup/);
+
+    const staleTelemetry = createCollectingProviderBackedBoundaryTelemetry();
+    for (const id of OWNING_BOUNDARY_EVENT_IDS) {
+      staleTelemetry.emit(id);
+    }
+    const staleEvidence = buildProbeOwningBoundaryEvidence({
+      observations: staleTelemetry.observations,
+      workspaceMaterializationCompleted: true,
+      terminalReasonId: "page_contract_missing",
+      terminalSubstage: "page_contract_ready",
+      cleanupOutcomeClass: "ok",
+    });
+    assert.equal(staleEvidence.sequenceCoherence.ok, false);
+    if (!staleEvidence.sequenceCoherence.ok) {
+      assert.equal(
+        staleEvidence.sequenceCoherence.incoherenceClass,
+        "illegal_failure_cas_after_succeeded_cas",
+      );
+    }
   });
 
   await test("f904 probe log fixture reproduces prior two-boundary + ingestion path", () => {
