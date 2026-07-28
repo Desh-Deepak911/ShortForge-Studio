@@ -131,7 +131,6 @@ async function main() {
       story: fixStory(),
       environment: CAPABLE_ENV,
     });
-    assert.equal(built.ok, true);
     if (!built.ok) throw new Error(built.message);
     assert.equal(built.manifest.project.projectId, projectId);
     const draft = { ...built.manifest };
@@ -150,7 +149,6 @@ async function main() {
       story: fixStory(),
       environment: CAPABLE_ENV,
     });
-    assert.equal(built.ok, true);
     if (!built.ok) throw new Error(built.message);
     assert.equal(validateExportManifest(built.manifest).ok, true);
   });
@@ -223,7 +221,6 @@ async function main() {
       story: fixStory(),
       environment: CAPABLE_ENV,
     });
-    assert.equal(built.ok, true);
     if (!built.ok) throw new Error(built.message);
     const beforeFp = built.manifest.fingerprint;
     const beforeProjectId = built.manifest.project.projectId;
@@ -316,7 +313,6 @@ async function main() {
       draftCtx.authoritativeStagingObjectRefs,
       LIVE_CLOCK_MS + 500,
     );
-    assert.equal(appended.ok, true);
     if (!appended.ok) throw new Error(appended.message);
     const staged = await store.compareAndSetProvisional({
       jobId: provisional.jobId,

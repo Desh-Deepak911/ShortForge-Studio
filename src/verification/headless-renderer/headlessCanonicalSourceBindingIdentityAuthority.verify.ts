@@ -182,7 +182,6 @@ async function seedProvisionalWithCoverage(input: {
     updatedAtMs: CLOCK,
     expiresAtMs: CLOCK + 7_200_000,
   });
-  assert.equal(provisional.ok, true);
   if (!provisional.ok) throw new Error(provisional.message);
 
   const created = await input.fixture.jobStore.createProvisionalIfAbsent({
@@ -279,9 +278,12 @@ async function main() {
       ownerId: fixture.ownerId,
       nowMs: CLOCK,
     });
-    assert.equal(materialized.ok, true);
     if (!materialized.ok) {
-      throw new Error(`${materialized.issues[0]?.code}: ${materialized.issues[0]?.message}`);
+      const issue = materialized.issues[0];
+      if (issue == null) {
+        throw new Error("materialize canonical from finalized coverage failed");
+      }
+      throw new Error(`${issue.code}: ${issue.message}`);
     }
 
     const canonicalLocators = materialized.value.canonicalRequest.assetBundle.assets.map(
@@ -358,7 +360,6 @@ async function main() {
       maxTotalAssetBytes: 32 * 1024 * 1024,
     });
     workspace.cleanup();
-    assert.equal(materializeAssets.ok, true);
     if (!materializeAssets.ok) throw new Error(materializeAssets.message);
   });
 
@@ -449,7 +450,6 @@ async function main() {
       updatedAtMs: CLOCK,
       expiresAtMs: CLOCK + 7_200_000,
     });
-    assert.equal(provisional.ok, true);
     if (!provisional.ok) throw new Error(provisional.message);
     await fixture.jobStore.createProvisionalIfAbsent({
       idempotencyAuthorityKey: fixture.draftCtx.draft.idempotencyAuthorityKey,
