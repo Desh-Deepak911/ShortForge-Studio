@@ -17,7 +17,7 @@ export const FLY_VERIFY_LIVE_ARCHIVED_FAIL_ENDED_MS = Date.parse(
 );
 
 export const FLY_VERIFY_CLEANUP_RECOVERY_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_VERIFY_LIVE_CLEANUP_RECOVERY_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_CLEANUP_RECOVERY_EVIDENCE.md";
 
 export type FlyVerifyCleanupRecoveryTarget = {
   readonly ownerId: string;

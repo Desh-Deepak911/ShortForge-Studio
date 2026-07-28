@@ -83,7 +83,7 @@ async function main() {
     assert.equal(
       sha256(
         readFileSync(
-          path.join(ROOT, "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"),
+          path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"),
         ),
       ),
       EXECUTION_PROBE_CURRENT_FAIL_EVIDENCE_SHA,
@@ -93,7 +93,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${EXECUTION_PROBE_CURRENT_FAIL_EVIDENCE_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${EXECUTION_PROBE_CURRENT_FAIL_EVIDENCE_SHA}.md`,
           ),
         ),
       ),
@@ -104,7 +104,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${EXECUTION_PROBE_PRIOR_FAIL_EVIDENCE_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${EXECUTION_PROBE_PRIOR_FAIL_EVIDENCE_SHA}.md`,
           ),
         ),
       ),
@@ -115,7 +115,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-${EXECUTION_PROBE_PRIOR_REAL_SHAPE_FAIL_EVIDENCE_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-${EXECUTION_PROBE_PRIOR_REAL_SHAPE_FAIL_EVIDENCE_SHA}.md`,
           ),
         ),
       ),
@@ -126,7 +126,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-${EXECUTION_PROBE_HISTORICAL_FAIL_EVIDENCE_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-${EXECUTION_PROBE_HISTORICAL_FAIL_EVIDENCE_SHA}.md`,
           ),
         ),
       ),
@@ -137,7 +137,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.pre-run-${PACKAGING_GATE_EVIDENCE_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.pre-run-${PACKAGING_GATE_EVIDENCE_SHA}.md`,
           ),
         ),
       ),
@@ -146,7 +146,7 @@ async function main() {
     assert.equal(
       sha256(
         readFileSync(
-          path.join(ROOT, "docs/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"),
+          path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"),
         ),
       ),
       PAGE_DIAGNOSTIC_PASS_EVIDENCE_SHA,

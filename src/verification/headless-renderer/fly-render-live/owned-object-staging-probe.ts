@@ -120,7 +120,7 @@ export async function runFlyRenderOwnedObjectStagingProbe(
       document: {
         ...createNotTestedFlyRenderOwnedObjectStagingProbeEvidence([
           "Gate on but Neon QA secret contract incomplete.",
-          "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+          "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
         ]),
         overall: "FAIL",
         eligibilityVerdict: OWNED_OBJECT_STAGING_PROBE_ELIGIBILITY.FAIL_CONFIG,
@@ -337,7 +337,7 @@ export async function runFlyRenderOwnedObjectStagingProbe(
       "Stages manifest, asset_bundle_record, and asset_bytes in canonical order.",
       "Stops before R2 upload, reconciliation, promotion, outbox, or enqueue.",
       "Safe with active workers — no queued job or dispatch intent created.",
-      "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+      "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
     ],
   };
 

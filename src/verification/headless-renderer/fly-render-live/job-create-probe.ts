@@ -155,7 +155,7 @@ export async function runFlyRenderJobCreateProbe(
       document: {
         ...createNotTestedFlyRenderJobCreateProbeEvidence([
           "Gate on but Neon/R2 QA secret contract incomplete.",
-          "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+          "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
         ]),
         overall: "FAIL",
         eligibilityVerdict: JOB_CREATE_PROBE_ELIGIBILITY.FAIL_CONFIG,
@@ -232,7 +232,7 @@ export async function runFlyRenderJobCreateProbe(
         "Blocked before Neon/R2 mutation — active staging render dispatch sweepers may race probe outbox reread.",
         "Does not claim queued+pending-outbox contract while verify=1 render=1 workers are operational.",
         "Use separately authorized official render-live matrix for dispatch/hosted render path.",
-        "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+        "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
       ],
     };
     writeFlyRenderJobCreateProbeEvidence({ evidencePath, document });
@@ -388,7 +388,7 @@ export async function runFlyRenderJobCreateProbe(
       "Zero-consumer topology required for queued+pending-outbox contract.",
       "Blocked before mutation when verify=1 render=1 operational consumers exist.",
       "No render delivery; no Fly Machine mutation.",
-      "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+      "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
     ],
   };
 

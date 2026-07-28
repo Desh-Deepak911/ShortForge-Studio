@@ -116,5 +116,5 @@ export function writeFlyVerifyCleanupRecoveryEvidence(options: {
 export function defaultFlyVerifyCleanupRecoveryEvidencePath(
   cwd: string = process.cwd(),
 ): string {
-  return path.join(cwd, "docs/HEADLESS_11E_FLY_VERIFY_LIVE_CLEANUP_RECOVERY_EVIDENCE.md");
+  return path.join(cwd, "docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_CLEANUP_RECOVERY_EVIDENCE.md");
 }

@@ -20,7 +20,7 @@ import {
 } from "./job-create-probe-consumer-safety";
 
 export const FLY_RENDER_JOB_CREATE_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_JOB_CREATE_PROBE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_JOB_CREATE_PROBE.md";
 
 export function defaultFlyRenderJobCreateProbeEvidencePath(
   cwd: string = process.cwd(),
@@ -79,7 +79,7 @@ export function createNotTestedFlyRenderJobCreateProbeEvidence(
     "Gate off — no Neon or R2 connection attempted.",
     "Prior PASS/FAIL job-create probe evidence must not be overwritten by gate-off runs.",
     "Zero-consumer topology required for queued+pending-outbox contract.",
-    "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+    "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
   ],
 ): FlyRenderJobCreateProbeEvidenceDocument {
   return {

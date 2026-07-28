@@ -117,7 +117,7 @@ async function main() {
   await test("8F.6F evidence archived byte-identically", () => {
     const archive = path.join(
       ROOT,
-      "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012.md",
+      "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012.md",
     );
     assert.ok(existsSync(archive));
     assert.equal(sha256(readFileSync(archive)), EVIDENCE_8F6F_SHA);
@@ -129,7 +129,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6E_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6E_SHA}.md`,
           ),
         ),
       ),
@@ -140,14 +140,14 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${EXECUTION_PROBE_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${EXECUTION_PROBE_SHA}.md`,
           ),
         ),
       ),
       EXECUTION_PROBE_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
+      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
       PAGE_DIAG_SHA,
     );
   });

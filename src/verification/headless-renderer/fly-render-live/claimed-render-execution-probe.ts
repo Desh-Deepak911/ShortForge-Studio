@@ -201,7 +201,7 @@ export async function runFlyRenderExecutionProbe(
       document: {
         ...createNotTestedFlyRenderExecutionProbeEvidence([
           "Gate on but QA secret contract incomplete.",
-          "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+          "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
         ]),
         overall: "FAIL",
         eligibilityVerdict: EXECUTION_PROBE_ELIGIBILITY.FAIL_CONFIG,
@@ -232,7 +232,7 @@ export async function runFlyRenderExecutionProbe(
       document: {
         ...createNotTestedFlyRenderExecutionProbeEvidence([
           `Render Machine image authority rejected (${telemetryImage.reasonId}).`,
-          "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+          "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
         ]),
         overall: "FAIL",
         eligibilityVerdict: EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE,
@@ -260,7 +260,7 @@ export async function runFlyRenderExecutionProbe(
 
   const notes = [
     "One bounded 720p-webm-30 / 2000ms production-path execution probe.",
-    "Does not overwrite docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+    "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
     "Hosted Fly render worker is sole consumer of the shared staging render stream.",
     "No Machine scale/restart/redeploy; no 4K capacity claim.",
   ];

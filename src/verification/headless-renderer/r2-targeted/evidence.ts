@@ -1,6 +1,6 @@
 /**
  * Safe R2 targeted-QA evidence document — separate from official live evidence.
- * NEVER writes docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md.
+ * NEVER writes docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md.
  */
 
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -30,11 +30,11 @@ export type R2TargetedEvidenceDocument = {
 };
 
 export const R2_TARGETED_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_R2_TARGETED_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_R2_TARGETED_EVIDENCE.md";
 
 /** Official live path — targeted harness must never write here. */
 export const R2_OFFICIAL_LIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md";
 
 export function defaultR2TargetedEvidencePath(
   cwd: string = process.cwd(),
@@ -52,7 +52,7 @@ export function createNotTestedR2TargetedEvidence(
   notes: readonly string[] = [
     "Gate off — no Neon or R2 connection attempted.",
     "Prior PASS/FAIL targeted evidence must not be overwritten by gate-off runs.",
-    "Official docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md is never written by this harness.",
+    "Official docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md is never written by this harness.",
   ],
 ): R2TargetedEvidenceDocument {
   return {

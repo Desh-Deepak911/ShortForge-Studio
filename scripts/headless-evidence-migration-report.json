@@ -1,0 +1,2219 @@
+{
+  "rootBefore": 172,
+  "moves": [
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE2_1_AUDIO_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE2_1_AUDIO_AUTHORITY.md",
+      "sha256": "69c95945b979611d99277e5df8abe2bfeb1af2546c8e0d7a12218a8a6165e40f",
+      "size": 2289
+    },
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE2_AUDIO_CONTRACT.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE2_AUDIO_CONTRACT.md",
+      "sha256": "fadb32760dd7a211bde27a4af9d20454e966c0bf8ebdb0c89e8820032e7a9631",
+      "size": 2761
+    },
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE3_2_STREAMING_4K.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE3_2_STREAMING_4K.md",
+      "sha256": "e6e8e00b5306d1459a596084208ac56c785a781704bee519745a1bbdfcf1760b",
+      "size": 7087
+    },
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE3_2A_STREAMING_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE3_2A_STREAMING_AUTHORITY.md",
+      "sha256": "40bc9d800509ef8d466ce630eb4d610c8475e695da765c43e1a39044c1c64929",
+      "size": 2758
+    },
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE3_3_STREAMED_ARTIFACT_DELIVERY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE3_3_STREAMED_ARTIFACT_DELIVERY.md",
+      "sha256": "65d06f984058c167b491751623b61e4790570041d68d959fe80a97246fc70c11",
+      "size": 2207
+    },
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE3_3A_ARTIFACT_BINDING.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE3_3A_ARTIFACT_BINDING.md",
+      "sha256": "e092e07a9cf706e4db1d80e3c5513bd0ae91e0ace0a96fd70501454eef621693",
+      "size": 1405
+    },
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE3_3A1_BINDING_CLEANUP.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE3_3A1_BINDING_CLEANUP.md",
+      "sha256": "28e986c6ece865fe4b295e54ce7d67c7a7003c2134a923af76af0052f75d9dfc",
+      "size": 1600
+    },
+    {
+      "oldPath": "docs/HEADLESS_11D_PHASE3_OUTPUT_PROFILES.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11D_PHASE3_OUTPUT_PROFILES.md",
+      "sha256": "4b3f8cfd019e41a1bfb396fecd99fa4ea5531d535caf4f9814db3ba0add673b7",
+      "size": 4380
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_8I4C_BINDING_PROBE_POSTMORTEM.md",
+      "newPath": "docs/archive/sprints/headless/HEADLESS_11E_8I4C_BINDING_PROBE_POSTMORTEM.md",
+      "sha256": "6aebc31a4d2cd33f6d2dd229b718567cc3a00a3e19670c5d56b045930ff1daa6",
+      "size": 4956
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md",
+      "sha256": "da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4",
+      "size": 4701
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012.md",
+      "sha256": "720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012",
+      "size": 3999
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-4b0ccdd4f78f34b5dfa9f0d0663a0c2800b1b7d4b4a4b20a8ac633ac38935d27.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-4b0ccdd4f78f34b5dfa9f0d0663a0c2800b1b7d4b4a4b20a8ac633ac38935d27.md",
+      "sha256": "4b0ccdd4f78f34b5dfa9f0d0663a0c2800b1b7d4b4a4b20a8ac633ac38935d27",
+      "size": 3136
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-c6d92173cdc5c4cceef0ca3a0f584bee5dd5632f568231c864064e77a0c30925.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-c6d92173cdc5c4cceef0ca3a0f584bee5dd5632f568231c864064e77a0c30925.md",
+      "sha256": "c6d92173cdc5c4cceef0ca3a0f584bee5dd5632f568231c864064e77a0c30925",
+      "size": 5157
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-e6f1268c9e9ec974dfa507811aee37e26144b8305b9114efc810202599dbafce.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-e6f1268c9e9ec974dfa507811aee37e26144b8305b9114efc810202599dbafce.md",
+      "sha256": "e6f1268c9e9ec974dfa507811aee37e26144b8305b9114efc810202599dbafce",
+      "size": 4585
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-fecae38cc2f26fc3d839e6ec0914403187663fadc77299ea34577a086b3e2083.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-fecae38cc2f26fc3d839e6ec0914403187663fadc77299ea34577a086b3e2083.md",
+      "sha256": "fecae38cc2f26fc3d839e6ec0914403187663fadc77299ea34577a086b3e2083",
+      "size": 3649
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md",
+      "sha256": "20c848203e0932511b531b477958169b8d254f5a7b287869bd21e42f33a1bd8b",
+      "size": 2810
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.pre-run-b4b76f8ec90c22e5931ab37f61914c172a585e2d27a8fa0055f08ba348ee2a1c.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.pre-run-b4b76f8ec90c22e5931ab37f61914c172a585e2d27a8fa0055f08ba348ee2a1c.md",
+      "sha256": "b4b76f8ec90c22e5931ab37f61914c172a585e2d27a8fa0055f08ba348ee2a1c",
+      "size": 2783
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md",
+      "sha256": "24d3ad9818c52451a0c356ae8176e5cd255a4a8ef958a180dadaf641b30119df",
+      "size": 4188
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-a1475a6e3b329d9db8a7a51f8d0d0a31d6a56e7ebb4d631661d9dadee3280ee1.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-a1475a6e3b329d9db8a7a51f8d0d0a31d6a56e7ebb4d631661d9dadee3280ee1.md",
+      "sha256": "a1475a6e3b329d9db8a7a51f8d0d0a31d6a56e7ebb4d631661d9dadee3280ee1",
+      "size": 3995
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-c067d20b94ebe1aa.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-c067d20b94ebe1aa.md",
+      "sha256": "c067d20b94ebe1aa5a1ce6e26f655e9d42a842bd08a0ba84a8a2a7f0e67bc965",
+      "size": 836
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k3-c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k3-c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03.md",
+      "sha256": "c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03",
+      "size": 4014
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k4-cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k4-cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e.md",
+      "sha256": "cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e",
+      "size": 4255
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md",
+      "sha256": "2f803514229c3bfc51f5f3580b607c72955d403194dc7c343a94b892f2dcc752",
+      "size": 4229
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md",
+      "sha256": "b9e8c279d56a2bf4812106ea04e4f2fa069106016a4a0396a065d7c83820594b",
+      "size": 719
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_POSTMORTEM_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_POSTMORTEM_EVIDENCE.md",
+      "sha256": "6b0f36d2c2cb2d67c800d1997847ea28312c1766d104849f5fc4947886e1bd7d",
+      "size": 11271
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md",
+      "sha256": "c7f944dba578539ad4f3ebc2431f38fb60640c041cb582bb28e239067adf500a",
+      "size": 4889
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.postmortem-8i6c-sanitized.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.postmortem-8i6c-sanitized.md",
+      "sha256": "92f5a2ab408b177d1f5d57532644d976a906bf7ea7f986e7e3acd6bd06f8f68f",
+      "size": 1662
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f2-claim-correlation-fail-ac3ca1b1eb5b206f683f17fd7678059a37de62f97424c41c8ca5a63acff62816.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f2-claim-correlation-fail-ac3ca1b1eb5b206f683f17fd7678059a37de62f97424c41c8ca5a63acff62816.md",
+      "sha256": "ac3ca1b1eb5b206f683f17fd7678059a37de62f97424c41c8ca5a63acff62816",
+      "size": 1757
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "sha256": "aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa",
+      "size": 2117
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "sha256": "f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010",
+      "size": 2157
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i2-12faa3c663d0b58ef24855062a8a55847bd6051ca1454f1af976f1da46fe0712.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i2-12faa3c663d0b58ef24855062a8a55847bd6051ca1454f1af976f1da46fe0712.md",
+      "sha256": "12faa3c663d0b58ef24855062a8a55847bd6051ca1454f1af976f1da46fe0712",
+      "size": 3854
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i3-b5b373987b01fb74705a1d19734d4728274fad09369164c1fea999fd30b67bf3.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i3-b5b373987b01fb74705a1d19734d4728274fad09369164c1fea999fd30b67bf3.md",
+      "sha256": "b5b373987b01fb74705a1d19734d4728274fad09369164c1fea999fd30b67bf3",
+      "size": 4174
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i52c-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i52c-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "sha256": "f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2",
+      "size": 4863
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076",
+      "size": 3912
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-27835fd59fa5097cd046cbe28f85b8a1638a89410ae6c9588a28bfa92db5d0be.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-27835fd59fa5097cd046cbe28f85b8a1638a89410ae6c9588a28bfa92db5d0be.md",
+      "sha256": "27835fd59fa5097cd046cbe28f85b8a1638a89410ae6c9588a28bfa92db5d0be",
+      "size": 699
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-36773913c5c9d22aa179381dddc611eec5adaf5da98a982a40e6b4ca39ee44d5.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-36773913c5c9d22aa179381dddc611eec5adaf5da98a982a40e6b4ca39ee44d5.md",
+      "sha256": "36773913c5c9d22aa179381dddc611eec5adaf5da98a982a40e6b4ca39ee44d5",
+      "size": 2118
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-535c7cc07f06866ebbc148ff9cd406e0d01bb1285505bcecf56db4e289b806f0.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-535c7cc07f06866ebbc148ff9cd406e0d01bb1285505bcecf56db4e289b806f0.md",
+      "sha256": "535c7cc07f06866ebbc148ff9cd406e0d01bb1285505bcecf56db4e289b806f0",
+      "size": 1889
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33.md",
+      "sha256": "a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33",
+      "size": 3484
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0.md",
+      "sha256": "aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0",
+      "size": 4538
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-d23acb8c1b25db87319018c7899128f75e30938a986c5725756d7fc334dd44ef.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-d23acb8c1b25db87319018c7899128f75e30938a986c5725756d7fc334dd44ef.md",
+      "sha256": "d23acb8c1b25db87319018c7899128f75e30938a986c5725756d7fc334dd44ef",
+      "size": 2360
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3.md",
+      "sha256": "e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3",
+      "size": 2227
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-eb61b3d1eafe83ef4dbb008e2dbf9ebfb8e53ff7b8be7bb27fcb8b2a52740c1d.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-eb61b3d1eafe83ef4dbb008e2dbf9ebfb8e53ff7b8be7bb27fcb8b2a52740c1d.md",
+      "sha256": "eb61b3d1eafe83ef4dbb008e2dbf9ebfb8e53ff7b8be7bb27fcb8b2a52740c1d",
+      "size": 699
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082.md",
+      "sha256": "f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082",
+      "size": 2265
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_JOB_CREATE_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_JOB_CREATE_PROBE.md",
+      "sha256": "cf76fbf77acc05beaea6de381cd72634c803651865a45829e61871bacfc997d1",
+      "size": 536
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md",
+      "sha256": "f808db98a4925057e235dbda9f212232959b66089d4bce1e0476e52f9468f693",
+      "size": 2851
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-coverage-fix-20260723T030236Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-coverage-fix-20260723T030236Z.md",
+      "sha256": "d6a8fa97d0745da23c839581fad5e7dc9e09cf9336ef5d3c861ed799ee39cd2b",
+      "size": 3156
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-post-007-fail-c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-post-007-fail-c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de.md",
+      "sha256": "c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de",
+      "size": 3142
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8d-dispatch-race-fail-33728fd3aeb5ebbbff2a0118423309dfabaeef84d0cad6dc38bd69510699d3a5.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8d-dispatch-race-fail-33728fd3aeb5ebbbff2a0118423309dfabaeef84d0cad6dc38bd69510699d3a5.md",
+      "sha256": "33728fd3aeb5ebbbff2a0118423309dfabaeef84d0cad6dc38bd69510699d3a5",
+      "size": 2895
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8e-owned-object-finalize-fail-3e5dd5bb8467f7bc183a86a3cf041a5a0043bfd606ce1ff76bb252bddda9c238.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8e-owned-object-finalize-fail-3e5dd5bb8467f7bc183a86a3cf041a5a0043bfd606ce1ff76bb252bddda9c238.md",
+      "sha256": "3e5dd5bb8467f7bc183a86a3cf041a5a0043bfd606ce1ff76bb252bddda9c238",
+      "size": 3239
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8f-render-claim-fail-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8f-render-claim-fail-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "sha256": "6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737",
+      "size": 2945
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01.md",
+      "sha256": "2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01",
+      "size": 2943
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8667fb3f-20260722T205826Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8667fb3f-20260722T205826Z.md",
+      "sha256": "8667fb3f5d703090b985e7aca95465885472843491441814d7850ff283d767b9",
+      "size": 2797
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8ab7fc12-20260722T210837Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8ab7fc12-20260722T210837Z.md",
+      "sha256": "8ab7fc128389af1828a1a8500996870728dc8b7467ba840e15fa926eea85fd20",
+      "size": 2769
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-run-20260722T204907Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-run-20260722T204907Z.md",
+      "sha256": "f042ccc42302d502091f431168a0acb6423f45d286a2e0f8c6ce4ad937a7cd8b",
+      "size": 748
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md",
+      "sha256": "b892b98f205610bf3cb32410414265ae3c087239b3a95f02392d95a847676a96",
+      "size": 3062
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.pre-run-20260723T123054Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.pre-run-20260723T123054Z.md",
+      "sha256": "481f641d1498d447ce4bf7595d64180aabf850399e8ea2984d46abf5bc479829",
+      "size": 678
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md",
+      "sha256": "8a01a93fd9e90de4a02dc0a74a112f7993d16f61eabf2c7473473b3bb68e8ca2",
+      "size": 2568
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-config-fail-c71209b66538023d41041ba7a3edf07280fe3d05c77602c89b056dd9c2baca78.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-config-fail-c71209b66538023d41041ba7a3edf07280fe3d05c77602c89b056dd9c2baca78.md",
+      "sha256": "c71209b66538023d41041ba7a3edf07280fe3d05c77602c89b056dd9c2baca78",
+      "size": 581
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-diagnostic-5b738502696b6b480633b04e0d4ba9a879dfacbfbea93969916842adc20567ec.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-diagnostic-5b738502696b6b480633b04e0d4ba9a879dfacbfbea93969916842adc20567ec.md",
+      "sha256": "5b738502696b6b480633b04e0d4ba9a879dfacbfbea93969916842adc20567ec",
+      "size": 1980
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_CLEANUP_RECOVERY_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_CLEANUP_RECOVERY_EVIDENCE.md",
+      "sha256": "6df18535a68bfaf06076dc6952a21e28887d4f8a7fa3d905c6e022d891f9ca73",
+      "size": 1210
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md",
+      "sha256": "b75d4f2d9799ef75afbbbbfb6aa0f1b5b0b27f8c3d0edb937940912d57f0b6b4",
+      "size": 2120
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-historical-pass-93c402510d234340cd7d21904d9c49295e88c06fb4a3709a73fc794b92769e88.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-historical-pass-93c402510d234340cd7d21904d9c49295e88c06fb4a3709a73fc794b92769e88.md",
+      "sha256": "93c402510d234340cd7d21904d9c49295e88c06fb4a3709a73fc794b92769e88",
+      "size": 2039
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-image-digest-fail-eb71c0c57fe9a9ceb27bb33b6659e5e13d53ed2ce1b7c7e5ad2f7aa3e4c28806.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-image-digest-fail-eb71c0c57fe9a9ceb27bb33b6659e5e13d53ed2ce1b7c7e5ad2f7aa3e4c28806.md",
+      "sha256": "eb71c0c57fe9a9ceb27bb33b6659e5e13d53ed2ce1b7c7e5ad2f7aa3e4c28806",
+      "size": 2232
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a1-configuration-fail-9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a1-configuration-fail-9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36.md",
+      "sha256": "9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36",
+      "size": 435
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a2-coverage-fail-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a2-coverage-fail-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "sha256": "0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292",
+      "size": 2040
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T174812Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T174812Z.md",
+      "sha256": "764c483eaab40b3cae3f769d1d99f2ef22fcdaad07775895ce8cc107f346ef2e",
+      "size": 662
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-rerun-20260722T184708Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-rerun-20260722T184708Z.md",
+      "sha256": "c81db9d52be411f545f29f8347359e4aa93aa2df913e580ccfbbf1f95f08585f",
+      "size": 804
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_LIVE_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md",
+      "sha256": "68b1f1422c8483c3ab3eb5e8157b5f00662508d86b0122ea2f8fca884e22c8fb",
+      "size": 1683
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-2b2c.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-2b2c.md",
+      "sha256": "47e082c0017a731ec53a0dd2601cd294e7d037f8f529853712f9a61eb1e7ec9b",
+      "size": 515
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-2b2d-20260720T092923Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-2b2d-20260720T092923Z.md",
+      "sha256": "55df47d8bfe16de3d58458d99ca402aff923089e2b46f6edb7887ebf56c264fa",
+      "size": 817
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-official-rerun-20260720T115913Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-official-rerun-20260720T115913Z.md",
+      "sha256": "05faf5720ad6ca04fe889d19947be652a19730b7fa1b4fbf6b542f0d7b3c6f5a",
+      "size": 722
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.md",
+      "sha256": "ce77a3f3ad9b408073e940b525ecf4f932c5b92a13dc9ce9cdec476351f23968",
+      "size": 2187
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d2-20260720T102737Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d2-20260720T102737Z.md",
+      "sha256": "df5b55829d492fadbdfd12066d4ac7c1e2e6cee45a56b716facc6ff5b7e3ca21",
+      "size": 1300
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d3-20260720T105813Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d3-20260720T105813Z.md",
+      "sha256": "f7e40178048b3238e2b3fb43c9913a1d23699bdd7539a72f644f7570acae4b45",
+      "size": 1343
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_PROGRESSIVE_TARGETED_2B2D2.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_NEON_PROGRESSIVE_TARGETED_2B2D2.md",
+      "sha256": "e3ca0541e03266fa3f9812cfb76cb391bb0956232c6c868861c55587ff9f9478",
+      "size": 1273
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.md",
+      "sha256": "c97aa2a90f123195e3a9b3b2590fc37b517c9ba0afa23b71e16429f6ac52bca5",
+      "size": 989
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.pre-2b2d4-20260720T112040Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.pre-2b2d4-20260720T112040Z.md",
+      "sha256": "c7fee4d7417607865a05f2ec2428afcd22c1854748e78b8d044ae4c2590a9fcc",
+      "size": 991
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md",
+      "sha256": "937c269bd722f46f7de08712bba0eec05e016d15e15b1f25d5352cc957c1fd3e",
+      "size": 68516
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E1_HOSTED_WORKER_FOUNDATION.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E1_HOSTED_WORKER_FOUNDATION.md",
+      "sha256": "ad9fa2973c65528b1bdd7aaf1f57c13a1013ee88cc7d9908416b94e55a02cbe4",
+      "size": 9642
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E1A_CORRECTION.md",
+      "newPath": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E1A_CORRECTION.md",
+      "sha256": "be0a23019c0498545867f599304a784647969f4c78bf7a316fc570aded9a8ae4",
+      "size": 2431
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2A_RENDER_STORAGE_CLEANUP.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2A_RENDER_STORAGE_CLEANUP.md",
+      "sha256": "f4ccff51e149d7b9655f8cbcd5303134d175bdb2d5490158a576ed3b2a8c05b6",
+      "size": 11966
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2B_TRUSTED_VERIFY_PROMOTION.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2B_TRUSTED_VERIFY_PROMOTION.md",
+      "sha256": "61b5cadba77220af0d79ebdd467a297193311c8b6dd2a1a3ea0f00a1e7f1d6c6",
+      "size": 1519
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2B1_HOSTED_EXECUTION_CORRECTION.md",
+      "newPath": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E2B1_HOSTED_EXECUTION_CORRECTION.md",
+      "sha256": "35d3963aeae716968e4c17a6c013683469941c27f741dcecf4a98849ee29571c",
+      "size": 1601
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2B2_DURABLE_DISPATCH_OUTBOX.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2B2_DURABLE_DISPATCH_OUTBOX.md",
+      "sha256": "75bad797c43c4618122827a2b2d36f8b52484a281de865add7e57942d349402e",
+      "size": 2215
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2B3_DISPATCH_CAS_TRUTHFULNESS.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2B3_DISPATCH_CAS_TRUTHFULNESS.md",
+      "sha256": "195c22db43c38d1f7010cda5ecabe9482dfff30721771c5785712043eb27f61e",
+      "size": 1323
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D1_STAGING_SCHEMA_READINESS.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D1_STAGING_SCHEMA_READINESS.md",
+      "sha256": "466660deb89143345c2451e7bfb5c586005a787887e964de10b6e902b9690f1e",
+      "size": 5358
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.md",
+      "sha256": "26288d6b9eef1ebb850a4e83d8f8b88a6fc0c50303db64128cd936b181840968",
+      "size": 6511
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.md",
+      "newPath": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.md",
+      "sha256": "0ec713c52236c43b2f64f51b1482a0d8bd0eb0d20c7e8dd5f9d3128150a7d2f9",
+      "size": 5769
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.md",
+      "newPath": "docs/operations/headless/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.md",
+      "sha256": "083e3d27cac72a1537a15dc2189a321deb54b6efc1d8c668345595dbbdfc3d17",
+      "size": 5514
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.pre-account-unlock-FAIL.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.pre-account-unlock-FAIL.md",
+      "sha256": "a69fb7089dc9fdae87deb698acb4af71f90be5433a0a1927d1c89c4dcb773129",
+      "size": 3443
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D4_FLY_STAGING_DEPLOYMENT_AUTHORITY.md",
+      "newPath": "docs/operations/headless/HEADLESS_11E_PHASE2E2D4_FLY_STAGING_DEPLOYMENT_AUTHORITY.md",
+      "sha256": "d4e2361be49ae1c793df4b2169fbdd2e25a68e8a913557801cc21317ebc3ca07",
+      "size": 6731
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.md",
+      "newPath": "docs/operations/headless/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.md",
+      "sha256": "a0b56da850138275a451b9ebf7e6db7ab32d9ff65aed800e5d22a32ab132650e",
+      "size": 4379
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5a-FAIL.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5a-FAIL.md",
+      "sha256": "a1b544db644040ee7fe709b2391ee85cea5ed17e4d2fa0405d86e20c70a43cf1",
+      "size": 4556
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5b-FAIL.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5b-FAIL.md",
+      "sha256": "4b5df80f9d5bfd384ac0a2d987fba432e022f187a9e6bd2eea85e3af31589c5e",
+      "size": 4319
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5d-FAIL.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5d-FAIL.md",
+      "sha256": "9a6a16e0bdeb19ae3ccfe38afd49b5e9e2d549a6d34d0edf57dad01e753418de",
+      "size": 6614
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5f-FAIL.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5f-FAIL.md",
+      "sha256": "0047bfbc79e5f80937e5cab4d7518ee75d016a5862eed51efd00de9d3d708a10",
+      "size": 4760
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D5C_FLY_STAGING_ZERO_MACHINE_LIFECYCLE.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D5C_FLY_STAGING_ZERO_MACHINE_LIFECYCLE.md",
+      "sha256": "cb4107ed4af7b158cb17dfdfd976051e33f62a70b9b5578d6cdcb1c99b587645",
+      "size": 4182
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D5E_PRE_FIRST_MACHINE_OBSERVATION_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D5E_PRE_FIRST_MACHINE_OBSERVATION_AUTHORITY.md",
+      "sha256": "03b1db2f300bce22c546281113d1b79195fb83c3250a142d0c3e0f2a2a0ef064",
+      "size": 2552
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6_FLY_STAGING_VERIFY_FIRST.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "d11bf7afb86bdf8dc3bb3a76a5feb758e8dbdb4fd11cd156e62d1db58305830b",
+      "size": 3406
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6A_FLY_STAGING_ORCHESTRATOR_ROOT_PATH_AUTHORITY.md",
+      "newPath": "docs/operations/headless/HEADLESS_11E_PHASE2E2D6A_FLY_STAGING_ORCHESTRATOR_ROOT_PATH_AUTHORITY.md",
+      "sha256": "2ba169f105c33b0713888f755711c3bbfe216d5c85f09ca61dfe12e7de3d3e3d",
+      "size": 2385
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6B_FLY_STAGING_VERIFY_FIRST.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6B_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "4820b4e97ffc223a0d3cd6ce1bb56f3c2bd0601332dc35acbe6ad1315bf77c6d",
+      "size": 3065
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6C_FLY_STAGING_PUBLIC_ENVIRONMENT_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6C_FLY_STAGING_PUBLIC_ENVIRONMENT_AUTHORITY.md",
+      "sha256": "9f273d59eb564acae834ec2ad485fdba92c962ef84ff582fa96ff1cc7f98f25a",
+      "size": 1975
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "6c64d223a9b61a00a14ed1f01e9b1461cc8d7f3d15369fc4f4bf32205fb536e2",
+      "size": 3525
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6E_FLY_STAGING_STAGED_SECRET_ACTIVATION_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6E_FLY_STAGING_STAGED_SECRET_ACTIVATION_AUTHORITY.md",
+      "sha256": "6377d133bf3b161b5614a7e0972a75204dcc64c96f7649b8ea5f45c68553e3f4",
+      "size": 3616
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6F_FLY_STAGING_VERIFY_FIRST.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6F_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "c24acde707a2627642e24df6193506835e8129bb2cb2d7bf0e64315d925c0554",
+      "size": 3352
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6G_FLY_STAGING_CANONICAL_VERIFY_FIRST_ORCHESTRATOR.md",
+      "newPath": "docs/operations/headless/HEADLESS_11E_PHASE2E2D6G_FLY_STAGING_CANONICAL_VERIFY_FIRST_ORCHESTRATOR.md",
+      "sha256": "57bc3991c80f7aa070d86787a91ce2e1e807ed28a6e36f7271efa5d2330a7ed7",
+      "size": 2677
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6H_FLY_STAGING_DECODED_SECRET_SYNC_ROLLBACK.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6H_FLY_STAGING_DECODED_SECRET_SYNC_ROLLBACK.md",
+      "sha256": "07d5f11a2a19869ceac98b68bc4c487189cf4e3f973a296b332125303cc171c5",
+      "size": 2309
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D7A_FLY_STAGING_VERIFY_FIRST_PASS_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_PHASE2E2D7A_FLY_STAGING_VERIFY_FIRST_PASS_EVIDENCE.md",
+      "sha256": "66d73436b4a3bdfb04eb6659eef71490bfbe49b0fae407307c79af675761474c",
+      "size": 2067
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D7A1_FLY_VERIFY_LIVE_ENVIRONMENT_CONTRACT.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D7A1_FLY_VERIFY_LIVE_ENVIRONMENT_CONTRACT.md",
+      "sha256": "12da4d97e985322938593be95c2398a467c484e001bbc4c5a8c3f865f783d939",
+      "size": 4241
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D7A2_FLY_VERIFY_OBSERVATION_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D7A2_FLY_VERIFY_OBSERVATION_AUTHORITY.md",
+      "sha256": "8b0758a5e512a36d493f70b1bbb572c5581514de844b143919c964d2a2b84a6e",
+      "size": 3858
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8A_FLY_RENDER_LIVE_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8A_FLY_RENDER_LIVE_AUTHORITY.md",
+      "sha256": "cfe95506dfb5e0f2297f70c89afc459a6e34f4dae5490083ac881b5d20dc8c4c",
+      "size": 3658
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8C2_OWNED_OBJECT_SLOT_KEY_SCHEMA_ALIGNMENT.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8C2_OWNED_OBJECT_SLOT_KEY_SCHEMA_ALIGNMENT.md",
+      "sha256": "67cc93827683cc7bcaaee30e94c7f1f52004ce0de58b0b30fb59bda91bff4a04",
+      "size": 5012
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8C2A_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8C2A_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY.md",
+      "sha256": "c78fd7a8be2c3febf56f7da7540e964a196046f2f2fb5a9778b06e8fe0931757",
+      "size": 2579
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8D_MONOTONIC_DISPATCH_OUTBOX_OBSERVATION_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8D_MONOTONIC_DISPATCH_OUTBOX_OBSERVATION_AUTHORITY.md",
+      "sha256": "4a6f01cccb6db3b673ca3f8d3b88c69edbda8a04008a674ab89b39069e64cba0",
+      "size": 2285
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8E_OWNED_OBJECT_FINALIZE_ATTRIBUTION.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8E_OWNED_OBJECT_FINALIZE_ATTRIBUTION.md",
+      "sha256": "2ca9860a05134d12207fac118a7a7f774e061f60218d284aa386def17dc8fac8",
+      "size": 2533
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8F_CLAIMED_RENDER_EXECUTION_ATTRIBUTION.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8F_CLAIMED_RENDER_EXECUTION_ATTRIBUTION.md",
+      "sha256": "1c2a390afd4eb5b297abebc752bed7ecac6583192f47368054799f4e6efd359e",
+      "size": 2197
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8F1_TELEMETRY_IMAGE_VERSION_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8F1_TELEMETRY_IMAGE_VERSION_AUTHORITY.md",
+      "sha256": "0c52d40956aa5bb8923d9a02d7b098fd1bed83c8529945e5f2fd1ee3cdf16e23",
+      "size": 2083
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D8K_HOSTED_4K_CAPACITY_AUTHORITY.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8K_HOSTED_4K_CAPACITY_AUTHORITY.md",
+      "sha256": "6bbed3d86b2fc0634390e17126eba517a5e9bdea87b468cea23f22813e2a4da5",
+      "size": 3807
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2G13_MEDIA_VISUAL_AUDIO_PARITY.md",
+      "newPath": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2G13_MEDIA_VISUAL_AUDIO_PARITY.md",
+      "sha256": "09a3d681ca505d5d89d830467489ca673db98f46475487fbf24c671167acf8a8",
+      "size": 4660
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PRODUCT_DISPATCH.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_PRODUCT_DISPATCH.md",
+      "sha256": "c708aeee3abde9bdbb93211b82863a14dc92d33d2afb96a14dc7867d76488fb0",
+      "size": 7694
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_DURABILITY_EVIDENCE.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_R2_DURABILITY_EVIDENCE.md",
+      "sha256": "8da177816ade3a0326d13e5368cc79c8427e68029830dc0246cb770e44bec0b7",
+      "size": 6659
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_FIXTURE_AUTHORITY_2C1B.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_R2_FIXTURE_AUTHORITY_2C1B.md",
+      "sha256": "918d553489d0f09b88f83a0456802577db1b0929f406da7ab8b4762db365aa9e",
+      "size": 2192
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md",
+      "sha256": "5694d5f0846aad00dbd9e0a28dcc7dfdccb289c4ce2e6ac2e1b4ee8a4bb56b58",
+      "size": 1355
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-2c1b-20260720T171818Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-2c1b-20260720T171818Z.md",
+      "sha256": "3232c9e46835fedbff5ea436984e8cbc48ad825c74ab7f0f5e2b12f5bdd67ad5",
+      "size": 1422
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-official-2c1a-20260720T171231Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-official-2c1a-20260720T171231Z.md",
+      "sha256": "24113f74e9ad84f5a456cd3188342189b1d4cfb5bef38b50971d11289a5c2f9b",
+      "size": 401
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_OWNED_OBJECT_FOUNDATION.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_R2_OWNED_OBJECT_FOUNDATION.md",
+      "sha256": "cd44638ecde36966bfc1ebf5a53c5648c8b2404b19904b160548691885ebdeba",
+      "size": 3014
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_TARGETED_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_R2_TARGETED_EVIDENCE.md",
+      "sha256": "f93415664136a58e77181b917bc186b0cc1595e55c16655c7eab93f9e18c5658",
+      "size": 1045
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_SOURCE_SLOT_IDENTITY_V2.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_SOURCE_SLOT_IDENTITY_V2.md",
+      "sha256": "9ce44e9f36afffb642dbde76ef65ece85cb133db78b42a5b22e0290f0bbfb7c0",
+      "size": 1537
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.md",
+      "sha256": "74fc6c23f99be59f0474e0c54d711a0c5c96b286040007e00e0e72a794fd950c",
+      "size": 1325
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.pre-2d1f1-rerun-20260721T122517Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.pre-2d1f1-rerun-20260721T122517Z.md",
+      "sha256": "a74eead35ea624cfd9329ec2f44a8717ef17e3dbf8723216a1c9e7bdd5c178c3",
+      "size": 946
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.md",
+      "sha256": "76f3d7c4b7b9ad326f82fbc23d10ba76deaf116d46f5d6c7c88fff427d04b3f8",
+      "size": 1591
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.pre-2d1h-live-20260721T134516Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.pre-2d1h-live-20260721T134516Z.md",
+      "sha256": "00ada199159b48ecd077d75b47616c6e26548a4741c461a6f45aa2893aeb179a",
+      "size": 811
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.pre-2d1h1-live-20260721T144144Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.pre-2d1h1-live-20260721T144144Z.md",
+      "sha256": "de2801d3fd1a282824f9de6aaf95267c301f455d30ba583775649ecaaa5573c0",
+      "size": 1562
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_DLQ_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_DLQ_PROBE.md",
+      "sha256": "c448d9e2d5560ffebc9756c4fe8ffa6d139752b3fe8c935b78d06487b19d6a55",
+      "size": 1365
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_DLQ_PROBE.pre-2d1g1-rerun-20260721T125600Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_DLQ_PROBE.pre-2d1g1-rerun-20260721T125600Z.md",
+      "sha256": "d122a35488a939bb4be80f112a800278b99dc928b0a79ff252d7569c04badcfe",
+      "size": 758
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_DUAL_LEASE_FOUNDATION.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_UPSTASH_DUAL_LEASE_FOUNDATION.md",
+      "sha256": "79c8a344ffc3bf4aa184d795965c1f825b5b9ce422cab833489f06363e73d784",
+      "size": 21264
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_ENQUEUE_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_ENQUEUE_PROBE.md",
+      "sha256": "645aa426d0dc23e029cafa2fb8e56f3a33291efde9dd8791f40dfe98e96a7285",
+      "size": 1120
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md",
+      "sha256": "360e059bd04b324edc759abe1638553b2347e05edd7fe3b6365dbb24e440b11e",
+      "size": 1703
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.official-fail-2d1b-20260721T042059Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.official-fail-2d1b-20260721T042059Z.md",
+      "sha256": "5fd9030bf5bd80d0c5e5f1dc4f3a5c9eb7ab851b8a9446e68737277967e82f77",
+      "size": 1799
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1a-20260721T041709Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1a-20260721T041709Z.md",
+      "sha256": "70e5c990c3bfe681ad7215c341fef02523985f730ce39d3423a6edeb63ace300",
+      "size": 466
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1h-20260721T141415Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1h-20260721T141415Z.md",
+      "sha256": "f2f38dc16218868853c4f1d64c49a0981307790bd3e3762cf0c5ab30137d11f4",
+      "size": 1774
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1h1-20260721T150819Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1h1-20260721T150819Z.md",
+      "sha256": "1d760fce84516057c571c01c27fb9f8de084603774e0b7ba7a9409c5941e2cf3",
+      "size": 1749
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-rerun-2d1c3-20260721T082936Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-rerun-2d1c3-20260721T082936Z.md",
+      "sha256": "83ec48b170b276e4c3a3ed2072d68acb60e91b29af11660e321dcfbd212b16c3",
+      "size": 1778
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_MATRIX_DELIVERY_AUDIT.md",
+      "newPath": "docs/architecture/headless/HEADLESS_11E_UPSTASH_MATRIX_DELIVERY_AUDIT.md",
+      "sha256": "3962ef3bbb20b429706ed83b44eeacbb3b3c5de4e939a02b6e184f97b00697e8",
+      "size": 7776
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.md",
+      "sha256": "8b6a0fdefbca11b299d48320c1d23236c618b4604de61a87d08640e4ea750a59",
+      "size": 1699
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1d2-20260721T094133Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1d2-20260721T094133Z.md",
+      "sha256": "92366917d3e2046e27711ab436a25963277959fdc5d2623b1a8e6803b8608596",
+      "size": 555
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1f1-progressive-20260721T122902Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1f1-progressive-20260721T122902Z.md",
+      "sha256": "1f42f396f4ed42903ae6ed0d9f224c137edde3a52ffa307c81a934b8f47019ca",
+      "size": 1786
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1g1-progressive-20260721T132727Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1g1-progressive-20260721T132727Z.md",
+      "sha256": "d6ebcf344b7509f5c76f06cdf87ff2d69eb42d573ad655e70c3f0090aa1c612f",
+      "size": 1722
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h-progressive-20260721T134922Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h-progressive-20260721T134922Z.md",
+      "sha256": "482dfb1137967b1a6308526200e8eb15d85f4dbd783de4d6528812be970deeca",
+      "size": 1725
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h1-progressive-20260721T144906Z.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h1-progressive-20260721T144906Z.md",
+      "sha256": "de133fb2aa0b3f4eb34198f9140fdd0b427462a192cf195b66147df12b5a1fcc",
+      "size": 1699
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_TERMINAL_PROBE.md",
+      "newPath": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_TERMINAL_PROBE.md",
+      "sha256": "efb229552e1e40b4aa1f5c2511860633694682d220e53753842a228788b993fc",
+      "size": 1345
+    },
+    {
+      "oldPath": "docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md",
+      "newPath": "docs/architecture/headless/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md",
+      "sha256": "42717bbab482802ad890d06b5176bd8d92d23c27e0285cd8c5d8a86f4bafe6d5",
+      "size": 39594
+    },
+    {
+      "oldPath": "src/docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md",
+      "newPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.unreferenced-src-copy.md",
+      "sha256": "31de2c3de1c350f85032f354e9cb4378e16c8f321eda8bf93a84545dd1d4b2ad",
+      "size": 648,
+      "note": "unreferenced src/docs copy preserved in archive"
+    }
+  ],
+  "aliases": [
+    {
+      "retired": "HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md",
+      "sha256": "da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "sha256": "aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "sha256": "f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i4-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i4-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i52c-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "sha256": "f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6a-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6a-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6c-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6c-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-rerun-20260723T033548Z.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-rerun-20260723T033548Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-coverage-fix-20260723T030236Z.md",
+      "sha256": "d6a8fa97d0745da23c839581fad5e7dc9e09cf9336ef5d3c861ed799ee39cd2b",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c1-staging-attribution-20260723T035008Z.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c1-staging-attribution-20260723T035008Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-post-007-fail-c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de.md",
+      "sha256": "c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8f-render-claim-fail-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "sha256": "6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-rerun-20260723T025333Z.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-rerun-20260723T025333Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8ab7fc12-20260722T210837Z.md",
+      "sha256": "8ab7fc128389af1828a1a8500996870728dc8b7467ba840e15fa926eea85fd20",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-7a1-rerun-20260722T183251Z.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-7a1-rerun-20260722T183251Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a1-configuration-fail-9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36.md",
+      "sha256": "9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-rerun-20260722T191949Z-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-rerun-20260722T191949Z-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a2-coverage-fail-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "sha256": "0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T175256Z.md",
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T175256Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T174812Z.md",
+      "sha256": "764c483eaab40b3cae3f769d1d99f2ef22fcdaad07775895ce8cc107f346ef2e",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-full-rerun-20260720T113640Z.md",
+      "oldPath": "docs/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-full-rerun-20260720T113640Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d3-20260720T105813Z.md",
+      "sha256": "f7e40178048b3238e2b3fb43c9913a1d23699bdd7539a72f644f7570acae4b45",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.pre-2e2d3.md",
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.pre-2e2d3.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.md",
+      "sha256": "0ec713c52236c43b2f64f51b1482a0d8bd0eb0d20c7e8dd5f9d3128150a7d2f9",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.pre-2e2d2a-FAIL.md",
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.pre-2e2d2a-FAIL.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.md",
+      "sha256": "26288d6b9eef1ebb850a4e83d8f8b88a6fc0c50303db64128cd936b181840968",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.pre-2e2d6f-FAIL.md",
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.pre-2e2d6f-FAIL.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "6c64d223a9b61a00a14ed1f01e9b1461cc8d7f3d15369fc4f4bf32205fb536e2",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_R2_LIVE_EVIDENCE.pre-official-rerun-2c1b-20260720T173913Z.md",
+      "oldPath": "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-official-rerun-2c1b-20260720T173913Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-2c1b-20260720T171818Z.md",
+      "sha256": "3232c9e46835fedbff5ea436984e8cbc48ad825c74ab7f0f5e2b12f5bdd67ad5",
+      "reason": "byte-identical duplicate consolidated"
+    },
+    {
+      "retired": "HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-rerun-2d1b-20260721T043641Z.md",
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-rerun-2d1b-20260721T043641Z.md",
+      "canonicalOldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.official-fail-2d1b-20260721T042059Z.md",
+      "sha256": "5fd9030bf5bd80d0c5e5f1dc4f3a5c9eb7ab851b8a9446e68737277967e82f77",
+      "reason": "byte-identical duplicate consolidated"
+    }
+  ],
+  "deleted": [
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4.md",
+      "canonicalPath": "docs/evidence/headless/current/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md",
+      "sha256": "da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i4-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i52c-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "sha256": "f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6a-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6c-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "sha256": "aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "sha256": "f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c1-staging-attribution-20260723T035008Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-post-007-fail-c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de.md",
+      "sha256": "c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8f-render-claim-fail-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "sha256": "6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-rerun-20260723T025333Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8ab7fc12-20260722T210837Z.md",
+      "sha256": "8ab7fc128389af1828a1a8500996870728dc8b7467ba840e15fa926eea85fd20"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-rerun-20260723T033548Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-coverage-fix-20260723T030236Z.md",
+      "sha256": "d6a8fa97d0745da23c839581fad5e7dc9e09cf9336ef5d3c861ed799ee39cd2b"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T175256Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T174812Z.md",
+      "sha256": "764c483eaab40b3cae3f769d1d99f2ef22fcdaad07775895ce8cc107f346ef2e"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-7a1-rerun-20260722T183251Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a1-configuration-fail-9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36.md",
+      "sha256": "9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-rerun-20260722T191949Z-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a2-coverage-fail-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "sha256": "0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-full-rerun-20260720T113640Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d3-20260720T105813Z.md",
+      "sha256": "f7e40178048b3238e2b3fb43c9913a1d23699bdd7539a72f644f7570acae4b45"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.pre-2e2d3.md",
+      "canonicalPath": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.md",
+      "sha256": "0ec713c52236c43b2f64f51b1482a0d8bd0eb0d20c7e8dd5f9d3128150a7d2f9"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.pre-2e2d2a-FAIL.md",
+      "canonicalPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.md",
+      "sha256": "26288d6b9eef1ebb850a4e83d8f8b88a6fc0c50303db64128cd936b181840968"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.pre-2e2d6f-FAIL.md",
+      "canonicalPath": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "6c64d223a9b61a00a14ed1f01e9b1461cc8d7f3d15369fc4f4bf32205fb536e2"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-official-rerun-2c1b-20260720T173913Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-2c1b-20260720T171818Z.md",
+      "sha256": "3232c9e46835fedbff5ea436984e8cbc48ad825c74ab7f0f5e2b12f5bdd67ad5"
+    },
+    {
+      "oldPath": "docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-rerun-2d1b-20260721T043641Z.md",
+      "canonicalPath": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.official-fail-2d1b-20260721T042059Z.md",
+      "sha256": "5fd9030bf5bd80d0c5e5f1dc4f3a5c9eb7ab851b8a9446e68737277967e82f77"
+    }
+  ],
+  "shaProof": [
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE2_1_AUDIO_AUTHORITY.md",
+      "sha256": "69c95945b979611d99277e5df8abe2bfeb1af2546c8e0d7a12218a8a6165e40f",
+      "size": 2289,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE2_AUDIO_CONTRACT.md",
+      "sha256": "fadb32760dd7a211bde27a4af9d20454e966c0bf8ebdb0c89e8820032e7a9631",
+      "size": 2761,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE3_2_STREAMING_4K.md",
+      "sha256": "e6e8e00b5306d1459a596084208ac56c785a781704bee519745a1bbdfcf1760b",
+      "size": 7087,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE3_2A_STREAMING_AUTHORITY.md",
+      "sha256": "40bc9d800509ef8d466ce630eb4d610c8475e695da765c43e1a39044c1c64929",
+      "size": 2758,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE3_3_STREAMED_ARTIFACT_DELIVERY.md",
+      "sha256": "65d06f984058c167b491751623b61e4790570041d68d959fe80a97246fc70c11",
+      "size": 2207,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE3_3A_ARTIFACT_BINDING.md",
+      "sha256": "e092e07a9cf706e4db1d80e3c5513bd0ae91e0ace0a96fd70501454eef621693",
+      "size": 1405,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE3_3A1_BINDING_CLEANUP.md",
+      "sha256": "28e986c6ece865fe4b295e54ce7d67c7a7003c2134a923af76af0052f75d9dfc",
+      "size": 1600,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11D_PHASE3_OUTPUT_PROFILES.md",
+      "sha256": "4b3f8cfd019e41a1bfb396fecd99fa4ea5531d535caf4f9814db3ba0add673b7",
+      "size": 4380,
+      "ok": true
+    },
+    {
+      "path": "docs/archive/sprints/headless/HEADLESS_11E_8I4C_BINDING_PROBE_POSTMORTEM.md",
+      "sha256": "6aebc31a4d2cd33f6d2dd229b718567cc3a00a3e19670c5d56b045930ff1daa6",
+      "size": 4956,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md",
+      "sha256": "da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4",
+      "size": 4701,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012.md",
+      "sha256": "720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012",
+      "size": 3999,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-4b0ccdd4f78f34b5dfa9f0d0663a0c2800b1b7d4b4a4b20a8ac633ac38935d27.md",
+      "sha256": "4b0ccdd4f78f34b5dfa9f0d0663a0c2800b1b7d4b4a4b20a8ac633ac38935d27",
+      "size": 3136,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-c6d92173cdc5c4cceef0ca3a0f584bee5dd5632f568231c864064e77a0c30925.md",
+      "sha256": "c6d92173cdc5c4cceef0ca3a0f584bee5dd5632f568231c864064e77a0c30925",
+      "size": 5157,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-e6f1268c9e9ec974dfa507811aee37e26144b8305b9114efc810202599dbafce.md",
+      "sha256": "e6f1268c9e9ec974dfa507811aee37e26144b8305b9114efc810202599dbafce",
+      "size": 4585,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-fecae38cc2f26fc3d839e6ec0914403187663fadc77299ea34577a086b3e2083.md",
+      "sha256": "fecae38cc2f26fc3d839e6ec0914403187663fadc77299ea34577a086b3e2083",
+      "size": 3649,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md",
+      "sha256": "20c848203e0932511b531b477958169b8d254f5a7b287869bd21e42f33a1bd8b",
+      "size": 2810,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.pre-run-b4b76f8ec90c22e5931ab37f61914c172a585e2d27a8fa0055f08ba348ee2a1c.md",
+      "sha256": "b4b76f8ec90c22e5931ab37f61914c172a585e2d27a8fa0055f08ba348ee2a1c",
+      "size": 2783,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md",
+      "sha256": "24d3ad9818c52451a0c356ae8176e5cd255a4a8ef958a180dadaf641b30119df",
+      "size": 4188,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-a1475a6e3b329d9db8a7a51f8d0d0a31d6a56e7ebb4d631661d9dadee3280ee1.md",
+      "sha256": "a1475a6e3b329d9db8a7a51f8d0d0a31d6a56e7ebb4d631661d9dadee3280ee1",
+      "size": 3995,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k1-c067d20b94ebe1aa.md",
+      "sha256": "c067d20b94ebe1aa5a1ce6e26f655e9d42a842bd08a0ba84a8a2a7f0e67bc965",
+      "size": 836,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k3-c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03.md",
+      "sha256": "c40ce8a6db89972c4f3e63cc735595f66fed33a0141899ccc81eb31614a40e03",
+      "size": 4014,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k4-cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e.md",
+      "sha256": "cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e",
+      "size": 4255,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md",
+      "sha256": "2f803514229c3bfc51f5f3580b607c72955d403194dc7c343a94b892f2dcc752",
+      "size": 4229,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_CLEANUP_RECOVERY_EVIDENCE.md",
+      "sha256": "b9e8c279d56a2bf4812106ea04e4f2fa069106016a4a0396a065d7c83820594b",
+      "size": 719,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE_POSTMORTEM_EVIDENCE.md",
+      "sha256": "6b0f36d2c2cb2d67c800d1997847ea28312c1766d104849f5fc4947886e1bd7d",
+      "size": 11271,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md",
+      "sha256": "c7f944dba578539ad4f3ebc2431f38fb60640c041cb582bb28e239067adf500a",
+      "size": 4889,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.postmortem-8i6c-sanitized.md",
+      "sha256": "92f5a2ab408b177d1f5d57532644d976a906bf7ea7f986e7e3acd6bd06f8f68f",
+      "size": 1662,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f2-claim-correlation-fail-ac3ca1b1eb5b206f683f17fd7678059a37de62f97424c41c8ca5a63acff62816.md",
+      "sha256": "ac3ca1b1eb5b206f683f17fd7678059a37de62f97424c41c8ca5a63acff62816",
+      "size": 1757,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+      "sha256": "aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa",
+      "size": 2117,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+      "sha256": "f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010",
+      "size": 2157,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i2-12faa3c663d0b58ef24855062a8a55847bd6051ca1454f1af976f1da46fe0712.md",
+      "sha256": "12faa3c663d0b58ef24855062a8a55847bd6051ca1454f1af976f1da46fe0712",
+      "size": 3854,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i3-b5b373987b01fb74705a1d19734d4728274fad09369164c1fea999fd30b67bf3.md",
+      "sha256": "b5b373987b01fb74705a1d19734d4728274fad09369164c1fea999fd30b67bf3",
+      "size": 4174,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i52c-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+      "sha256": "f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2",
+      "size": 4863,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+      "sha256": "9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076",
+      "size": 3912,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-27835fd59fa5097cd046cbe28f85b8a1638a89410ae6c9588a28bfa92db5d0be.md",
+      "sha256": "27835fd59fa5097cd046cbe28f85b8a1638a89410ae6c9588a28bfa92db5d0be",
+      "size": 699,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-36773913c5c9d22aa179381dddc611eec5adaf5da98a982a40e6b4ca39ee44d5.md",
+      "sha256": "36773913c5c9d22aa179381dddc611eec5adaf5da98a982a40e6b4ca39ee44d5",
+      "size": 2118,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-535c7cc07f06866ebbc148ff9cd406e0d01bb1285505bcecf56db4e289b806f0.md",
+      "sha256": "535c7cc07f06866ebbc148ff9cd406e0d01bb1285505bcecf56db4e289b806f0",
+      "size": 1889,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33.md",
+      "sha256": "a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33",
+      "size": 3484,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0.md",
+      "sha256": "aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0",
+      "size": 4538,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-d23acb8c1b25db87319018c7899128f75e30938a986c5725756d7fc334dd44ef.md",
+      "sha256": "d23acb8c1b25db87319018c7899128f75e30938a986c5725756d7fc334dd44ef",
+      "size": 2360,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3.md",
+      "sha256": "e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3",
+      "size": 2227,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-eb61b3d1eafe83ef4dbb008e2dbf9ebfb8e53ff7b8be7bb27fcb8b2a52740c1d.md",
+      "sha256": "eb61b3d1eafe83ef4dbb008e2dbf9ebfb8e53ff7b8be7bb27fcb8b2a52740c1d",
+      "size": 699,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082.md",
+      "sha256": "f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082",
+      "size": 2265,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_JOB_CREATE_PROBE.md",
+      "sha256": "cf76fbf77acc05beaea6de381cd72634c803651865a45829e61871bacfc997d1",
+      "size": 536,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md",
+      "sha256": "f808db98a4925057e235dbda9f212232959b66089d4bce1e0476e52f9468f693",
+      "size": 2851,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-coverage-fix-20260723T030236Z.md",
+      "sha256": "d6a8fa97d0745da23c839581fad5e7dc9e09cf9336ef5d3c861ed799ee39cd2b",
+      "size": 3156,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8c-post-007-fail-c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de.md",
+      "sha256": "c87e09c992b46630af89fad9bded74266a3f1db234f77abc49ad7f05b6d529de",
+      "size": 3142,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8d-dispatch-race-fail-33728fd3aeb5ebbbff2a0118423309dfabaeef84d0cad6dc38bd69510699d3a5.md",
+      "sha256": "33728fd3aeb5ebbbff2a0118423309dfabaeef84d0cad6dc38bd69510699d3a5",
+      "size": 2895,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8e-owned-object-finalize-fail-3e5dd5bb8467f7bc183a86a3cf041a5a0043bfd606ce1ff76bb252bddda9c238.md",
+      "sha256": "3e5dd5bb8467f7bc183a86a3cf041a5a0043bfd606ce1ff76bb252bddda9c238",
+      "size": 3239,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8f-render-claim-fail-6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737.md",
+      "sha256": "6ba33aed184caf0e068186ee52c7bc41e29fc86fcc6890ed10725714e3fdd737",
+      "size": 2945,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01.md",
+      "sha256": "2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01",
+      "size": 2943,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8667fb3f-20260722T205826Z.md",
+      "sha256": "8667fb3f5d703090b985e7aca95465885472843491441814d7850ff283d767b9",
+      "size": 2797,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-fail-8ab7fc12-20260722T210837Z.md",
+      "sha256": "8ab7fc128389af1828a1a8500996870728dc8b7467ba840e15fa926eea85fd20",
+      "size": 2769,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-official-run-20260722T204907Z.md",
+      "sha256": "f042ccc42302d502091f431168a0acb6423f45d286a2e0f8c6ce4ad937a7cd8b",
+      "size": 748,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md",
+      "sha256": "b892b98f205610bf3cb32410414265ae3c087239b3a95f02392d95a847676a96",
+      "size": 3062,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.pre-run-20260723T123054Z.md",
+      "sha256": "481f641d1498d447ce4bf7595d64180aabf850399e8ea2984d46abf5bc479829",
+      "size": 678,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md",
+      "sha256": "8a01a93fd9e90de4a02dc0a74a112f7993d16f61eabf2c7473473b3bb68e8ca2",
+      "size": 2568,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-config-fail-c71209b66538023d41041ba7a3edf07280fe3d05c77602c89b056dd9c2baca78.md",
+      "sha256": "c71209b66538023d41041ba7a3edf07280fe3d05c77602c89b056dd9c2baca78",
+      "size": 581,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-diagnostic-5b738502696b6b480633b04e0d4ba9a879dfacbfbea93969916842adc20567ec.md",
+      "sha256": "5b738502696b6b480633b04e0d4ba9a879dfacbfbea93969916842adc20567ec",
+      "size": 1980,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_CLEANUP_RECOVERY_EVIDENCE.md",
+      "sha256": "6df18535a68bfaf06076dc6952a21e28887d4f8a7fa3d905c6e022d891f9ca73",
+      "size": 1210,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md",
+      "sha256": "b75d4f2d9799ef75afbbbbfb6aa0f1b5b0b27f8c3d0edb937940912d57f0b6b4",
+      "size": 2120,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-historical-pass-93c402510d234340cd7d21904d9c49295e88c06fb4a3709a73fc794b92769e88.md",
+      "sha256": "93c402510d234340cd7d21904d9c49295e88c06fb4a3709a73fc794b92769e88",
+      "size": 2039,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-image-digest-fail-eb71c0c57fe9a9ceb27bb33b6659e5e13d53ed2ce1b7c7e5ad2f7aa3e4c28806.md",
+      "sha256": "eb71c0c57fe9a9ceb27bb33b6659e5e13d53ed2ce1b7c7e5ad2f7aa3e4c28806",
+      "size": 2232,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a1-configuration-fail-9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36.md",
+      "sha256": "9c0a4e408f387beb59ba8a3af5baf22afc3bb28efbcdb17476d6440dbca7de36",
+      "size": 435,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7a2-coverage-fail-0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292.md",
+      "sha256": "0617b7daa538620713d50e6d8c94c9a40434d5d464be6417507bbdb8a4edd292",
+      "size": 2040,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-2e2d7b-20260722T174812Z.md",
+      "sha256": "764c483eaab40b3cae3f769d1d99f2ef22fcdaad07775895ce8cc107f346ef2e",
+      "size": 662,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-rerun-20260722T184708Z.md",
+      "sha256": "c81db9d52be411f545f29f8347359e4aa93aa2df913e580ccfbbf1f95f08585f",
+      "size": 804,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md",
+      "sha256": "68b1f1422c8483c3ab3eb5e8157b5f00662508d86b0122ea2f8fca884e22c8fb",
+      "size": 1683,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-2b2c.md",
+      "sha256": "47e082c0017a731ec53a0dd2601cd294e7d037f8f529853712f9a61eb1e7ec9b",
+      "size": 515,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-2b2d-20260720T092923Z.md",
+      "sha256": "55df47d8bfe16de3d58458d99ca402aff923089e2b46f6edb7887ebf56c264fa",
+      "size": 817,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_NEON_LIVE_EVIDENCE.pre-official-rerun-20260720T115913Z.md",
+      "sha256": "05faf5720ad6ca04fe889d19947be652a19730b7fa1b4fbf6b542f0d7b3c6f5a",
+      "size": 722,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.md",
+      "sha256": "ce77a3f3ad9b408073e940b525ecf4f932c5b92a13dc9ce9cdec476351f23968",
+      "size": 2187,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d2-20260720T102737Z.md",
+      "sha256": "df5b55829d492fadbdfd12066d4ac7c1e2e6cee45a56b716facc6ff5b7e3ca21",
+      "size": 1300,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_NEON_PROGRESSIVE_DIAGNOSTIC.pre-2b2d3-20260720T105813Z.md",
+      "sha256": "f7e40178048b3238e2b3fb43c9913a1d23699bdd7539a72f644f7570acae4b45",
+      "size": 1343,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_NEON_PROGRESSIVE_TARGETED_2B2D2.md",
+      "sha256": "e3ca0541e03266fa3f9812cfb76cb391bb0956232c6c868861c55587ff9f9478",
+      "size": 1273,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.md",
+      "sha256": "c97aa2a90f123195e3a9b3b2590fc37b517c9ba0afa23b71e16429f6ac52bca5",
+      "size": 989,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.pre-2b2d4-20260720T112040Z.md",
+      "sha256": "c7fee4d7417607865a05f2ec2428afcd22c1854748e78b8d044ae4c2590a9fcc",
+      "size": 991,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md",
+      "sha256": "937c269bd722f46f7de08712bba0eec05e016d15e15b1f25d5352cc957c1fd3e",
+      "size": 68516,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E1_HOSTED_WORKER_FOUNDATION.md",
+      "sha256": "ad9fa2973c65528b1bdd7aaf1f57c13a1013ee88cc7d9908416b94e55a02cbe4",
+      "size": 9642,
+      "ok": true
+    },
+    {
+      "path": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E1A_CORRECTION.md",
+      "sha256": "be0a23019c0498545867f599304a784647969f4c78bf7a316fc570aded9a8ae4",
+      "size": 2431,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2A_RENDER_STORAGE_CLEANUP.md",
+      "sha256": "f4ccff51e149d7b9655f8cbcd5303134d175bdb2d5490158a576ed3b2a8c05b6",
+      "size": 11966,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2B_TRUSTED_VERIFY_PROMOTION.md",
+      "sha256": "61b5cadba77220af0d79ebdd467a297193311c8b6dd2a1a3ea0f00a1e7f1d6c6",
+      "size": 1519,
+      "ok": true
+    },
+    {
+      "path": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E2B1_HOSTED_EXECUTION_CORRECTION.md",
+      "sha256": "35d3963aeae716968e4c17a6c013683469941c27f741dcecf4a98849ee29571c",
+      "size": 1601,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2B2_DURABLE_DISPATCH_OUTBOX.md",
+      "sha256": "75bad797c43c4618122827a2b2d36f8b52484a281de865add7e57942d349402e",
+      "size": 2215,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2B3_DISPATCH_CAS_TRUTHFULNESS.md",
+      "sha256": "195c22db43c38d1f7010cda5ecabe9482dfff30721771c5785712043eb27f61e",
+      "size": 1323,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D1_STAGING_SCHEMA_READINESS.md",
+      "sha256": "466660deb89143345c2451e7bfb5c586005a787887e964de10b6e902b9690f1e",
+      "size": 5358,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D2_DOCKER_IMAGE_AUTHORITY.md",
+      "sha256": "26288d6b9eef1ebb850a4e83d8f8b88a6fc0c50303db64128cd936b181840968",
+      "size": 6511,
+      "ok": true
+    },
+    {
+      "path": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.md",
+      "sha256": "0ec713c52236c43b2f64f51b1482a0d8bd0eb0d20c7e8dd5f9d3128150a7d2f9",
+      "size": 5769,
+      "ok": true
+    },
+    {
+      "path": "docs/operations/headless/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.md",
+      "sha256": "083e3d27cac72a1537a15dc2189a321deb54b6efc1d8c668345595dbbdfc3d17",
+      "size": 5514,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.pre-account-unlock-FAIL.md",
+      "sha256": "a69fb7089dc9fdae87deb698acb4af71f90be5433a0a1927d1c89c4dcb773129",
+      "size": 3443,
+      "ok": true
+    },
+    {
+      "path": "docs/operations/headless/HEADLESS_11E_PHASE2E2D4_FLY_STAGING_DEPLOYMENT_AUTHORITY.md",
+      "sha256": "d4e2361be49ae1c793df4b2169fbdd2e25a68e8a913557801cc21317ebc3ca07",
+      "size": 6731,
+      "ok": true
+    },
+    {
+      "path": "docs/operations/headless/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.md",
+      "sha256": "a0b56da850138275a451b9ebf7e6db7ab32d9ff65aed800e5d22a32ab132650e",
+      "size": 4379,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5a-FAIL.md",
+      "sha256": "a1b544db644040ee7fe709b2391ee85cea5ed17e4d2fa0405d86e20c70a43cf1",
+      "size": 4556,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5b-FAIL.md",
+      "sha256": "4b5df80f9d5bfd384ac0a2d987fba432e022f187a9e6bd2eea85e3af31589c5e",
+      "size": 4319,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5d-FAIL.md",
+      "sha256": "9a6a16e0bdeb19ae3ccfe38afd49b5e9e2d549a6d34d0edf57dad01e753418de",
+      "size": 6614,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5f-FAIL.md",
+      "sha256": "0047bfbc79e5f80937e5cab4d7518ee75d016a5862eed51efd00de9d3d708a10",
+      "size": 4760,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D5C_FLY_STAGING_ZERO_MACHINE_LIFECYCLE.md",
+      "sha256": "cb4107ed4af7b158cb17dfdfd976051e33f62a70b9b5578d6cdcb1c99b587645",
+      "size": 4182,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D5E_PRE_FIRST_MACHINE_OBSERVATION_AUTHORITY.md",
+      "sha256": "03b1db2f300bce22c546281113d1b79195fb83c3250a142d0c3e0f2a2a0ef064",
+      "size": 2552,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "d11bf7afb86bdf8dc3bb3a76a5feb758e8dbdb4fd11cd156e62d1db58305830b",
+      "size": 3406,
+      "ok": true
+    },
+    {
+      "path": "docs/operations/headless/HEADLESS_11E_PHASE2E2D6A_FLY_STAGING_ORCHESTRATOR_ROOT_PATH_AUTHORITY.md",
+      "sha256": "2ba169f105c33b0713888f755711c3bbfe216d5c85f09ca61dfe12e7de3d3e3d",
+      "size": 2385,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6B_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "4820b4e97ffc223a0d3cd6ce1bb56f3c2bd0601332dc35acbe6ad1315bf77c6d",
+      "size": 3065,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6C_FLY_STAGING_PUBLIC_ENVIRONMENT_AUTHORITY.md",
+      "sha256": "9f273d59eb564acae834ec2ad485fdba92c962ef84ff582fa96ff1cc7f98f25a",
+      "size": 1975,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "6c64d223a9b61a00a14ed1f01e9b1461cc8d7f3d15369fc4f4bf32205fb536e2",
+      "size": 3525,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6E_FLY_STAGING_STAGED_SECRET_ACTIVATION_AUTHORITY.md",
+      "sha256": "6377d133bf3b161b5614a7e0972a75204dcc64c96f7649b8ea5f45c68553e3f4",
+      "size": 3616,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6F_FLY_STAGING_VERIFY_FIRST.md",
+      "sha256": "c24acde707a2627642e24df6193506835e8129bb2cb2d7bf0e64315d925c0554",
+      "size": 3352,
+      "ok": true
+    },
+    {
+      "path": "docs/operations/headless/HEADLESS_11E_PHASE2E2D6G_FLY_STAGING_CANONICAL_VERIFY_FIRST_ORCHESTRATOR.md",
+      "sha256": "57bc3991c80f7aa070d86787a91ce2e1e807ed28a6e36f7271efa5d2330a7ed7",
+      "size": 2677,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6H_FLY_STAGING_DECODED_SECRET_SYNC_ROLLBACK.md",
+      "sha256": "07d5f11a2a19869ceac98b68bc4c487189cf4e3f973a296b332125303cc171c5",
+      "size": 2309,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_PHASE2E2D7A_FLY_STAGING_VERIFY_FIRST_PASS_EVIDENCE.md",
+      "sha256": "66d73436b4a3bdfb04eb6659eef71490bfbe49b0fae407307c79af675761474c",
+      "size": 2067,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D7A1_FLY_VERIFY_LIVE_ENVIRONMENT_CONTRACT.md",
+      "sha256": "12da4d97e985322938593be95c2398a467c484e001bbc4c5a8c3f865f783d939",
+      "size": 4241,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D7A2_FLY_VERIFY_OBSERVATION_AUTHORITY.md",
+      "sha256": "8b0758a5e512a36d493f70b1bbb572c5581514de844b143919c964d2a2b84a6e",
+      "size": 3858,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8A_FLY_RENDER_LIVE_AUTHORITY.md",
+      "sha256": "cfe95506dfb5e0f2297f70c89afc459a6e34f4dae5490083ac881b5d20dc8c4c",
+      "size": 3658,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8C2_OWNED_OBJECT_SLOT_KEY_SCHEMA_ALIGNMENT.md",
+      "sha256": "67cc93827683cc7bcaaee30e94c7f1f52004ce0de58b0b30fb59bda91bff4a04",
+      "size": 5012,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8C2A_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY.md",
+      "sha256": "c78fd7a8be2c3febf56f7da7540e964a196046f2f2fb5a9778b06e8fe0931757",
+      "size": 2579,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8D_MONOTONIC_DISPATCH_OUTBOX_OBSERVATION_AUTHORITY.md",
+      "sha256": "4a6f01cccb6db3b673ca3f8d3b88c69edbda8a04008a674ab89b39069e64cba0",
+      "size": 2285,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8E_OWNED_OBJECT_FINALIZE_ATTRIBUTION.md",
+      "sha256": "2ca9860a05134d12207fac118a7a7f774e061f60218d284aa386def17dc8fac8",
+      "size": 2533,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8F_CLAIMED_RENDER_EXECUTION_ATTRIBUTION.md",
+      "sha256": "1c2a390afd4eb5b297abebc752bed7ecac6583192f47368054799f4e6efd359e",
+      "size": 2197,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8F1_TELEMETRY_IMAGE_VERSION_AUTHORITY.md",
+      "sha256": "0c52d40956aa5bb8923d9a02d7b098fd1bed83c8529945e5f2fd1ee3cdf16e23",
+      "size": 2083,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8K_HOSTED_4K_CAPACITY_AUTHORITY.md",
+      "sha256": "6bbed3d86b2fc0634390e17126eba517a5e9bdea87b468cea23f22813e2a4da5",
+      "size": 3807,
+      "ok": true
+    },
+    {
+      "path": "docs/archive/sprints/headless/HEADLESS_11E_PHASE2G13_MEDIA_VISUAL_AUDIO_PARITY.md",
+      "sha256": "09a3d681ca505d5d89d830467489ca673db98f46475487fbf24c671167acf8a8",
+      "size": 4660,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_PRODUCT_DISPATCH.md",
+      "sha256": "c708aeee3abde9bdbb93211b82863a14dc92d33d2afb96a14dc7867d76488fb0",
+      "size": 7694,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_R2_DURABILITY_EVIDENCE.md",
+      "sha256": "8da177816ade3a0326d13e5368cc79c8427e68029830dc0246cb770e44bec0b7",
+      "size": 6659,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_R2_FIXTURE_AUTHORITY_2C1B.md",
+      "sha256": "918d553489d0f09b88f83a0456802577db1b0929f406da7ab8b4762db365aa9e",
+      "size": 2192,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_R2_LIVE_EVIDENCE.md",
+      "sha256": "5694d5f0846aad00dbd9e0a28dcc7dfdccb289c4ce2e6ac2e1b4ee8a4bb56b58",
+      "size": 1355,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-2c1b-20260720T171818Z.md",
+      "sha256": "3232c9e46835fedbff5ea436984e8cbc48ad825c74ab7f0f5e2b12f5bdd67ad5",
+      "size": 1422,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_R2_LIVE_EVIDENCE.pre-official-2c1a-20260720T171231Z.md",
+      "sha256": "24113f74e9ad84f5a456cd3188342189b1d4cfb5bef38b50971d11289a5c2f9b",
+      "size": 401,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_R2_OWNED_OBJECT_FOUNDATION.md",
+      "sha256": "cd44638ecde36966bfc1ebf5a53c5648c8b2404b19904b160548691885ebdeba",
+      "size": 3014,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_R2_TARGETED_EVIDENCE.md",
+      "sha256": "f93415664136a58e77181b917bc186b0cc1595e55c16655c7eab93f9e18c5658",
+      "size": 1045,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_SOURCE_SLOT_IDENTITY_V2.md",
+      "sha256": "9ce44e9f36afffb642dbde76ef65ece85cb133db78b42a5b22e0290f0bbfb7c0",
+      "size": 1537,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.md",
+      "sha256": "74fc6c23f99be59f0474e0c54d711a0c5c96b286040007e00e0e72a794fd950c",
+      "size": 1325,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_CLAIM_ACK_PROBE.pre-2d1f1-rerun-20260721T122517Z.md",
+      "sha256": "a74eead35ea624cfd9329ec2f44a8717ef17e3dbf8723216a1c9e7bdd5c178c3",
+      "size": 946,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.md",
+      "sha256": "76f3d7c4b7b9ad326f82fbc23d10ba76deaf116d46f5d6c7c88fff427d04b3f8",
+      "size": 1591,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.pre-2d1h-live-20260721T134516Z.md",
+      "sha256": "00ada199159b48ecd077d75b47616c6e26548a4741c461a6f45aa2893aeb179a",
+      "size": 811,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_CONCURRENCY_PROBE.pre-2d1h1-live-20260721T144144Z.md",
+      "sha256": "de2801d3fd1a282824f9de6aaf95267c301f455d30ba583775649ecaaa5573c0",
+      "size": 1562,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_DLQ_PROBE.md",
+      "sha256": "c448d9e2d5560ffebc9756c4fe8ffa6d139752b3fe8c935b78d06487b19d6a55",
+      "size": 1365,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_DLQ_PROBE.pre-2d1g1-rerun-20260721T125600Z.md",
+      "sha256": "d122a35488a939bb4be80f112a800278b99dc928b0a79ff252d7569c04badcfe",
+      "size": 758,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_UPSTASH_DUAL_LEASE_FOUNDATION.md",
+      "sha256": "79c8a344ffc3bf4aa184d795965c1f825b5b9ce422cab833489f06363e73d784",
+      "size": 21264,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_ENQUEUE_PROBE.md",
+      "sha256": "645aa426d0dc23e029cafa2fb8e56f3a33291efde9dd8791f40dfe98e96a7285",
+      "size": 1120,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md",
+      "sha256": "360e059bd04b324edc759abe1638553b2347e05edd7fe3b6365dbb24e440b11e",
+      "size": 1703,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.official-fail-2d1b-20260721T042059Z.md",
+      "sha256": "5fd9030bf5bd80d0c5e5f1dc4f3a5c9eb7ab851b8a9446e68737277967e82f77",
+      "size": 1799,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1a-20260721T041709Z.md",
+      "sha256": "70e5c990c3bfe681ad7215c341fef02523985f730ce39d3423a6edeb63ace300",
+      "size": 466,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1h-20260721T141415Z.md",
+      "sha256": "f2f38dc16218868853c4f1d64c49a0981307790bd3e3762cf0c5ab30137d11f4",
+      "size": 1774,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-2d1h1-20260721T150819Z.md",
+      "sha256": "1d760fce84516057c571c01c27fb9f8de084603774e0b7ba7a9409c5941e2cf3",
+      "size": 1749,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.pre-official-rerun-2d1c3-20260721T082936Z.md",
+      "sha256": "83ec48b170b276e4c3a3ed2072d68acb60e91b29af11660e321dcfbd212b16c3",
+      "size": 1778,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_11E_UPSTASH_MATRIX_DELIVERY_AUDIT.md",
+      "sha256": "3962ef3bbb20b429706ed83b44eeacbb3b3c5de4e939a02b6e184f97b00697e8",
+      "size": 7776,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.md",
+      "sha256": "8b6a0fdefbca11b299d48320c1d23236c618b4604de61a87d08640e4ea750a59",
+      "size": 1699,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1d2-20260721T094133Z.md",
+      "sha256": "92366917d3e2046e27711ab436a25963277959fdc5d2623b1a8e6803b8608596",
+      "size": 555,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1f1-progressive-20260721T122902Z.md",
+      "sha256": "1f42f396f4ed42903ae6ed0d9f224c137edde3a52ffa307c81a934b8f47019ca",
+      "size": 1786,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1g1-progressive-20260721T132727Z.md",
+      "sha256": "d6ebcf344b7509f5c76f06cdf87ff2d69eb42d573ad655e70c3f0090aa1c612f",
+      "size": 1722,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h-progressive-20260721T134922Z.md",
+      "sha256": "482dfb1137967b1a6308526200e8eb15d85f4dbd783de4d6528812be970deeca",
+      "size": 1725,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h1-progressive-20260721T144906Z.md",
+      "sha256": "de133fb2aa0b3f4eb34198f9140fdd0b427462a192cf195b66147df12b5a1fcc",
+      "size": 1699,
+      "ok": true
+    },
+    {
+      "path": "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_TERMINAL_PROBE.md",
+      "sha256": "efb229552e1e40b4aa1f5c2511860633694682d220e53753842a228788b993fc",
+      "size": 1345,
+      "ok": true
+    },
+    {
+      "path": "docs/architecture/headless/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md",
+      "sha256": "42717bbab482802ad890d06b5176bd8d92d23c27e0285cd8c5d8a86f4bafe6d5",
+      "size": 39594,
+      "ok": true
+    }
+  ],
+  "ambiguous": [],
+  "duplicateGroupsBefore": 18,
+  "updatedFiles": [
+    "MASTER_ARCHITECTURE.md",
+    "ROADMAP.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E1_HOSTED_WORKER_FOUNDATION.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D5C_FLY_STAGING_ZERO_MACHINE_LIFECYCLE.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D5E_PRE_FIRST_MACHINE_OBSERVATION_AUTHORITY.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6B_FLY_STAGING_VERIFY_FIRST.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6C_FLY_STAGING_PUBLIC_ENVIRONMENT_AUTHORITY.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6D_FLY_STAGING_VERIFY_FIRST.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6E_FLY_STAGING_STAGED_SECRET_ACTIVATION_AUTHORITY.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6F_FLY_STAGING_VERIFY_FIRST.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D6_FLY_STAGING_VERIFY_FIRST.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D7A1_FLY_VERIFY_LIVE_ENVIRONMENT_CONTRACT.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D7A2_FLY_VERIFY_OBSERVATION_AUTHORITY.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8A_FLY_RENDER_LIVE_AUTHORITY.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8E_OWNED_OBJECT_FINALIZE_ATTRIBUTION.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2E2D8F_CLAIMED_RENDER_EXECUTION_ATTRIBUTION.md",
+    "docs/architecture/headless/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md",
+    "docs/architecture/headless/HEADLESS_11E_R2_DURABILITY_EVIDENCE.md",
+    "docs/architecture/headless/HEADLESS_11E_R2_FIXTURE_AUTHORITY_2C1B.md",
+    "docs/architecture/headless/HEADLESS_11E_R2_OWNED_OBJECT_FOUNDATION.md",
+    "docs/architecture/headless/HEADLESS_11E_SOURCE_SLOT_IDENTITY_V2.md",
+    "docs/architecture/headless/HEADLESS_11E_UPSTASH_DUAL_LEASE_FOUNDATION.md",
+    "docs/archive/sprints/headless/HEADLESS_11E_8I4C_BINDING_PROBE_POSTMORTEM.md",
+    "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E1A_CORRECTION.md",
+    "docs/archive/sprints/headless/HEADLESS_11E_PHASE2E2D2A_CHROMIUM_SANDBOX_CORRECTION.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-4b0ccdd4f78f34b5dfa9f0d0663a0c2800b1b7d4b4a4b20a8ac633ac38935d27.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.pre-run-b4b76f8ec90c22e5931ab37f61914c172a585e2d27a8fa0055f08ba348ee2a1c.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.postmortem-8i6c-sanitized.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f2-claim-correlation-fail-ac3ca1b1eb5b206f683f17fd7678059a37de62f97424c41c8ca5a63acff62816.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f5-attribution-aa9df339bb81a47e1e3ac637e0c1f149b92122e96b554c96af417ef67df0c1fa.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i2-12faa3c663d0b58ef24855062a8a55847bd6051ca1454f1af976f1da46fe0712.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i3-b5b373987b01fb74705a1d19734d4728274fad09369164c1fea999fd30b67bf3.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i52c-f0b157c9535cbd8aece176b782bb7f073f4b40e9d038a0e9002eaef30d6402c2.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8i6d-9355792575999a4fb8fec0032f3519e7a3d0f08033c9e34e842b1a809c3d5076.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-27835fd59fa5097cd046cbe28f85b8a1638a89410ae6c9588a28bfa92db5d0be.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-36773913c5c9d22aa179381dddc611eec5adaf5da98a982a40e6b4ca39ee44d5.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-535c7cc07f06866ebbc148ff9cd406e0d01bb1285505bcecf56db4e289b806f0.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-aafd4161ca3f071e1dd5fd68cd7c536cafc1e367b3ff7991e5a2d939388540c0.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-d23acb8c1b25db87319018c7899128f75e30938a986c5725756d7fc334dd44ef.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-eb61b3d1eafe83ef4dbb008e2dbf9ebfb8e53ff7b8be7bb27fcb8b2a52740c1d.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.pre-run-20260723T123054Z.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-config-fail-c71209b66538023d41041ba7a3edf07280fe3d05c77602c89b056dd9c2baca78.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.pre-8c1-diagnostic-5b738502696b6b480633b04e0d4ba9a879dfacbfbea93969916842adc20567ec.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.pre-account-unlock-FAIL.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5b-FAIL.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5d-FAIL.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.pre-2e2d5f-FAIL.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1d2-20260721T094133Z.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1f1-progressive-20260721T122902Z.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1g1-progressive-20260721T132727Z.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h-progressive-20260721T134922Z.md",
+    "docs/evidence/headless/archive/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.pre-2d1h1-progressive-20260721T144906Z.md",
+    "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md",
+    "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md",
+    "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_JOB_CREATE_PROBE.md",
+    "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md",
+    "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md",
+    "docs/evidence/headless/current/HEADLESS_11E_R2_TARGETED_EVIDENCE.md",
+    "docs/evidence/headless/current/HEADLESS_11E_UPSTASH_PROGRESSIVE_DIAGNOSTIC.md",
+    "docs/operations/ENV_AND_FEATURE_FLAGS.md",
+    "docs/operations/headless/HEADLESS_11E_PHASE2E2D3_FLY_SANDBOX_PROBE.md",
+    "docs/operations/headless/HEADLESS_11E_PHASE2E2D4_FLY_STAGING_DEPLOYMENT_AUTHORITY.md",
+    "docs/operations/headless/HEADLESS_11E_PHASE2E2D5_FLY_STAGING_ZERO_CONSUMER_RELEASE.md",
+    "docs/operations/headless/HEADLESS_11E_PHASE2E2D6A_FLY_STAGING_ORCHESTRATOR_ROOT_PATH_AUTHORITY.md",
+    "docs/operations/headless/HEADLESS_11E_PHASE2E2D6G_FLY_STAGING_CANONICAL_VERIFY_FIRST_ORCHESTRATOR.md",
+    "src/features/headless-renderer/control-plane/migrations/README.md",
+    "src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-verify-first-pass-evidence.ts",
+    "src/features/headless-renderer/worker/runtime/output-profiles.ts",
+    "src/verification/headless-renderer/contracts/headlessProfileBoundaryContinuityAuthority.verify.ts",
+    "src/verification/headless-renderer/evidence/headlessClaimedRenderDiagnosticEvidenceFileAuthority.verify.ts",
+    "src/verification/headless-renderer/evidence/headlessFlyRenderExecutionProbeJobCreateAttribution.verify.ts",
+    "src/verification/headless-renderer/evidence/headlessOwningBoundaryEmissionPostmortemAuthority.verify.ts",
+    "src/verification/headless-renderer/execution/headlessClaimedRenderDiagnosticBootstrapAuthority.verify.ts",
+    "src/verification/headless-renderer/execution/headlessClaimedRenderDiagnosticCapabilityBoundaryAuthority.verify.ts",
+    "src/verification/headless-renderer/execution/headlessClaimedRenderDiagnosticImageAuthority.verify.ts",
+    "src/verification/headless-renderer/execution/headlessPageBootstrapCoherenceAuthority.verify.ts",
+    "src/verification/headless-renderer/execution/headlessPageDiagnosticImageAuthority.verify.ts",
+    "src/verification/headless-renderer/fly-render-4k-capacity/capacity-4k-evidence.ts",
+    "src/verification/headless-renderer/fly-render-live/claimed-render-execution-probe-evidence.ts",
+    "src/verification/headless-renderer/fly-render-live/claimed-render-execution-probe.ts",
+    "src/verification/headless-renderer/fly-render-live/evidence.ts",
+    "src/verification/headless-renderer/fly-render-live/execution-probe-cleanup-recovery-evidence.ts",
+    "src/verification/headless-renderer/fly-render-live/execution-probe-cleanup-recovery.ts",
+    "src/verification/headless-renderer/fly-render-live/job-create-probe-evidence.ts",
+    "src/verification/headless-renderer/fly-render-live/job-create-probe.ts",
+    "src/verification/headless-renderer/fly-render-live/owned-object-finalize-probe-evidence.ts",
+    "src/verification/headless-renderer/fly-render-live/owned-object-finalize-probe.ts",
+    "src/verification/headless-renderer/fly-render-live/owned-object-staging-probe-evidence.ts",
+    "src/verification/headless-renderer/fly-render-live/owned-object-staging-probe.ts",
+    "src/verification/headless-renderer/fly-verify-live/cleanup-recovery-evidence.ts",
+    "src/verification/headless-renderer/fly-verify-live/cleanup-recovery.ts",
+    "src/verification/headless-renderer/fly-verify-live/evidence.ts",
+    "src/verification/headless-renderer/neon-live/evidence.ts",
+    "src/verification/headless-renderer/neon-live/progressive-evidence.ts",
+    "src/verification/headless-renderer/neon-live/promotion-probe-evidence.ts",
+    "src/verification/headless-renderer/neon-live/targeted-evidence.ts",
+    "src/verification/headless-renderer/platform/headlessFlyRender4kCapacityHarnessAuthority.verify.ts",
+    "src/verification/headless-renderer/platform/headlessFlyRender4kProcessTreeSamplerAuthority.verify.ts",
+    "src/verification/headless-renderer/platform/headlessFlyRender4kProcessTreeSamplerCadenceAuthority.verify.ts",
+    "src/verification/headless-renderer/platform/headlessFlyRender4kProcessTreeSamplerLifecycleAuthority.verify.ts",
+    "src/verification/headless-renderer/platform/headlessFlyRenderOperationalSweepReadinessAuthority.verify.ts",
+    "src/verification/headless-renderer/platform/headlessFlyStagingVersionedImageAuthority.verify.ts",
+    "src/verification/headless-renderer/platform/headlessNeonProgressiveTargeted.verify.ts",
+    "src/verification/headless-renderer/platform/headlessR2Targeted.verify.ts",
+    "src/verification/headless-renderer/platform/headlessUpstashProgressive.verify.ts",
+    "src/verification/headless-renderer/queue/headlessUpstashClaimAckProbe.verify.ts",
+    "src/verification/headless-renderer/queue/headlessUpstashEnqueueProbe.verify.ts",
+    "src/verification/headless-renderer/queue/headlessUpstashTerminalProbe.verify.ts",
+    "src/verification/headless-renderer/r2-live/evidence.ts",
+    "src/verification/headless-renderer/r2-targeted/evidence.ts",
+    "src/verification/headless-renderer/r2-targeted/run-r2-targeted-harness.ts",
+    "src/verification/headless-renderer/upstash-live/claim-ack-probe-evidence.ts",
+    "src/verification/headless-renderer/upstash-live/concurrency-probe-evidence.ts",
+    "src/verification/headless-renderer/upstash-live/dlq-probe-evidence.ts",
+    "src/verification/headless-renderer/upstash-live/enqueue-probe-evidence.ts",
+    "src/verification/headless-renderer/upstash-live/evidence.ts",
+    "src/verification/headless-renderer/upstash-live/progressive-evidence.ts",
+    "src/verification/headless-renderer/upstash-live/run-upstash-progressive-harness.ts",
+    "src/verification/headless-renderer/upstash-live/terminal-probe-evidence.ts"
+  ],
+  "rootAfter": 0,
+  "destinationCounts": {
+    "current": 26,
+    "archive": 73,
+    "architecture": 43,
+    "operations": 5,
+    "sprint": 5
+  },
+  "duplicateGroupsAfter": 0,
+  "redundantRemoved": 20
+}

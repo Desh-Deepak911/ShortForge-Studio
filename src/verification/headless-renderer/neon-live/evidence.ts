@@ -29,7 +29,7 @@ export type NeonLiveEvidenceDocument = {
 };
 
 export const NEON_LIVE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_NEON_LIVE_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md";
 
 export function defaultNeonLiveEvidencePath(
   cwd: string = process.cwd(),

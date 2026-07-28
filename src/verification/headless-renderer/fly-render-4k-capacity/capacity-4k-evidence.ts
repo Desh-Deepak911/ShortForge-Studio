@@ -62,10 +62,10 @@ export type FlyRender4kCapacityEvidenceDocument = {
 };
 
 export const FLY_RENDER_4K_CAPACITY_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md";
 
 export const FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md";
+  "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md";
 
 export function defaultFlyRender4kCapacityEvidencePath(
   cwd: string = process.cwd(),

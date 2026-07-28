@@ -145,7 +145,7 @@ import { HEADLESS_FLY_STAGING_VERIFY_FIRST_PASS_IMAGE_DIGEST } from "@/features/
 
 const ROOT = path.resolve(import.meta.dirname, "../../../..");
 const HISTORICAL_PASS_PATH =
-  "docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-historical-pass-93c402510d234340cd7d21904d9c49295e88c06fb4a3709a73fc794b92769e88.md";
+  "docs/evidence/headless/archive/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.pre-007-historical-pass-93c402510d234340cd7d21904d9c49295e88c06fb4a3709a73fc794b92769e88.md";
 
 const OFFICIAL_EVIDENCE_SHAS = Object.freeze({
   verifyLivePass: "b75d4f2d9799ef75afbbbbfb6aa0f1b5b0b27f8c3d0edb937940912d57f0b6b4",
@@ -1234,25 +1234,25 @@ async function main() {
 
   await test("official evidence SHAs remain byte-identical", () => {
     assert.equal(
-      sha256File("docs/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md"),
+      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md"),
       OFFICIAL_EVIDENCE_SHAS.verifyLivePass,
     );
     assert.equal(
-      sha256File("docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md"),
+      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md"),
       OFFICIAL_EVIDENCE_SHAS.renderLivePass,
     );
     assert.equal(
       sha256File(
-        "docs/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01.md",
+        "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.pre-8j-2e6942334843b664e7089d13bfca488c29f888bfac897e89aceb2fb1768feb01.md",
       ),
       OFFICIAL_EVIDENCE_SHAS.renderLiveFailArchived8J,
     );
     assert.equal(
-      sha256File("docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md"),
+      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_STAGING_PROBE.md"),
       OFFICIAL_EVIDENCE_SHAS.ownedObjectStagingPass,
     );
     assert.equal(
-      sha256File("docs/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md"),
+      sha256File("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_OWNED_OBJECT_FINALIZE_PROBE.md"),
       OFFICIAL_EVIDENCE_SHAS.ownedObjectFinalizePass,
     );
   });

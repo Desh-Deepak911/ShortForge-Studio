@@ -96,15 +96,15 @@ async function main() {
     const root = process.cwd();
     const f904 = join(
       root,
-      "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082.md",
+      "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-f9042d8067b9189f56bbd3c11fa2beb267fca6e976930da407351f4f42928082.md",
     );
     const e8aa = join(
       root,
-      "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3.md",
+      "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3.md",
     );
     const da86 = join(
       root,
-      "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-da861f68858a48ab330804e36c9d9dd0c2e8e586f11dd4a6736f6fbb51f0ffc4.md",
+      "docs/evidence/headless/current/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md",
     );
     assert.equal(existsSync(f904), true, "f904 archive missing");
     assert.equal(existsSync(e8aa), true, "e8aac archive missing");

@@ -81,7 +81,7 @@ HEADLESS_NEON_QA=1 DATABASE_URL='postgresql://…' npm run test:headless-neon-li
 
 Optional preserve of QA rows: `HEADLESS_NEON_QA_PRESERVE=1`.
 
-Evidence: `docs/HEADLESS_11E_NEON_LIVE_EVIDENCE.md` (`NOT_TESTED` / `FAIL` / `PASS`). Gate-off runs do not overwrite a prior PASS/FAIL with a false Pass.
+Evidence: `docs/evidence/headless/current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md` (`NOT_TESTED` / `FAIL` / `PASS`). Gate-off runs do not overwrite a prior PASS/FAIL with a false Pass.
 
 ## Design notes
 

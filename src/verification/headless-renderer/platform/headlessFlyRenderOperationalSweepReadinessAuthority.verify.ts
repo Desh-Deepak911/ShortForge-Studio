@@ -156,7 +156,7 @@ async function main() {
     };
     assert.equal(
       createHash("sha256")
-        .update(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md")))
+        .update(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md")))
         .digest("hex"),
       shas.current,
     );
@@ -166,7 +166,7 @@ async function main() {
           readFileSync(
             path.join(
               ROOT,
-              `docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${shas.preRun}.md`,
+              `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${shas.preRun}.md`,
             ),
           ),
         )
@@ -175,7 +175,7 @@ async function main() {
     );
     assert.equal(
       createHash("sha256")
-        .update(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md")))
+        .update(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.md")))
         .digest("hex"),
       shas.diag,
     );

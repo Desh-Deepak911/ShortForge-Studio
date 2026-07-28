@@ -453,11 +453,11 @@ SPRINT 11 HEADLESS RENDERER: READY TO BEGIN
 
 ExportManifest v3 / `"9C"` and v2 / `"8D"` remain **frozen and unchanged** (720p/1080p only — no silent `"4k"` label). 4K elevation is headless-target-only. Evidence: `test:headless-worker-limit-authority` · `test:headless-worker-duration-authority` · `test:headless-worker-output-profiles` · `test:headless-worker-resource-evidence` · `test:headless-worker-mp4` · `test:headless-worker-resolution-ladder`. No paid vendor, product UI, or required `.env.local` changes (optional path overrides only).
 
-**11A.1 / 2.1A / 2.1B product authority:** Headless Export is **user-triggered** (not cron). Export returns a stable **jobId immediately** via a **provisional** store record (no `HeadlessRenderJobV1` until Stage B); upload/trusted verify and atomic same-`jobId` promotion may be async; render enqueue only after canonical promotion. See [docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md](./docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md) §1A / §12A and [provider decision](./docs/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md) §8.6.
+**11A.1 / 2.1A / 2.1B product authority:** Headless Export is **user-triggered** (not cron). Export returns a stable **jobId immediately** via a **provisional** store record (no `HeadlessRenderJobV1` until Stage B); upload/trusted verify and atomic same-`jobId` promotion may be async; render enqueue only after canonical promotion. See [docs/architecture/headless/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md](./docs/architecture/headless/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md) §1A / §12A and [provider decision](./docs/architecture/headless/HEADLESS_11E_PHASE2_PROVIDER_DECISION.md) §8.6.
 
 | Phase | Status |
 |-------|--------|
-| **11A** Architecture + authority audit | **Ready for final acceptance** — [docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md](./docs/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md) |
+| **11A** Architecture + authority audit | **Ready for final acceptance** — [docs/architecture/headless/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md](./docs/architecture/headless/HEADLESS_RENDERER_ARCHITECTURE_AUDIT.md) |
 | **11A.1** User-triggered export authority | **Ready for acceptance** — also an **11E** acceptance requirement |
 | **11B** Formal job / asset / artifact contracts | Accepted foundation |
 | **11B.1 / 11B.1A** Authority hardening + request chain | Accepted |

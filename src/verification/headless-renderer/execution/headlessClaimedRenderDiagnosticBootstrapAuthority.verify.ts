@@ -152,7 +152,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6A_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6A_SHA}.md`,
           ),
         ),
       ),
@@ -163,7 +163,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6B_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6B_SHA}.md`,
           ),
         ),
       ),
@@ -174,7 +174,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6E_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-run-${EVIDENCE_8F6E_SHA}.md`,
           ),
         ),
       ),
@@ -185,18 +185,18 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-${EVIDENCE_8F6F_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_CLAIMED_RENDER_DIAGNOSTIC.pre-8f6f-${EVIDENCE_8F6F_SHA}.md`,
           ),
         ),
       ),
       EVIDENCE_8F6F_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
+      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
       EXECUTION_PROBE_SHA,
     );
     assert.equal(
-      sha256(readFileSync(path.join(ROOT, "docs/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
+      sha256(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),
       PAGE_DIAGNOSTIC_SHA,
     );
   });

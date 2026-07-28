@@ -2,7 +2,7 @@
  * Sprint 11E Phase 2D.1D — progressive Upstash live diagnostic entry.
  * Run: npm run test:headless-upstash-progressive
  * Gate: HEADLESS_UPSTASH_QA_PROGRESSIVE=1
- * Never overwrites docs/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.
+ * Never overwrites docs/evidence/headless/current/HEADLESS_11E_UPSTASH_LIVE_EVIDENCE.md.
  */
 
 import { runUpstashProgressiveHarness } from "../upstash-live/run-upstash-progressive-harness";

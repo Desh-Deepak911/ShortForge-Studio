@@ -14,7 +14,7 @@ import {
 import { emptyPromotionDiagnosticFields } from "./promotion-diagnostic";
 
 export const NEON_PROMOTION_PROBE_EVIDENCE_RELATIVE_PATH =
-  "docs/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.md";
+  "docs/evidence/headless/current/HEADLESS_11E_NEON_PROMOTION_PROBE_2B2D3.md";
 
 export function defaultNeonPromotionProbeEvidencePath(
   cwd: string = process.cwd(),

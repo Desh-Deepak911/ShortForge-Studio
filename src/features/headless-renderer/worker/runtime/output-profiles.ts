@@ -139,7 +139,7 @@ const ARCH_RENDER_MS = ARCH_CONTENT_MS + HEADLESS_ACCEPTED_EXPORT_END_BUFFER_MS;
 
 /**
  * Canonical matrix. Duration ceilings require representative evidence
- * (see docs/HEADLESS_11D_PHASE3_OUTPUT_PROFILES.md).
+ * (see docs/architecture/headless/HEADLESS_11D_PHASE3_OUTPUT_PROFILES.md).
  */
 export const HEADLESS_OUTPUT_PROFILES: Readonly<
   Record<HeadlessOutputProfileId, HeadlessOutputProfile>
