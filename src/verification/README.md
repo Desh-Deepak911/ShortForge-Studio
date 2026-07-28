@@ -16,7 +16,15 @@ modules — it is never imported by production routes.
 | `drafts/` | Draft persistence and reload |
 | `editor/`, `ui/` | Editor behavior and route-level UI contracts |
 | `export/` | Browser/export manifest, timing, media, artifact, and parity checks |
-| `headless-renderer/` | Control plane, worker, storage, hosted probes, and capacity certification |
+| `headless-renderer/` | Headless control plane, worker, storage, queue, evidence, and hosted probes |
+| `headless-renderer/contracts/` | Render/worker/manifest/profile/schema compatibility authorities |
+| `headless-renderer/execution/` | Claimed-render, Chromium, page bootstrap, FFmpeg, and frame execution |
+| `headless-renderer/control-plane/` | Job lifecycle, promotion, CAS, terminalization, and ownership control |
+| `headless-renderer/storage/` | R2, owned objects, artifact binding, upload/finalization, and cleanup |
+| `headless-renderer/queue/` | Upstash delivery, dispatch outbox, enqueueing, retry, and DLQ |
+| `headless-renderer/evidence/` | Evidence writing/parsing, telemetry, postmortem, and observer attribution |
+| `headless-renderer/platform/` | Fly staging, hosted worker packaging, import boundaries, and product integration |
+| `headless-renderer/support/` | Shared headless verification fixtures and assertion helpers |
 | `story/retention/` | Retention planning and production integration |
 | `story/hook/` | Hook planning, validation, streaming, safety, and persistence |
 | `intelligence/research/` | Research grounding, script context, and research-layer QA |
@@ -27,12 +35,20 @@ modules — it is never imported by production routes.
 | `timeline/` | Shared timeline and playback foundations |
 | `canonical/`, `utils/` | Shared verification helpers and canonical fixtures |
 
-## Structure note (Batch 1)
+## Structure note (Batch 1 — story/intelligence)
 
 This batch changed file ownership and discoverability only. Test behavior and production
 behavior remain unchanged. Existing `test:*` package-script names remain the public
-verification entrypoints. Co-located feature verification and headless-renderer decomposition
-are deferred.
+verification entrypoints. Co-located feature verification remains deferred.
+
+## Structure note (Batch 2 — headless-renderer domains)
+
+Flat headless verification files were grouped into domain-owned subdirectories
+(`contracts/`, `execution/`, `control-plane/`, `storage/`, `queue/`, `evidence/`,
+`platform/`, `support/`). Mature provider subtrees (`fly-render-live/`, `neon-live/`,
+`upstash-live/`, `fly-render-4k-capacity/`, and related nested harnesses) remain in place.
+Five genuinely cross-domain files remain flat pending a later ownership decision. Existing
+`test:*` script names remain the stable public entrypoints.
 
 ## File conventions
 
