@@ -25,6 +25,7 @@ modules — it is never imported by production routes.
 | `headless-renderer/evidence/` | Evidence writing/parsing, telemetry, postmortem, and observer attribution |
 | `headless-renderer/platform/` | Fly staging, hosted worker packaging, import boundaries, and product integration |
 | `headless-renderer/support/` | Shared headless verification fixtures and assertion helpers |
+| `features/` | Mirrored feature-domain verification (see structure note below) |
 | `story/retention/` | Retention planning and production integration |
 | `story/hook/` | Hook planning, validation, streaming, safety, and persistence |
 | `intelligence/research/` | Research grounding, script context, and research-layer QA |
@@ -47,8 +48,19 @@ Flat headless verification files were grouped into domain-owned subdirectories
 (`contracts/`, `execution/`, `control-plane/`, `storage/`, `queue/`, `evidence/`,
 `platform/`, `support/`). Mature provider subtrees (`fly-render-live/`, `neon-live/`,
 `upstash-live/`, `fly-render-4k-capacity/`, and related nested harnesses) remain in place.
-Five genuinely cross-domain files remain flat pending a later ownership decision. Existing
+Five genuinely cross-domain files remained flat pending a later ownership decision. Existing
 `test:*` script names remain the stable public entrypoints.
+
+## Structure note (Batch 3 — feature verification mirror)
+
+Co-located `src/features/**/*.verify.ts` files that are safe to centralize now live under
+`src/verification/features/` with the same path beneath `src/features/`. Production runtime
+code remains in `src/features/`; verification code imports production modules but is not
+imported by production routes. Package-script names are unchanged — only target paths were
+updated. Runtime-coupled exceptions (none in this batch) would remain co-located under
+`src/features/`. The five deferred flat headless-renderer root tests from Batch 2 were
+classified into domain owners; the headless-renderer root now contains no unclassified flat
+`*.verify.ts` files.
 
 ## File conventions
 
