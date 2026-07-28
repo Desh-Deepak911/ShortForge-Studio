@@ -35,6 +35,7 @@ import {
 } from "./verify-r2-owned-object";
 import { stableHeadlessDeliveryId } from "./stable-delivery-id";
 import { dispatchRenderOutboxIntentOnce } from "./dispatch-render-outbox";
+import { terminalizeProvisionalMaterializationRejection } from "./terminalize-provisional-materialization-rejection";
 
 export type TrustedVerifyPromotionOutcomeKind =
   | "verified_waiting_for_coverage"
@@ -387,13 +388,23 @@ export async function executeTrustedVerifyPromotion(
         reasonId: code,
       });
     }
+    const terminalized =
+      await terminalizeProvisionalMaterializationRejection({
+        jobStore: input.jobStore,
+        jobId,
+        ownerId: input.ownerId,
+        nowMs: input.nowMs,
+      });
     return outcome({
       jobId,
       objectId,
       attempt: null,
       deliveryId: null,
       kind: "materialization_rejected",
-      reasonId: code,
+      reasonId:
+        terminalized === "failed" || terminalized === "already_terminal"
+          ? code
+          : "materialization_terminalization_unconfirmed",
     });
   }
 

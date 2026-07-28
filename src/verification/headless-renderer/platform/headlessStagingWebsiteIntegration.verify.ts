@@ -110,6 +110,35 @@ await test("server product view is accepted by the browser validator", () => {
   assert.equal(validated.cancelAccepted, true);
 });
 
+await test("failed provisional materialization exits verifying UI safely", () => {
+  const mapped = toHeadlessProductJobViewFromStore({
+    stage: "provisional",
+    jobId: "22222222-2222-4222-8222-222222222222",
+    state: "failed",
+    createdAtMs: 1,
+    updatedAtMs: 2,
+    progress: null,
+    terminalReason: {
+      reasonId: "INVALID_MANIFEST",
+      retryable: false,
+    },
+    requestedRendererProfile: {
+      resolution: "4k",
+      format: "webm",
+      fps: 30,
+      quality: "high",
+    },
+  } as never);
+  const validated = validateHeadlessPublicJobView(mapped);
+  assert.ok(validated);
+  assert.equal(validated.state, "failed");
+  assert.equal(validated.cancelAccepted, false);
+  assert.deepEqual(validated.terminalReason, {
+    reasonId: "INVALID_MANIFEST",
+    retryable: false,
+  });
+});
+
 await test("browser owned-upload adapter PUTs then completes without exposing providers", async () => {
   const calls: Array<{ url: string; method: string }> = [];
   const view = {
