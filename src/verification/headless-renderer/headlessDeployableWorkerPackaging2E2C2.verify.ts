@@ -85,11 +85,15 @@ function scriptedExecutor(
   handler: (text: string) => { rows: unknown[]; rowCount: number },
 ): HeadlessSqlExecutor {
   const client: HeadlessSqlClient = {
-    query: async (text) => handler(text),
+    query: async <Row extends Record<string, unknown>>(text: string) =>
+      handler(text) as { rows: Row[]; rowCount: number },
   };
   return {
-    withClient: async (fn) => fn(client),
-    withTransaction: async (fn) => fn(client),
+    withClient: async <T>(fn: (client: HeadlessSqlClient) => Promise<T>) =>
+      fn(client),
+    withTransaction: async <T>(
+      fn: (client: HeadlessSqlClient) => Promise<T>,
+    ) => fn(client),
   };
 }
 
@@ -266,7 +270,8 @@ async function main() {
         cwd: path.join(DIST),
         encoding: "utf8",
         env: {
-          PATH: process.env.PATH,
+          NODE_ENV: "test",
+          PATH: process.env.PATH ?? "",
           HEADLESS_WORKER_MODE: "render",
           HEADLESS_ENV_NAME: "staging",
         },

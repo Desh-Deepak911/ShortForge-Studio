@@ -300,10 +300,14 @@ test("subtitleText edits change preview subtitle source", () => {
 
   const before = getDisplayCaption({
     captionMode: "subtitles",
+    subtitle: "Original subtitle chunk one.",
+    narration: "",
     subtitleText: "Original subtitle chunk one.",
   });
   const after = getDisplayCaption({
     captionMode: "subtitles",
+    subtitle: "Rewritten subtitle chunk one.",
+    narration: "",
     subtitleText: "Rewritten subtitle chunk one.",
   });
   assert.notEqual(before, after);

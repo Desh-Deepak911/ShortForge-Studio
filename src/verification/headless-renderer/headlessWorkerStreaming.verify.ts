@@ -432,7 +432,6 @@ async function main() {
           processOnce: result.value,
           state: stored.value.canonicalJob!.state,
           terminalReason: stored.value.canonicalJob!.terminalReason,
-          terminalMessage: stored.value.canonicalJob!.terminalMessage,
         }),
       );
       assert.equal(stored.value.canonicalJob!.state, "succeeded");

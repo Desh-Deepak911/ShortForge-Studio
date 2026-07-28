@@ -31,7 +31,7 @@ require.cache[require.resolve("server-only")] = {
   filename: require.resolve("server-only"),
   loaded: true,
   exports: {},
-};
+} as unknown as NodeJS.Module;
 
 const root = process.cwd();
 const DEFAULT_TARGET_DURATION_SECONDS = 30;
@@ -220,7 +220,7 @@ function assertWordBudgetRespected(graphContext: GraphContext): string[] {
         warnings: graphContext.warnings,
         confidence: graphContext.confidence,
         provenance: graphContext.provenance,
-      },
+      } as unknown as Parameters<typeof resolveResearchPromptText>[0]["assembled"],
       graphContext,
     }).promptText;
 

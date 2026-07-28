@@ -39,6 +39,7 @@ import {
 import { resolveSystemChromeExecutable } from "@/features/headless-renderer/worker/chromium/chrome-executable";
 import { buildAttributionFromTerminalJob } from "./fly-render-live/claim-correlation-authority";
 import { renderFlyRenderExecutionProbeEvidenceMarkdown } from "./fly-render-live/claimed-render-execution-probe-evidence";
+import { buildHeadlessFlyRenderLiveSmokeWorkloadEvidence } from "./fly-render-live/smoke-workload";
 
 const DIST = join(process.cwd(), "dist/headless-worker");
 let passed = 0;
@@ -354,18 +355,13 @@ async function main() {
       }),
       cleanupStatus: "ok",
       executionStages: [{ stageId: "hosted.chromium_execution", status: "FAIL" }],
-      smokeWorkload: {
-        profileId: "720p-webm-30",
-        contentDurationMs: 2_000,
-        pollTimeoutMs: 180_000,
-        claims4kCapacity: false,
-      },
+      smokeWorkload: buildHeadlessFlyRenderLiveSmokeWorkloadEvidence(),
       resourceObservation: null,
       executionDurationMs: 900,
       artifactAuthority: null,
       acceptedImageDigestSha256: null,
       notes: ["real-shape fixture"],
-    });
+    } as never);
     assert.match(markdown, /source_artifact_presence_class=present_readable/);
     assert.equal(markdown.includes("/tmp/"), false);
     assert.equal(markdown.includes("sha256:"), false);

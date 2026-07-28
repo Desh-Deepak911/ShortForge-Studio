@@ -307,9 +307,9 @@ async function main() {
       });
       assert.ok(failingWriter != null);
       if (failingWriter == null) return;
-      failingWriter.xaddDlq = async () =>
-        cpFail("INTERNAL_ERROR", "forced DLQ write failure");
-      failingWriter.moveToDlq = async (i) => failingWriter.xaddDlq(i);
+      failingWriter.xaddDlq = (async () =>
+        cpFail("INTERNAL_ERROR", "forced DLQ write failure")) as never;
+      failingWriter.moveToDlq = ((i: never) => failingWriter.xaddDlq(i)) as never;
       const bound = createGroupBoundStreamQueue({
         restProducer: scoped.restProducer,
         tcpConsumer: stream,
@@ -379,9 +379,9 @@ async function main() {
       });
       assert.ok(failingWriter != null);
       if (failingWriter == null) return;
-      failingWriter.xaddDlq = async () =>
-        cpFail("INTERNAL_ERROR", "forced DLQ write failure");
-      failingWriter.moveToDlq = async (i) => failingWriter.xaddDlq(i);
+      failingWriter.xaddDlq = (async () =>
+        cpFail("INTERNAL_ERROR", "forced DLQ write failure")) as never;
+      failingWriter.moveToDlq = ((i: never) => failingWriter.xaddDlq(i)) as never;
       const bound = createGroupBoundStreamQueue({
         restProducer: scoped.restProducer,
         tcpConsumer: stream,
@@ -561,7 +561,7 @@ async function main() {
       // Bounded retry policy: ACK-pending leaves source pending → redelivery
       // may duplicate DLQ under at-least-once (documented; not exactly-once).
       assert.equal(
-        DLQ_ATTRIBUTION_REASON_IDS.includes("exactly_once_dlq"),
+        DLQ_ATTRIBUTION_REASON_IDS.includes("exactly_once_dlq" as never),
         false,
       );
     },

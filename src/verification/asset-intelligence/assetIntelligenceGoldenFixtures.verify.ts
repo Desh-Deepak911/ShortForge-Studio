@@ -133,9 +133,11 @@ function validateFixture(fixture: AssetIntelligenceGoldenFixture): void {
 
   assert.ok(input.mappedScenes && input.mappedScenes.length > 0, `${fixture.name}: missing mapped scenes`);
   for (let index = 0; index < input.mappedScenes.length; index += 1) {
-    const scene = input.mappedScenes[index];
+    const scene: NonNullable<AssetIntelligenceInput["mappedScenes"]>[number] =
+      input.mappedScenes[index]!;
     const plan = result.sceneAssetPlans[index];
-    const expectedLegacy = scene.assetSearchQuery?.trim() || scene.mediaHints.searchQuery?.trim();
+    const expectedLegacy: string | undefined =
+      scene.assetSearchQuery?.trim() || scene.mediaHints.searchQuery?.trim();
     if (expectedLegacy) {
       assert.equal(
         plan.legacySearchQuery,

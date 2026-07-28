@@ -615,10 +615,6 @@ async function main() {
       enq.value.streamId,
     );
     assert.equal(failProbe.ok, false);
-    assert.notEqual(
-      failProbe.ok === true && failProbe.pending === true,
-      true,
-    );
   });
 
   await test("QA and production groups remain independent", async () => {

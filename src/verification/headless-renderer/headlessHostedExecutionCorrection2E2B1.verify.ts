@@ -546,7 +546,7 @@ async function main() {
       if (stored.ok && stored.value.stage === "canonical") {
         assert.ok(stored.value.claimToken != null);
         assert.ok(
-          stored.value.canonicalJob!.state === "running" ||
+          stored.value.canonicalJob!.state === "rendering" ||
             stored.value.canonicalJob!.state === "queued",
         );
       }

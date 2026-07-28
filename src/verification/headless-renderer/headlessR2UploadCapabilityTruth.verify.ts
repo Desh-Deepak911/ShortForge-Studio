@@ -84,10 +84,11 @@ async function main() {
     assert.equal(issued.ok, true);
     if (!issued.ok || !captured) return;
 
-    assert.equal(captured.bucket, "assets-bucket");
-    assert.equal(captured.objectKey, OBJECT_KEY);
-    assert.equal(captured.contentType, "application/json");
-    assert.equal(captured.contentLength, 42);
+    const observed = captured as unknown as Parameters<CreatePresignedPutUrl>[0];
+    assert.equal(observed.bucket, "assets-bucket");
+    assert.equal(observed.objectKey, OBJECT_KEY);
+    assert.equal(observed.contentType, "application/json");
+    assert.equal(observed.contentLength, 42);
     assert.equal(issued.value.requiredHeaders["Content-Type"], "application/json");
     assert.equal(issued.value.requiredHeaders["Content-Length"], "42");
   });

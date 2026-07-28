@@ -22,7 +22,7 @@ require.cache[require.resolve("server-only")] = {
   filename: require.resolve("server-only"),
   loaded: true,
   exports: {},
-};
+} as unknown as NodeJS.Module;
 
 const root = process.cwd();
 

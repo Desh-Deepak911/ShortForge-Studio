@@ -78,7 +78,7 @@ function buildCanonicalJob(input: {
     claimToken: null,
     claimedAtMs: null,
     artifactObjectBinding: null,
-  } as HeadlessCanonicalStoredJobRecord;
+  } as unknown as HeadlessCanonicalStoredJobRecord;
 }
 
 function buildOutboxRow(input: {
@@ -286,7 +286,8 @@ async function main() {
       operationId: "op_a",
     });
     const row = buildOutboxRow({ job, state: "claimed" });
-    row.claimedAtMs = row.updatedAtMs + 5_000;
+    (row as { claimedAtMs: number | null }).claimedAtMs =
+      row.updatedAtMs + 5_000;
     const obs = classifyMonotonicDispatchOutboxIntentObservation({ row, job });
     assert.equal(obs.ok, false);
     if (!obs.ok) {
@@ -450,7 +451,11 @@ async function main() {
 
   await test("cleanup after failure leaves no session anchor", async () => {
     const ctx = buildJobCreateCtx();
-    ctx.session = emptyFlyRenderLiveSession();
+    (
+      ctx as typeof ctx & {
+        session: ReturnType<typeof emptyFlyRenderLiveSession>;
+      }
+    ).session = emptyFlyRenderLiveSession();
     const outbox = ctx.dispatchOutbox as MemoryHeadlessRenderDispatchOutboxAdapter;
     outbox.testingUnsafeDelete("unused");
     const captured = await captureMonotonicDispatchOutboxObservation({

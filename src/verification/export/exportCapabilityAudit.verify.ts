@@ -112,7 +112,7 @@ function main() {
     assert.equal(isExportFormat("webp"), false);
     assert.equal(isExportFormat("gif"), false);
     const settings = normalizeExportSettings(
-      { format: "webp" } as Partial<{ format: "webm" | "mp4" }>,
+      { format: "webp" } as unknown as Partial<{ format: "webm" | "mp4" }>,
       "Test",
     );
     // invalid formats fall back to default webm — must not become webp

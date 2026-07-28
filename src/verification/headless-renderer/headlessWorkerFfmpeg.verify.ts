@@ -35,7 +35,7 @@ async function main() {
     // 15 frames @ 30fps = 0.5s
     for (let i = 0; i < 15; i++) {
       const out = join(framesDir, `frame_${String(i).padStart(6, "0")}.png`);
-      const r = spawnSync(
+      const r: { status: number | null } = spawnSync(
         bins.ffmpegExecutable,
         [
           "-y",

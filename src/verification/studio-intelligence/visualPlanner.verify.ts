@@ -192,9 +192,12 @@ test("search query uses topic and entities when provided", () => {
 
   const enriched = enrichBlueprintsWithVisuals(makeCollection([blueprint]), input).blueprints[0];
 
-  assert.ok(enriched?.asset.searchQuery.includes("haaland"));
-  assert.ok(enriched?.asset.searchQuery.includes("erling"));
-  assert.ok(enriched?.asset.fallbackQuery.includes("haaland") || enriched?.asset.fallbackQuery.includes("title race"));
+  assert.ok(enriched?.asset.searchQuery?.includes("haaland"));
+  assert.ok(enriched?.asset.searchQuery?.includes("erling"));
+  assert.ok(
+    enriched?.asset.fallbackQuery?.includes("haaland") ||
+      enriched?.asset.fallbackQuery?.includes("title race"),
+  );
 });
 
 test("enrichment does not mutate original collection", () => {

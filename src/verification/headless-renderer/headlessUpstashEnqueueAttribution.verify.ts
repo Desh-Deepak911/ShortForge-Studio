@@ -179,7 +179,7 @@ async function main() {
         ok: false as const,
         issues: [
           {
-            code: "STORAGE_UNAVAILABLE" as const,
+            code: "CONFIGURATION_UNAVAILABLE" as const,
             message: "injected",
           },
         ],

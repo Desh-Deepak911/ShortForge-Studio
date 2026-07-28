@@ -219,7 +219,10 @@ async function main() {
     const result = await runPromise;
     assert.equal(hookCalls, 1);
     assert.equal(seenJobId, fx.record.jobId);
-    assert.ok(typeof seenToken === "string" && seenToken.length > 0);
+    assert.ok(
+      typeof seenToken === "string" &&
+        (seenToken as unknown as string).length > 0,
+    );
     assert.equal(result.exitCode, 0);
   });
 
@@ -301,13 +304,13 @@ async function main() {
     let resolveCount = 0;
     let uploadCount = 0;
     const baseStorage = fx.stack.storage;
-    const trackingStorage: HeadlessStoragePort = {
+    const trackingStorage = {
       ...baseStorage,
-      createUploadSession: async (input) => {
+      createUploadSession: async (input: never) => {
         uploadCount += 1;
         return baseStorage.createUploadSession(input);
       },
-    };
+    } as unknown as HeadlessStoragePort;
     const result = await executeClaimedRender({
       claimedRecord: claimed.claimedRecord,
       claimToken: "claim_forged_token",

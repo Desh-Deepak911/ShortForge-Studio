@@ -17,7 +17,7 @@ require.cache[require.resolve("server-only")] = {
   filename: require.resolve("server-only"),
   loaded: true,
   exports: {},
-};
+} as unknown as NodeJS.Module;
 
 function test(name: string, fn: () => void | Promise<void>) {
   return Promise.resolve(fn()).then(
@@ -43,6 +43,8 @@ const assembled: AssembledContext = {
     intent: "ranked_list",
     confidence: "high",
     confidencePercent: 90,
+    confidenceScore: 0.9,
+    matchedPatterns: ["ranked-list"],
     reasoning: "test",
     topic: {
       competitionWords: [],

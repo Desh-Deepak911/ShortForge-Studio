@@ -26,6 +26,7 @@ import { materializeOwnedAssets } from "@/features/headless-renderer/worker/asse
 import { createHeadlessWorkerWorkspace } from "@/features/headless-renderer/worker/assets/workspace";
 import {
   resolveProviderBackedSourceBinding,
+  type SourceBindingAttributionSnapshot,
 } from "@/features/headless-renderer/worker/runtime/source-binding-resolution";
 import { buildHeadlessFlyRenderLiveSmokeBoundary } from "./fly-render-live/smoke-workload";
 import { deriveFlyRenderJobCreateStagingPayloads } from "./fly-render-live/job-create-fixture-identity";
@@ -112,7 +113,7 @@ async function buildIdentityFixture(): Promise<IdentityFixture> {
   const fake = new FakeS3Client();
   const ownedObjectStore = new MemoryHeadlessOwnedObjectStoreAdapter();
   const jobStore = new MemoryHeadlessJobStoreAdapter();
-  const ctx: R2LiveMatrixContext = {
+  const ctx = {
     runId,
     ownerId: draftCtx.ownerId,
     projectId: draftCtx.projectId,
@@ -128,7 +129,7 @@ async function buildIdentityFixture(): Promise<IdentityFixture> {
     createdJobIds: [],
     createdProjectIds: [],
     createdR2Locators: [],
-  };
+  } as unknown as R2LiveMatrixContext;
 
   const staged = await runOwnedObjectStagingRecordChain({
     ctx,
@@ -233,7 +234,7 @@ async function main() {
     const payloads = deriveFlyRenderJobCreateStagingPayloads(fixture.draftCtx);
     const driftedBundle = alignBundleToFinalizedStaging({
       bundle: fixture.unalignedBundle,
-      manifest: fixture.draftCtx.manifest,
+      manifest: fixture.draftCtx.manifest as unknown as import("@/features/export/domain").ExportManifestV3,
       staged: fixture.staged,
       payloads,
     });
@@ -260,7 +261,11 @@ async function main() {
       fixture.ownerId,
       CLOCK,
     );
-    const attribution = storage.consumeLastSourceBindingAttribution();
+    const attribution = (
+      storage as typeof storage & {
+        consumeLastSourceBindingAttribution(): SourceBindingAttributionSnapshot | null;
+      }
+    ).consumeLastSourceBindingAttribution();
     assert.equal(opened.ok, false);
     assert.equal(attribution?.sourceBindingSubstage, "owned_object_load");
     assert.equal(attribution?.sourceBindingResultClass, "record_missing");

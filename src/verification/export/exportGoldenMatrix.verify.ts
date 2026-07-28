@@ -101,6 +101,7 @@ function mkScene(
       source: "upload" as const,
       transform: { x: 0, y: 0, scale: 1, rotation: 0 },
       motion: {
+        version: 1 as const,
         preset: "slow-zoom-in" as const,
         intensity: 0.3,
         startMs: 0,
@@ -155,11 +156,12 @@ function buildStory(input: {
       ? {
           backgroundMusic: {
             enabled: true,
-            url: "https://example.com/music.mp3",
+            source: "upload" as const,
+            fileUrl: "https://example.com/music.mp3",
             volume: 0.35,
             fadeIn: true,
             fadeOut: true,
-            ducking: true,
+            duckingEnabled: true,
           },
         }
       : {}),
@@ -209,7 +211,7 @@ test("Golden B — Voice WebM mixed image/video", () => {
   const manifest = buildExportManifest({
     story,
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   assertGoldenBasics(manifest, "webm");
   assert.ok(manifest.scenes.some((s) => s.media.type === "video"));
@@ -227,7 +229,7 @@ test("Golden C — Voice + music WebM ducking/fades", () => {
   const manifest = buildExportManifest({
     story,
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   const withMusic =
     manifest.audio.music != null
@@ -287,7 +289,7 @@ test("Golden E — Voice MP4", () => {
   const manifest = buildExportManifest({
     story,
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   assertGoldenBasics(manifest, "mp4");
   const prepared = prepareExportAudio(
@@ -321,7 +323,7 @@ test("Golden F — Voice + music MP4", () => {
   const manifest = buildExportManifest({
     story,
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   assert.equal(resolveExportFormatId(manifest), "mp4");
   assert.equal(resolveExportFormatAdapter(manifest).codecPolicy.audioCodec, "aac");
@@ -342,7 +344,7 @@ test("Golden G — Full mixed-media near end buffer", () => {
   const manifest = buildExportManifest({
     story,
     environment: CAPABLE_ENV,
-    options: { audioMode: "with-voice" },
+    audioMode: "with-voice",
   });
   assertGoldenBasics(manifest, "webm");
   const snap = resolveExportEndOfProjectSnapshot(manifest);

@@ -325,8 +325,26 @@ test("15. image motion defaults to none/subtle and patches independently of tran
   assert.deepEqual(reset.imageMotion, { type: "zoom-in", intensity: "subtle" });
 
   const scenes: FootieScene[] = [
-    { ...sampleScene({ url: "blob:motion-a", scale: 1, fitMode: "fit" }), id: "scene-a" },
-    { ...sampleScene({ url: "blob:motion-b", scale: 1, fitMode: "fit" }), id: "scene-b" },
+    {
+      ...sampleScene({
+        url: "blob:motion-a",
+        x: 0,
+        y: 0,
+        scale: 1,
+        fitMode: "fit",
+      }),
+      id: "scene-a",
+    },
+    {
+      ...sampleScene({
+        url: "blob:motion-b",
+        x: 0,
+        y: 0,
+        scale: 1,
+        fitMode: "fit",
+      }),
+      id: "scene-b",
+    },
   ];
   const updated = updateSceneImageSettings(scenes, "scene-b", {
     imageMotion: { type: "zoom-out", intensity: "strong" },

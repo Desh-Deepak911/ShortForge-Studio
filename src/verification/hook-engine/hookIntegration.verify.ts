@@ -1403,7 +1403,7 @@ await runTests("7D.2 final integration coherence", [
         "lineup",
         "manual",
         "forbidden",
-      ]) {
+      ] as const) {
         assert.ok(kinds.has(required), `missing ${required}`);
       }
 

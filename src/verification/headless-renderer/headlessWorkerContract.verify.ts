@@ -65,7 +65,11 @@ function targetFor(
 ) {
   const resolved = resolveHeadlessRenderTarget(profile);
   assert.equal(resolved.ok, true);
-  if (!resolved.ok) throw new Error(resolved.message);
+  if (!resolved.ok) {
+    throw new Error(
+      String((resolved as { message?: unknown }).message ?? "target failed"),
+    );
+  }
   return resolved.target;
 }
 
@@ -536,7 +540,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(badCodec.ok, false);
 
@@ -584,7 +588,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(wrongContainer.ok, false);
 
@@ -635,7 +639,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(missingAudioFacts.ok, false);
 
@@ -677,7 +681,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(buildMismatch.ok, false);
   });
@@ -783,7 +787,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(built.ok, true, built.ok ? "" : built.message);
     if (!built.ok) return;
@@ -1083,7 +1087,7 @@ async function main() {
     mkdir(framesDir, { recursive: true });
     for (let i = 0; i < 8; i++) {
       const out = pathJoin(framesDir, `frame_${String(i).padStart(6, "0")}.png`);
-      const r = spawnSync(
+      const r: { status: number | null } = spawnSync(
         bins.ffmpegExecutable,
         [
           "-y",
@@ -1270,7 +1274,7 @@ async function main() {
           rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
           audioChannels: null,
           audioSampleRateHz: null,
-        },
+        } as never,
       });
       assert.equal(built.ok, false);
     }
@@ -1318,7 +1322,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(ok.ok, true);
     if (!ok.ok) return;

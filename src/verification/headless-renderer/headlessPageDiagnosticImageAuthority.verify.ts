@@ -251,13 +251,13 @@ async function main() {
         byteLength: 100,
         digestSha256: PRODUCTION_PAGE_SHA,
       }),
-      renderContract: async () => ({
+      renderContract: (async () => ({
         ok: false,
         executionSubstage: "page_contract_ready",
         pageFailureReason: "page_contract_missing",
         pageResponseClass: "missing_api",
         message: "scrubbed",
-      }),
+      })) as never,
     });
     assert.equal(result.failedSubstage, "page_contract_ready");
     assert.equal(result.reasonId, "contract_global_missing");
@@ -274,13 +274,13 @@ async function main() {
         byteLength: 100,
         digestSha256: PRODUCTION_PAGE_SHA,
       }),
-      renderContract: async () => ({
+      renderContract: (async () => ({
         ok: false,
         executionSubstage: "page_contract_ready",
         pageFailureReason: "page_contract_version_mismatch",
         pageResponseClass: "invalid_payload",
         message: "scrubbed",
-      }),
+      })) as never,
     });
     assert.equal(result.reasonId, "contract_version_mismatch");
   });
@@ -296,13 +296,13 @@ async function main() {
         byteLength: 100,
         digestSha256: PRODUCTION_PAGE_SHA,
       }),
-      renderContract: async () => ({
+      renderContract: (async () => ({
         ok: false,
         executionSubstage: "page_request_submit",
         pageFailureReason: "page_request_rejected",
         pageResponseClass: "rejected",
         message: "scrubbed",
-      }),
+      })) as never,
     });
     assert.equal(result.failedSubstage, "frame_request");
     assert.equal(result.reasonId, "frame_request_failed");
@@ -319,13 +319,13 @@ async function main() {
         byteLength: 100,
         digestSha256: PRODUCTION_PAGE_SHA,
       }),
-      renderContract: async () => ({
+      renderContract: (async () => ({
         ok: false,
         executionSubstage: "page_response_validate",
         pageFailureReason: "page_response_invalid",
         pageResponseClass: "invalid_payload",
         message: "scrubbed",
-      }),
+      })) as never,
     });
     assert.equal(result.reasonId, "png_response_invalid");
   });
@@ -341,7 +341,7 @@ async function main() {
       scriptLoadedClass: "loaded",
       contractGlobalClass: "missing",
       contractVersionClass: "not_applicable",
-      responseClass: "missing_api",
+      responseClass: "missing_payload",
       chromiumExitClass: "failed",
       boundedDurationMs: 120,
       cleanupStatus: "ok",

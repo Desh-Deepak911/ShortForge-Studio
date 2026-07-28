@@ -66,9 +66,10 @@ function fixStory(): FootieScript {
         source: "upload",
         transform: { x: 10, y: -5, scale: 1.2, rotation: 0 },
         motion: {
+          version: 1,
           enabled: true,
           presetId: "zoom-in",
-          easing: "ease_out",
+          easing: "ease-out",
           intensity: 0.8,
         },
       },
@@ -317,7 +318,7 @@ test("caption layout + opacity survive manifest freeze unchanged", () => {
   assert.equal(caption!.layout.usesLegacyBottomCenter, false);
   assert.equal(caption!.style.backgroundOpacity, 3);
   assert.equal(caption!.style.textAlign, "left");
-  assert.equal(caption!.layout.offsetX === 0 ? "zero-ok" : "nonzero", "nonzero");
+  assert.equal(Number(caption!.layout.offsetX) === 0 ? "zero-ok" : "nonzero", "nonzero");
 });
 
 test("explicit zero offsets and opacity are preserved (not defaulted away)", () => {
@@ -384,8 +385,12 @@ test("v4 freezes image/video visual adjustments into fingerprinted media", () =>
   assert.equal(manifest.rendererContractVersion, "9D");
   assert.equal(manifest.scenes[0]!.media.type, "image");
   assert.equal(manifest.scenes[0]!.media.visualAdjustments?.contrast, 130);
+  const timelineMedia = manifest.scenes[0]!.mediaTimeline.items[0]!.media;
+  assert.notEqual(timelineMedia.type, "placeholder");
   assert.equal(
-    manifest.scenes[0]!.mediaTimeline.items[0]!.media.visualAdjustments?.shadowBlur,
+    timelineMedia.type === "placeholder"
+      ? undefined
+      : timelineMedia.visualAdjustments?.shadowBlur,
     18,
   );
   assert.equal(validateExportManifest(manifest).ok, true);
@@ -400,6 +405,7 @@ test("v4 freezes image/video visual adjustments into fingerprinted media", () =>
   assert.notEqual(buildExportManifestFingerprint({
     version: corrupted.version,
     rendererContractVersion: corrupted.rendererContractVersion,
+    manifestId: corrupted.manifestId,
     createdAt: corrupted.createdAt,
     project: corrupted.project,
     output: corrupted.output,

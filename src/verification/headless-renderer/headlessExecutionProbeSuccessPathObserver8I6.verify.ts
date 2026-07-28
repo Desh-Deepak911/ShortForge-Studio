@@ -171,7 +171,9 @@ async function main() {
       ownedObjectStore: {
         listByJobIdAndOwner: async () => ({ ok: true, value: [] }),
       },
-    } as never;
+    } as unknown as Parameters<
+      typeof observeArtifactBindingCoherenceDurable
+    >[0];
     const result = await observeArtifactBindingCoherenceDurable(ctx, {
       providerFinalizationProven: true,
       bindingValidationCompleted: true,
@@ -275,8 +277,12 @@ async function main() {
       jobSucceededCasCompleted: true,
     });
     assert.equal(result.ok, true);
-    assert.equal(ctx.session.artifactObjectKey, "artifact/key");
-    assert.equal(ctx.createdObjectIds.length, 1);
+    const observed = ctx as unknown as {
+      session: { artifactObjectKey: string | null };
+      createdObjectIds: string[];
+    };
+    assert.equal(observed.session.artifactObjectKey, "artifact/key");
+    assert.equal(observed.createdObjectIds.length, 1);
   });
 
   console.log(`\n${passed} passed\n`);

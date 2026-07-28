@@ -107,9 +107,13 @@ async function main() {
     if (!issued.ok) return;
     assert.equal(issued.value.putUrl, "https://signed.example/put-only-at-issuance");
     assert.equal(issued.value.requiredHeaders["Content-Length"], "5");
-    assert.equal(captured?.bucket, "assets-bucket");
+    const observed = captured as unknown as {
+      bucket: string;
+      objectKey: string;
+    };
+    assert.equal(observed.bucket, "assets-bucket");
     assert.equal(
-      captured?.objectKey,
+      observed.objectKey,
       "test/staging/assets/manifest/aa/bb/cc/dd/none/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
     );
     // Secret must not appear in issuance result JSON.

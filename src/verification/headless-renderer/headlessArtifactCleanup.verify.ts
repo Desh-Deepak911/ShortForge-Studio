@@ -315,7 +315,7 @@ async function main() {
       assert.equal(intent.ok, true);
       if (!intent.ok) return;
       assert.equal(intent.value.state, "pending");
-      const view = toHeadlessPublicJobView(stored.value.canonicalJob);
+      const view = toHeadlessPublicJobView(stored.value.canonicalJob!);
       const viewJson = JSON.stringify(view);
       assert.equal(viewJson.includes("objectKey"), false);
       assert.equal(viewJson.includes("cleanupId"), false);
@@ -589,7 +589,7 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      const view = toHeadlessPublicJobView(stored.value.canonicalJob);
+      const view = toHeadlessPublicJobView(stored.value.canonicalJob!);
       const blob = JSON.stringify({
         view,
         evidence: result.value.lastEvidence,

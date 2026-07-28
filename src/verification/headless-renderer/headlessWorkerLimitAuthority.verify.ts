@@ -274,7 +274,7 @@ async function main() {
   });
 
   test("13–14. effective limits are detached+frozen; caller mutation isolated", () => {
-    const overrides: Partial<HeadlessWorkerLimits> = {
+    const overrides: { jobTimeoutMs: number } = {
       jobTimeoutMs: 99_000,
     };
     const resolved = resolveEffectiveWorkerLimits({

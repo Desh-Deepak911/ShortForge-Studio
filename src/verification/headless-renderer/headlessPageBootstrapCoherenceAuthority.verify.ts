@@ -110,7 +110,7 @@ async function buildProviderChainFixture() {
       createdJobIds: [],
       createdProjectIds: [],
       createdR2Locators: [],
-    },
+    } as never,
     payloads,
     jobId: draftCtx.jobId,
     operationId: draftCtx.operationId,
@@ -131,7 +131,7 @@ async function buildProviderChainFixture() {
       createdJobIds: [],
       createdProjectIds: [],
       createdR2Locators: [],
-    },
+    } as never,
     staged: staged.staged,
     payloads,
   });
@@ -155,7 +155,11 @@ async function buildProviderChainFixture() {
     expiresAtMs: CLOCK + 7_200_000,
   });
   assert.equal(provisional.ok, true);
-  if (!provisional.ok) throw new Error(provisional.message);
+  if (!provisional.ok) {
+    throw new Error(
+      String((provisional as { message?: unknown }).message ?? "provisional failed"),
+    );
+  }
 
   const created = await jobStore.createProvisionalIfAbsent({
     idempotencyAuthorityKey: draftCtx.draft.idempotencyAuthorityKey,
@@ -181,7 +185,10 @@ async function buildProviderChainFixture() {
   });
   assert.equal(materialized.ok, true);
   if (!materialized.ok) {
-    throw new Error(`${materialized.issues[0]?.code}: ${materialized.issues[0]?.message}`);
+    const issues = (materialized as {
+      issues?: readonly { code?: string; message?: string }[];
+    }).issues;
+    throw new Error(`${issues?.[0]?.code}: ${issues?.[0]?.message}`);
   }
 
   return { draftCtx, materialized, jobStore, ownedObjectStore, io };
@@ -300,7 +307,11 @@ async function main() {
     });
     workspace.cleanup();
     assert.equal(result.ok, true);
-    if (!result.ok) throw new Error(result.message);
+    if (!result.ok) {
+      throw new Error(
+        String((result as { message?: unknown }).message ?? "materialize failed"),
+      );
+    }
     assert.equal(
       result.sourceBindingAttribution.sourceBindingSubstage,
       "binding_resolution_complete",

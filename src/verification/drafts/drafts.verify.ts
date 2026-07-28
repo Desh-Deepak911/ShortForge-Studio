@@ -479,7 +479,7 @@ test("applyVoiceoverToScript preserves script base64 when slice omits audioBase6
 
 test("review storyboard merge and reload keep voiceover for preview and export", () => {
   const persistedBase64 = Buffer.from("review-flow-voiceover").toString("base64");
-  const reviewScript: FootieScript = {
+  const reviewScript = {
     title: "Review Flow",
     narration: "A last-minute winner changes everything.",
     totalDuration: 0,
@@ -488,7 +488,7 @@ test("review storyboard merge and reload keep voiceover for preview and export",
     voiceoverDurationMs: 12_000,
     voiceoverAudioBase64: persistedBase64,
     voiceSettings: { voice: "alloy", speed: 1 },
-  };
+  } as unknown as FootieScript;
 
   const withScenes = syncFootieScript({
     ...reviewScript,
@@ -539,7 +539,7 @@ test("scene image edits preserve persisted voiceover after reload resolution", (
     ],
     voiceoverAudioBase64: persistedBase64,
     voiceoverUrl: "blob:voice",
-  } as FootieScript;
+  } as unknown as FootieScript;
 
   const edited = applySceneImageSettings(script, "1", { scale: 1.2 });
   const draft = normalizeDraft({

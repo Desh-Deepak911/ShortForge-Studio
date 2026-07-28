@@ -74,7 +74,7 @@ export function runEditorWorkspaceRedesignTests(): void {
       normalizeEditorWorkspaceLayout({
         inspectorWidthPx: 9999,
         timelineHeightPx: -10,
-        timelineDensity: "unknown",
+        timelineDensity: "unknown" as never,
       }),
       {
         ...DEFAULT_EDITOR_WORKSPACE_LAYOUT,

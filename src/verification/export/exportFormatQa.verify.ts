@@ -82,10 +82,7 @@ test("4. MP4 export path still has transcode or single-pass MP4 mux", () => {
   assert.match(videoRenderSource, /transcodeForMp4ExportPath/);
   assert.match(videoRenderSource, /resolveExportPath\(exportSettings\)/);
   const mp4Path = resolveExportPath({
-    fileName: "story",
     format: "mp4",
-    quality: "high",
-    resolution: "1080x1920",
   });
   assert.equal(mp4Path.path, "mp4");
   assert.equal(mp4Path.blocked, false);
@@ -101,8 +98,6 @@ test("6. exported file extension matches selected format", () => {
     buildExportDownloadFileName({
       fileName: "my-story",
       format: "webm",
-      quality: "high",
-      resolution: "1080x1920",
     }),
     "my-story.webm",
   );
@@ -110,8 +105,6 @@ test("6. exported file extension matches selected format", () => {
     buildExportDownloadFileName({
       fileName: "my-story",
       format: "mp4",
-      quality: "high",
-      resolution: "1080x1920",
     }),
     "my-story.mp4",
   );
@@ -123,10 +116,7 @@ test("6. exported file extension matches selected format", () => {
 
 test("7. background music does not silently force MP4 on WebM", () => {
   const webmWithMusic = resolveExportPath({
-    fileName: "story",
     format: "webm",
-    quality: "high",
-    resolution: "1080x1920",
   });
   assert.equal(webmWithMusic.format, "webm");
   assert.equal(webmWithMusic.path, "webm");

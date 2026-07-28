@@ -157,11 +157,7 @@ async function main() {
         },
       });
       assert.equal(attributed.ok, true, "expected PASS after post-release delay");
-      if (!attributed.ok) {
-        assert.fail(
-          `stage=${attributed.failureStage} reason=${attributed.failureReasonId}`,
-        );
-      }
+      if (!attributed.ok) return;
       assert.equal(attributed.winnerAction, "claimed_and_acked");
       assert.equal(attributed.peerAction, "acked_duplicate_live");
     },

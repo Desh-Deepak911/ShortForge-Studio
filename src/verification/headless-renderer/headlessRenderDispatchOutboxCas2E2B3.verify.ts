@@ -875,9 +875,10 @@ async function main() {
     });
     assert.equal(seeded.ok, true);
     if (!seeded.ok) return;
+    const seededValue = seeded.value;
 
     const slots = extractRequiredHeadlessSourceSlots(manifest);
-    const expectedSlotClaims = seeded.value.bundle.assets.map((asset) => {
+    const expectedSlotClaims = seededValue.bundle.assets.map((asset) => {
       const slot = slots.find(
         (s) =>
           s.role === asset.sourceIdentity.role &&
@@ -902,19 +903,19 @@ async function main() {
         purpose: "manifest" as const,
         slotKey: null,
         locator: seeded.value.manifestLocator,
-        contentDigestClaim: seeded.value.manifestPayloadDigest,
+        contentDigestClaim: seededValue.manifestPayloadDigest,
         byteLengthClaim: 100,
         mimeTypeClaim: "application/json",
       },
       {
         purpose: "asset_bundle_record" as const,
         slotKey: null,
-        locator: seeded.value.bundleLocator,
+        locator: seededValue.bundleLocator,
         contentDigestClaim: "sha256:" + "cc".repeat(32),
         byteLengthClaim: 200,
         mimeTypeClaim: "application/json",
       },
-      ...seeded.value.bundle.assets.map((asset) => ({
+      ...seededValue.bundle.assets.map((asset) => ({
         purpose: "asset_bytes" as const,
         slotKey: headlessSourceSlotKey({
           role: asset.sourceIdentity.role,
@@ -959,15 +960,15 @@ async function main() {
         },
         requestedRendererBuildId: "renderer-build-1",
         snapshotClaim: {
-          manifestPayloadDigestClaim: seeded.value.manifestPayloadDigest,
-          assetBundleFingerprintClaim: seeded.value.bundle.fingerprint,
+          manifestPayloadDigestClaim: seededValue.manifestPayloadDigest,
+          assetBundleFingerprintClaim: seededValue.bundle.fingerprint,
           expectedSlotClaims,
         },
         stagingObjectRefs: fullStaging,
         expiresAtMs: clock + 3_600_000,
       });
-      assert.equal(materialize.ok, true, materialize.ok ? "" : materialize.message);
-      if (!materialize.ok) throw new Error(materialize.message);
+      assert.equal(materialize.ok, true);
+      if (!materialize.ok) throw new Error(String((materialize as { message?: unknown }).message ?? "materialize failed"));
       const created = await store.createProvisionalIfAbsent({
         idempotencyAuthorityKey: materialize.record.idempotencyAuthorityKey,
         record: materialize.record,
@@ -989,7 +990,7 @@ async function main() {
         clock + 2,
       );
       assert.equal(covered.ok, true);
-      if (!covered.ok) throw new Error(covered.message);
+      if (!covered.ok) throw new Error(String((covered as { message?: unknown }).message ?? "coverage update failed"));
       const cas = await store.compareAndSetProvisional({
         jobId: record.jobId,
         ownerId,
@@ -1004,7 +1005,7 @@ async function main() {
       const requestResult = finalizeHeadlessRenderJobRequest({
         ownership: { ownerId, projectId },
         manifest,
-        assetBundle: seeded.value.bundle,
+        assetBundle: seededValue.bundle,
         rendererProfile: record.requestedRendererProfile,
         rendererBuildId: record.requestedRendererBuildId,
         idempotencyKey: record.creatorIdempotencyKey,

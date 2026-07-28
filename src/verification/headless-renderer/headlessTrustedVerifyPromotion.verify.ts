@@ -91,7 +91,6 @@ const CAPABLE_ENV: Partial<ExportEnvironmentSnapshot> = {
   browserName: "chrome",
   supportsCanvasCaptureStream: true,
   supportsManualCanvasFrameRequest: true,
-  supportsWebAudio: true,
   supportsMediaRecorder: true,
 };
 
@@ -1081,7 +1080,6 @@ async function main() {
           verifiedTargets: [...targets],
           complete: true,
         },
-        storeVersion: 0,
       },
     });
     const materialize = await materializeCanonicalFromFinalizedCoverage({

@@ -38,6 +38,7 @@ function baseImageScene(overrides: Partial<FootieScene> = {}): FootieScene {
     duration: 4,
     durationMs: 4000,
     narration: "Image scene",
+    subtitle: "Image scene",
     image: {
       url: "blob:image",
       x: 0,
@@ -60,6 +61,8 @@ function baseImageScene(overrides: Partial<FootieScene> = {}): FootieScene {
 function baseScript(scene: FootieScene): FootieScript {
   return {
     title: "Framing",
+    narration: "Image scene",
+    totalDuration: scene.duration,
     scenes: [scene],
   };
 }

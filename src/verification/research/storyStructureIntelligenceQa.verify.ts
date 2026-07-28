@@ -48,7 +48,9 @@ function buildMinimalGraphContext(input: {
     queryId: `qa-${input.mode}`,
     topic: input.topic,
     selectedMode: input.mode,
-    primaryEntities: [{ id: "player-1", label: "Test Player", kind: "player" }],
+    primaryEntities: [
+      { nodeId: "test-player", label: "Test Player", kind: "player" },
+    ],
     rankedFacts,
     verifiedFacts: [
       {
@@ -88,11 +90,12 @@ function buildMinimalGraphContext(input: {
     ],
     entitySummaries: [
       {
-        id: "entity-summary-1",
+        nodeId: "test-player",
         label: "Test Player",
         kind: "player",
         lines: ["Leading scorer this season."],
         factIds: ["verified-1"],
+        relatedNodeIds: [],
       },
     ],
     relationshipSummaries: [],

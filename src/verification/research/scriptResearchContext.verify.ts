@@ -35,6 +35,8 @@ const worldCupAssembled: AssembledContext = {
     intent: "ranked_list",
     confidence: "high",
     confidencePercent: 90,
+    confidenceScore: 0.9,
+    matchedPatterns: ["ranked-list"],
     reasoning: "test",
     topic: {
       competitionWords: [],

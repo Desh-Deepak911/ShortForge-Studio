@@ -236,8 +236,12 @@ async function buildDraft(input?: {
     stagingObjectRefs: input?.emptyStaging ? [] : fullStaging,
     expiresAtMs: CLOCK + 60 * 60 * 1000,
   });
-  assert.equal(materialize.ok, true, materialize.ok ? "" : materialize.message);
-  if (!materialize.ok) throw new Error(materialize.message);
+  assert.equal(materialize.ok, true);
+  if (!materialize.ok) {
+    throw new Error(
+      String((materialize as { message?: unknown }).message ?? "materialize failed"),
+    );
+  }
 
   return {
     ownerId,
@@ -266,8 +270,12 @@ async function casCoverage(
     CLOCK + 1000,
     CLOCK + 2000,
   );
-  assert.equal(next.ok, true, next.ok ? "" : next.message);
-  if (!next.ok) throw new Error(next.message);
+  assert.equal(next.ok, true);
+  if (!next.ok) {
+    throw new Error(
+      String((next as { message?: unknown }).message ?? "coverage update failed"),
+    );
+  }
   const cas = await store.compareAndSetProvisional({
     jobId: record.jobId,
     ownerId: record.ownerId,

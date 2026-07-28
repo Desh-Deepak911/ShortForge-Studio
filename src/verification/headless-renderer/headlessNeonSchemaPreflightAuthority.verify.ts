@@ -27,11 +27,17 @@ function scriptedExecutor(
   },
 ): HeadlessSqlExecutor {
   const client: HeadlessSqlClient = {
-    query: async (text, params) => handler(text, params),
+    query: async <Row extends Record<string, unknown>>(
+      text: string,
+      params?: readonly unknown[],
+    ) => handler(text, params) as { rows: Row[]; rowCount: number },
   };
   return {
-    withClient: async (fn) => fn(client),
-    withTransaction: async (fn) => fn(client),
+    withClient: async <T>(fn: (client: HeadlessSqlClient) => Promise<T>) =>
+      fn(client),
+    withTransaction: async <T>(
+      fn: (client: HeadlessSqlClient) => Promise<T>,
+    ) => fn(client),
   };
 }
 

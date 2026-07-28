@@ -122,7 +122,7 @@ async function buildProviderFixture(input?: {
   const fake = new FakeS3Client();
   const ownedObjectStore = new MemoryHeadlessOwnedObjectStoreAdapter();
   const jobStore = new MemoryHeadlessJobStoreAdapter();
-  const ctx: R2LiveMatrixContext = {
+  const ctx = {
     runId,
     ownerId: draftCtx.ownerId,
     projectId: draftCtx.projectId,
@@ -138,7 +138,7 @@ async function buildProviderFixture(input?: {
     createdJobIds: [],
     createdProjectIds: [],
     createdR2Locators: [],
-  };
+  } as unknown as R2LiveMatrixContext;
 
   const staged = await runOwnedObjectStagingRecordChain({
     ctx,
@@ -183,7 +183,7 @@ async function buildProviderFixture(input?: {
     draftCtx.manifest,
     alignBundleToFinalizedStaging({
       bundle: draftCtx.seeded.bundle,
-      manifest: draftCtx.manifest,
+      manifest: draftCtx.manifest as unknown as import("@/features/export/domain").ExportManifestV3,
       staged: staged.staged,
       payloads,
     }),
@@ -229,7 +229,11 @@ async function buildProviderFixture(input?: {
 function consumeBinding(
   storage: ReturnType<typeof createR2JobBoundStorageAdapter>,
 ): SourceBindingAttributionSnapshot | null {
-  return storage.consumeLastSourceBindingAttribution();
+  return (
+    storage as typeof storage & {
+      consumeLastSourceBindingAttribution(): SourceBindingAttributionSnapshot | null;
+    }
+  ).consumeLastSourceBindingAttribution();
 }
 
 async function openFirstAsset(fixture: ProviderFixture) {
@@ -273,7 +277,7 @@ async function main() {
     });
     workspace.cleanup();
     assert.equal(materialized.ok, true);
-    if (!materialized.ok) throw new Error(materialized.message);
+    if (!materialized.ok) throw new Error(String((materialized as { message?: unknown }).message ?? "materialize failed"));
     assert.ok(materialized.assets.length > 0);
   });
 

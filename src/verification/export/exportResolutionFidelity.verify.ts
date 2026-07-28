@@ -54,7 +54,7 @@ function story(resolution: "720x1280" | "1080x1920", quality: "standard" | "high
       url: "https://example.com/full-res.jpg",
       source: "upload" as const,
       transform: { x: 0, y: 0, scale: 1.2, rotation: 0 },
-      fitMode: "fill" as const,
+      fitMode: "cover" as const,
     },
     image: {
       url: "https://example.com/full-res.jpg",

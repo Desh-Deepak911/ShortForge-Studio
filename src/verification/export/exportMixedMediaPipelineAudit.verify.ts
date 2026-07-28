@@ -117,6 +117,7 @@ async function main() {
       durationMs: 5000,
       startMs: 3000,
       endMs: 8000,
+      subtitle: "",
       media: {
         type: "video",
         url: "blob:long",

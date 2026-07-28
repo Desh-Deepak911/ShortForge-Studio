@@ -77,7 +77,7 @@ async function runInjectedMatrix(
     env: { HEADLESS_NEON_QA_PROGRESSIVE: "1" },
     forceGateOn: true,
     assumeConfigured: true,
-    injectedExecutor: noopSql(),
+    injectedExecutor: noopSql() as never,
     evidencePath,
     runSchemaPreflight: okPreflight(),
     injectThrowAt,

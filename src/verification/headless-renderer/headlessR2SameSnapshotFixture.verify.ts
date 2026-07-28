@@ -94,7 +94,7 @@ function buildCtx(options: {
     nowMs: 5_000,
     sql: {
       withClient: async () => ({ rows: [], rowCount: 0 }),
-      withTransaction: async (fn) =>
+      withTransaction: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [], rowCount: 0 }) } as never),
     } as never,
     jobStore: options.jobStore,

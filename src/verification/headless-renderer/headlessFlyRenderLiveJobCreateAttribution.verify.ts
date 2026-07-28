@@ -67,9 +67,9 @@ function buildCtx(overrides?: {
     projectId: randomUUID(),
     nowMs: 1_700_000_000_000,
     sql: {
-      withClient: async (fn) =>
+      withClient: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
-      withTransaction: async (fn) =>
+      withTransaction: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
     } as never,
     jobStore,

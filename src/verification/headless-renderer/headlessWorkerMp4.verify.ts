@@ -288,7 +288,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         audioChannels: null,
         audioSampleRateHz: null,
-      },
+      } as never,
     });
     assert.equal(wrong.ok, false);
   });

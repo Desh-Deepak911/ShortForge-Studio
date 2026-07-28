@@ -146,7 +146,7 @@ async function main() {
       assumeConfigured: true,
       injectedExecutor: {
         withClient: async () => ({ rows: [], rowCount: 0 }),
-        withTransaction: async (fn) =>
+        withTransaction: async (fn: (client: never) => Promise<unknown>) =>
           fn({
             query: async () => ({ rows: [], rowCount: 0 }),
           } as never),

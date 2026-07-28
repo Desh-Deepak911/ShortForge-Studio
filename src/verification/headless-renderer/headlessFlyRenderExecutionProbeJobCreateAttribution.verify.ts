@@ -87,9 +87,9 @@ function buildCtx(overrides?: {
     projectId: randomUUID(),
     nowMs: 1_700_000_000_000,
     sql: {
-      withClient: async (fn) =>
+      withClient: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
-      withTransaction: async (fn) =>
+      withTransaction: async (fn: (client: never) => Promise<unknown>) =>
         fn({ query: async () => ({ rows: [{ n: "0" }] }) } as never),
     } as never,
     jobStore,
@@ -453,7 +453,9 @@ async function main() {
         claims4kCapacity: false as const,
       },
       acceptedImageDigestSha256: "fixture",
-    };
+    } as unknown as ReturnType<
+      typeof createNotTestedFlyRenderExecutionProbeEvidence
+    >;
     const md = renderFlyRenderExecutionProbeEvidenceMarkdown(withAttribution);
     assert.ok(md.includes("## Execution-probe job-create attribution"));
     assert.ok(md.includes("job_create_failure_stage=coverage_reconcile"));

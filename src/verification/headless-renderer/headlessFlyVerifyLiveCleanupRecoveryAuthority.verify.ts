@@ -170,9 +170,15 @@ async function main() {
     const result = await executeFlyVerifyCleanupRecoveryMutation({
       sql: fixtureSql({ jobs: [], objects: [], projects: [] }),
       storage: {
-        probeExactObjectPresence: async () => ({ ok: false }),
-        deleteObject: async () => ({ ok: false }),
-      },
+        probeExactObjectPresence: async () => ({
+          ok: false,
+          issues: [{ code: "STORAGE_UNAVAILABLE", message: "fixture" }],
+        }),
+        deleteObject: async () => ({
+          ok: false,
+          issues: [{ code: "STORAGE_UNAVAILABLE", message: "fixture" }],
+        }),
+      } as never,
       redis: null,
       target,
       windowStartMs: FLY_VERIFY_LIVE_ARCHIVED_FAIL_STARTED_MS,

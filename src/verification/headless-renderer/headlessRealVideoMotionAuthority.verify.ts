@@ -64,6 +64,7 @@ async function main() {
       startMs: 0,
       endMs: 6000,
       durationMs: 6000,
+      subtitle: "",
       media,
     };
     const at4500 = resolveExportSceneMediaPlaybackState(scene, 4500, 6000);
@@ -96,9 +97,7 @@ async function main() {
         rvfcMediaTime = value;
         queueMicrotask(() => listeners.get("seeked")?.forEach((fn) => fn()));
       },
-      pause() {
-        this.paused = true;
-      },
+      pause() {},
       addEventListener(type: string, fn: () => void) {
         if (!listeners.has(type)) listeners.set(type, new Set());
         listeners.get(type)!.add(fn);
