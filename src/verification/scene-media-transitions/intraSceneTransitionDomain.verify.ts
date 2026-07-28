@@ -36,7 +36,11 @@ import {
   TRANSITION_VISUAL_EFFECTS,
 } from "@/features/story/utils/transition-vocabulary";
 import { classifyStoryPatch } from "@/features/editor/story-patches/story-patch-classifier";
-import { buildExportManifest } from "@/features/export/domain";
+import {
+  buildExportManifest,
+  EXPORT_MANIFEST_VERSION,
+  EXPORT_RENDERER_CONTRACT_VERSION,
+} from "@/features/export/domain";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
 function threeItemScene(): { scene: FootieScene; a: string; b: string; c: string } {
@@ -320,7 +324,7 @@ test("Atomic write rejects unsupported effect/duration", () => {
   );
 });
 
-test("ExportManifest v3 freezes mediaTransitions; Preview compose is not imported by export draw", () => {
+test("current ExportManifest freezes mediaTransitions; Preview compose is not imported by export draw", () => {
   const __pair = twoItemScene();
   let scene = __pair.scene;
   const a = __pair.a;
@@ -340,16 +344,16 @@ test("ExportManifest v3 freezes mediaTransitions; Preview compose is not importe
   });
   const withMeta = buildExportManifest({ story });
   assert.notEqual(without.fingerprint, withMeta.fingerprint);
-  assert.equal(withMeta.version, 3);
-  assert.equal(withMeta.rendererContractVersion, "9C");
+  assert.equal(withMeta.version, EXPORT_MANIFEST_VERSION);
+  assert.equal(withMeta.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
   assert.match(JSON.stringify(withMeta.scenes[0]), /mediaTransitions/);
   assert.equal(
-    (withMeta.scenes[0] as { mediaTransitions: { boundaries: unknown[] } })
+    (withMeta.scenes[0] as unknown as { mediaTransitions: { boundaries: unknown[] } })
       .mediaTransitions.boundaries.length,
     1,
   );
   assert.equal(
-    (without.scenes[0] as { mediaTransitions: { boundaries: unknown[] } })
+    (without.scenes[0] as unknown as { mediaTransitions: { boundaries: unknown[] } })
       .mediaTransitions.boundaries.length,
     0,
   );
