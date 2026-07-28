@@ -337,7 +337,7 @@ async function main(): Promise<void> {
   await check("[T4] no failure path commits narration or starts VO", async () => {
     const rewriteRoot = path.join(
       __dirname,
-      "../../features/retention-story/rewrite",
+      "../../../features/retention-story/rewrite",
     );
     const sources = [
       "run-retention-terminal-validation.ts",

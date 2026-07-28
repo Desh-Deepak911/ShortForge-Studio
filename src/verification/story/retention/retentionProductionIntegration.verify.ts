@@ -280,7 +280,7 @@ function assertNoSecrets(blob: string): void {
   assert.equal(/Bearer\s+eyJ/.test(blob), false);
 }
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, "../../..");
 const PRODUCTION_ROOT = path.join(ROOT, "features/retention-story/production");
 const AUDIO_FIRST = path.join(
   ROOT,

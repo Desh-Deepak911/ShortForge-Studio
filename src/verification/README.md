@@ -17,13 +17,22 @@ modules — it is never imported by production routes.
 | `editor/`, `ui/` | Editor behavior and route-level UI contracts |
 | `export/` | Browser/export manifest, timing, media, artifact, and parity checks |
 | `headless-renderer/` | Control plane, worker, storage, hosted probes, and capacity certification |
-| `hook-engine/` | Hook planning, validation, streaming, safety, and persistence |
-| `retention-story/` | Retention planning and production integration |
+| `story/retention/` | Retention planning and production integration |
+| `story/hook/` | Hook planning, validation, streaming, safety, and persistence |
+| `intelligence/research/` | Research grounding, script context, and research-layer QA |
+| `intelligence/graph/` | Knowledge graph, provider engine, and prompt intelligence QA |
 | `scene-media-timeline/` | Multi-item media timeline authority |
 | `scene-media-transitions/` | Intra-scene transition authority |
 | `studio-intelligence/` | Studio planning and production wiring |
 | `timeline/` | Shared timeline and playback foundations |
 | `canonical/`, `utils/` | Shared verification helpers and canonical fixtures |
+
+## Structure note (Batch 1)
+
+This batch changed file ownership and discoverability only. Test behavior and production
+behavior remain unchanged. Existing `test:*` package-script names remain the public
+verification entrypoints. Co-located feature verification and headless-renderer decomposition
+are deferred.
 
 ## File conventions
 

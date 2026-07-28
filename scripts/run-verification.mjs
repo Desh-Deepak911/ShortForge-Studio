@@ -6,7 +6,7 @@
  *   node scripts/run-verification.mjs              # all domains
  *   node scripts/run-verification.mjs export       # export/
  *   node scripts/run-verification.mjs timeline     # timeline/
- *   node scripts/run-verification.mjs intelligence # canonical, entity, football, graph, research
+ *   node scripts/run-verification.mjs intelligence # canonical, entity, football, intelligence/graph, intelligence/research
  */
 
 import { spawnSync } from "node:child_process";
@@ -19,7 +19,13 @@ const verificationRoot = join(root, "src/verification");
 const DOMAIN_FOLDERS = {
   export: ["export"],
   timeline: ["timeline"],
-  intelligence: ["canonical", "entity", "football", "graph", "research"],
+  intelligence: [
+    "canonical",
+    "entity",
+    "football",
+    "intelligence/graph",
+    "intelligence/research",
+  ],
 };
 
 function listVerifyFiles(dir) {

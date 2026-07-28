@@ -31,7 +31,7 @@ import {
   openingComposerProposal,
 } from "./retentionStoryCoherentEnvelope";
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, "../../..");
 const INTEGRATION_ROOT = path.join(ROOT, "features/retention-story/integration");
 
 let passed = 0;

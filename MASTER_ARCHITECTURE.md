@@ -958,7 +958,7 @@ Sprint 7 — Provocative Hook
 | `src/features/studio-intelligence/` | Downstream visual/scene hook consumer (no upstream import) |
 | `src/features/creator-templates/` | Advisory `openingStyle` → one canonical adapter |
 | `src/app/api/generate-script/route.ts` | Mode matrix; legacy/`full` explicit failure (no silent bypass) |
-| `src/verification/hook-engine/` | 7B–7E fixtures + golden/safety/persistence/streaming QA |
+| `src/verification/story/hook/` | 7B–7E fixtures + golden/safety/persistence/streaming QA |
 
 Parallel product debt (not Sprint 7 itself): ROADMAP Creator Templates 3.10, Asset Search 3.8, Export 6G–6I.
 

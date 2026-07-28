@@ -40,7 +40,7 @@ import {
 } from "@/features/retention-story";
 import { SCRIPT_MODES, type Tone } from "@/types/footiebitz";
 
-const ROOT = path.resolve(__dirname, "../..");
+const ROOT = path.resolve(__dirname, "../../..");
 const STRATEGY_ROOT = path.join(ROOT, "features/retention-story/strategy");
 
 let passed = 0;
