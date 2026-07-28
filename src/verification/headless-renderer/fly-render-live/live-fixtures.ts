@@ -48,7 +48,7 @@ export async function promoteFlyRenderLiveSmokeJobToCanonical(
   if (
     !job.ok ||
     job.value.stage !== "canonical" ||
-    job.value.canonicalJob.state !== "queued"
+    job.value.canonicalJob!.state !== "queued"
   ) {
     return { ok: false };
   }
@@ -82,7 +82,7 @@ export async function enqueueFlyRenderLiveDelivery(
 
   const deliveryId = stableHeadlessDeliveryId(
     job.value.jobId,
-    job.value.canonicalJob.attempt,
+    job.value.canonicalJob!.attempt,
   );
   ctx.session.renderDeliveryId = deliveryId;
   ctx.session.renderGroup = ctx.streamNames.renderGroup;
@@ -95,7 +95,7 @@ export async function enqueueFlyRenderLiveDelivery(
     deliveryId,
     jobId: ctx.session.jobId,
     ownerId: ctx.ownerId,
-    attempt: job.value.canonicalJob.attempt,
+    attempt: job.value.canonicalJob!.attempt,
     enqueuedAtMs: ctx.nowMs,
     deliveryKind: "render",
   });

@@ -18,6 +18,7 @@ import {
   reconcileRetentionCandidateAfterHook,
   runRetentionHookBridge,
   type RetentionComposerCallback,
+  type RetentionHookRunner,
   type RetentionNarrationCandidate,
   type RetentionStoryPlan,
   type RetentionStrategySeed,
@@ -215,7 +216,7 @@ async function main(): Promise<void> {
       const forged = JSON.parse(
         JSON.stringify(source),
       ) as RetentionNarrationCandidate;
-      forged.segments[0] = {
+      (forged.segments as RetentionNarrationCandidate["segments"][number][])[0] = {
         ...forged.segments[0]!,
         claimRefs: ["forged-ci"],
       };
@@ -246,11 +247,10 @@ async function main(): Promise<void> {
     const env = await coherentEnvelope("balanced");
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     const result = await runRetentionHookBridge({
       contract: env.contract,
@@ -264,7 +264,7 @@ async function main(): Promise<void> {
       tone: "dramatic",
       duration: 30,
       scriptMode: "story",
-      hookRunner: async () => ({
+      hookRunner: (async () => ({
         ok: true as const,
         title: "Bypass",
         approvedNarration:
@@ -292,7 +292,7 @@ async function main(): Promise<void> {
         snapshot: hookContext.snapshot,
         compressionRevalidated: false,
         // Missing terminalEvidence → fail closed before reconciliation.
-      }),
+      })) as unknown as RetentionHookRunner,
     });
     assert.equal(result.status, "failed");
     if (result.status === "failed") {
@@ -304,11 +304,10 @@ async function main(): Promise<void> {
     const env = await coherentEnvelope("balanced");
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     const result = await runRetentionHookBridge({
       contract: env.contract,
@@ -338,11 +337,10 @@ async function main(): Promise<void> {
     const env = await coherentEnvelope("balanced");
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     const ledger = createRetentionModelCallLedger("balanced");
     const result = await runRetentionHookBridge({
@@ -357,7 +355,9 @@ async function main(): Promise<void> {
       tone: "dramatic",
       duration: 30,
       scriptMode: "story",
-      hookRunner: async (input) => {
+      hookRunner: (async (
+        input: Parameters<RetentionHookRunner>[0],
+      ) => {
         const first = await input.modelCall({
           kind: "initial",
           topic: input.topic,
@@ -396,7 +396,7 @@ async function main(): Promise<void> {
           snapshot: input.hookContext.snapshot,
           compressionRevalidated: false,
         };
-      },
+      }) as unknown as RetentionHookRunner,
     });
     assert.equal(result.status, "failed");
     if (result.status === "failed") {
@@ -408,11 +408,10 @@ async function main(): Promise<void> {
     const env = await coherentEnvelope("balanced");
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     const result = await runRetentionHookBridge({
       contract: env.contract,
@@ -438,11 +437,10 @@ async function main(): Promise<void> {
     const env = await coherentEnvelope("balanced");
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     let modelCallInvoked = false;
     const result = await runRetentionHookBridge({
@@ -474,11 +472,10 @@ async function main(): Promise<void> {
 
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     const result = await runRetentionHookBridge({
       contract: env.contract,
@@ -513,11 +510,10 @@ async function main(): Promise<void> {
     const cheapEnv = await coherentEnvelope("cheap");
     const hookContext = buildHookGenerationContext({
       topic: "Spain pressure night",
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     const result = await runRetentionHookBridge({
       contract,
@@ -545,11 +541,10 @@ async function main(): Promise<void> {
     const env = await coherentEnvelope("balanced");
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     const result = await runRetentionHookBridge({
       contract: env.contract,

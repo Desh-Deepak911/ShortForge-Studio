@@ -148,7 +148,6 @@ function jsonSuccessEnvelope(): GenerateScriptResponse {
   return {
     success: true,
     data: {
-      id: "s1",
       title: "Stream Title",
       narration: "Why does Spain pressure matter? Body continues.",
       totalDuration: 30,
@@ -167,7 +166,7 @@ async function main(): Promise<void> {
   await check("JSON and NDJSON terminal-envelope parity (Retention fields)", async () => {
     const json = jsonSuccessEnvelope();
     const events: GenerateScriptStreamEvent[] = [
-      { type: "progress", step: 1, label: "Writing script..." },
+      { type: "progress", step: 1, label: "Writing your story..." },
       {
         type: "complete",
         success: true,
@@ -190,7 +189,7 @@ async function main(): Promise<void> {
 
   await check("exactly one terminal stream result", async () => {
     const events: GenerateScriptStreamEvent[] = [
-      { type: "progress", step: 1, label: "A" },
+      { type: "progress", step: 1, label: "Writing your story..." },
       {
         type: "complete",
         success: true,
@@ -248,7 +247,6 @@ async function main(): Promise<void> {
         type: "complete",
         success: true,
         data: {
-          id: "utf",
           title: "UTF",
           narration,
           totalDuration: 30,

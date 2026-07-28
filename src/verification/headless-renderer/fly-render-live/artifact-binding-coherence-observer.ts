@@ -70,7 +70,7 @@ export async function observeArtifactBindingCoherenceDurable(
       return { ok: false, failureCategory: "ARTIFACT_BINDING_DURABLE_REREAD_FAILED" };
     }
 
-    const initialState = initialJob.value.canonicalJob.state;
+    const initialState = initialJob.value.canonicalJob!.state;
     if (initialState === "failed" || initialState === "cancelled") {
       return { ok: false, failureCategory: "ARTIFACT_BINDING_INCOHERENT" };
     }
@@ -78,7 +78,7 @@ export async function observeArtifactBindingCoherenceDurable(
     const deadline = Date.now() + ctx.smokePollTimeoutMs;
     let jobRecord = initialJob.value;
     while (
-      jobRecord.canonicalJob.state !== "succeeded" &&
+      jobRecord.canonicalJob!.state !== "succeeded" &&
       Date.now() < deadline
     ) {
       await new Promise((r) => setTimeout(r, 2_000));
@@ -91,14 +91,14 @@ export async function observeArtifactBindingCoherenceDurable(
       }
       jobRecord = polled.value;
       if (
-        jobRecord.canonicalJob.state === "failed" ||
-        jobRecord.canonicalJob.state === "cancelled"
+        jobRecord.canonicalJob!.state === "failed" ||
+        jobRecord.canonicalJob!.state === "cancelled"
       ) {
         return { ok: false, failureCategory: "ARTIFACT_BINDING_INCOHERENT" };
       }
     }
 
-    if (jobRecord.canonicalJob.state !== "succeeded") {
+    if (jobRecord.canonicalJob!.state !== "succeeded") {
       if (
         anchors.providerFinalizationProven === true ||
         anchors.bindingValidationCompleted === true ||

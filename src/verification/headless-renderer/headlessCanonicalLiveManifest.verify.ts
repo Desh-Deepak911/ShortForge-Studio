@@ -70,7 +70,6 @@ function fixStory(): FootieScript {
           url: "https://example.com/a.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
       {
@@ -88,7 +87,6 @@ function fixStory(): FootieScript {
           url: "https://example.com/b.jpg",
           source: "upload",
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          motion: null,
         },
       },
     ],

@@ -542,10 +542,10 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "succeeded");
+      assert.equal(stored.value.canonicalJob!.state, "succeeded");
       const ev = result.value.lastEvidence;
       assert.ok(ev);
-      assert.equal(ev!.byteLength, stored.value.canonicalJob.artifact!.byteLength);
+      assert.equal(ev!.byteLength, stored.value.canonicalJob!.artifact!.byteLength);
       assert.equal(ev!.metrics.artifactBytesStreamed, ev!.byteLength);
       assert.ok((ev!.metrics.artifactUploadChunkCount ?? 0) >= 1);
       assert.ok((ev!.metrics.peakArtifactUploadChunkBytes ?? 0) >= 1);
@@ -581,8 +581,8 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "succeeded");
-      assert.equal(stored.value.canonicalJob.artifact!.format, "mp4");
+      assert.equal(stored.value.canonicalJob!.state, "succeeded");
+      assert.equal(stored.value.canonicalJob!.artifact!.format, "mp4");
       const ev = result.value.lastEvidence!;
       assert.equal(ev.metrics.artifactBytesStreamed, ev.byteLength);
       assert.equal(ev.videoCodec, "h264");

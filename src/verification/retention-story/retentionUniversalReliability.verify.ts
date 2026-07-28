@@ -23,6 +23,7 @@ import {
   RETENTION_VALID_FLEXIBLE_REMAINING_TERMINAL_CATEGORIES,
 } from "@/features/retention-story/production/retention-terminal-failure-taxonomy";
 import type { RetentionComposerCallback } from "@/features/retention-story/composition/retention-narration-candidate.types";
+import type { StoryFormatStrategySelection } from "@/features/retention-story";
 import type { RetentionProductionFailureCategory } from "@/features/retention-story/production/retention-production.types";
 import { listCompatibleStoryStrategySelections } from "@/features/retention-story/presentation/story-strategy-selection";
 import {
@@ -85,12 +86,12 @@ function emptyComposer(): RetentionComposerCallback {
 function weakEditorialComposer(): RetentionComposerCallback {
   return (request) => ({
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: request.orderedBeatIds.map((beatId, i) => ({
       beatId,
       text:
         i === 0 ? "Why does Spain pressure matter?" : "Pressure keeps rising.",
-      claimRefs: [] as string[],
+      claimRefs: [] as unknown as string[],
     })),
   });
 }
@@ -136,7 +137,7 @@ async function runFlexibleDet(input: {
   readonly durationSec: number;
   readonly qualityMode: (typeof QUALITIES)[number];
   readonly scriptMode: ScriptMode;
-  readonly formatStrategyId?: string;
+  readonly formatStrategyId?: StoryFormatStrategySelection;
   readonly generationPath?: "script_only" | "audio_first_full";
   readonly hookStyle?: string;
   readonly requestedStrategyId?: string;
@@ -368,7 +369,7 @@ async function main() {
                   let rem = targetTotal - base * n;
                   return {
                     title: "Write My Own draft",
-                    hookClaimRefs: [] as string[],
+                    hookClaimRefs: [] as unknown as string[],
                     segments: request.orderedBeatIds.map((beatId, i) => {
                       const target = Math.max(4, base + (rem > 0 ? 1 : 0));
                       if (rem > 0) rem -= 1;
@@ -376,7 +377,7 @@ async function main() {
                         return {
                           beatId,
                           text: opening,
-                          claimRefs: [] as string[],
+                          claimRefs: [] as unknown as string[],
                         };
                       }
                       const seed =
@@ -388,7 +389,7 @@ async function main() {
                       return {
                         beatId,
                         text: padSpokenWords(seed, target),
-                        claimRefs: [] as string[],
+                        claimRefs: [] as unknown as string[],
                       };
                     }),
                   };

@@ -224,7 +224,7 @@ async function main() {
 
   await test("asset bundle fingerprint excludes storage locator identity", async () => {
     const { materialized } = await buildProviderChainFixture();
-    const bundle = materialized.value.canonicalRequest.assetBundle;
+    const bundle = materialized.value.canonicalRequest!.assetBundle;
     const rebound = buildHeadlessAssetBundleFingerprint(bundle.bundleId, bundle.assets);
     assert.equal(rebound.ok, true);
     if (!rebound.ok) throw new Error("fingerprint failed");
@@ -267,7 +267,7 @@ async function main() {
   await test("provider-shaped chain materializes assets with success attribution", async () => {
     const { materialized, draftCtx, ownedObjectStore, jobStore, io } =
       await buildProviderChainFixture();
-    const allowed = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const allowed = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (a) => a.storageLocator,
     );
     const storage = createR2JobBoundStorageAdapter({
@@ -293,7 +293,7 @@ async function main() {
     const result = await materializeOwnedAssets({
       storage,
       ownerId: draftCtx.ownerId,
-      bundle: materialized.value.canonicalRequest.assetBundle,
+      bundle: materialized.value.canonicalRequest!.assetBundle,
       workspace,
       nowMs: CLOCK,
       maxTotalAssetBytes: 32 * 1024 * 1024,
@@ -403,21 +403,21 @@ async function main() {
 
   await test("incoherent bundle record fails validateHeadlessAssetBundle", async () => {
     const { materialized } = await buildProviderChainFixture();
-    const bundle = materialized.value.canonicalRequest.assetBundle;
+    const bundle = materialized.value.canonicalRequest!.assetBundle;
     const tampered = {
       ...bundle,
       fingerprint: "hab:sha256:" + "00".repeat(32),
     };
     const validated = validateHeadlessAssetBundle(
       tampered,
-      materialized.value.canonicalRequest.manifest,
+      materialized.value.canonicalRequest!.manifest,
     );
     assert.equal(validated.ok, false);
   });
 
   await test("rebind preserves bundle fingerprint when only locators drift", async () => {
     const { materialized, draftCtx } = await buildProviderChainFixture();
-    const driftedAssets = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const driftedAssets = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (row, index) =>
         index === 0
           ? {
@@ -431,8 +431,8 @@ async function main() {
           : row,
     );
     const rebound = finalizeHeadlessAssetBundle({
-      bundleId: materialized.value.canonicalRequest.assetBundle.bundleId,
-      manifest: materialized.value.canonicalRequest.manifest,
+      bundleId: materialized.value.canonicalRequest!.assetBundle.bundleId,
+      manifest: materialized.value.canonicalRequest!.manifest,
       assets: driftedAssets,
     });
     assert.equal(rebound.ok, true);

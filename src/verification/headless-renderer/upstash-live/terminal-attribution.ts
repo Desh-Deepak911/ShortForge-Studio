@@ -342,10 +342,10 @@ export async function runAttributedTerminalNoopConsume(
         jobValue: loaded.value.canonicalJob,
         requestValue: loaded.value.canonicalRequest,
         toState: "failed",
-        attempt: loaded.value.canonicalJob.attempt,
+        attempt: loaded.value.canonicalJob!.attempt,
         updatedAtMs: Math.max(
           ctx.nowMs,
-          loaded.value.canonicalJob.updatedAtMs + 1,
+          loaded.value.canonicalJob!.updatedAtMs + 1,
         ),
         terminalReason: { reasonId: "WORKER_FAILED", retryable: false },
       });
@@ -778,7 +778,7 @@ export async function runAttributedTerminalNoopConsume(
       stages.push(stageOk("consume_job_load"));
 
       // --- terminal_detection ---
-      if (!isHeadlessTerminalState(loaded.value.canonicalJob.state)) {
+      if (!isHeadlessTerminalState(loaded.value.canonicalJob!.state)) {
         return failAt(
           stages,
           "terminal_detection",
@@ -786,7 +786,7 @@ export async function runAttributedTerminalNoopConsume(
           counting.claimQueuedJobCallCount,
         );
       }
-      const tr = loaded.value.canonicalJob.terminalReason;
+      const tr = loaded.value.canonicalJob!.terminalReason;
       if (
         tr == null ||
         tr.reasonId !== "WORKER_FAILED" ||

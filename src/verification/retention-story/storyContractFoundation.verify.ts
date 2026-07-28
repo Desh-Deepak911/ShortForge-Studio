@@ -146,7 +146,7 @@ function minimalAssembled(): AssembledContext {
       matchedPatterns: [],
       reasoning: "test",
       topic: { raw: "test", normalized: "test", tokens: ["test"] },
-    } as AssembledContext["intent"],
+    } as unknown as AssembledContext["intent"],
     entities: [],
     verifiedFacts: [
       {
@@ -860,6 +860,7 @@ console.log("10b1-canonical-grounding");
 check("forged eligibility downgraded; tampered identity rejected", () => {
   const forged = normalizeRetentionGroundingContext({
     version: 1,
+    researchIdentity: null,
     claims: [
       {
         claimId: "m1",

@@ -48,11 +48,11 @@ function padWords(base: string, target: number): string {
 function proposalWithTexts(plan: RetentionStoryPlan, texts: readonly string[]) {
   return {
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, index) => ({
       beatId: beat.id,
       text: texts[index] ?? "Spain pressure advances.",
-      claimRefs: [] as string[],
+      claimRefs: [] as unknown as string[],
     })),
   };
 }
@@ -139,7 +139,7 @@ function openingPreservingRewriteComposer(
           return {
             beatId,
             text: first,
-            claimRefs: [] as string[],
+            claimRefs: [] as unknown as string[],
           };
         }
         const section = SECTION_WORDS[i] ?? "next";
@@ -152,7 +152,7 @@ function openingPreservingRewriteComposer(
         return {
           beatId,
           text: padWords(seed, target),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }),
     };

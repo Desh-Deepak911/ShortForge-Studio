@@ -110,7 +110,7 @@ async function attempt(spec: RunSpec): Promise<{
       !result.ok ||
       !stored.ok ||
       result.value.succeeded !== 1 ||
-      stored.value.canonicalJob.state !== "succeeded" ||
+      stored.value.canonicalJob!.state !== "succeeded" ||
       !result.value.lastEvidence
     ) {
       return {
@@ -123,14 +123,14 @@ async function attempt(spec: RunSpec): Promise<{
           contentDurationMs: spec.contentMs,
           elapsedMs,
           processOnce: result.ok ? result.value : result,
-          jobState: stored.ok ? stored.value.canonicalJob.state : null,
+          jobState: stored.ok ? stored.value.canonicalJob!.state : null,
           note: "Streamed artifact delivery did not reach succeeded.",
         },
       };
     }
 
     const ev = result.value.lastEvidence;
-    const art = stored.value.canonicalJob.artifact!;
+    const art = stored.value.canonicalJob!.artifact!;
     const record: Record<string, unknown> = {
       kind: "measured",
       status: "REAL_LOCAL_PASS",

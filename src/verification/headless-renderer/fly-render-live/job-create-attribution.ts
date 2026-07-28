@@ -900,7 +900,7 @@ export async function runAttributedFlyRenderJobCreateChain(input: {
     if (
       !job.ok ||
       job.value.stage !== "canonical" ||
-      job.value.canonicalJob.state !== "queued"
+      job.value.canonicalJob!.state !== "queued"
     ) {
       return failAt(stages, "queued_state_assertion", "queued_state_mismatch", {
         durableJobStage: job.ok ? job.value.stage : undefined,

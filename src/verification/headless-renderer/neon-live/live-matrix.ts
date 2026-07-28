@@ -705,7 +705,7 @@ export async function runNeonLiveMatrix(
         jobValue: got.value.canonicalJob,
         requestValue: got.value.canonicalRequest,
         toState: "rendering",
-        attempt: got.value.canonicalJob.attempt,
+        attempt: got.value.canonicalJob!.attempt,
         updatedAtMs: LIVE_CLOCK_MS + 20_000,
       });
       if (!next.ok) {
@@ -743,7 +743,7 @@ export async function runNeonLiveMatrix(
         jobValue: got.value.canonicalJob,
         requestValue: got.value.canonicalRequest,
         toState: "failed",
-        attempt: got.value.canonicalJob.attempt,
+        attempt: got.value.canonicalJob!.attempt,
         updatedAtMs: LIVE_CLOCK_MS + 30_000,
         terminalReason: { reasonId: "WORKER_FAILED", retryable: false },
       });
@@ -952,7 +952,7 @@ export async function runNeonLiveMatrix(
         jobValue: claimed.value.record.canonicalJob,
         requestValue: claimed.value.record.canonicalRequest,
         toState: "failed",
-        attempt: claimed.value.record.canonicalJob.attempt,
+        attempt: claimed.value.record.canonicalJob!.attempt,
         updatedAtMs: claimNow + 1,
         terminalReason: { reasonId: "WORKER_FAILED", retryable: false },
       });

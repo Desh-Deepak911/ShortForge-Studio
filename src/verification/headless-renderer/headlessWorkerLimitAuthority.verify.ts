@@ -327,10 +327,10 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.state, "failed");
-      assert.equal(stored.value.canonicalJob.artifact, null);
+      assert.equal(stored.value.canonicalJob!.state, "failed");
+      assert.equal(stored.value.canonicalJob!.artifact, null);
       assert.equal(
-        stored.value.canonicalJob.terminalReason?.reasonId,
+        stored.value.canonicalJob!.terminalReason?.reasonId,
         "UNSUPPORTED_CAPABILITY",
       );
     },
@@ -358,9 +358,9 @@ async function main() {
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
-      assert.equal(stored.value.canonicalJob.artifact, null);
+      assert.equal(stored.value.canonicalJob!.artifact, null);
       assert.equal(
-        stored.value.canonicalJob.terminalReason?.reasonId,
+        stored.value.canonicalJob!.terminalReason?.reasonId,
         "UNSUPPORTED_CAPABILITY",
       );
     },

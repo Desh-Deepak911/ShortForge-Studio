@@ -62,8 +62,8 @@ async function main() {
       jobValue: fx.record.canonicalJob,
       requestValue: fx.record.canonicalRequest,
       toState: "failed",
-      attempt: fx.record.canonicalJob.attempt,
-      updatedAtMs: Math.max(fx.nowMs, fx.record.canonicalJob.updatedAtMs) + 1,
+      attempt: fx.record.canonicalJob!.attempt,
+      updatedAtMs: Math.max(fx.nowMs, fx.record.canonicalJob!.updatedAtMs) + 1,
       terminalReason: { reasonId: "WORKER_FAILED", retryable: false },
     });
     assert.equal(failed.ok, true);

@@ -240,7 +240,7 @@ function completePlannerProposal(
       beat: Record<string, unknown>,
       index: number,
     ) => Record<string, unknown>;
-    readonly strategy?: Record<string, unknown>;
+    readonly strategy?: NonNullable<RetentionPlannerProposal["strategy"]>;
   } = {},
 ): RetentionPlannerProposal {
   const { seed } = seedAndContext(input);
@@ -1795,7 +1795,9 @@ async function main(): Promise<void> {
     const policy = await buildRetentionStoryPlan(
       makePlanInput({
         qualityMode: "balanced",
-        planner: () => ({ pacingProfile: "reveal_late" }),
+        planner: (() => ({
+          pacingProfile: "reveal_late",
+        })) as unknown as RetentionPlannerCallback,
       }),
     );
     assert.equal(policy.status, "failed");
@@ -1843,6 +1845,7 @@ async function main(): Promise<void> {
   await check("manual/inferred/forbidden claims never ground beats", () => {
     const grounding = normalizeRetentionGroundingContext({
       version: 1,
+      researchIdentity: null,
       claims: [
         {
           claimId: "manual-1",

@@ -204,11 +204,11 @@ export function qualitativeSegmentText(index: number): string {
 export function qualitativeProposal(plan: RetentionStoryPlan) {
   return {
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, index) => ({
       beatId: beat.id,
       text: qualitativeSegmentText(index),
-      claimRefs: [] as string[],
+      claimRefs: [] as unknown as string[],
     })),
   };
 }
@@ -216,14 +216,14 @@ export function qualitativeProposal(plan: RetentionStoryPlan) {
 export function openingComposerProposal(plan: RetentionStoryPlan) {
   return {
     title: "Spain pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, index) => ({
       beatId: beat.id,
       text:
         index === 0
           ? "Spain pressure night hits harder. The opener pulls the viewer into the tension."
           : "Next, Spain advances with clear spoken focus and pace through the following stretch.",
-      claimRefs: [] as string[],
+      claimRefs: [] as unknown as string[],
     })),
   };
 }

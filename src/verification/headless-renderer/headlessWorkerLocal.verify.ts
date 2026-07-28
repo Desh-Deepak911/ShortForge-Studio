@@ -59,7 +59,7 @@ async function main() {
     const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
-    const artifact = stored.value.canonicalJob.artifact;
+    const artifact = stored.value.canonicalJob!.artifact;
     assert.ok(artifact);
     assert.equal(artifact!.width, 720);
     assert.equal(artifact!.height, 1280);
@@ -119,7 +119,7 @@ async function main() {
     const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
-    const artifact = stored.value.canonicalJob.artifact!;
+    const artifact = stored.value.canonicalJob!.artifact!;
     assert.equal(artifact.audio.present, true);
     assert.equal(artifact.audio.codec, "opus");
     assert.ok((artifact.audio.channels ?? 0) >= 1);
@@ -173,7 +173,7 @@ async function main() {
     const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
-    const artifact = stored.value.canonicalJob.artifact!;
+    const artifact = stored.value.canonicalJob!.artifact!;
     assert.equal(artifact.audio.present, true);
     assert.equal(artifact.audio.codec, "opus");
     assert.equal(artifact.width, 720);
@@ -316,13 +316,13 @@ async function main() {
     );
     const tRender = Math.max(
       clock + 1,
-      claimed.value.record.canonicalJob.updatedAtMs + 1,
+      claimed.value.record.canonicalJob!.updatedAtMs + 1,
     );
     const stepped = applyHeadlessJobTransition({
       jobValue: claimed.value.record.canonicalJob,
       requestValue: claimed.value.record.canonicalRequest,
       toState: "rendering",
-      attempt: claimed.value.record.canonicalJob.attempt,
+      attempt: claimed.value.record.canonicalJob!.attempt,
       updatedAtMs: tRender,
       progress: { percent: 20, stage: "rendering", updatedAtMs: tRender },
     });
@@ -354,7 +354,7 @@ async function main() {
     );
     assert.equal(abandoned.ok, true);
     if (!abandoned.ok) return;
-    assert.equal(abandoned.value.canonicalJob.state, "rendering");
+    assert.equal(abandoned.value.canonicalJob!.state, "rendering");
     assert.equal(abandoned.value.claimToken, "claim_crash");
 
     // 5. Advance beyond lease.
@@ -376,9 +376,9 @@ async function main() {
     );
     assert.equal(parentAfter.ok, true);
     if (!parentAfter.ok) return;
-    assert.equal(parentAfter.value.canonicalJob.state, "failed");
+    assert.equal(parentAfter.value.canonicalJob!.state, "failed");
     assert.equal(
-      parentAfter.value.canonicalJob.terminalReason?.reasonId,
+      parentAfter.value.canonicalJob!.terminalReason?.reasonId,
       "CLAIM_LEASE_EXPIRED",
     );
     assert.notEqual(recovered.value.jobId, parentJobId);
@@ -504,8 +504,8 @@ async function main() {
     const stored = await stack.jobStore.getByJobIdAndOwner(jobId, "owner-11d");
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
-    assert.equal(stored.value.canonicalJob.artifact?.audio.present, true);
-    assert.equal(stored.value.canonicalJob.artifact?.audio.codec, "opus");
+    assert.equal(stored.value.canonicalJob!.artifact?.audio.present, true);
+    assert.equal(stored.value.canonicalJob!.artifact?.audio.codec, "opus");
   });
 
   await testAsync("v2 hard-cut silent regression still succeeds", async () => {

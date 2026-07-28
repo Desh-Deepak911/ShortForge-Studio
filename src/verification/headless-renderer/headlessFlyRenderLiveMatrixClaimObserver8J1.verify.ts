@@ -241,7 +241,7 @@ async function main() {
           fn({
             query: async (_sql: string, params?: unknown[]) => {
               if (Array.isArray(params) && params[0] === createdJobIds) {
-                queriedJobIds = params[0] as string[];
+                queriedJobIds = params[0] as unknown as string[];
               }
               return { rows: [{ n: "0" }] };
             },

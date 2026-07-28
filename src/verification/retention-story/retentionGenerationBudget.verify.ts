@@ -229,11 +229,10 @@ async function main(): Promise<void> {
 
     const hookContext = buildHookGenerationContext({
       topic: env.contract.topic,
-      durationSec: 30,
+      durationSeconds: 30,
       scriptMode: "story",
       tone: "dramatic",
       generationPath: "script_only",
-      qualityMode: "balanced",
     });
     await runRetentionHookBridge({
       contract: env.contract,

@@ -117,15 +117,15 @@ async function runMeasured(input: {
     1,
     JSON.stringify({
       processOnce: result.value,
-      state: stored.value.canonicalJob.state,
-      terminalReason: stored.value.canonicalJob.terminalReason,
+      state: stored.value.canonicalJob!.state,
+      terminalReason: stored.value.canonicalJob!.terminalReason,
       contentDurationMs: fixture.manifestV3.project.contentDurationMs,
       renderDurationMs: fixture.manifestV3.project.renderDurationMs,
     }),
   );
   assert.ok(result.value.lastEvidence, "missing lastEvidence metrics");
   const ev = result.value.lastEvidence!;
-  const art = stored.value.canonicalJob.artifact!;
+  const art = stored.value.canonicalJob!.artifact!;
   const profileId =
     `${input.profile.resolution}-${input.profile.format}-30` as HeadlessOutputProfileId;
   const expected = HEADLESS_OUTPUT_PROFILES[profileId];

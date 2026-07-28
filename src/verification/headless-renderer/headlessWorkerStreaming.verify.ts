@@ -430,12 +430,12 @@ async function main() {
         1,
         JSON.stringify({
           processOnce: result.value,
-          state: stored.value.canonicalJob.state,
-          terminalReason: stored.value.canonicalJob.terminalReason,
-          terminalMessage: stored.value.canonicalJob.terminalMessage,
+          state: stored.value.canonicalJob!.state,
+          terminalReason: stored.value.canonicalJob!.terminalReason,
+          terminalMessage: stored.value.canonicalJob!.terminalMessage,
         }),
       );
-      assert.equal(stored.value.canonicalJob.state, "succeeded");
+      assert.equal(stored.value.canonicalJob!.state, "succeeded");
       const ev = result.value.lastEvidence!;
       assert.ok(ev.metrics.totalFrameBytesStreamed != null);
       assert.ok((ev.metrics.totalFrameBytesStreamed ?? 0) > 0);

@@ -303,12 +303,12 @@ async function main() {
     assert.equal(materialized.ok, true);
     if (!materialized.ok) throw new Error("materialize failed");
     assert.equal(
-      materialized.value.canonicalRequest.assetBundle.fingerprint,
+      materialized.value.canonicalRequest!.assetBundle.fingerprint,
       draftCtx.draft.snapshotClaim.assetBundleFingerprintClaim,
     );
     assert.equal(
       verifyHeadlessAssetBundleFingerprintCoherence(
-        materialized.value.canonicalRequest.assetBundle,
+        materialized.value.canonicalRequest!.assetBundle,
       ),
       true,
     );

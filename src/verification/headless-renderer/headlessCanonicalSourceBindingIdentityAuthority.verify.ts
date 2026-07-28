@@ -286,7 +286,7 @@ async function main() {
       throw new Error(`${issue.code}: ${issue.message}`);
     }
 
-    const canonicalLocators = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const canonicalLocators = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (a) => a.storageLocator,
     );
     const listed = await fixture.ownedObjectStore.listByJobIdAndOwner({
@@ -311,7 +311,7 @@ async function main() {
     }
 
     assert.equal(
-      materialized.value.canonicalRequest.assetBundle.fingerprint,
+      materialized.value.canonicalRequest!.assetBundle.fingerprint,
       fixture.draftCtx.draft.snapshotClaim.assetBundleFingerprintClaim,
     );
   });
@@ -343,7 +343,7 @@ async function main() {
     if (!promoted.ok) throw new Error("promote failed");
     assert.equal(promoted.value.kind, "updated");
 
-    const allowed = materialized.value.canonicalRequest.assetBundle.assets.map(
+    const allowed = materialized.value.canonicalRequest!.assetBundle.assets.map(
       (a) => a.storageLocator,
     );
     const storage = createStorage({ fixture, allowedLocators: allowed });
@@ -354,7 +354,7 @@ async function main() {
     const materializeAssets = await materializeOwnedAssets({
       storage,
       ownerId: fixture.ownerId,
-      bundle: materialized.value.canonicalRequest.assetBundle,
+      bundle: materialized.value.canonicalRequest!.assetBundle,
       workspace,
       nowMs: CLOCK,
       maxTotalAssetBytes: 32 * 1024 * 1024,
@@ -387,12 +387,12 @@ async function main() {
     assert.equal(second.ok, true);
     if (!first.ok || !second.ok) throw new Error("materialize replay failed");
     assert.deepEqual(
-      first.value.canonicalRequest.assetBundle.assets.map((a) => a.storageLocator),
-      second.value.canonicalRequest.assetBundle.assets.map((a) => a.storageLocator),
+      first.value.canonicalRequest!.assetBundle.assets.map((a) => a.storageLocator),
+      second.value.canonicalRequest!.assetBundle.assets.map((a) => a.storageLocator),
     );
     assert.equal(
-      first.value.canonicalRequest.assetBundle.fingerprint,
-      second.value.canonicalRequest.assetBundle.fingerprint,
+      first.value.canonicalRequest!.assetBundle.fingerprint,
+      second.value.canonicalRequest!.assetBundle.fingerprint,
     );
   });
 
@@ -410,7 +410,7 @@ async function main() {
     assert.equal(materialized.ok, true);
     if (!materialized.ok) throw new Error("materialize failed");
     const locator =
-      materialized.value.canonicalRequest.assetBundle.assets[0]!.storageLocator;
+      materialized.value.canonicalRequest!.assetBundle.assets[0]!.storageLocator;
     const resolved = await resolveProviderBackedSourceBinding({
       locator,
       ownerId: fixture.ownerId,
@@ -548,7 +548,7 @@ async function main() {
     assert.equal(listed.ok, true);
     if (!listed.ok) throw new Error("list failed");
     const canonicalLocator =
-      promoted.value.record.canonicalRequest.assetBundle.assets[0]!.storageLocator;
+      promoted.value.record.canonicalRequest!.assetBundle.assets[0]!.storageLocator;
     const finalized = listed.value
       .map((s) => s.record)
       .find(

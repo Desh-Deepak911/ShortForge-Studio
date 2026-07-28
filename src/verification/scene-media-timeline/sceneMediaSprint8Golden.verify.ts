@@ -425,7 +425,6 @@ test("Export: later invalid media cannot hide behind item 1", () => {
       positionY: 0,
       zoom: 1,
       rotationDeg: 0,
-      motion: null,
     } as never;
   const preflight = runExportCapabilityPreflight(poisoned);
   assert.equal(preflight.supported, false);

@@ -435,10 +435,11 @@ async function main() {
       validationFingerprint: FP.validation,
       candidateFingerprint: FP.candidate,
     };
-    assert.equal(
-      validateRetentionValidationSummary(legacyValidation).reason,
-      "legacy_unlinked",
-    );
+    const legacyResult =
+      validateRetentionValidationSummary(legacyValidation);
+    assert.equal(legacyResult.ok, false);
+    if (legacyResult.ok) throw new Error("expected legacy validation failure");
+    assert.equal(legacyResult.reason, "legacy_unlinked");
     assert.equal(
       buildRetentionExplainabilityModel({
         retentionPlan: samplePlan(),

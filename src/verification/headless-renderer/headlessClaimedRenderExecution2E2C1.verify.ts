@@ -186,7 +186,7 @@ async function main() {
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
     assert.equal(stored.value.stage, "canonical");
-    assert.equal(stored.value.canonicalJob.state, "succeeded");
+    assert.equal(stored.value.canonicalJob!.state, "succeeded");
     assert.ok(stored.value.artifactObjectBinding != null);
     assert.equal(stored.value.claimToken, null);
   });
@@ -329,7 +329,7 @@ async function main() {
     );
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
-    assert.notEqual(stored.value.canonicalJob.state, "succeeded");
+    assert.notEqual(stored.value.canonicalJob!.state, "succeeded");
   });
 
   await test("7: provisional/terminal/stale-attempt/cross-owner/forged fail closed", async () => {
@@ -358,14 +358,14 @@ async function main() {
         canonicalJob: {
           ...claimed.claimedRecord.canonicalJob,
           ownership: {
-            ...claimed.claimedRecord.canonicalJob.ownership,
+            ...claimed.claimedRecord.canonicalJob!.ownership,
             ownerId: "other-owner",
           },
         },
         canonicalRequest: {
           ...claimed.claimedRecord.canonicalRequest,
           ownership: {
-            ...claimed.claimedRecord.canonicalRequest.ownership,
+            ...claimed.claimedRecord.canonicalRequest!.ownership,
             ownerId: "other-owner",
           },
         },
@@ -380,7 +380,7 @@ async function main() {
         ...claimed.claimedRecord,
         canonicalJob: {
           ...claimed.claimedRecord.canonicalJob,
-          attempt: claimed.claimedRecord.canonicalJob.attempt + 1,
+          attempt: claimed.claimedRecord.canonicalJob!.attempt + 1,
         },
       },
       claimToken: claimed.claimToken,
@@ -394,9 +394,9 @@ async function main() {
       jobValue: claimed.claimedRecord.canonicalJob,
       requestValue: claimed.claimedRecord.canonicalRequest,
       toState: "failed",
-      attempt: claimed.claimedRecord.canonicalJob.attempt,
+      attempt: claimed.claimedRecord.canonicalJob!.attempt,
       updatedAtMs:
-        Math.max(fx.nowMs, claimed.claimedRecord.canonicalJob.updatedAtMs) + 1,
+        Math.max(fx.nowMs, claimed.claimedRecord.canonicalJob!.updatedAtMs) + 1,
       terminalReason: { reasonId: "WORKER_FAILED", retryable: false },
     });
     assert.equal(failed.ok, true);
@@ -446,7 +446,7 @@ async function main() {
       operationId: provOpId,
       creatorIdempotencyKey: `cik-${randomUUID().slice(0, 8)}`,
       idempotencyAuthorityKey: idem.fingerprint,
-      requestedRendererProfile: fx2.record.canonicalJob.rendererProfile,
+      requestedRendererProfile: fx2.record.canonicalJob!.rendererProfile,
       requestedRendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
       snapshotClaim: {
         manifestPayloadDigestClaim: digest,
@@ -524,8 +524,8 @@ async function main() {
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
     assert.ok(
-      stored.value.canonicalJob.state === "failed" ||
-        stored.value.canonicalJob.state === "cancelled",
+      stored.value.canonicalJob!.state === "failed" ||
+        stored.value.canonicalJob!.state === "cancelled",
     );
     assert.equal(stored.value.artifactObjectBinding, null);
   });
@@ -607,7 +607,7 @@ async function main() {
     const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
-    assert.notEqual(stored.value.canonicalJob.state, "succeeded");
+    assert.notEqual(stored.value.canonicalJob!.state, "succeeded");
     assert.equal(stored.value.artifactObjectBinding, null);
     assert.ok(result.value.lastOrphanCleanup != null);
   });

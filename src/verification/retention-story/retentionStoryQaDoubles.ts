@@ -227,7 +227,7 @@ export function makeRetentionComposer(): RetentionComposerCallback {
         return {
           beatId,
           text: joinOpeningAndBody(open, body),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }
       const seed =
@@ -237,12 +237,12 @@ export function makeRetentionComposer(): RetentionComposerCallback {
       return {
         beatId,
         text: padWords(seed, target),
-        claimRefs: [] as string[],
+        claimRefs: [] as unknown as string[],
       };
     });
     return {
       title: "Spain pressure story",
-      hookClaimRefs: [] as string[],
+      hookClaimRefs: [] as unknown as string[],
       segments,
     };
   };

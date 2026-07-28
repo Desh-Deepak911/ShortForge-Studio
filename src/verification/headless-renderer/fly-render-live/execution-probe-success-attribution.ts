@@ -291,7 +291,7 @@ export function deriveExecutionProbeSuccessAttribution(
   const { job, deliveryEvents, bindingCoherent, finalizedArtifactPresent } =
     input.preCleanupSignals;
 
-  if (job.canonicalJob.state !== "succeeded") {
+  if (job.canonicalJob!.state !== "succeeded") {
     return {
       ok: false,
       failureCategory: "EXECUTION_PROBE_SUCCESS_ATTRIBUTION_DURABLE_JOB_NOT_SUCCEEDED",

@@ -47,13 +47,13 @@ function fittingProposal(
   let rem = targetTotal - base * n;
   return {
     title: "Matchup pressure story",
-    hookClaimRefs: [] as string[],
+    hookClaimRefs: [] as unknown as string[],
     segments: plan.beatPlan.beats.map((beat, i) => {
       if (texts?.[i]) {
         return {
           beatId: beat.id,
           text: texts[i]!,
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }
       const target = Math.max(minPer, base + (rem > 0 ? 1 : 0));
@@ -68,7 +68,7 @@ function fittingProposal(
         return {
           beatId: beat.id,
           text: joinOpeningAndBody(open, body),
-          claimRefs: [] as string[],
+          claimRefs: [] as unknown as string[],
         };
       }
       const seed =
@@ -78,7 +78,7 @@ function fittingProposal(
       return {
         beatId: beat.id,
         text: padSpokenWords(seed, target),
-        claimRefs: [] as string[],
+        claimRefs: [] as unknown as string[],
       };
     }),
   };

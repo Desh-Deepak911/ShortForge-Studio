@@ -817,7 +817,6 @@ test("8D.1-18. Compatibility-media mismatch is rejected", () => {
     positionY: 0,
     zoom: 1,
     rotationDeg: 0,
-    motion: null,
   } as never;
   const result = validateExportManifest(bad);
   assert.equal(result.ok, false);
@@ -994,7 +993,6 @@ assertFailClosedMalformed(
       positionY: 0,
       zoom: 1,
       rotationDeg: 0,
-      motion: null,
     };
     (manifest.scenes[0]!.mediaTimeline.items[0] as { media: unknown }).media = videoMedia;
     (manifest.scenes[0] as { media: unknown }).media = videoMedia;
@@ -1024,7 +1022,6 @@ assertFailClosedMalformed(
       positionY: 0,
       zoom: 1,
       rotationDeg: 0,
-      motion: null,
     };
   },
   "INVALID_MEDIA_FIT_MODE",

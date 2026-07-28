@@ -278,15 +278,15 @@ export async function runAttributedRenderEnqueue(input: {
     stages.push(stageOk("neon_job_reread"));
 
     let current = stored.value;
-    if (current.canonicalJob.state !== "queued") {
+    if (current.canonicalJob!.state !== "queued") {
       const queued = applyHeadlessJobTransition({
         jobValue: current.canonicalJob,
         requestValue: current.canonicalRequest,
         toState: "queued",
-        attempt: current.canonicalJob.attempt,
+        attempt: current.canonicalJob!.attempt,
         updatedAtMs: Math.max(
           ctx.nowMs,
-          current.canonicalJob.updatedAtMs + 1,
+          current.canonicalJob!.updatedAtMs + 1,
         ),
       });
       if (!queued.ok) {
@@ -324,7 +324,7 @@ export async function runAttributedRenderEnqueue(input: {
       if (
         !reread.ok ||
         reread.value.stage !== "canonical" ||
-        reread.value.canonicalJob.state !== "queued"
+        reread.value.canonicalJob!.state !== "queued"
       ) {
         return failAt(
           stages,
@@ -336,9 +336,9 @@ export async function runAttributedRenderEnqueue(input: {
     }
 
     if (
-      current.canonicalJob.state !== "queued" ||
+      current.canonicalJob!.state !== "queued" ||
       current.claimToken != null ||
-      current.canonicalRequest.ownership.projectId !== ctx.projectId
+      current.canonicalRequest!.ownership.projectId !== ctx.projectId
     ) {
       return failAt(
         stages,
@@ -348,7 +348,7 @@ export async function runAttributedRenderEnqueue(input: {
     }
 
     jobId = current.jobId;
-    attempt = current.canonicalJob.attempt;
+    attempt = current.canonicalJob!.attempt;
     storeVersion = current.storeVersion;
     deliveryId = stableHeadlessDeliveryId(jobId, attempt);
     trackJobId(ctx, jobId);

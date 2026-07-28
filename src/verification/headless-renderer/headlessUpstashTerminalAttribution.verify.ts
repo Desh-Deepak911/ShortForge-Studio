@@ -316,7 +316,7 @@ async function main() {
     assert.equal(stored.ok, true);
     if (!stored.ok) return;
     assert.equal(stored.value.stage, "canonical");
-    assert.equal(stored.value.canonicalJob.state, "failed");
+    assert.equal(stored.value.canonicalJob!.state, "failed");
     assert.equal(stored.value.claimToken, null);
     assert.equal(stored.value.storeVersion, result.storeVersion);
   });

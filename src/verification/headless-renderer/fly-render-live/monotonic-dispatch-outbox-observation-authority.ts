@@ -81,13 +81,13 @@ export function classifyDispatchOutboxIdentityCoherence(input: {
     const { row, job } = input;
     const expectedDeliveryId = stableHeadlessDeliveryId(
       job.jobId,
-      job.canonicalJob.attempt,
+      job.canonicalJob!.attempt,
     );
     if (
       row.intent.jobId !== job.jobId ||
       row.intent.ownerId !== job.ownerId ||
       row.intent.projectId !== job.projectId ||
-      row.intent.attempt !== job.canonicalJob.attempt ||
+      row.intent.attempt !== job.canonicalJob!.attempt ||
       row.intent.deliveryId !== expectedDeliveryId ||
       row.intent.dispatchId !== expectedDeliveryId
     ) {

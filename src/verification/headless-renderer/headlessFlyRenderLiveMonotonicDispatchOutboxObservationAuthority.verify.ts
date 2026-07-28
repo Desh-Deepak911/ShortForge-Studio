@@ -90,7 +90,7 @@ function buildOutboxRow(input: {
 }): HeadlessStoredRenderDispatchOutbox {
   const deliveryId =
     input.forgedDeliveryId ??
-    stableHeadlessDeliveryId(input.job.jobId, input.job.canonicalJob.attempt);
+    stableHeadlessDeliveryId(input.job.jobId, input.job.canonicalJob!.attempt);
   const now = 1_700_000_000_000;
   const storeVersion = input.storeVersion ?? 1;
   const base = {
@@ -98,7 +98,7 @@ function buildOutboxRow(input: {
       version: HEADLESS_RENDER_DISPATCH_OUTBOX_VERSION,
       dispatchId: deliveryId,
       jobId: input.forgedJobId ?? input.job.jobId,
-      attempt: input.job.canonicalJob.attempt,
+      attempt: input.job.canonicalJob!.attempt,
       ownerId: input.job.ownerId,
       projectId: input.job.projectId,
       deliveryId,
@@ -223,7 +223,7 @@ async function main() {
     const completion = classifyMonotonicDispatchOutboxDispatchedCompletion({
       row,
       job,
-      anchorAttempt: job.canonicalJob.attempt,
+      anchorAttempt: job.canonicalJob!.attempt,
       anchorFirstStoreVersion: 1,
     });
     assert.equal(completion.ok, true);
@@ -360,7 +360,7 @@ async function main() {
     const current = await outbox.getByJobAttemptAndOwner({
       jobId: result.draftCtx.jobId,
       ownerId: ctx.ownerId,
-      attempt: job.value.canonicalJob.attempt,
+      attempt: job.value.canonicalJob!.attempt,
     });
     assert.ok(current.ok && current.value != null);
     outbox.testingUnsafeSeed(
@@ -417,7 +417,7 @@ async function main() {
     const row = await ctx.dispatchOutbox!.getByJobAttemptAndOwner({
       jobId: result.draftCtx.jobId,
       ownerId: ctx.ownerId,
-      attempt: job.value.canonicalJob.attempt,
+      attempt: job.value.canonicalJob!.attempt,
     });
     const completion = classifyMonotonicDispatchOutboxDispatchedCompletion({
       row: row.ok ? row.value : null,

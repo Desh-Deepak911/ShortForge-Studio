@@ -60,7 +60,7 @@ async function renderProfile(input: {
   const stored = await stack.jobStore.getByJobIdAndOwner(jobId, "owner-11d");
   assert.equal(stored.ok, true);
   if (!stored.ok) throw new Error("missing");
-  const art = stored.value.canonicalJob.artifact!;
+  const art = stored.value.canonicalJob!.artifact!;
   const expected =
     HEADLESS_OUTPUT_PROFILES[
       `${input.profile.resolution}-${input.profile.format}-30` as keyof typeof HEADLESS_OUTPUT_PROFILES
