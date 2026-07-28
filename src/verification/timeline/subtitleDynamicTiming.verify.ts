@@ -8,9 +8,11 @@ import { join } from "node:path";
 import {
   buildFootieExportPayload,
   getExportTotalDurationSec,
+  mapSceneToExport,
 } from "@/features/export/services";
 import { resolveExportSubtitleDisplay } from "@/features/export/utils/export-subtitle.utils";
 import { getPreviewSceneTiming } from "@/features/preview/utils/previewSceneTiming";
+import { buildMasterTimeline } from "@/features/timeline-intelligence/build-master-timeline";
 import type { FootieScene } from "@/features/story/types";
 import {
   getSceneTimingAtGlobalTime,
@@ -106,6 +108,15 @@ test("preview timing uses scene.durationMs from the timing map", () => {
     [makeSubtitlesScene("1", 8000, 0), makeSubtitlesScene("2", 8000, 8000)],
     12_000,
   );
+  const masterTimeline = buildMasterTimeline(
+    syncFootieScript({
+      title: "Preview timing",
+      narration: subtitleText,
+      totalDuration: 12,
+      scenes,
+    }),
+    { mode: "preview" },
+  );
 
   const { sceneElapsedMs, sceneDurationMs, activeSceneIndex } = getPreviewSceneTiming({
     scenes,
@@ -115,6 +126,8 @@ test("preview timing uses scene.durationMs from the timing map", () => {
     isPlaying: true,
     browserSceneStartedAtMs: null,
     previewClockMs: 0,
+    masterTimeline,
+    currentTimeMs: 3000,
   });
 
   assert.equal(sceneDurationMs, 6000);
@@ -128,7 +141,7 @@ test("export derives subtitle timing from scene.durationMs", () => {
   const scene = makeSubtitlesScene("1", 9000, 0);
   const chunks = splitSubtitleChunks(subtitleText);
   const chunkDurationMs = 9000 / chunks.length;
-  const display = resolveExportSubtitleDisplay(scene, {
+  const display = resolveExportSubtitleDisplay(mapSceneToExport(scene), {
     sceneElapsedMs: chunkDurationMs * 1.5,
     sceneDurationMs: scene.durationMs!,
   });

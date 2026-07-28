@@ -225,8 +225,10 @@ function resolvePreviewPlaybackFrame(
 
   for (const event of sceneEvents) {
     if (timeMs >= event.startMs && timeMs < event.endMs) {
-      const sceneId = event.metadata.sceneId;
-      const sceneIndex = event.metadata.sceneIndex;
+      assert.equal(event.type, "scene");
+      const sceneEvent = event as Extract<typeof event, { type: "scene" }>;
+      const sceneId = sceneEvent.metadata.sceneId;
+      const sceneIndex = sceneEvent.metadata.sceneIndex;
       return {
         scene: sceneById.get(sceneId) ?? scenes[sceneIndex] ?? scenes[0]!,
         sceneIndex,

@@ -16,6 +16,8 @@ import {
 import { getTimelineTrackByType } from "@/features/timeline-intelligence/timeline-utils";
 import type {
   CaptionAnimationTimelineEvent,
+  MasterTimeline,
+  SubtitleTimelineEvent,
   TransitionTimelineEvent,
 } from "@/features/timeline-intelligence/timeline.types";
 import type { FootieScene, FootieScript } from "@/features/story/types";
@@ -149,27 +151,30 @@ test("2. transition duration is clamped to safe outgoing scene tail", () => {
   const timeline = buildMasterTimeline(story, { mode: "preview" });
   const sceneEndMs = getTimelineTrackByType(timeline.tracks, "scene")!.events[0]!.endMs;
 
-  const tamperedTimeline = {
+  const tamperedTimeline: MasterTimeline = {
     ...timeline,
-    tracks: timeline.tracks.map((track) =>
-      track.type === "transition"
-        ? {
-            ...track,
-            events: track.events.map((event) => ({
-              ...event,
+    tracks: timeline.tracks.map((track) => {
+      if (track.type !== "transition") return track;
+      return {
+        ...track,
+        events: track.events.map((event): TransitionTimelineEvent => {
+          assert.equal(event.type, "transition");
+          const transition = event as TransitionTimelineEvent;
+          return {
+            ...transition,
+            startMs: 0,
+            endMs: sceneEndMs,
+            durationMs: sceneEndMs,
+            metadata: {
+              ...transition.metadata,
               startMs: 0,
               endMs: sceneEndMs,
               durationMs: sceneEndMs,
-              metadata: {
-                ...(event as TransitionTimelineEvent).metadata,
-                startMs: 0,
-                endMs: sceneEndMs,
-                durationMs: sceneEndMs,
-              },
-            })),
-          }
-        : track,
-    ),
+            },
+          };
+        }),
+      };
+    }),
   };
 
   const optimized = optimizeMasterTimeline(tamperedTimeline);
@@ -222,7 +227,10 @@ test("4. dense subtitles are flagged without rewriting text", () => {
   const optimized = optimizeMasterTimeline(timeline);
   const subtitleAfter = getTimelineTrackByType(optimized.timeline.tracks, "subtitle")!.events[0]!;
 
-  assert.equal(subtitleBefore.metadata.text, subtitleAfter.metadata.text);
+  assert.equal(
+    (subtitleBefore as SubtitleTimelineEvent).metadata.text,
+    (subtitleAfter as SubtitleTimelineEvent).metadata.text,
+  );
   assert.ok(
     optimized.findings.some((finding) => finding.rule === "dense-subtitle-flag"),
     "dense subtitle flagged",
@@ -246,24 +254,27 @@ test("5. caption animation duration is clamped to subtitle window", () => {
     .events[0] as CaptionAnimationTimelineEvent;
   const subtitle = getTimelineTrackByType(timeline.tracks, "subtitle")!.events[0]!;
 
-  const tamperedTimeline = {
+  const tamperedTimeline: MasterTimeline = {
     ...timeline,
-    tracks: timeline.tracks.map((track) =>
-      track.type === "caption-animation"
-        ? {
-            ...track,
-            events: track.events.map((event) => ({
-              ...event,
-              endMs: subtitle.endMs + 500,
-              durationMs: subtitle.endMs + 500 - event.startMs,
-              metadata: {
-                ...(event as CaptionAnimationTimelineEvent).metadata,
-                animationEndMs: subtitle.endMs + 500,
-              },
-            })),
-          }
-        : track,
-    ),
+    tracks: timeline.tracks.map((track) => {
+      if (track.type !== "caption-animation") return track;
+      return {
+        ...track,
+        events: track.events.map((event): CaptionAnimationTimelineEvent => {
+          assert.equal(event.type, "caption-animation");
+          const animation = event as CaptionAnimationTimelineEvent;
+          return {
+            ...animation,
+            endMs: subtitle.endMs + 500,
+            durationMs: subtitle.endMs + 500 - animation.startMs,
+            metadata: {
+              ...animation.metadata,
+              animationEndMs: subtitle.endMs + 500,
+            },
+          };
+        }),
+      };
+    }),
   };
 
   assert.ok(animationBefore.endMs <= subtitle.endMs + 1, "baseline already within window");

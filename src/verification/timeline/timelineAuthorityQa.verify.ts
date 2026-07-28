@@ -21,11 +21,9 @@ import {
   resolvePreviewDurationSec,
   resolvePreviewPlaybackState,
 } from "@/features/preview/utils/preview-master-timeline.utils";
-import {
-  buildMasterTimeline,
-  TIMELINE_SUBTITLE_FINAL_READABLE_HOLD_MS,
-} from "@/features/timeline-intelligence/build-master-timeline";
+import { TIMELINE_SUBTITLE_FINAL_READABLE_HOLD_MS } from "@/features/timeline-intelligence/build-master-timeline";
 import { buildTimelineDevDiagnostics } from "@/features/timeline-intelligence/timeline-diagnostics.dev.utils";
+import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.types";
 import {
   getActiveSubtitleAtTime,
   resolveTimelineFrameCount,
@@ -126,15 +124,17 @@ function scenesForDuration(totalSec: number, segmentSec = 6): FootieScene[] {
 function assertMasterTimelineDurationAuthority(
   script: FootieScript,
   label: string,
-): { previewTimeline: ReturnType<typeof buildPreviewMasterTimeline>; exportTimeline: ReturnType<typeof buildMasterTimeline> } {
+): { previewTimeline: MasterTimeline; exportTimeline: MasterTimeline } {
   const previewTimeline = buildPreviewMasterTimeline(script);
   const preflight = prepareStoryForExport(script);
   const exportTimeline = preflight.masterTimeline;
 
-  assert.ok(previewTimeline, `${label}: preview timeline`);
+  if (previewTimeline == null) {
+    throw new Error(`${label}: preview timeline`);
+  }
   assert.equal(
     resolvePreviewDurationSec(previewTimeline),
-    previewTimeline!.renderDurationMs / 1000,
+    previewTimeline.renderDurationMs / 1000,
     `${label}: preview duration from renderDurationMs`,
   );
   assert.equal(
@@ -143,32 +143,35 @@ function assertMasterTimelineDurationAuthority(
     `${label}: export duration from MasterTimeline`,
   );
 
-  return { previewTimeline: previewTimeline!, exportTimeline };
+  return { previewTimeline, exportTimeline };
 }
 
 function assertPreviewExportFrameParity(
   script: FootieScript,
-  previewTimeline: ReturnType<typeof buildMasterTimeline>,
-  exportTimeline: ReturnType<typeof buildMasterTimeline>,
+  previewTimeline: MasterTimeline,
+  exportTimeline: MasterTimeline,
   timeMs: number,
   label: string,
 ): void {
-  const scenes = script.scenes;
-  const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
+  const previewScenes = script.scenes;
+  const exportScenes = buildFootieExportPayload(script).scenes;
+  const exportSceneById = new Map(exportScenes.map((scene) => [scene.id, scene]));
 
-  const preview = resolvePreviewPlaybackState(previewTimeline, scenes, timeMs);
+  const preview = resolvePreviewPlaybackState(previewTimeline, previewScenes, timeMs);
   const exportFrame = resolveExportFrameFromMasterTimeline(
     exportTimeline,
-    scenes,
-    sceneById,
+    exportScenes,
+    exportSceneById,
     timeMs,
   );
 
-  assert.ok(preview, `${label} @${timeMs}ms: preview state`);
-  assert.equal(preview!.sceneIndex, exportFrame.sceneIndex, `${label} @${timeMs}ms: scene index`);
-  assert.equal(preview!.scene.id, exportFrame.scene.id, `${label} @${timeMs}ms: scene id`);
+  if (preview == null) {
+    throw new Error(`${label} @${timeMs}ms: preview state`);
+  }
+  assert.equal(preview.sceneIndex, exportFrame.sceneIndex, `${label} @${timeMs}ms: scene index`);
+  assert.equal(preview.scene.id, exportFrame.scene.id, `${label} @${timeMs}ms: scene id`);
   assert.equal(
-    preview!.sceneElapsedMs,
+    preview.sceneElapsedMs,
     exportFrame.timing.sceneElapsedMs,
     `${label} @${timeMs}ms: scene elapsed`,
   );
@@ -183,7 +186,7 @@ function assertPreviewExportFrameParity(
   assert.equal(previewText, exportText, `${label} @${timeMs}ms: subtitle chunk`);
 }
 
-function assertFinalSubtitleCompletes(timeline: ReturnType<typeof buildMasterTimeline>, label: string): void {
+function assertFinalSubtitleCompletes(timeline: MasterTimeline, label: string): void {
   const finalSubtitleEndMs = timeline.diagnostics.finalSubtitleEndMs ?? 0;
   assert.ok(finalSubtitleEndMs > 0, `${label}: has final subtitle end`);
   assert.ok(
@@ -201,8 +204,8 @@ function assertFinalSubtitleCompletes(timeline: ReturnType<typeof buildMasterTim
 
 function assertNoSubtitleDriftAtSamples(
   script: FootieScript,
-  previewTimeline: ReturnType<typeof buildMasterTimeline>,
-  exportTimeline: ReturnType<typeof buildMasterTimeline>,
+  previewTimeline: MasterTimeline,
+  exportTimeline: MasterTimeline,
   sampleCount: number,
   label: string,
 ): void {
@@ -311,7 +314,7 @@ test("7. transitions", () => {
   const story = buildStory(scenes, {
     voiceoverDurationMs: 12_000,
     timelineItems: [
-      { type: "scene", sceneId: "s1", order: 0 },
+      { id: "s1", type: "scene", scene: scenes[0]! },
       {
         type: "transition",
         id: "t-s1-s2",
@@ -319,8 +322,9 @@ test("7. transitions", () => {
         toSceneId: "s2",
         effect: "fade",
         durationMs: 500,
+        label: "Fade",
       },
-      { type: "scene", sceneId: "s2", order: 1 },
+      { id: "s2", type: "scene", scene: scenes[1]! },
     ],
   });
 
@@ -338,7 +342,8 @@ test("8. exported WebM uses MasterTimeline frame loop", () => {
 
   assert.match(videoRender, /resolveExportFrameFromMasterTimeline/);
   assert.match(videoRender, /resolveTimelineFrameCount\(renderDurationMs/);
-  assert.match(videoRender, /prepareStoryForExport/);
+  assert.match(videoRender, /prepareExportRequest/);
+  assert.match(videoRender, /exportFootieShortFromManifest/);
   assert.match(ffmpeg, /outputFormat = options\.outputFormat \?\? "webm"/);
 
   const story = buildStory(scenesForDuration(12), { voiceoverDurationMs: 12_000 });
@@ -355,7 +360,9 @@ test("9. exported MP4 uses MasterTimeline duration in mux path", () => {
   const videoRender = readSrc("src/features/export/services/video-render.service.ts");
   const ffmpeg = readSrc("src/features/export/utils/ffmpeg.utils.ts");
 
-  assert.match(videoRender, /return exportPath === "mp4" \? "mp4" : "webm"/);
+  assert.match(videoRender, /finalizeBlobForExportPath/);
+  assert.match(videoRender, /isWebmExportPath\(exportPath\)/);
+  assert.match(videoRender, /transcodeForMp4ExportPath/);
   assert.match(ffmpeg, /outputFormat === "mp4"/);
 
   const story = buildStory(scenesForDuration(12), { voiceoverDurationMs: 12_000 });
@@ -379,8 +386,8 @@ test("10. preview vs export timing comparison", () => {
   const diagnostics = buildTimelineDevDiagnostics(story);
 
   assert.equal(diagnostics.preview.renderDurationMs, diagnostics.export.renderDurationMs);
-  assert.equal(diagnostics.preview.exportRefitApplied, true);
-  assert.equal(diagnostics.export.exportRefitApplied, true);
+  assert.equal(diagnostics.preview.exportRefitApplied, false);
+  assert.equal(diagnostics.export.exportRefitApplied, false);
   assert.equal(diagnostics.comparisonWarnings.length, 0);
 
   const previewUtils = readSrc("src/features/preview/utils/preview-master-timeline.utils.ts");

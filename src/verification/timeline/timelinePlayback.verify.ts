@@ -36,6 +36,7 @@ import { getTransitionLayerStyles } from "@/features/preview/utils/previewTimeli
 import { recalculateSceneTimings } from "@/features/story/utils";
 import { resolvePreviewPlaybackState } from "@/features/preview/utils/preview-master-timeline.utils";
 import { resolveExportFrameFromMasterTimeline } from "@/features/export/services/video-render.service";
+import { buildFootieExportPayload } from "@/features/export/services/export-payload.service";
 import { getTypewriterRevealedText } from "@/features/story/utils/subtitle-effect.utils";
 import { resolveSubtitleDisplayLayout } from "@/features/story/utils/subtitle-layout.utils";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -49,10 +50,19 @@ function readSrc(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
-function makeScene(id: string, durationSec: number, startSec = 0): FootieScene {
+function makeScene(
+  id: string,
+  durationSec: number,
+  startOrOptions: number | { startSec?: number; subtitleText?: string } = 0,
+): FootieScene {
+  const startSec =
+    typeof startOrOptions === "number" ? startOrOptions : (startOrOptions.startSec ?? 0);
   const durationMs = durationSec * 1000;
   const startMs = startSec * 1000;
-  const subtitleText = `Subtitle for ${id}.`;
+  const subtitleText =
+    typeof startOrOptions === "number"
+      ? `Subtitle for ${id}.`
+      : (startOrOptions.subtitleText ?? `Subtitle for ${id}.`);
 
   return {
     id,
@@ -102,7 +112,10 @@ test("getTimelineProgress uses startMs <= timeMs < endMs boundary", () => {
     endMs: 4000,
     durationMs: 3000,
     source: "editor-scene-timing",
-    metadata: {},
+    metadata: {
+      sceneId: "s1",
+      sceneIndex: 0,
+    },
   };
 
   assert.equal(getTimelineProgress(event, 999).isWithinWindow, false);
@@ -158,15 +171,16 @@ test("preview and export resolve the same scene index at the same time", () => {
   const story = buildStory([makeScene("s1", 5), makeScene("s2", 5, 5)], 10_000);
   const previewTimeline = buildMasterTimeline(story, { mode: "preview", useVoiceoverRefit: true });
   const exportTimeline = buildMasterTimeline(story, { mode: "export", useVoiceoverRefit: true });
-  const scenes = story.scenes;
-  const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
+  const previewScenes = story.scenes;
+  const exportScenes = buildFootieExportPayload(story).scenes;
+  const exportSceneById = new Map(exportScenes.map((scene) => [scene.id, scene]));
   const timeMs = 6_500;
 
-  const preview = resolvePreviewPlaybackState(previewTimeline, scenes, timeMs);
+  const preview = resolvePreviewPlaybackState(previewTimeline, previewScenes, timeMs);
   const exportFrame = resolveExportFrameFromMasterTimeline(
     exportTimeline,
-    scenes,
-    sceneById,
+    exportScenes,
+    exportSceneById,
     timeMs,
   );
 
@@ -318,12 +332,12 @@ test("resolveCaptionAnimationState accelerates typewriter when window is too sho
   assert.equal(nearEnd.shouldRenderFullText, true);
 });
 
-test("preview and export caption renderers use resolveCaptionAnimationState", () => {
+test("preview and export caption renderers use shared caption animation resolvers", () => {
   const exportSubtitle = readSrc("src/features/export/utils/export-subtitle.utils.ts");
   const exportCanvas = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const subtitleEffectPreview = readSrc("src/features/editor/components/subtitleEffectPreview.tsx");
   const subtitleOverlay = readSrc("src/features/preview/components/SubtitleOverlay.tsx");
-  assert.match(exportSubtitle, /resolveCaptionAnimationState/);
+  assert.match(exportSubtitle, /resolveExportCaptionAnimation/);
   assert.match(exportCanvas, /display\.animationState/);
   assert.match(subtitleEffectPreview, /captionAnimationState/);
   assert.match(subtitleOverlay, /captionAnimationState/);
@@ -349,7 +363,7 @@ function makeImageMotionEvent(
     startMs,
     endMs,
     durationMs: endMs - startMs,
-    source: "editor-scene-image-motion",
+    source: "derived-image-motion",
     metadata: {
       sceneId: "s1",
       sceneIndex: 0,
