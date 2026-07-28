@@ -63,6 +63,9 @@ export function mapStoryErrorReason(
     case "planner_call_failed":
       return "planner_failed";
     case "planner_proposal_invalid":
+    case "invalid_controlling_idea":
+    case "no_valid_controlling_idea":
+    case "controlling_idea_candidate_mismatch":
       return "planner_invalid";
     case "composer_unavailable":
       return "composer_unavailable";

@@ -32,11 +32,38 @@ const SHORT_MEANINGFUL = new Set([
   "bv",
 ]);
 
+const MAX_QUALITATIVE_ANCHOR_WORDS = 12;
+const MAX_QUALITATIVE_ANCHOR_CHARS = 96;
+const CREATOR_INSTRUCTION_PREFIX =
+  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?\s*)/i;
+
 function foldToken(raw: string): string {
   return raw
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .toLowerCase();
+}
+
+function buildBoundedQualitativeAnchor(topic: string): string {
+  if (
+    topic.length <= MAX_QUALITATIVE_ANCHOR_CHARS &&
+    topic.split(/\s+/).filter(Boolean).length <= MAX_QUALITATIVE_ANCHOR_WORDS
+  ) {
+    return topic;
+  }
+
+  const firstThought = topic.split(/[\n.!?]+/u)[0]?.trim() || topic;
+  const withoutInstruction =
+    firstThought.replace(CREATOR_INSTRUCTION_PREFIX, "").trim() || firstThought;
+  const words = withoutInstruction.split(/\s+/).filter(Boolean);
+  let bounded = words.slice(0, MAX_QUALITATIVE_ANCHOR_WORDS).join(" ");
+  while (bounded.length > MAX_QUALITATIVE_ANCHOR_CHARS && words.length > 1) {
+    words.pop();
+    bounded = words
+      .slice(0, MAX_QUALITATIVE_ANCHOR_WORDS)
+      .join(" ");
+  }
+  return bounded || topic;
 }
 
 interface OrderedDisplayToken {
@@ -91,8 +118,9 @@ export function resolveRetentionDeterministicSubjectAnchor(
 
   const risky = detectRetentionFactualRisk(normalized).risky;
   if (!risky) {
-    // Preserve normal topic wording when it carries no factual-risk signals.
-    return normalized;
+    // Preserve concise topics verbatim. A creator may also enter a full brief;
+    // bound that prose before it enters the short controlling-idea contract.
+    return buildBoundedQualitativeAnchor(normalized);
   }
 
   // Prefer meaningful tokens (≥3) that are not standalone club prefixes when a

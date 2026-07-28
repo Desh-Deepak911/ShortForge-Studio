@@ -480,6 +480,49 @@ async function main() {
     assert.ok(resolveRetentionDeterministicSubjectAnchor("AI FC"));
   });
 
+  await check("[R13A] full creator briefs produce bounded subject anchors", () => {
+    const brief =
+      "Tell the dramatic rise, fall, and attempted rebirth of Xabi Alonso. Begin with his extraordinary breakthrough at Bayer Leverkusen, then contrast that rise with pressure at Real Madrid.";
+    const anchor = resolveRetentionDeterministicSubjectAnchor(brief);
+    assert.ok(anchor);
+    assert.match(anchor!, /Xabi Alonso/i);
+    assert.doesNotMatch(anchor!, /^Tell\b/i);
+    assert.ok(anchor!.length <= 96);
+    assert.ok(anchor!.split(/\s+/).length <= 12);
+  });
+
+  await check(
+    "[R13B] Retention-first explicit Hook survives a long creator brief",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic:
+          "Tell the dramatic rise, fall, and attempted rebirth of Xabi Alonso. Begin with his extraordinary breakthrough at Bayer Leverkusen, then contrast that rise with pressure at Real Madrid and his new challenge at Chelsea.",
+        durationSec: 30,
+        generationPath: "script_only",
+        qualityMode: "cheap",
+        tone: "dramatic",
+        scriptMode: "story",
+        formatStrategyId: "short_retention",
+        hookStyle: "provocative_question",
+        factHandlingMode: "creative_premise",
+        premiseDetails:
+          "Chelsea and Alonso are two damaged reputations taking one enormous gamble on each other.",
+        planner: null,
+        composer: () => {
+          throw new Error("model composer unavailable");
+        },
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(
+        result.ok,
+        true,
+        result.ok ? "" : `${result.failureCategory}: ${result.error}`,
+      );
+      if (!result.ok) throw new Error("expected ok");
+      assert.ok(result.approved.narration.trim().length > 20);
+    },
+  );
+
   await check("[R14] verified-only manual facts emit unsupported_facts_omitted", () => {
     const input = buildProductionStoryContractInput({
       topic: "Spain versus France tactical preview",

@@ -52,7 +52,6 @@ import type {
 import {
   DEFAULT_SCENE_COUNT,
   DEFAULT_SCRIPT_MODE,
-  isResearchDefaultEnabledForScriptMode,
 } from "@/types/footiebitz";
 
 /**
@@ -64,9 +63,9 @@ export default function CreateStoryFlow() {
   const [topic, setTopic] = useState("");
   const [scriptMode, setScriptMode] = useState<ScriptMode>(DEFAULT_SCRIPT_MODE);
   const [context, setContext] = useState("");
-  const [enableResearch, setEnableResearch] = useState(() =>
-    isResearchDefaultEnabledForScriptMode(DEFAULT_SCRIPT_MODE),
-  );
+  // Smart Research is an explicit creator choice. Never auto-enable a
+  // provider-backed feature when its providers may not be configured.
+  const [enableResearch, setEnableResearch] = useState(false);
   const [tone, setTone] = useState<Tone>("dramatic");
   const [duration, setDuration] = useState<number>(30);
   const [qualityMode, setQualityMode] = useState<QualityMode>("cheap");
@@ -112,7 +111,6 @@ export default function CreateStoryFlow() {
   const handleScriptModeChange = useCallback(
     (mode: ScriptMode) => {
       setScriptMode(mode);
-      setEnableResearch(isResearchDefaultEnabledForScriptMode(mode));
       const reconciled = reconcileHookStyleSelection(hookStyle, mode);
       setHookStyle(reconciled.selection);
       setHookStyleCompatibilityNotice(reconciled.compatibilityNotice);
@@ -203,7 +201,6 @@ export default function CreateStoryFlow() {
       const nextScriptMode = nextBrief.scriptMode ?? DEFAULT_SCRIPT_MODE;
 
       setScriptMode(nextScriptMode);
-      setEnableResearch(isResearchDefaultEnabledForScriptMode(nextScriptMode));
       setDuration(nextBrief.duration);
       setSceneCount(nextBrief.sceneCount);
       // Template must not overwrite a compatible explicit Hook Style; reset only if incompatible.

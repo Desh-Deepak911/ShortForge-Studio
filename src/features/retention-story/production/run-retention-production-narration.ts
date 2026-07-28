@@ -1196,8 +1196,15 @@ export async function runRetentionProductionNarration(
       ok: true as const,
       approved: committed.approved,
     });
-  } catch {
+  } catch (error) {
     // Never rethrow provider/model/stack payloads to /api/generate-script.
+    if (isRetentionStoryError(error)) {
+      return failResult(mapStoryErrorReason(error.reason), {
+        contractFingerprint: contract.contractFingerprint,
+        qualityMode: contract.qualityMode,
+        safeReasonIds: Object.freeze([error.reason]),
+      });
+    }
     return failResult("production_internal_failure", {
       contractFingerprint: contract.contractFingerprint,
       qualityMode: contract.qualityMode,

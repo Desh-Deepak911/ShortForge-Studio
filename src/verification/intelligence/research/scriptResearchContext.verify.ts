@@ -9,8 +9,10 @@ import type { AssembledContext } from "@/features/intelligence/context/assembled
 import type { GraphContext } from "@/features/intelligence/context/graph-context.types";
 import {
   applyAssembledResearchContext,
+  buildResearchUnavailableContext,
   isReusableResearchPreview,
   matchesResearchPreviewHandoff,
+  RESEARCH_UNAVAILABLE_CREATOR_WARNING,
 } from "@/features/research/utils/script-research-context.utils";
 import { applyResolvedResearchContext } from "@/features/research/legacy/script-research-context.legacy.utils";
 import type { FootballResearchContext } from "@/features/research/types/football-research.types";
@@ -26,6 +28,20 @@ const root = process.cwd();
 function readSrc(relativePath: string): string {
   return readFileSync(join(root, relativePath), "utf8");
 }
+
+test("optional Smart Research failures preserve the creator brief", () => {
+  const resolved = buildResearchUnavailableContext(
+    "  Keep the creator's original angle.  ",
+  );
+  assert.equal(resolved.context, "Keep the creator's original angle.");
+  assert.equal(resolved.researchApplied, false);
+  assert.equal(resolved.usedResearchPreview, false);
+  assert.equal(resolved.top5RankedDataAvailable, false);
+  assert.equal(
+    resolved.researchWarning,
+    RESEARCH_UNAVAILABLE_CREATOR_WARNING,
+  );
+});
 
 const worldCupAssembled: AssembledContext = {
   queryId: "test-query",
@@ -332,6 +348,10 @@ test("generate-script route passes top5RankedDataAvailable to generation", () =>
   assert.doesNotMatch(routeResearch, /cacheExecutionResult/);
   assert.doesNotMatch(serverResolver, /cacheExecutionResult/);
   assert.match(serverResolver, /executeAndCacheIntelligenceQuery/);
+  assert.match(serverResolver, /buildResearchUnavailableContext/);
+  assert.match(serverResolver, /optional research unavailable/);
+  assert.match(serverResolver, /try\s*\{/);
+  assert.match(serverResolver, /catch\s*\{/);
   assert.doesNotMatch(serverResolver, /contextText/);
   assert.doesNotMatch(routeResearch, /researchContext/);
   assert.doesNotMatch(routeResearch, /contextText/);
