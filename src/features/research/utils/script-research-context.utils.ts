@@ -37,6 +37,22 @@ export interface ResolvedScriptResearchContext {
   narrativePlan?: NarrativePlan;
 }
 
+export const RESEARCH_UNAVAILABLE_CREATOR_WARNING =
+  "Smart Research is unavailable, so this draft used your brief without research.";
+
+/** Fail-open context for an optional provider-backed research attempt. */
+export function buildResearchUnavailableContext(
+  manualContext?: string,
+): ResolvedScriptResearchContext {
+  return {
+    context: manualContext?.trim() || undefined,
+    researchApplied: false,
+    researchWarning: RESEARCH_UNAVAILABLE_CREATOR_WARNING,
+    usedResearchPreview: false,
+    top5RankedDataAvailable: false,
+  };
+}
+
 function withSupplementalManualNotes(
   assembled: AssembledContext,
   manualContext?: string,

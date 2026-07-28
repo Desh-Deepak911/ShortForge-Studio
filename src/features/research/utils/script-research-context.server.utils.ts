@@ -7,6 +7,7 @@ import {
 } from "@/features/intelligence/context/resolve-research-prompt-text";
 import {
   applyAssembledResearchContext,
+  buildResearchUnavailableContext,
   isReusableResearchPreview,
   type ResolveScriptResearchContextInput,
   type ResolvedScriptResearchContext,
@@ -102,5 +103,14 @@ export async function resolveScriptResearchContext(
     };
   }
 
-  return resolveResearchPayload(input);
+  try {
+    return await resolveResearchPayload(input);
+  } catch {
+    // Research is optional. Provider/store failures must not block a creator
+    // from generating a draft from their own brief.
+    console.warn(
+      "[script-research] optional research unavailable; continuing with creator brief",
+    );
+    return buildResearchUnavailableContext(manualContext);
+  }
 }

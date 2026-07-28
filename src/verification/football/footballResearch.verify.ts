@@ -76,9 +76,10 @@ test("formatFixtureResearchContext includes fixture facts", () => {
 
 test("generate-script resolves research before script-only generation", () => {
   const route = readSrc("src/app/api/generate-script/route.ts");
-  assert.match(route, /resolveScriptOnlyGenerationContext/);
+  assert.match(route, /resolveNarrationGenerationContext/);
+  assert.match(route, /resolveScriptResearchContext/);
   assert.match(route, /enableResearch/);
-  assert.match(route, /generationContext/);
+  assert.match(route, /resolvedContext/);
   assert.match(route, /researchWarning/);
 });
 
@@ -89,9 +90,13 @@ test("create flow exposes Football Research Mode", () => {
   // Creator notes must not be overwritten by assembled generationContext (10H.4A).
   assert.doesNotMatch(createFlow, /context:\s*data\.generationContext/);
   assert.match(createFlow, /researchApplied/);
-  assert.match(createFlow, /isResearchDefaultEnabledForScriptMode/);
+  assert.doesNotMatch(createFlow, /isResearchDefaultEnabledForScriptMode/);
+  assert.match(createFlow, /useState\(false\)/);
   assert.match(briefInspector, /Smart Research/);
-  assert.match(briefInspector, /Use trusted sources when available\./);
+  assert.match(
+    briefInspector,
+    /Research absence does not block a qualitative draft\./,
+  );
 });
 
 test("research-football route is wired", () => {
