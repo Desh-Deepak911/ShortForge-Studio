@@ -1,53 +1,64 @@
 # Verification scripts
 
-Non-production regression and QA scripts for ShortForge. These files live outside the production build (`tsconfig.json` excludes `**/*.verify.ts`) and assert contracts between preview, export, timeline, research, and related subsystems.
+Non-production regression and QA scripts for ShortForge. These files live outside the
+production build (`tsconfig.json` excludes `**/*.verify.ts`) and assert contracts between
+preview, export, timeline, research, and related subsystems.
 
-Runtime code stays in `src/lib` and `src/features`. Verification code only imports runtime modules — it is never imported by production routes.
+Runtime code stays in `src/lib` and `src/features`. Verification code only imports runtime
+modules — it is never imported by production routes.
 
-## Folder structure
+## Suite ownership
 
-```
-src/verification/
-├── README.md
-├── audio/          Voiceover, background music, audio engine, export audio mix
-├── canonical/      Canonical pipeline consolidation
-├── drafts/         Draft persistence, hydration, script generation/review
-├── editor/         Scene images, motion, Smart Edit / image tool bridge
-├── entity/         Entity resolution and ownership
-├── export/         Export payload, preflight, subtitles, sync, format
-├── football/       Football research providers and API-Football adapters
-├── graph/          Knowledge graph, prompt intelligence, provider engine
-├── research/       Research grounding, script prompts, story structure
-├── timeline/       Timeline authority, playback, transitions, subtitles
-├── ui/             Cross-cutting UI / phase QA
-└── utils/          Legacy compatibility, narration budget helpers
-```
+| Directory | Primary responsibility |
+| --- | --- |
+| `asset-intelligence/` | Asset search, ranking, and planning authority |
+| `audio/` | Narration, mixer, and audio-first workflow |
+| `drafts/` | Draft persistence and reload |
+| `editor/`, `ui/` | Editor behavior and route-level UI contracts |
+| `export/` | Browser/export manifest, timing, media, artifact, and parity checks |
+| `headless-renderer/` | Control plane, worker, storage, hosted probes, and capacity certification |
+| `hook-engine/` | Hook planning, validation, streaming, safety, and persistence |
+| `retention-story/` | Retention planning and production integration |
+| `scene-media-timeline/` | Multi-item media timeline authority |
+| `scene-media-transitions/` | Intra-scene transition authority |
+| `studio-intelligence/` | Studio planning and production wiring |
+| `timeline/` | Shared timeline and playback foundations |
+| `canonical/`, `utils/` | Shared verification helpers and canonical fixtures |
 
-## Domain grouping
+## File conventions
 
-| Domain | Focus | Example scripts |
-|--------|--------|-----------------|
-| `audio/` | Voiceover lifecycle, BGM, browser/server audio mix | `test:audio-engine-qa`, `test:voiceover-service` |
-| `canonical/` | Single canonical research → script pipeline | `test:canonical-pipeline-qa` |
-| `drafts/` | Draft CRUD, reload, routing, script workflows | `test:drafts`, `test:script-generation` |
-| `editor/` | Scene image upload, motion, external tool bridge | `test:scene-image-qa`, `test:smart-edit-image-action-qa` |
-| `entity/` | Competition/player entity resolution | `test:entity-resolver-qa` |
-| `export/` | Export settings, payload, ffmpeg path, subtitle burn-in | `test:export-sync-qa`, `test:export-subtitle-qa` |
-| `football/` | Football-specific research services | `test:football-research-service` |
-| `graph/` | Intelligence planner, graph context, provider routing | `test:provider-engine-qa`, `test:graph-context-qa` |
-| `research/` | Grounding, prompts, duration control, top-scorers | `test:story-structure-intelligence-qa` |
-| `timeline/` | Master timeline, transitions, caption timing | `test:timeline-foundation-qa`, `test:transition-qa` |
-| `ui/` | Product-wide UI smoke checks | `test:phase-a-qa` |
-| `utils/` | Legacy story compatibility | `test:legacy-compat` |
+- `*.verify.ts` is an executable deterministic verification entry point.
+- `*-fixtures.ts` contains reusable, production-shaped fixtures for a nearby suite.
+- `run-*` files orchestrate a bounded matrix or gated harness.
+- A provider-backed harness must remain gate-off by default and make zero provider
+  connections when its gate is absent.
+- Historical contract fixtures should state the frozen version explicitly. Current
+  production fixtures should use exported version and contract constants.
 
-## Naming convention
+## Refactor rules
 
-| Pattern | Purpose |
-|---------|---------|
-| `<feature>.verify.ts` | Focused contract/regression tests for one subsystem |
-| `<feature>Qa.verify.ts` | Broader QA suite; often reads source files and asserts cross-file invariants |
+- Keep production behavior out of verification helpers; tests may consume production APIs
+  but must not become a second implementation.
+- Prefer typed fixture builders over repeated casts or incomplete object literals.
+- Preserve intentional invalid fixtures with the narrowest possible `unknown` boundary.
+- When a production contract advances, update current fixtures while retaining explicitly
+  labelled historical compatibility cases.
+- Do not weaken a fail-closed assertion merely to remove a TypeScript diagnostic.
+- Keep package scripts stable unless a dedicated script-organization change is reviewed.
 
-Script names in `package.json` follow `test:<kebab-case-feature>` and map 1:1 to a file under `src/verification/<domain>/`.
+## Validation layers
+
+For a focused verification refactor:
+
+1. Run the directly affected suite.
+2. Run adjacent contract/authority suites.
+3. Run `npm run typecheck`, `npm run lint`, and `npm run build`.
+4. Run `npx tsc -p tsconfig.verify.json --pretty false` to measure strict verification debt.
+5. Confirm `git diff --check` and audit that no runtime, evidence, credential, or artifact
+   files entered the change set.
+
+Provider-backed Fly, Neon, R2, Upstash, Vercel, and OpenAI checks are separate explicit
+operations and must never be triggered by a repository-maintenance batch.
 
 ## How to run
 
@@ -59,16 +70,17 @@ npm run test:provider-engine-qa
 npm run test:legacy-compat
 ```
 
-### Domain batches (helper scripts)
+### Domain batches
 
 ```bash
-npm run test:verification              # all domains (78 scripts)
-npm run test:verification:export       # src/verification/export/
-npm run test:verification:timeline     # src/verification/timeline/
-npm run test:verification:intelligence   # canonical, entity, football, graph, research
+npm run test:verification
+npm run test:verification:export
+npm run test:verification:timeline
+npm run test:verification:intelligence
 ```
 
-The batch runner is `scripts/run-verification.mjs`. It discovers `*.verify.ts` files automatically — no manual file list to maintain.
+The batch runner is `scripts/run-verification.mjs`. It discovers `*.verify.ts` files
+automatically, so it does not need a manually maintained file list.
 
 ### Typecheck verification files only
 
@@ -78,65 +90,63 @@ npx tsc -p tsconfig.verify.json
 
 ## Key scripts by area
 
-**Before shipping export changes**
+Before shipping export changes:
 
 ```bash
 npm run test:export-payload
 npm run test:export-preflight
 npm run test:export-sync-qa
 npm run test:export-subtitle-qa
-# or
 npm run test:verification:export
 ```
 
-**Before shipping timeline / preview changes**
+Before shipping timeline or Preview changes:
 
 ```bash
 npm run test:timeline-foundation-qa
 npm run test:timeline-playback
 npm run test:transition-qa
 npm run test:timing-subtitle-qa
-# or
 npm run test:verification:timeline
 ```
 
-**Before shipping intelligence / research changes**
+Before shipping intelligence or research changes:
 
 ```bash
 npm run test:provider-engine-qa
 npm run test:prompt-intelligence-qa
 npm run test:story-structure-intelligence-qa
 npm run test:canonical-pipeline-qa
-# or
 npm run test:verification:intelligence
 ```
 
-Some scripts call live APIs (e.g. API-Football). Ensure `.env.local` is configured when running provider or football research QA.
+Some scripts can call live APIs. Provider-backed checks must only be run under their
+documented explicit gate with the intended environment configured.
 
-## When to add a new verification file
+## When to add a verification file
 
-Add a verification script when:
+Add a verification script for:
 
-1. **Cross-surface parity** — preview, export, and timeline must stay aligned (timing, transitions, subtitles, motion).
-2. **Regression lock** — a bug was fixed and should not return without a failing script.
-3. **Pipeline contract** — research → script → voiceover → export has a non-obvious invariant worth documenting in executable form.
-4. **Source-structure gate** — QA needs to assert that production files still contain required wiring (common in `*Qa.verify.ts` files).
+1. Cross-surface parity that must stay aligned across Preview, export, and timeline.
+2. A regression lock for a corrected defect.
+3. A non-obvious pipeline contract from research through export.
+4. A source-structure gate that protects required production wiring.
 
-Do **not** add verification files for pure unit logic that belongs in a test framework, or for one-off debugging.
+Do not add a verification file for one-off debugging or duplicate an existing authority.
 
-### Checklist for a new file
+Checklist:
 
-1. Create `src/verification/<domain>/<name>.verify.ts` (or `<name>Qa.verify.ts`).
-2. Import runtime code via `@/lib/*` or `@/features/*` — never import other verify files at runtime (source reads via `readSrc()` are OK for QA gates).
-3. Add `"test:<kebab-name>": "tsx src/verification/<domain>/<file>.verify.ts"` to `package.json`.
-4. Run `npm run test:<kebab-name>` locally.
-5. If the domain is covered by a batch helper, no extra wiring is needed — discovery is automatic.
+1. Place it in the owning `src/verification/<domain>/` directory.
+2. Import production code through its public module boundary.
+3. Add a stable `test:*` entry only when no existing domain runner discovers it.
+4. Run the focused suite and the validation layers above.
+5. Document explicit provider gates and gate-off zero-contact behavior when applicable.
 
-## Related config
+## Related configuration
 
 | File | Role |
-|------|------|
+| --- | --- |
 | `package.json` | Individual `test:*` scripts and domain batch helpers |
-| `tsconfig.json` | Excludes `**/*.verify.ts` from production build |
-| `tsconfig.verify.json` | Typechecks `src/verification/**/*.verify.ts` only |
-| `scripts/run-verification.mjs` | Domain batch runner |
+| `tsconfig.json` | Excludes `**/*.verify.ts` from the production build |
+| `tsconfig.verify.json` | Strictly typechecks verification sources |
+| `scripts/run-verification.mjs` | Discovers and runs domain verification batches |
