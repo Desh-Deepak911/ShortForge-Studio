@@ -28,6 +28,7 @@ import {
   isProvisionalStoredJobRecord,
   materializeCanonicalFromFinalizedCoverage,
   stableHeadlessDeliveryId,
+  terminalizeProvisionalMaterializationRejection,
   verifyAndFinalizeR2OwnedObject,
   verifyAndFinalizeR2OwnedObjectUnderClaim,
 } from "@/features/headless-renderer/control-plane";
@@ -1091,6 +1092,78 @@ async function main() {
       nowMs: CLOCK + 1,
     });
     assert.equal(materialize.ok, false);
+  });
+
+  await test("23: materialization rejection terminalizes provisional polling state", async () => {
+    const jobStore = new MemoryHeadlessJobStoreAdapter();
+    const digest = digestOf(new TextEncoder().encode("manifest"));
+    const idem = buildHeadlessAuthorityFingerprint("hid", {
+      version: 1,
+      kind: "control-plane-idempotency",
+      ownership: { ownerId: "owner_1", projectId: "project_1" },
+      idempotencyKey: "idem_materialization_rejected",
+    });
+    assert.equal(idem.ok, true);
+    if (!idem.ok) return;
+    const provisional = createProvisionalMaterializingRecord({
+      jobId: "job_materialization_rejected",
+      ownerId: "owner_1",
+      projectId: "project_1",
+      operationId: "op_materialization_rejected",
+      creatorIdempotencyKey: "idem_materialization_rejected",
+      idempotencyAuthorityKey: idem.fingerprint,
+      requestedRendererProfile: {
+        resolution: "4k",
+        format: "webm",
+        fps: 30,
+        quality: "high",
+      },
+      requestedRendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
+      snapshotClaim: {
+        manifestPayloadDigestClaim: digest,
+        assetBundleFingerprintClaim: "hab:sha256:" + "ee".repeat(32),
+        expectedSlotClaims: [],
+      },
+      stagingObjectRefs: [],
+      createdAtMs: CLOCK,
+      updatedAtMs: CLOCK,
+      expiresAtMs: CLOCK + 7_200_000,
+      progress: {
+        percent: 92,
+        stage: "materializing",
+        updatedAtMs: CLOCK,
+      },
+    });
+    assert.equal(provisional.ok, true);
+    if (!provisional.ok) return;
+    const created = await jobStore.createProvisionalIfAbsent({
+      idempotencyAuthorityKey: idem.fingerprint,
+      record: provisional.record,
+    });
+    assert.equal(created.ok, true);
+
+    const terminalized =
+      await terminalizeProvisionalMaterializationRejection({
+        jobStore,
+        jobId: provisional.record.jobId,
+        ownerId: provisional.record.ownerId,
+        nowMs: CLOCK + 1,
+      });
+    assert.equal(terminalized, "failed");
+
+    const loaded = await jobStore.getByJobIdAndOwner(
+      provisional.record.jobId,
+      provisional.record.ownerId,
+    );
+    assert.equal(loaded.ok, true);
+    if (!loaded.ok) return;
+    assert.equal(loaded.value.stage, "provisional");
+    assert.equal(loaded.value.state, "failed");
+    assert.deepEqual(loaded.value.terminalReason, {
+      reasonId: "INVALID_MANIFEST",
+      retryable: false,
+    });
+    assert.equal(loaded.value.progress, null);
   });
 
   console.log(`\n${passed} tests passed.\n`);

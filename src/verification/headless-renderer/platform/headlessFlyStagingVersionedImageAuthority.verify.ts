@@ -65,6 +65,12 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_REAL_VIDEO_MOTION_CAPABILITY_VERSION,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_BUILD_INFO_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_CURRENT_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_PAGE_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_MANIFEST_CONTRACT_ALIGNMENT_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_COHERENCE_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_CLEANUP_CORRECTION_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_OBJECT_KEY_BINDING_VALIDATION_CAPABILITY_VERSION,
@@ -188,12 +194,12 @@ function machinesJson(digest: string): string {
 
 async function main() {
   console.log(
-    "\nSprint 11E Phase 2G.12B — versioned Fly staging image authority\n",
+    "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 28 with eighteen immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 28);
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 18);
+  await test("authority version is frozen at 29 with nineteen immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 29);
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 19);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
       [
@@ -214,12 +220,13 @@ async function main() {
         "post_007_8i4_artifact_binding_cleanup_correction_historical",
         "post_007_8i5_object_key_binding_validation_historical",
         "post_007_staging_runtime_observed_baseline_historical",
-        "post_007_2g12_real_video_motion_current",
+        "post_007_2g12_real_video_motion_historical",
+        "post_007_2g20_manifest_contract_alignment_current",
       ],
     );
   });
 
-  await test("2G.12 current record binds real-video motion digest and artifacts — runtime-ready", () => {
+  await test("2G.12 historical record remains immutable and ineligible", () => {
     const record =
       HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_CURRENT_IMAGE_RECORD;
     assert.equal(
@@ -238,13 +245,13 @@ async function main() {
       record.pageTelemetryCapabilityVersion,
       HEADLESS_FLY_STAGING_REAL_VIDEO_MOTION_CAPABILITY_VERSION,
     );
-    assert.equal(record.lifecycle, "current");
-    assert.equal(record.eligibleForCurrentStagingReadiness, true);
-    assert.equal(record.eligibleForRenderLiveHarness, true);
-    assert.equal(record.eligibleForVerifyLiveHarness, true);
+    assert.equal(record.lifecycle, "historical");
+    assert.equal(record.eligibleForCurrentStagingReadiness, false);
+    assert.equal(record.eligibleForRenderLiveHarness, false);
+    assert.equal(record.eligibleForVerifyLiveHarness, false);
     assert.equal(
       resolveProspectiveFlyStaging2g12RealVideoMotionImageRecord().recordId,
-      "post_007_2g12_real_video_motion_current",
+      "post_007_2g12_real_video_motion_historical",
     );
     assert.equal(
       HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_BUILD_INFO_SHA256,
@@ -258,6 +265,35 @@ async function main() {
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
     );
+  });
+
+  await test("2G.20 current record binds v4/9D worker and runtime image", () => {
+    const record =
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_CURRENT_IMAGE_RECORD;
+    assert.equal(
+      record.imageDigestSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+    );
+    assert.equal(
+      record.hostedWorkerArtifactSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+    );
+    assert.equal(
+      record.hostedPageArtifactSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_PAGE_ARTIFACT_SHA256,
+    );
+    assert.equal(
+      record.pageTelemetryCapabilityVersion,
+      HEADLESS_FLY_STAGING_MANIFEST_CONTRACT_ALIGNMENT_CAPABILITY_VERSION,
+    );
+    assert.equal(
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_BUILD_INFO_SHA256,
+      "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a",
+    );
+    assert.equal(record.lifecycle, "current");
+    assert.equal(record.eligibleForCurrentStagingReadiness, true);
+    assert.equal(record.eligibleForRenderLiveHarness, true);
+    assert.equal(record.eligibleForVerifyLiveHarness, true);
   });
 
   await test("observed staging runtime baseline historical record binds rollback pin digest and remote artifacts", () => {
@@ -574,11 +610,11 @@ async function main() {
     assert.equal(record.eligibleForVerifyLiveHarness, false);
   });
 
-  await test("current resolves 2G.12 real-video motion while prospective selector aligns with current", () => {
+  await test("current resolves 2G.20 contract alignment while prospective selector aligns with current", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
-    assert.equal(current.recordId, "post_007_2g12_real_video_motion_current");
-    assert.equal(prospective.recordId, "post_007_2g12_real_video_motion_current");
+    assert.equal(current.recordId, "post_007_2g20_manifest_contract_alignment_current");
+    assert.equal(prospective.recordId, "post_007_2g20_manifest_contract_alignment_current");
     assert.equal(
       resolveProspectiveFlyStaging8i3ArtifactBindingCoherenceImageRecord().recordId,
       "post_007_8i3_artifact_binding_coherence_historical",
@@ -681,12 +717,12 @@ async function main() {
     assert.equal(record.eligibleForCurrentStagingReadiness, false);
   });
 
-  await test("current selection resolves 2G.12 real-video motion digest 69219707", () => {
+  await test("current selection resolves 2G.20 manifest-contract alignment digest 8a72c2d5", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
-    assert.equal(current.recordId, "post_007_2g12_real_video_motion_current");
+    assert.equal(current.recordId, "post_007_2g20_manifest_contract_alignment_current");
     assert.equal(
       resolveCurrentFlyStagingAcceptedImageDigestSha256(),
-      HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
     );
     const historical8i3 =
       resolveHistoricalPost0078i3ArtifactBindingCoherenceFlyStagingImageRecord();
@@ -746,9 +782,9 @@ async function main() {
     assert.equal(SIX_MIGRATION_IDS.length, 6);
   });
 
-  await test("2G.12 current image + seven migrations accepted for current readiness", () => {
+  await test("2G.20 current image + seven migrations accepted for current readiness", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
-      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       schemaMigrationIds: SEVEN_MIGRATION_IDS,
     });
     assert.equal(result.eligible, true);
@@ -792,13 +828,13 @@ async function main() {
     }
   });
 
-  await test("2G.12 current image + six migrations rejected", () => {
+  await test("2G.20 current image + six migrations rejected", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
-      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       schemaMigrationIds: SIX_MIGRATION_IDS,
     });
     assert.equal(result.eligible, false);
-    assert.equal(result.reasonId, "post_007_digest_with_six_migrations");
+    assert.equal(result.reasonId, "schema_fingerprint_count_mismatch");
   });
 
   await test("unknown digest rejected", () => {
@@ -810,28 +846,28 @@ async function main() {
     assert.equal(result.reasonId, "unknown_digest");
   });
 
-  await test("2G.12 current digest with bound worker artifact accepted for artifact eligibility", () => {
+  await test("2G.20 current digest with bound worker artifact accepted for artifact eligibility", () => {
     const result = classifyFlyStagingImageWorkerArtifactEligibility({
       imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       hostedWorkerArtifactSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_HOSTED_WORKER_ARTIFACT_SHA256,
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
     });
     assert.equal(result.ok, true);
   });
 
-  await test("2G.12 current digest with wrong worker artifact rejected", () => {
+  await test("2G.20 current digest with wrong worker artifact rejected", () => {
     const result = classifyFlyStagingImageWorkerArtifactEligibility({
-      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       hostedWorkerArtifactSha256: HEADLESS_FLY_STAGING_POST_007_PRE_TELEMETRY_HOSTED_WORKER_ARTIFACT_SHA256,
     });
     assert.equal(result.ok, false);
     assert.equal(result.reasonId, "wrong_hosted_worker_artifact");
   });
 
-  await test("2G.12 current digest with wrong page artifact rejected", () => {
+  await test("2G.20 current digest with wrong page artifact rejected", () => {
     const result = classifyFlyStagingImagePageArtifactEligibility({
-      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       hostedPageArtifactSha256: "0".repeat(64),
     });
     assert.equal(result.ok, false);
@@ -840,15 +876,15 @@ async function main() {
 
   await test("cross-bound verify/render digest mismatch rejected", () => {
     const result = classifyFlyStagingCrossBoundImageDigestMatch({
-      verifyImageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+      verifyImageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       renderImageDigestSha256: HEADLESS_FLY_STAGING_PRE_007_HISTORICAL_IMAGE_DIGEST,
     });
     assert.equal(result.ok, false);
     assert.equal(result.reasonId, "cross_bound_digest_mismatch");
   });
 
-  await test("cross-bound matching 2G.12 current digest accepted", () => {
-    const digest = HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST;
+  await test("cross-bound matching 2G.20 current digest accepted", () => {
+    const digest = HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST;
     const result = classifyFlyStagingCrossBoundImageDigestMatch({
       verifyImageDigestSha256: digest,
       renderImageDigestSha256: digest,
@@ -894,10 +930,10 @@ async function main() {
     assert.equal(historical8f.reasonId, "missing_page_telemetry_capability");
   });
 
-  await test("execution probe accepts 2G.12 real-video motion current render image", () => {
+  await test("execution probe accepts 2G.20 manifest-contract alignment current render image", () => {
     const telemetry = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
       renderImageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
     });
     assert.equal(telemetry.ok, true);
   });
@@ -947,19 +983,19 @@ async function main() {
     assert.equal(historical.reasonId, "historical_lifecycle_not_current_ready");
   });
 
-  await test("2G.12 current digest with bound worker and page artifacts accepted for artifact eligibility", () => {
+  await test("2G.20 current digest with bound worker and page artifacts accepted for artifact eligibility", () => {
     const worker = classifyFlyStagingImageWorkerArtifactEligibility({
       imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       hostedWorkerArtifactSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_HOSTED_WORKER_ARTIFACT_SHA256,
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
     });
     assert.equal(worker.ok, true);
     const page = classifyFlyStagingImagePageArtifactEligibility({
       imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       hostedPageArtifactSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_PAGE_ARTIFACT_SHA256,
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_PAGE_ARTIFACT_SHA256,
     });
     assert.equal(page.ok, true);
   });
@@ -1114,15 +1150,15 @@ async function main() {
       assert.equal(result.eligible, false, digest);
     }
     const current = classifyPost007WorkerImageEligibility({
-      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST,
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
       schemaMigrationIds: SEVEN_MIGRATION_IDS,
     });
     assert.equal(current.eligible, true);
   });
 
-  await test("current verifier topology with 2G.12 digest produces verify=1 readiness", () => {
+  await test("current verifier topology with 2G.20 digest produces verify=1 readiness", () => {
     const digest = resolveCurrentFlyStagingAcceptedImageDigestSha256();
-    assert.equal(digest, HEADLESS_FLY_STAGING_POST_007_2G12_REAL_VIDEO_MOTION_PROSPECTIVE_IMAGE_DIGEST);
+    assert.equal(digest, HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST);
     const readiness = classifyFlyVerifyLiveAmendedReadiness({
       machinesJson: machinesJson(digest),
       servicesJson: "[]",

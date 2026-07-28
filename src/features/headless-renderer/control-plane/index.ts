@@ -271,6 +271,10 @@ export {
   type TrustedVerifyPromotionOutcomeKind,
 } from "./services/execute-trusted-verify-promotion";
 export {
+  terminalizeProvisionalMaterializationRejection,
+  type ProvisionalMaterializationTerminalizationResult,
+} from "./services/terminalize-provisional-materialization-rejection";
+export {
   materializeCanonicalFromFinalizedCoverage,
   type HeadlessCanonicalMaterializationSuccess,
 } from "./services/materialize-canonical-from-finalized-coverage";
