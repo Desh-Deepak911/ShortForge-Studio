@@ -4,7 +4,7 @@ Long-term product direction for ShortForge Studio. This document describes **whe
 
 ShortForge Studio today is a browser studio that turns a football topic into a narrated vertical short. The vision is to become the default **story-first short-form production tool** for football creators — from solo TikTok editors to club media teams.
 
-For near-term phased delivery, see [ROADMAP.md](../ROADMAP.md). For what exists today, see [FEATURES.md](./FEATURES.md).
+For near-term phased delivery, see [ROADMAP.md](../../ROADMAP.md). For what exists today, see [FEATURES.md](FEATURES.md).
 
 ---
 
@@ -378,7 +378,7 @@ The through-line: **story first, edit freely, ship confidently.** Generation and
 
 | Document | Contents |
 |----------|----------|
-| [ROADMAP.md](../ROADMAP.md) | Phased delivery plan |
-| [FEATURES.md](./FEATURES.md) | What exists today |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Current system design |
-| [DATA_MODEL.md](./DATA_MODEL.md) | Current data model (+ planned Draft entity) |
+| [ROADMAP.md](../../ROADMAP.md) | Phased delivery plan |
+| [FEATURES.md](FEATURES.md) | What exists today |
+| [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) | Current system design |
+| [DATA_MODEL.md](../architecture/DATA_MODEL.md) | Current data model (+ planned Draft entity) |

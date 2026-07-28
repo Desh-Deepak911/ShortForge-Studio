@@ -6,7 +6,7 @@ Studio Intelligence is a **planning subsystem** in ShortForge Studio. It transfo
 
 **Change policy:** Future Studio Intelligence work on this codebase should be **bug fixes** or **explicit feature milestones** (starting with **3.8 Asset Search Platform**). Do not make ad-hoc planner, adapter, or materializer changes without a scoped milestone and verification.
 
-Deep dive companion: [ARCHITECTURE.md — Studio Intelligence layer](./ARCHITECTURE.md#studio-intelligence-layer)
+Deep dive companion: [../architecture/ARCHITECTURE.md — Studio Intelligence layer](../architecture/ARCHITECTURE.md#studio-intelligence-layer)
 
 ---
 
@@ -466,7 +466,7 @@ No editor behavior changes until **3.8C**.
 
 ### 3.8 — Asset Search Platform (next)
 
-Search Orchestrator, provider connectors, unified asset browser, one-click attach, Smart Edit integration, and asset history. Detail: [ROADMAP.md — Asset Search Platform 3.8](../ROADMAP.md#asset-search-platform-38).
+Search Orchestrator, provider connectors, unified asset browser, one-click attach, Smart Edit integration, and asset history. Detail: [ROADMAP.md — Asset Search Platform 3.8](../../ROADMAP.md#asset-search-platform-38).
 
 ### 3.9 — Smart Editing Intelligence (planned)
 
@@ -478,7 +478,7 @@ Use planning metadata to suggest timeline edits, caption emphasis, and motion pr
 
 | Document | Contents |
 |----------|----------|
-| [README.md — Studio Intelligence](../README.md#studio-intelligence-v1) | Product-level summary |
-| [ARCHITECTURE.md — Studio Intelligence layer](./ARCHITECTURE.md#studio-intelligence-layer) | Default vs opt-in production paths |
+| [README.md — Studio Intelligence](../../README.md#studio-intelligence-v1) | Product-level summary |
+| [../architecture/ARCHITECTURE.md — Studio Intelligence layer](../architecture/ARCHITECTURE.md#studio-intelligence-layer) | Default vs opt-in production paths |
 | [GENERATION.md — Stage 4](./GENERATION.md#stage-4--scene-planning) | AI vs SI scene planning |
-| [ROADMAP.md — Studio Intelligence v1](../ROADMAP.md#studio-intelligence-v1) | Phase checklist |
+| [ROADMAP.md — Studio Intelligence v1](../../ROADMAP.md#studio-intelligence-v1) | Phase checklist |

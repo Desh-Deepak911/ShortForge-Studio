@@ -126,7 +126,7 @@ Scene duration, MasterTimeline, voiceover, captions/subtitles remain authoritati
 
 - **9C Export:** frozen (v3 / `"9C"`); 9C.1 consecutive-boundary order + fingerprint coherence.
 - **9D Golden QA:** deterministic registry (22 fixtures), Preview/Export goldens, sprint runner — accepted.
-- **9D.1 / 9D.2 / 9D.3:** local evidence truth · editor discoverability · operator sign-off — Sprint 9 frozen ([qa/intra-scene-transition-sprint-9-freeze.md](./qa/intra-scene-transition-sprint-9-freeze.md)).
+- **9D.1 / 9D.2 / 9D.3:** local evidence truth · editor discoverability · operator sign-off — Sprint 9 frozen ([qa/intra-scene-transition-sprint-9-freeze.md](../qa/intra-scene-transition-sprint-9-freeze.md)).
 
 ## Editor notice
 

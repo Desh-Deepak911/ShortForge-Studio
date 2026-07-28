@@ -73,14 +73,14 @@ Owner: Export Reliability Architecture
 
 Production entry: `exportFootieShort` → `prepareExportRequest` → `createExportRenderContext` → `renderExport(manifest, context)` → format adapter → `validateFinalExportArtifact` → `disposeExportRenderContext`.
 
-Audio/format architecture: [`EXPORT_AUDIO_AND_FORMATS.md`](./EXPORT_AUDIO_AND_FORMATS.md).
+Audio/format architecture: [`EXPORT_AUDIO_AND_FORMATS.md`](../product/EXPORT_AUDIO_AND_FORMATS.md).
 
 Sprint 6A inventory and architecture decisions are recorded in:
 
-- [`EXPORT_ARCHITECTURE_AUDIT.md`](./EXPORT_ARCHITECTURE_AUDIT.md)
-- [`EXPORT_CAPABILITIES.md`](./EXPORT_CAPABILITIES.md)
-- [`EXPORT_TIMING_MODEL.md`](./EXPORT_TIMING_MODEL.md)
-- [`qa/export-preview-parity-matrix.md`](./qa/export-preview-parity-matrix.md)
+- [`EXPORT_ARCHITECTURE_AUDIT.md`](EXPORT_ARCHITECTURE_AUDIT.md)
+- [`EXPORT_CAPABILITIES.md`](../product/EXPORT_CAPABILITIES.md)
+- [`EXPORT_TIMING_MODEL.md`](../product/EXPORT_TIMING_MODEL.md)
+- [`qa/export-preview-parity-matrix.md`](../qa/export-preview-parity-matrix.md)
 
 ---
 

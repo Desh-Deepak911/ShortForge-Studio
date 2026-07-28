@@ -36,11 +36,11 @@ function main() {
   console.log("\nexport-capability-audit (Sprint 6A)\n");
 
   const docs = [
-    "docs/EXPORT_CONTRACT.md",
+    "docs/architecture/EXPORT_CONTRACT.md",
     "docs/qa/export-preview-parity-matrix.md",
-    "docs/EXPORT_TIMING_MODEL.md",
-    "docs/EXPORT_CAPABILITIES.md",
-    "docs/EXPORT_ARCHITECTURE_AUDIT.md",
+    "docs/product/EXPORT_TIMING_MODEL.md",
+    "docs/product/EXPORT_CAPABILITIES.md",
+    "docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md",
     "docs/EXPORT_RELIABILITY_SPRINT.md",
   ];
 
@@ -51,7 +51,7 @@ function main() {
   });
 
   test("EXPORT_CONTRACT defines immutable manifest and Export Never Breaks", () => {
-    const body = read("docs/EXPORT_CONTRACT.md");
+    const body = read("docs/architecture/EXPORT_CONTRACT.md");
     assert.match(body, /ExportManifest/);
     assert.match(body, /Export Never Breaks/);
     assert.match(body, /Capability Preflight/);
@@ -79,21 +79,21 @@ function main() {
   });
 
   test("timing model documents renderDurationMs and frame-center sample", () => {
-    const body = read("docs/EXPORT_TIMING_MODEL.md");
+    const body = read("docs/product/EXPORT_TIMING_MODEL.md");
     assert.match(body, /renderDurationMs/);
     assert.match(body, /resolveTimelineFrameSampleTimeMs/);
     assert.match(body, /Model A/);
   });
 
   test("capabilities doc distinguishes WebM vs WebP", () => {
-    const body = read("docs/EXPORT_CAPABILITIES.md");
+    const body = read("docs/product/EXPORT_CAPABILITIES.md");
     assert.match(body, /WebM/);
     assert.match(body, /WebP/);
     assert.match(body, /Not in Export UI|No/);
   });
 
   test("architecture audit recommends chunked/hybrid not full 1080p sequence", () => {
-    const body = read("docs/EXPORT_ARCHITECTURE_AUDIT.md");
+    const body = read("docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md");
     assert.match(body, /Chunked/);
     assert.match(body, /Hybrid|hybrid/);
     assert.match(body, /Not viable|not viable|Unsafe/);
@@ -178,7 +178,7 @@ function main() {
     );
     assert.ok(existsSync(join(process.cwd(), "src/features/export/runtime/index.ts")));
     assert.ok(existsSync(join(process.cwd(), "src/features/export/timing/index.ts")));
-    assert.ok(existsSync(join(process.cwd(), "docs/EXPORT_RENDERER_ARCHITECTURE.md")));
+    assert.ok(existsSync(join(process.cwd(), "docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md")));
   });
 
   console.log(`\n${passed} tests passed.\n`);

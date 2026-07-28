@@ -109,4 +109,4 @@ Not blockers for Audio Mixer v1 freeze:
 
 **Next product milestone:** Creator Templates **3.10**.
 
-Related: [EDITING.md](./EDITING.md) · [RENDERING.md](./RENDERING.md) · [ARCHITECTURE.md](./ARCHITECTURE.md)
+Related: [EDITING.md](EDITING.md) · [RENDERING.md](RENDERING.md) · [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)

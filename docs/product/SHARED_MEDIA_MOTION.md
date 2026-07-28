@@ -74,7 +74,7 @@ At the same scene-local timestamp, reference-frame state must match before unit 
 
 ## Technical debt (post-freeze)
 
-See also [FUTURE.md](./FUTURE.md) and the Sprint 5 freeze report.
+See also [FUTURE.md](FUTURE.md) and the Sprint 5 freeze report.
 
 ### Opacity motion
 

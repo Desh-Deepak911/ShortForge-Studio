@@ -279,7 +279,7 @@ Football is the first knowledge domain. The Intelligence Runtime is domain-agnos
 | [README.md](./README.md) | Product overview, features, getting started |
 | [ROADMAP.md](./ROADMAP.md) | Completed, in-progress, and planned work |
 | [CHANGELOG.md](./CHANGELOG.md) | Release history |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Route-level implementation reference |
-| [docs/GENERATION.md](./docs/GENERATION.md) | Script, voiceover, and scene generation |
-| [docs/EDITING.md](./docs/EDITING.md) | Timeline and editor behavior |
-| [docs/RENDERING.md](./docs/RENDERING.md) | Preview and export mechanics |
+| [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | Route-level implementation reference |
+| [docs/product/GENERATION.md](./docs/product/GENERATION.md) | Script, voiceover, and scene generation |
+| [docs/product/EDITING.md](./docs/product/EDITING.md) | Timeline and editor behavior |
+| [docs/product/RENDERING.md](./docs/product/RENDERING.md) | Preview and export mechanics |

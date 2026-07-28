@@ -625,8 +625,8 @@ These are transient brief inputs in `CreateStoryFlow` / `BriefCanvas` — not pa
 
 | Document | Contents |
 |----------|----------|
-| [EDITING.md](./EDITING.md) | How editable fields are changed in UI |
-| [GENERATION.md](./GENERATION.md) | How initial field values are produced |
-| [RENDERING.md](./RENDERING.md) | How `ExportScene` snapshot is consumed |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Data flow through layers |
-| [FUTURE.md](./FUTURE.md) | Planned Draft persistence model |
+| [EDITING.md](../product/EDITING.md) | How editable fields are changed in UI |
+| [GENERATION.md](../product/GENERATION.md) | How initial field values are produced |
+| [RENDERING.md](../product/RENDERING.md) | How `ExportScene` snapshot is consumed |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Data flow through layers |
+| [FUTURE.md](../product/FUTURE.md) | Planned Draft persistence model |

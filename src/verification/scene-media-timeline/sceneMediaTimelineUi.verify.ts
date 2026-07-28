@@ -556,7 +556,7 @@ test("27. draft JSON preserves item order/weights/IDs", () => {
 
 test("28. retired-flag ledger and .env.example have no active multi-image config", () => {
   const envExample = readSrc(".env.example");
-  const ledger = readSrc("docs/ENV_AND_FEATURE_FLAGS.md");
+  const ledger = readSrc("docs/operations/ENV_AND_FEATURE_FLAGS.md");
   assert.doesNotMatch(
     envExample,
     /^\s*NEXT_PUBLIC_SHORTFORGE_MULTI_IMAGE_SCENES=/m,

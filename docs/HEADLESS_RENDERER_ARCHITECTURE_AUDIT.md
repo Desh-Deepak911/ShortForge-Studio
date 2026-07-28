@@ -63,7 +63,7 @@ This is an **11A architecture decision** and an **11E product acceptance require
 
 ## 2. Evidence inspected
 
-Architecture: `MASTER_ARCHITECTURE.md`, `ROADMAP.md`, `docs/EXPORT_CONTRACT.md`, `docs/EXPORT_RENDERER_ARCHITECTURE.md`, `docs/ENV_AND_FEATURE_FLAGS.md`, and the Sprint 8–10 freeze ledgers.
+Architecture: `MASTER_ARCHITECTURE.md`, `ROADMAP.md`, `docs/architecture/EXPORT_CONTRACT.md`, `docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md`, `docs/operations/ENV_AND_FEATURE_FLAGS.md`, and the Sprint 8–10 freeze ledgers.
 
 Production: export manifest build/fingerprint/validation/preflight/selection, `prepareExportRequest`, `ExportRenderContext`, chunked frame rendering, browser media cache, FFmpeg.wasm, `video-render.service.ts`, and `/api/assets/materialize`.
 

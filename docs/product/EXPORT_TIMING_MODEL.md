@@ -49,17 +49,17 @@ Export only:
 
 ### Preview (narration mode)
 
-1. Master clock follows narration `currentTime`, then wall-clock tail-hold.  
-2. Stops when `timelineClockMs >= renderDurationMs`.  
-3. Visuals/captions freeze at `contentEndMs` during the end buffer.  
+1. Master clock follows narration `currentTime`, then wall-clock tail-hold.
+2. Stops when `timelineClockMs >= renderDurationMs`.
+3. Visuals/captions freeze at `contentEndMs` during the end buffer.
 4. Final subtitle readable hold is included in `contentEndMs` composition.
 
 ### Export
 
-1. `prepareStoryForExport()` sets `exportDurationMs = masterTimeline.renderDurationMs`.  
-2. Renders `ceil(exportDurationMs * fps / 1000)` frames using frame-center samples.  
-3. Same visual freeze via `resolveTimelineVisualTimeMs`.  
-4. Mux duration uses full `exportDurationMs` (includes buffer).  
+1. `prepareStoryForExport()` sets `exportDurationMs = masterTimeline.renderDurationMs`.
+2. Renders `ceil(exportDurationMs * fps / 1000)` frames using frame-center samples.
+3. Same visual freeze via `resolveTimelineVisualTimeMs`.
+4. Mux duration uses full `exportDurationMs` (includes buffer).
 5. Normalized visual duration must ≈ `capturedFrameCount / fps`.
 
 ### Required single resolver (Sprint 6C)
@@ -80,13 +80,13 @@ Prefs (`voiceSettings.speed`) do not live-stretch audio until regeneration.
 
 ## Known timing deltas
 
-1. Preview continuous audio clock vs export frame-center samples (~0.5/fps).  
-2. Transition peer elapsed: Preview may use editor `scene.startMs`; Export uses refitted scenes after voiceover refit.  
-3. Browser TTS preview mode does not use MasterTimeline-global clock — not comparable to export.  
+1. Preview continuous audio clock vs export frame-center samples (~0.5/fps).
+2. Transition peer elapsed: Preview may use editor `scene.startMs`; Export uses refitted scenes after voiceover refit.
+3. Browser TTS preview mode does not use MasterTimeline-global clock — not comparable to export.
 4. Raw MediaRecorder duration must never drive playback speed.
 
 ## Related docs
 
-- `docs/EXPORT_DETERMINISTIC_CAPTURE.md`  
-- `docs/EXPORT_FAILURE_FORENSICS.md`  
-- `docs/qa/export-preview-parity-matrix.md`  
+- `docs/product/EXPORT_DETERMINISTIC_CAPTURE.md`
+- `docs/EXPORT_FAILURE_FORENSICS.md`
+- `docs/qa/export-preview-parity-matrix.md`

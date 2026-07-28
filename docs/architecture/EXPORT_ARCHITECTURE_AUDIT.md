@@ -6,7 +6,7 @@ Sprint 6A — production export path inventory and reliability assessment.
 
 After Sprint 6A, the production export contract is:
 
-**[`docs/EXPORT_CONTRACT.md`](./EXPORT_CONTRACT.md)**
+**[`docs/architecture/EXPORT_CONTRACT.md`](EXPORT_CONTRACT.md)**
 
 It requires an immutable `ExportManifest`, capability preflight before render, Preview/Export shared-domain parity, complete-success-or-explicit-failure, and hybrid/chunked renderer selection. Sprint 6B implements that contract; this audit remains the evidence base.
 
