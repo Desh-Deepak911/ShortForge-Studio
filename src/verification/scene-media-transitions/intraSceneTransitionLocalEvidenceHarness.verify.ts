@@ -329,7 +329,10 @@ test("One terminal artifact outcome + empty Fail", () => {
   assert.equal(
     deriveIstArtifactEvidenceResult({
       automatic: auto,
-      visual: createEmptyChecklist(IST_CORE_ARTIFACT_VISUAL_CHECK_KEYS),
+      visual: createEmptyChecklist([
+        ...IST_CORE_ARTIFACT_VISUAL_CHECK_KEYS,
+        "audioRemainsContinuous",
+      ]),
     }),
     "fail",
   );

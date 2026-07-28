@@ -25,7 +25,11 @@ import {
   resolveIntraSceneTransitionProgressCheckpoint,
 } from "@/features/scene-media-transitions/preview";
 import { resolvePreviewVideoClipTime } from "@/features/preview/utils/preview-video-clip.utils";
-import { buildExportManifest } from "@/features/export/domain";
+import {
+  buildExportManifest,
+  EXPORT_MANIFEST_VERSION,
+  EXPORT_RENDERER_CONTRACT_VERSION,
+} from "@/features/export/domain";
 import type { FootieScene, SceneMedia, TransitionEffect } from "@/features/story/types";
 import { getSceneDurationMs } from "@/features/story/utils/scene.utils";
 import { resolveTransitionEffectLayers } from "@/features/timeline-intelligence/resolve-transition-state.utils";
@@ -466,7 +470,7 @@ test("Incoming key/seek continuity across overlay end", () => {
   assert.equal(after.outgoing, null);
 });
 
-test("ExportManifest v3 freezes Preview-configured transitions; draw does not import Preview compose", () => {
+test("current ExportManifest freezes Preview-configured transitions; draw does not import Preview compose", () => {
   const { scene, a, b } = twoItemScene(
     imageMedia("https://example.com/a.jpg"),
     imageMedia("https://example.com/b.jpg"),
@@ -486,8 +490,8 @@ test("ExportManifest v3 freezes Preview-configured transitions; draw does not im
     },
   });
   assert.notEqual(withMeta.fingerprint, without.fingerprint);
-  assert.equal(withMeta.version, 3);
-  assert.equal(withMeta.rendererContractVersion, "9C");
+  assert.equal(withMeta.version, EXPORT_MANIFEST_VERSION);
+  assert.equal(withMeta.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
   assert.match(JSON.stringify(withMeta), /mediaTransitions/);
 
   const exportDraw = readSrc("src/features/export/runtime/draw-prepared-export-frame.ts");

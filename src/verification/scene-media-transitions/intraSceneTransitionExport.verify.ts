@@ -42,6 +42,20 @@ import { syncFootieScript } from "@/lib/utils/voiceover";
 
 let passed = 0;
 
+type DeepMutable<T> = T extends ReadonlyArray<infer Item>
+  ? DeepMutable<Item>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+    : T;
+
+function mutableClone<T>(value: T): DeepMutable<T> {
+  return structuredClone(value) as DeepMutable<T>;
+}
+
+function asManifest(value: unknown): ExportManifest {
+  return value as ExportManifest;
+}
+
 function test(name: string, fn: () => void) {
   fn();
   passed += 1;
@@ -139,7 +153,7 @@ function buildV3(scene: FootieScene): ExportManifestV3 {
     version: EXPORT_MANIFEST_V3_VERSION,
     rendererContractVersion: EXPORT_RENDERER_CONTRACT_V3,
     manifestId: current.manifestId,
-    createdAtIso: current.createdAtIso,
+    createdAt: current.createdAt,
     project: current.project,
     output: current.output,
     scenes: current.scenes,
@@ -206,6 +220,7 @@ function threeItemSceneWithABAndBC(): {
     startMs: 0,
     endMs: 9000,
     durationMs: 9000,
+    subtitle: "",
     media: imageMedia("https://example.com/a.jpg"),
     mediaTimeline: {
       version: 1,
@@ -389,8 +404,8 @@ test("9C.1 Multi-boundary reverse/duplicate/malformed fail closed", () => {
   const scene = asV3Scene(manifest);
   const [ab, bc] = scene.mediaTransitions.boundaries;
 
-  const reversed = structuredClone(manifest);
-  (reversed.scenes[0] as ExportSceneManifestV3).mediaTransitions = {
+  const reversed = mutableClone(manifest);
+  reversed.scenes[0]!.mediaTransitions = {
     version: 1,
     boundaries: [bc!, ab!],
   };
@@ -398,13 +413,13 @@ test("9C.1 Multi-boundary reverse/duplicate/malformed fail closed", () => {
   assert.equal(reversedResult.ok, false);
   assert.ok(reversedResult.issues.some((i) => i.code === "MEDIA_TRANSITION_ORDER"));
   assert.ok(
-    runExportCapabilityPreflight(reversed).blockers.some(
+    runExportCapabilityPreflight(asManifest(reversed)).blockers.some(
       (b) => b.code === "INVALID_MANIFEST",
     ),
   );
 
-  const duplicate = structuredClone(manifest);
-  (duplicate.scenes[0] as ExportSceneManifestV3).mediaTransitions = {
+  const duplicate = mutableClone(manifest);
+  duplicate.scenes[0]!.mediaTransitions = {
     version: 1,
     boundaries: [ab!, ab!],
   };
@@ -412,8 +427,8 @@ test("9C.1 Multi-boundary reverse/duplicate/malformed fail closed", () => {
   assert.equal(dupResult.ok, false);
   assert.ok(dupResult.issues.some((i) => i.code === "DUPLICATE_MEDIA_TRANSITION"));
 
-  const malformedSecond = structuredClone(manifest);
-  (malformedSecond.scenes[0] as ExportSceneManifestV3).mediaTransitions.boundaries[1]!.effect =
+  const malformedSecond = mutableClone(manifest);
+  malformedSecond.scenes[0]!.mediaTransitions.boundaries[1]!.effect =
     "cut" as never;
   const malformedResult = validateExportManifestV3SceneMedia(malformedSecond);
   assert.equal(malformedResult.ok, false);
@@ -536,7 +551,7 @@ test("9C.1 Fingerprint coherence matrix", () => {
   assert.equal(validateExportManifestV3SceneMedia(manifest).ok, true);
   assert.equal(validateExportManifestV2SceneMedia(v2).ok, true);
 
-  const effectTamper = structuredClone(manifest);
+  const effectTamper = mutableClone(manifest);
   effectTamper.scenes[0]!.mediaTransitions.boundaries[0]!.effect = "blur";
   assert.ok(
     validateExportManifestV3SceneMedia(effectTamper).issues.some(
@@ -544,7 +559,7 @@ test("9C.1 Fingerprint coherence matrix", () => {
     ),
   );
 
-  const durationTamper = structuredClone(manifest);
+  const durationTamper = mutableClone(manifest);
   durationTamper.scenes[0]!.mediaTransitions.boundaries[0]!.requestedDurationMs = 1000;
   durationTamper.scenes[0]!.mediaTransitions.boundaries[0]!.effectiveDurationMs = 400;
   durationTamper.scenes[0]!.mediaTransitions.boundaries[0]!.overlayEndOffsetMs =
@@ -556,9 +571,9 @@ test("9C.1 Fingerprint coherence matrix", () => {
   );
 
   const { manifest: multi } = threeItemSceneWithABAndBC();
-  const orderTamper = structuredClone(multi);
-  const bounds = (orderTamper.scenes[0] as ExportSceneManifestV3).mediaTransitions.boundaries;
-  (orderTamper.scenes[0] as ExportSceneManifestV3).mediaTransitions = {
+  const orderTamper = mutableClone(multi);
+  const bounds = orderTamper.scenes[0]!.mediaTransitions.boundaries;
+  orderTamper.scenes[0]!.mediaTransitions = {
     version: 1,
     boundaries: [bounds[1]!, bounds[0]!],
   };
@@ -590,7 +605,7 @@ test("9C.1 Fingerprint coherence matrix", () => {
   (metaOnly as { manifestId: string }).manifestId = "changed-id";
   assert.equal(validateExportManifestV3SceneMedia(metaOnly).ok, true);
 
-  const authorized = rebuildFingerprint(effectTamper);
+  const authorized = rebuildFingerprint(asManifest(effectTamper));
   assert.equal(validateExportManifestV3SceneMedia(authorized).ok, true);
 
   for (const value of [null, undefined, 12, "manifest", true]) {
@@ -653,14 +668,14 @@ test("Malformed v3 transition track rejected before side effects", () => {
   );
   const next = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
   const good = buildV3(next);
-  const bad = structuredClone(good);
-  (bad.scenes[0] as ExportSceneManifestV3).mediaTransitions.boundaries[0]!.effect =
+  const bad = mutableClone(good);
+  bad.scenes[0]!.mediaTransitions.boundaries[0]!.effect =
     "cut" as never;
   const result = validateExportManifestV3SceneMedia(bad);
   assert.equal(result.ok, false);
   assert.ok(result.issues.some((i) => i.code === "CUT_NOT_STORED"));
 
-  const preflight = runExportCapabilityPreflight(bad);
+  const preflight = runExportCapabilityPreflight(asManifest(bad));
   assert.equal(preflight.supported, false);
   assert.equal(preflight.blockers[0]?.code, "INVALID_MANIFEST");
   assert.equal(preflight.estimatedCost, EXPORT_INVALID_MANIFEST_COST_SENTINEL);

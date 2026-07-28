@@ -14,15 +14,16 @@ import {
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
-  isExportManifestV3,
+  isExportManifestV4,
   isExportSceneManifestV3,
   resolveExportIntraSceneTransitionAtElapsed,
   runExportCapabilityPreflight,
   validateExportManifest,
   validateExportManifestV2SceneMedia,
   validateExportManifestV3SceneMedia,
+  type ExportManifest,
   type ExportManifestV2,
-  type ExportManifestV3,
+  type ExportManifestV4,
   type ExportSceneManifestV3,
 } from "@/features/export/domain";
 import { buildExportMediaCacheKey } from "@/features/export/utils/export-media-cache.utils";
@@ -43,6 +44,20 @@ import {
 } from "./goldens";
 
 let passed = 0;
+
+type DeepMutable<T> = T extends ReadonlyArray<infer Item>
+  ? DeepMutable<Item>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+    : T;
+
+function mutableClone<T>(value: T): DeepMutable<T> {
+  return structuredClone(value) as DeepMutable<T>;
+}
+
+function asManifest(value: unknown): ExportManifest {
+  return value as ExportManifest;
+}
 
 function test(name: string, fn: () => void) {
   fn();
@@ -67,18 +82,18 @@ const CAPABLE_ENV = {
   mp4EncoderAvailable: true,
 } as const;
 
-function buildV3(fixture: IntraSceneTransitionGoldenFixture): ExportManifestV3 {
+function buildV3(fixture: IntraSceneTransitionGoldenFixture): ExportManifestV4 {
   const manifest = buildExportManifest({
     story: fixture.story,
     environment: CAPABLE_ENV,
     multiImageScenesEnabled: true,
   });
-  assert.ok(isExportManifestV3(manifest));
+  assert.ok(isExportManifestV4(manifest));
   return manifest;
 }
 
 function primaryV3Scene(
-  manifest: ExportManifestV3,
+  manifest: ExportManifestV4,
   fixture: IntraSceneTransitionGoldenFixture,
 ): ExportSceneManifestV3 {
   const scene = manifest.scenes.find((s) => s.id === fixture.primarySceneId) ??
@@ -87,7 +102,7 @@ function primaryV3Scene(
   return scene;
 }
 
-function freezeAsV2(manifest: ExportManifestV3): ExportManifestV2 {
+function freezeAsV2(manifest: ExportManifestV4): ExportManifestV2 {
   const scenes = manifest.scenes.map((scene) => {
     const rest = { ...scene };
     delete (rest as { mediaTransitions?: unknown }).mediaTransitions;
@@ -157,7 +172,7 @@ test("Registry covers all required golden ids", () => {
   }
 });
 
-test("Production manifests are v3 / 9C with mediaTransitions on every scene", () => {
+test("Production manifests use current authority with v3-shaped mediaTransitions on every scene", () => {
   for (const id of INTRA_SCENE_TRANSITION_GOLDEN_IDS) {
     if (
       id === "ist-fingerprint-tamper-reject" ||
@@ -417,24 +432,24 @@ test("Frozen v2 / 8D hard-cut compatibility", () => {
 test("Fingerprint-tampered and malformed reject before cost", () => {
   const fpFixture = buildIntraSceneTransitionGoldenFixture("ist-fingerprint-tamper-reject");
   const good = buildV3(fpFixture);
-  const tampered = structuredClone(good);
+  const tampered = mutableClone(good);
   tampered.scenes[0]!.mediaTransitions.boundaries[0]!.effect = "blur";
   const fpResult = validateExportManifestV3SceneMedia(tampered);
   assert.equal(fpResult.ok, false);
   assert.ok(fpResult.issues.some((i) => i.code === "MANIFEST_FINGERPRINT_MISMATCH"));
-  const fpPreflight = runExportCapabilityPreflight(tampered);
+  const fpPreflight = runExportCapabilityPreflight(asManifest(tampered));
   assert.equal(fpPreflight.supported, false);
   assert.equal(fpPreflight.estimatedCost, EXPORT_INVALID_MANIFEST_COST_SENTINEL);
 
   const malFixture = buildIntraSceneTransitionGoldenFixture("ist-malformed-boundary-reject");
   const malGood = buildV3(malFixture);
-  const malformed = structuredClone(malGood);
-  (malformed.scenes[0] as ExportSceneManifestV3).mediaTransitions.boundaries[0]!.effect =
+  const malformed = mutableClone(malGood);
+  malformed.scenes[0]!.mediaTransitions.boundaries[0]!.effect =
     "cut" as never;
   const malResult = validateExportManifestV3SceneMedia(malformed);
   assert.equal(malResult.ok, false);
   assert.ok(malResult.issues.some((i) => i.code === "CUT_NOT_STORED"));
-  assert.equal(runExportCapabilityPreflight(malformed).supported, false);
+  assert.equal(runExportCapabilityPreflight(asManifest(malformed)).supported, false);
 });
 
 test("Manifest-only rendering path has no Story/Preview imports in resolver", () => {
