@@ -14,7 +14,7 @@ Emits `[ExportStage]`, `[ExportNormalize]`, `[ExportViability]`, and `[ExportPip
 
 See `ExportStage` in `src/features/export/utils/export-pipeline-forensics.utils.ts`.
 
-Failures throw `ExportPipelineError` with `stage`, `code`, `detail`, and `context`.  
+Failures throw `ExportPipelineError` with `stage`, `code`, `detail`, and `context`.
 `ExportPanel` maps these to stage-specific UI messages without exposing stderr/stacks.
 
 ## Why the UI showed a generic message
@@ -37,8 +37,8 @@ Estimated JPEG sequence alone is hundreds of MB in FFmpeg MEMFS, plus raw WebM +
 
 ## Related Sprint 6A docs
 
-- `docs/EXPORT_ARCHITECTURE_AUDIT.md`
-- `docs/EXPORT_CAPABILITIES.md`
-- `docs/EXPORT_TIMING_MODEL.md`
+- `docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md`
+- `docs/product/EXPORT_CAPABILITIES.md`
+- `docs/product/EXPORT_TIMING_MODEL.md`
 - `docs/EXPORT_RELIABILITY_SPRINT.md`
 - `docs/qa/export-preview-parity-matrix.md`

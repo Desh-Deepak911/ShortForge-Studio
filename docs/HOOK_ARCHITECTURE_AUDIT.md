@@ -414,8 +414,8 @@ Likely touch points (future implementation — not this phase): `script-generati
 | `draft.types.ts` | `templatePromptHints` not consumed | Consumed on script-only |
 | `creator-template.types.ts` | Hints metadata only | Assembled into prompt block |
 | `footiebitz.ts` comments | Optional until PI consumes | Templates consumed by script assembly, not PI |
-| `docs/FEATURES.md` “Hybrid mode (static hook…)” | Caption hybrid wording | Not Sprint 7 Hook Engine |
-| `docs/FUTURE.md` A/B openings | Speculative | Not shipped |
+| `docs/product/FEATURES.md` “Hybrid mode (static hook…)” | Caption hybrid wording | Not Sprint 7 Hook Engine |
+| `docs/product/FUTURE.md` A/B openings | Speculative | Not shipped |
 | React “hooks” in architecture docs | False friends | Ignore |
 | ROADMAP (pre-7A) | No Sprint 7 Hook naming | MASTER already locked Sprint 7 |
 

@@ -348,4 +348,4 @@ Slots accept React nodes; frozen components passed as children.
 | [Studio-Principles.md](./Studio-Principles.md) | UX principles |
 | [Component-Migration-Plan.md](./Component-Migration-Plan.md) | Migration mapping |
 | [../EDITING.md](../EDITING.md) | Current editor behavior |
-| [../../ARCHITECTURE.md](../../ARCHITECTURE.md) | System architecture |
+| [../../architecture/ARCHITECTURE.md](../../architecture/ARCHITECTURE.md) | System architecture |

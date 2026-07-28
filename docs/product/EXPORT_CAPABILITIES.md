@@ -29,9 +29,9 @@ Sprint 6A inventory of what ShortForge Studio Preview and Export actually suppor
 
 ### UI bugs / fiction
 
-- Profile id `generic_mp4` recommends `format: "webm"` — label/settings mismatch.  
-- FPS / aspect appear informational only.  
-- Watermark cannot be disabled.  
+- Profile id `generic_mp4` recommends `format: "webm"` — label/settings mismatch.
+- FPS / aspect appear informational only.
+- Watermark cannot be disabled.
 - Preview chrome “FootieBitz” ≠ export burn-in “FOOTIEBITZ”.
 
 ## Audio modes
@@ -48,9 +48,9 @@ Source video audio is intentionally muted / not muxed.
 
 ## Voice speed
 
-- **Model A:** TTS bakes speed into MP3 duration.  
-- Preview `playbackRate = 1`.  
-- Export does not apply `atempo` for story speed prefs.  
+- **Model A:** TTS bakes speed into MP3 duration.
+- Preview `playbackRate = 1`.
+- Export does not apply `atempo` for story speed prefs.
 - Changing speed requires regeneration to update duration/captions/scenes (unless manual scene durations preserved).
 
 ## Media
@@ -67,9 +67,9 @@ Source video audio is intentionally muted / not muxed.
 
 ## Blocking gates (today)
 
-- Story sync: narration dirty, voice dirty, missing media, no scenes  
-- Format path blocked only if WebM flagged unavailable (currently always available)  
-- Narration requested without playable voiceover URL  
+- Story sync: narration dirty, voice dirty, missing media, no scenes
+- Format path blocked only if WebM flagged unavailable (currently always available)
+- Narration requested without playable voiceover URL
 
 **Gates (6F.1):** capability-based resolution approval (`approveExportResolution`), memory peak estimate, MP4 runtime probe, worker poison flag.
 
@@ -110,8 +110,8 @@ NEXT_PUBLIC_SHORTFORGE_EXPORT_ALLOW_1080P_BROWSER=1
 
 ## Related
 
-- `docs/EXPORT_CONTRACT.md` (formal guarantees for all export paths)  
-- `docs/qa/export-preview-parity-matrix.md`  
-- `docs/EXPORT_TIMING_MODEL.md`  
-- `docs/EXPORT_ARCHITECTURE_AUDIT.md`  
-- `docs/EXPORT_RELIABILITY_SPRINT.md`  
+- `docs/architecture/EXPORT_CONTRACT.md` (formal guarantees for all export paths)
+- `docs/qa/export-preview-parity-matrix.md`
+- `docs/product/EXPORT_TIMING_MODEL.md`
+- `docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md`
+- `docs/EXPORT_RELIABILITY_SPRINT.md`

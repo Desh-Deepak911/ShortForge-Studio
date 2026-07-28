@@ -238,7 +238,7 @@ Preview (Web Audio + HTMLMediaElement) · Export (browser mix + FFmpeg)
 
 **Known future improvements:** normalize voice, limiter UI, preview music boost > 100%, FFmpeg music fade filters, scene-level ducking.
 
-Deep dive: [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md)
+Deep dive: [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md)
 
 ---
 
@@ -302,7 +302,7 @@ FootieScene[]  →  same downstream as AI path
 - **Editor, Preview, Export, Audio, Timeline Intelligence, Drafts** — no SI integration
 - **Audio-first scenes path** — `generateAudioFirstStory()` does not pass SI flags
 
-Deep dive: [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) · Architecture: [ARCHITECTURE.md — Studio Intelligence layer](./ARCHITECTURE.md#studio-intelligence-layer)
+Deep dive: [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) · Architecture: [ARCHITECTURE.md — Studio Intelligence layer](./ARCHITECTURE.md#studio-intelligence-layer)
 
 ---
 
@@ -402,8 +402,8 @@ Latest release: **v2.6.0 — Timeline Intelligence Runtime** · **Audio Mixer v1
 | [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) | **Start here** — canonical architecture index and authority map |
 | [README.md](./README.md) | Product overview, features, and getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, pipelines, and design principles |
-| [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |
-| [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) | Audio Mixer v1 — voice/music/master buses, ducking, peak protection, freeze policy |
+| [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |
+| [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) | Audio Mixer v1 — voice/music/master buses, ducking, peak protection, freeze policy |
 | [ROADMAP.md](./ROADMAP.md) | Completed, in-progress, and planned product work |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history ([Keep a Changelog](https://keepachangelog.com/)) |
 

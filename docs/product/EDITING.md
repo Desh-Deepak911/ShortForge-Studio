@@ -279,7 +279,7 @@ Preview playback uses the canvas **Play** button — no native browser audio con
 
 Mixer changes update preview immediately and persist on save. They do **not** regenerate voiceover, restart export, or alter captions.
 
-Deep dive: [AUDIO_MIXER.md](./AUDIO_MIXER.md)
+Deep dive: [AUDIO_MIXER.md](AUDIO_MIXER.md)
 
 ### Review flow
 
@@ -463,8 +463,8 @@ src/
 
 | Document | Contents |
 |----------|----------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Editing layer in system context |
-| [GENERATION.md](./GENERATION.md) | What happens before editing |
-| [DATA_MODEL.md](./DATA_MODEL.md) | `FootieScene`, `FootieScript` fields |
-| [RENDERING.md](./RENDERING.md) | How edits appear in preview/export |
-| [FEATURES.md](./FEATURES.md) | Feature-level status and limitations |
+| [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) | Editing layer in system context |
+| [GENERATION.md](GENERATION.md) | What happens before editing |
+| [DATA_MODEL.md](../architecture/DATA_MODEL.md) | `FootieScene`, `FootieScript` fields |
+| [RENDERING.md](RENDERING.md) | How edits appear in preview/export |
+| [FEATURES.md](FEATURES.md) | Feature-level status and limitations |

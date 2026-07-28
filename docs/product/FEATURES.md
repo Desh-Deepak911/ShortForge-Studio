@@ -1,10 +1,10 @@
 # Features
 
-> **Status:** Partially stale in places (limitations and export notes may predate Timeline Intelligence, Audio Mixer v1, and Export Reliability 6B–6F.1). For canonical ownership and freezes, see [MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md).
+> **Status:** Partially stale in places (limitations and export notes may predate Timeline Intelligence, Audio Mixer v1, and Export Reliability 6B–6F.1). For canonical ownership and freezes, see [MASTER_ARCHITECTURE.md](../../MASTER_ARCHITECTURE.md).
 
 Complete reference for every implemented ShortForge Studio feature. Each entry covers **purpose**, **current status**, **known limitations**, and **future improvements**.
 
-For architecture and data flow, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For architecture and data flow, see [ARCHITECTURE.md](../architecture/ARCHITECTURE.md).
 
 ---
 
@@ -687,9 +687,9 @@ Component: `VideoPreview.tsx`. Timing: `previewTimeline.ts`, `previewSceneTiming
 
 | Document | Contents |
 |----------|----------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Three-layer system design |
-| [EDITING.md](./EDITING.md) | Editor workflow details |
-| [RENDERING.md](./RENDERING.md) | Canvas and FFmpeg internals |
-| [DATA_MODEL.md](./DATA_MODEL.md) | Type definitions |
-| [ROADMAP.md](../ROADMAP.md) | Product roadmap |
-| [FUTURE.md](./FUTURE.md) | Technical debt and planned work |
+| [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) | Three-layer system design |
+| [EDITING.md](EDITING.md) | Editor workflow details |
+| [RENDERING.md](RENDERING.md) | Canvas and FFmpeg internals |
+| [DATA_MODEL.md](../architecture/DATA_MODEL.md) | Type definitions |
+| [ROADMAP.md](../../ROADMAP.md) | Product roadmap |
+| [FUTURE.md](FUTURE.md) | Technical debt and planned work |

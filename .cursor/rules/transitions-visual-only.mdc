@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Visual-only transitions (scope lock)
 
-Read `footiebitz/docs/TRANSITIONS-SCOPE.md` before changing preview, export, or timeline transition behavior.
+Read `footiebitz/docs/product/TRANSITIONS-SCOPE.md` before changing preview, export, or timeline transition behavior.
 
 ## Frozen systems
 

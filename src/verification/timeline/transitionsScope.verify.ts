@@ -71,7 +71,7 @@ function buildStoryWithTransition(): FootieScript {
 console.log("transitions-scope");
 
 test("scope doc and cursor rule exist", () => {
-  const doc = readFileSync(join(root, "docs/TRANSITIONS-SCOPE.md"), "utf8");
+  const doc = readFileSync(join(root, "docs/product/TRANSITIONS-SCOPE.md"), "utf8");
   const rule = readFileSync(join(root, ".cursor/rules/transitions-visual-only.mdc"), "utf8");
 
   assert.match(doc, /visual-only/i);

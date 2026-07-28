@@ -508,7 +508,7 @@ Stream responses may include `usedFallback: true` on the complete event.
 
 | Document | Contents |
 |----------|----------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Three-layer system overview |
-| [DATA_MODEL.md](./DATA_MODEL.md) | `FootieScript`, `StoryScript`, voiceover types |
-| [FEATURES.md](./FEATURES.md) | User-facing generation feature reference |
-| [FUTURE.md](./FUTURE.md) | Broader technical debt and planned work |
+| [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) | Three-layer system overview |
+| [DATA_MODEL.md](../architecture/DATA_MODEL.md) | `FootieScript`, `StoryScript`, voiceover types |
+| [FEATURES.md](FEATURES.md) | User-facing generation feature reference |
+| [FUTURE.md](FUTURE.md) | Broader technical debt and planned work |

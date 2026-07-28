@@ -1,12 +1,12 @@
 # Architecture
 
-> **Status:** Partially stale on the export production path. Prefer [MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md), [EXPORT_CONTRACT.md](./EXPORT_CONTRACT.md), and [EXPORT_RENDERER_ARCHITECTURE.md](./EXPORT_RENDERER_ARCHITECTURE.md) for Export Reliability (Sprint 6B–6F.1 / `chunked-browser-v1`). Route-level and generation/editing sections remain useful supporting reference.
+> **Status:** Partially stale on the export production path. Prefer [MASTER_ARCHITECTURE.md](../../MASTER_ARCHITECTURE.md), [EXPORT_CONTRACT.md](EXPORT_CONTRACT.md), and [EXPORT_RENDERER_ARCHITECTURE.md](EXPORT_RENDERER_ARCHITECTURE.md) for Export Reliability (Sprint 6B–6F.1 / `chunked-browser-v1`). Route-level and generation/editing sections remain useful supporting reference.
 
 ShortForge Studio is a multi-route Next.js application for creating vertical football documentary shorts. The product shell exposes four main pages — landing, create, editor, and drafts — while the technical core remains three layers: **Generation**, **Editing**, and **Rendering**, all operating on a shared story model (`FootieScript`).
 
 AI work runs on server API routes. Editing, preview, export, and **draft persistence (MVP)** run in the browser. There is no database and no authentication today. Draft JSON is stored in **localStorage** under a single app key; opening `/editor/[draftId]` hydrates React state from that store without calling generation again.
 
-**Planned (not shipped):** cloud-backed drafts and user accounts — see [ROADMAP.md](../ROADMAP.md) Phase 5.
+**Planned (not shipped):** cloud-backed drafts and user accounts — see [ROADMAP.md](../../ROADMAP.md) Phase 5.
 
 ---
 
@@ -428,7 +428,7 @@ Story-level mixer overrides live on optional `FootieScript.audioMixer`. **`resol
 | Music | `music.volume × master.volume` | Ducking + fades via `preview-background-music.utils` | Ducking for voiceover duration; browser mix fades |
 | Master | Applies to both stems | Peak protection when gain > 1.0 or toggle on | Post-mix `alimiter` when active |
 
-Module: `src/features/audio-mixer/`. Detail: [AUDIO_MIXER.md](./AUDIO_MIXER.md).
+Module: `src/features/audio-mixer/`. Detail: [AUDIO_MIXER.md](../product/AUDIO_MIXER.md).
 
 ### Scene duration editing
 
@@ -454,7 +454,7 @@ UI: **`TransitionCard`** in scene inspector; markers on **`StudioTimeline`**. Lo
 
 ### Shared Media Motion (Sprint 5)
 
-Canonical media motion for images and videos. Deep dive: [SHARED_MEDIA_MOTION.md](./SHARED_MEDIA_MOTION.md).
+Canonical media motion for images and videos. Deep dive: [SHARED_MEDIA_MOTION.md](../product/SHARED_MEDIA_MOTION.md).
 
 | Concern | Authority |
 |---------|-----------|
@@ -464,7 +464,7 @@ Canonical media motion for images and videos. Deep dive: [SHARED_MEDIA_MOTION.md
 | Legacy `imageMotion` | Read via compatibility normalization; new writes use `media.motion` |
 | Timeline `image-motion` track | Foundation / QA — not production rendering |
 
-Manual QA checklist: [docs/qa/shared-media-motion-sprint-5.md](./qa/shared-media-motion-sprint-5.md).
+Manual QA checklist: [docs/qa/shared-media-motion-sprint-5.md](../qa/shared-media-motion-sprint-5.md).
 
 ### Image Motion (legacy Ken Burns field)
 
@@ -489,7 +489,7 @@ Tracks: scenes, subtitles, caption animations, image motion, transitions, audio.
 **Module:** `src/features/timeline-intelligence/`  
 **Authority:** `renderDurationMs` spans narration, scenes, subtitles, and transition tails.
 
-Deep dive: [README.md — Timeline Intelligence Runtime](../README.md#timeline-intelligence-runtime)
+Deep dive: [README.md — Timeline Intelligence Runtime](../../README.md#timeline-intelligence-runtime)
 
 ---
 
@@ -506,7 +506,7 @@ User Brief → Intent → Entity/Competition Resolution → Provider Registry �
 **Story structure QA:** `src/verification/research/storyStructureIntelligenceQa.verify.ts`  
 Prompt Intelligence is the primary production prompt path; Graph Context is fallback.
 
-Deep dive: [README.md — Intelligence Runtime](../README.md#intelligence-runtime)
+Deep dive: [README.md — Intelligence Runtime](../../README.md#intelligence-runtime)
 
 ---
 
@@ -573,7 +573,7 @@ StudioIntelligenceResult
 **Module:** `src/features/studio-intelligence/`  
 **Production bridge:** `src/features/story/services/studio-intelligence-scene-plan.utils.ts`  
 **Verification:** `src/verification/studio-intelligence/*.verify.ts`  
-**Deep dive:** [STUDIO_INTELLIGENCE.md](./STUDIO_INTELLIGENCE.md)
+**Deep dive:** [STUDIO_INTELLIGENCE.md](../product/STUDIO_INTELLIGENCE.md)
 
 ---
 
@@ -620,7 +620,7 @@ Aspect ratio: **9:16** inside a phone-style device frame.
 
 **Entry:** `exportFootieShort()` in `src/features/export/services/video-render.service.ts`
 
-**Contract (accepted after Sprint 6A):** [`docs/EXPORT_CONTRACT.md`](./EXPORT_CONTRACT.md) — immutable `ExportManifest`, preflight before render, Export Never Breaks, Preview/Export shared-domain parity. Sprint 6B implements the contract; current code still reads live story state and must migrate.
+**Contract (accepted after Sprint 6A):** [`docs/architecture/EXPORT_CONTRACT.md`](EXPORT_CONTRACT.md) — immutable `ExportManifest`, preflight before render, Export Never Breaks, Preview/Export shared-domain parity. Sprint 6B implements the contract; current code still reads live story state and must migrate.
 
 Pipeline:
 
@@ -633,7 +633,7 @@ Pipeline:
 
 Quality presets: `export-quality.utils.ts` (720p, 1080p, 1440p, 4K vertical @ 30 fps).
 
-Related: [`EXPORT_ARCHITECTURE_AUDIT.md`](./EXPORT_ARCHITECTURE_AUDIT.md), [`EXPORT_RELIABILITY_SPRINT.md`](./EXPORT_RELIABILITY_SPRINT.md).
+Related: [`EXPORT_ARCHITECTURE_AUDIT.md`](EXPORT_ARCHITECTURE_AUDIT.md), [`EXPORT_RELIABILITY_SPRINT.md`](../EXPORT_RELIABILITY_SPRINT.md).
 
 ### Subtitle renderer
 
@@ -783,9 +783,9 @@ Regression tests in `src/verification/` enforce parity (e.g. `test:export-subtit
 
 | Document | Contents |
 |----------|----------|
-| [GENERATION.md](./GENERATION.md) | AI pipeline details |
-| [STUDIO_INTELLIGENCE.md](./STUDIO_INTELLIGENCE.md) | Studio Intelligence 3.3 planning subsystem |
-| [EDITING.md](./EDITING.md) | Editor feature reference |
-| [RENDERING.md](./RENDERING.md) | Canvas and FFmpeg internals |
-| [DATA_MODEL.md](./DATA_MODEL.md) | Type definitions |
-| [FEATURES.md](./FEATURES.md) | Implemented capability list |
+| [GENERATION.md](../product/GENERATION.md) | AI pipeline details |
+| [STUDIO_INTELLIGENCE.md](../product/STUDIO_INTELLIGENCE.md) | Studio Intelligence 3.3 planning subsystem |
+| [EDITING.md](../product/EDITING.md) | Editor feature reference |
+| [RENDERING.md](../product/RENDERING.md) | Canvas and FFmpeg internals |
+| [DATA_MODEL.md](DATA_MODEL.md) | Type definitions |
+| [FEATURES.md](../product/FEATURES.md) | Implemented capability list |

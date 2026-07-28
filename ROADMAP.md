@@ -143,7 +143,7 @@ Items marked complete ship in the current product. In-progress and planned work 
 - [x] **3.6F Prompt ↔ Studio Intelligence alignment** — Shared mode-structure bridge; `test:studio-intelligence-prompt-alignment`
 - [x] **3.6G Story Coherence Validator** — Post-planning audit on `StudioIntelligenceResult`; `test:studio-intelligence-story-validator`
 
-Detail: [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md)
+Detail: [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md)
 
 ---
 
@@ -224,7 +224,7 @@ No editor behavior changes until **3.8C**.
 
 **Post-v1 (not in freeze):** normalize voice, limiter UI, preview music boost > 100%, FFmpeg music fade filters, scene/word-level ducking.
 
-Detail: [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md)
+Detail: [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md)
 
 ---
 
@@ -323,7 +323,7 @@ Sprint 8 — Multi-image Scenes
 
 **Deferred from Sprint 8:** Headless Renderer → **Sprint 11** (Retention Story Intelligence is Sprint 10).
 
-**References:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) · [docs/ENV_AND_FEATURE_FLAGS.md](./docs/ENV_AND_FEATURE_FLAGS.md) · [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md) · Verify: `test:scene-media-sprint`
+**References:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) · [docs/operations/ENV_AND_FEATURE_FLAGS.md](./docs/operations/ENV_AND_FEATURE_FLAGS.md) · [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) · Verify: `test:scene-media-sprint`
 
 ```text
 SPRINT 8 MULTI-IMAGE SCENES: FROZEN
@@ -352,7 +352,7 @@ Sprint 9 — Intra-scene Transitions
 9D — Golden QA and Freeze                 ← frozen (9D.3)
 ```
 
-**9A–9C:** Domain/editor, Preview composition, ExportManifest **v3 / `"9C"`** — accepted. See [docs/INTRA_SCENE_TRANSITIONS.md](./docs/INTRA_SCENE_TRANSITIONS.md) · [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md).
+**9A–9C:** Domain/editor, Preview composition, ExportManifest **v3 / `"9C"`** — accepted. See [docs/product/INTRA_SCENE_TRANSITIONS.md](./docs/product/INTRA_SCENE_TRANSITIONS.md) · [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md).
 
 **9D–9D.3:** Deterministic goldens, local-evidence truth, editor discoverability, operator Chromium Preview / 720p WebM / editor Pass. Evidence: [docs/qa/intra-scene-transition-sprint-9-freeze.md](./docs/qa/intra-scene-transition-sprint-9-freeze.md).
 
@@ -536,6 +536,6 @@ Architecture detail: [ARCHITECTURE.md](./ARCHITECTURE.md) · Product overview: [
 | [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) | Formal Retention Story Contract (**Accepted after Sprint 10A.2**) |
 | [README.md](./README.md) | Features, workflows, getting started |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and pipelines |
-| [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |
-| [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) | Audio Mixer v1 — buses, ducking, peak protection, freeze policy |
+| [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) | Studio Intelligence v1 — planners, adapter, 3.6 validation, freeze policy |
+| [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) | Audio Mixer v1 — buses, ducking, peak protection, freeze policy |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |

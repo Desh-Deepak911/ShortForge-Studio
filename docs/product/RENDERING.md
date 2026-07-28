@@ -1,6 +1,6 @@
 # Rendering
 
-> **Status:** Partially stale for export encode. Production export is manifest-only + `chunked-browser-v1` (not MediaRecorder as the primary path). Start with [MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md) and [EXPORT_RENDERER_ARCHITECTURE.md](./EXPORT_RENDERER_ARCHITECTURE.md). Preview sections remain useful supporting reference.
+> **Status:** Partially stale for export encode. Production export is manifest-only + `chunked-browser-v1` (not MediaRecorder as the primary path). Start with [MASTER_ARCHITECTURE.md](../../MASTER_ARCHITECTURE.md) and [EXPORT_RENDERER_ARCHITECTURE.md](../architecture/EXPORT_RENDERER_ARCHITECTURE.md). Preview sections remain useful supporting reference.
 
 The Rendering layer turns `FootieScript` into visible frames. ShortForge Studio has two renderers that share timing, subtitle, transition, and image motion logic but use different output technologies:
 
@@ -118,7 +118,7 @@ Offline frame-by-frame render to a downloadable WebM file.
 8. downloadBlob()
 ```
 
-See `docs/EXPORT_DETERMINISTIC_CAPTURE.md` and `docs/qa/mixed-media-export-freeze.md`.
+See `docs/product/EXPORT_DETERMINISTIC_CAPTURE.md` and `docs/qa/mixed-media-export-freeze.md`.
 
 ### Key differences summary
 
@@ -274,7 +274,7 @@ Two mux paths share mix settings from `resolveExportBackgroundMusicMixSettings()
 
 **Peak protection (v1):** When stem gain > 1.0 or Peak Protection is enabled — preview compressor; export post-mix FFmpeg `alimiter` (~0.98 ceiling).
 
-Detail: [AUDIO_MIXER.md](./AUDIO_MIXER.md)
+Detail: [AUDIO_MIXER.md](AUDIO_MIXER.md)
 
 ---
 
@@ -536,7 +536,7 @@ When voiceover is included, rendering progress is capped at 70% until mux comple
 - Fullscreen preview
 - Real-time audio/visual drift indicator
 
-See also [FUTURE.md](./FUTURE.md) and [ROADMAP.md](../ROADMAP.md).
+See also [FUTURE.md](FUTURE.md) and [ROADMAP.md](../../ROADMAP.md).
 
 ---
 
@@ -580,8 +580,8 @@ src/features/story/utils/
 
 | Document | Contents |
 |----------|----------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Rendering layer in system context |
-| [EDITING.md](./EDITING.md) | Controls that affect render output |
-| [GENERATION.md](./GENERATION.md) | Initial timing from voiceover |
-| [FEATURES.md](./FEATURES.md) | Preview and export feature reference |
-| [FUTURE.md](./FUTURE.md) | Technical debt and planned work |
+| [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) | Rendering layer in system context |
+| [EDITING.md](EDITING.md) | Controls that affect render output |
+| [GENERATION.md](GENERATION.md) | Initial timing from voiceover |
+| [FEATURES.md](FEATURES.md) | Preview and export feature reference |
+| [FUTURE.md](FUTURE.md) | Technical debt and planned work |

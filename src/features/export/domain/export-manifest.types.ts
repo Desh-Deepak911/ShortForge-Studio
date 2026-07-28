@@ -1,6 +1,6 @@
 /**
  * Immutable ExportManifest domain types (Sprint 6B / 8D / 9C).
- * Contract: docs/EXPORT_CONTRACT.md
+ * Contract: docs/architecture/EXPORT_CONTRACT.md
  *
  * Frozen backward-compatible pairs: v2 / "8D", v3 / "9C"
  * Current production pair: v4 / "9D"

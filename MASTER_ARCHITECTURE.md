@@ -73,16 +73,16 @@ Claims below are **repository-evidence only**. Do not treat marketing version li
 | Documented product releases | [CHANGELOG.md](./CHANGELOG.md) `[2.5.0]`, `[2.6.0]`, `[3.0.0]` | README “Latest: v2.6.0” is **partially stale** vs CHANGELOG / later milestones |
 | Intelligence Runtime | CHANGELOG / root [ARCHITECTURE.md](./ARCHITECTURE.md) | Shipped as **2.5.0** |
 | Timeline Intelligence Runtime | CHANGELOG / README | Shipped as **2.6.0** — `MasterTimeline` shared preview/export clock |
-| Studio Intelligence v1 | [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md), [ROADMAP.md](./ROADMAP.md) | **Complete and frozen** (3.3–3.6) |
-| Audio Mixer v1 | [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md), ROADMAP 3.9.2 | **Complete and frozen** |
-| Shared Media Motion | [docs/SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md) | Production path after 4.2C → Sprint 5; **manual freeze sign-off blank** |
-| Persistent Media Framing | [docs/MEDIA_FRAMING.md](./docs/MEDIA_FRAMING.md) | Canonical framing via `resolveSceneMediaFraming()` |
-| Export Reliability | [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md) | **Sprint 6A–6F.1 Implemented** (contract Accepted after 6A) |
+| Studio Intelligence v1 | [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md), [ROADMAP.md](./ROADMAP.md) | **Complete and frozen** (3.3–3.6) |
+| Audio Mixer v1 | [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md), ROADMAP 3.9.2 | **Complete and frozen** |
+| Shared Media Motion | [docs/product/SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) | Production path after 4.2C → Sprint 5; **manual freeze sign-off blank** |
+| Persistent Media Framing | [docs/product/MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) | Canonical framing via `resolveSceneMediaFraming()` |
+| Export Reliability | [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md), [docs/EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md) | **Sprint 6A–6F.1 Implemented** (contract Accepted after 6A) |
 | Export freeze | [docs/qa/export-reliability-freeze.md](./docs/qa/export-reliability-freeze.md) | **`EXPORT RELIABILITY FREEZE: APPROVED`** for **720p / Chromium-first / WebM primary** (2026-07-11, automated evidence) |
 
 ### Latest completed architectural milestone
 
-**Export Reliability Sprint 6F.1** — options-only `ExportSession`, fresh manifest every attempt, capability-gated 1080p approval. Primary docs: [EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md), [EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [qa/export-1080p-results.md](./docs/qa/export-1080p-results.md).
+**Export Reliability Sprint 6F.1** — options-only `ExportSession`, fresh manifest every attempt, capability-gated 1080p approval. Primary docs: [EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md), [EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md), [qa/export-1080p-results.md](./docs/qa/export-1080p-results.md).
 
 ### Current frozen systems (summary)
 
@@ -90,7 +90,7 @@ See [§9](#9-frozen-systems-and-regression-boundaries) for the full list. Headli
 
 - Studio Intelligence v1
 - Audio Mixer v1 (3.9.2)
-- Transition visual-only scope lock ([docs/TRANSITIONS-SCOPE.md](./docs/TRANSITIONS-SCOPE.md), [`.cursor/rules/transitions-visual-only.mdc`](./.cursor/rules/transitions-visual-only.mdc))
+- Transition visual-only scope lock ([docs/product/TRANSITIONS-SCOPE.md](./docs/product/TRANSITIONS-SCOPE.md), [`.cursor/rules/transitions-visual-only.mdc`](./.cursor/rules/transitions-visual-only.mdc))
 - Export Reliability 720p Chromium-first freeze (automated semantic evidence)
 - ExportManifest lifecycle + capability preflight + chunked renderer contracts
 
@@ -198,7 +198,7 @@ Final Artifact Validation  (validateFinalExportArtifact)
 
 `exportFootieShort` → `prepareExportRequest` → `createExportRenderContext` → `renderExport(manifest, context)` → format adapter → `validateFinalExportArtifact` → `disposeExportRenderContext`
 
-Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_RENDERER_ARCHITECTURE.md](./docs/EXPORT_RENDERER_ARCHITECTURE.md), `src/features/export/`.
+Sources: [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md), [docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md](./docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md), `src/features/export/`.
 
 **Terminology notes:**
 
@@ -214,33 +214,33 @@ Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_REND
 
 | Capability | Canonical owner | Primary type / contract | Preview adapter | Export adapter | Documentation | Verification | Status |
 |------------|-----------------|-------------------------|-----------------|----------------|---------------|--------------|--------|
-| Editable story state | `src/features/story/` (+ drafts store) | `FootieScript`, `FootieScene` in `story/types/story.types.ts` | N/A (state) | Snapshot into `ExportManifest` | [docs/DATA_MODEL.md](./docs/DATA_MODEL.md) | story / drafts verifies | Authoritative |
-| Scene media timeline (multi-image) | `src/features/scene-media-timeline/` + `timeline-editor/scene-media/` + Preview/Export adapters | `SceneMediaTimeline` on `FootieScene.mediaTimeline?` (v1 frozen); multi-image default | Active-item Preview (complete projected timeline) | ExportManifest v2 `mediaTimeline` (contract `"8D"` frozen); fail-closed total v2 validation before cost/preload/render | [docs/ENV_AND_FEATURE_FLAGS.md](./docs/ENV_AND_FEATURE_FLAGS.md) · [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md) · [docs/qa/scene-media-sprint-8-freeze.md](./docs/qa/scene-media-sprint-8-freeze.md) | `test:scene-media-preview` · `test:scene-media-export` · domain/ui/inspector | **Sprint 8 frozen**; flag retired 8E.3 |
+| Editable story state | `src/features/story/` (+ drafts store) | `FootieScript`, `FootieScene` in `story/types/story.types.ts` | N/A (state) | Snapshot into `ExportManifest` | [docs/architecture/DATA_MODEL.md](./docs/architecture/DATA_MODEL.md) | story / drafts verifies | Authoritative |
+| Scene media timeline (multi-image) | `src/features/scene-media-timeline/` + `timeline-editor/scene-media/` + Preview/Export adapters | `SceneMediaTimeline` on `FootieScene.mediaTimeline?` (v1 frozen); multi-image default | Active-item Preview (complete projected timeline) | ExportManifest v2 `mediaTimeline` (contract `"8D"` frozen); fail-closed total v2 validation before cost/preload/render | [docs/operations/ENV_AND_FEATURE_FLAGS.md](./docs/operations/ENV_AND_FEATURE_FLAGS.md) · [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) · [docs/qa/scene-media-sprint-8-freeze.md](./docs/qa/scene-media-sprint-8-freeze.md) | `test:scene-media-preview` · `test:scene-media-export` · domain/ui/inspector | **Sprint 8 frozen**; flag retired 8E.3 |
 | Story synchronization | `src/features/story-sync/` | `StorySynchronizationState`, readiness types | Sync UI / preview gates | Export readiness domain | Module + verifies | `test:story-sync*` | Authoritative |
 | Project timing | `src/features/timeline-intelligence/` | `MasterTimeline.renderDurationMs`, `contentEndMs` | Master timeline preview utils | Manifest `project.renderDurationMs` | EXPORT_TIMING_MODEL (clock hierarchy; encode path partially stale) | `test:timeline-*`, export timing suites | Authoritative |
 | Scene timing | Timeline Intelligence + story scenes | Scene events on `MasterTimeline` | Preview scene timing | Export scene manifests | DATA_MODEL / EDITING | timeline verifies | Authoritative |
 | Video trim / playback | `src/features/media-playback/` | `MediaPlaybackState`, trim window types | `preview/utils/preview-video-clip.utils.ts` | `export/utils/export-scene-media-renderer.ts` | Module headers | `media-playback.verify.ts` | Authoritative |
-| Media framing | `src/features/media-framing/` | `SceneMediaFraming` | Preview frames + `resolveSceneMediaFraming` | Export media renderer + manifest build | [docs/MEDIA_FRAMING.md](./docs/MEDIA_FRAMING.md) | `test:media-framing-*`, export framing | Authoritative |
-| Media motion | `src/features/media-motion/` | `SceneMediaMotion` → `MediaMotionState` | `editor/preview/motion/previewMotionAdapter.ts` | `editor/export/motion/exportMotionAdapter.ts` | [docs/SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md) | `test:media-motion`, motion sprint | Authoritative |
-| Transitions | Story transition fields + timeline events | `transition.effect`, `transition.durationMs` | Preview overlay layer | Export transition frame resolution | [docs/TRANSITIONS-SCOPE.md](./docs/TRANSITIONS-SCOPE.md) | `test:transitions-scope` | Scope-locked (visual-only) |
+| Media framing | `src/features/media-framing/` | `SceneMediaFraming` | Preview frames + `resolveSceneMediaFraming` | Export media renderer + manifest build | [docs/product/MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) | `test:media-framing-*`, export framing | Authoritative |
+| Media motion | `src/features/media-motion/` | `SceneMediaMotion` → `MediaMotionState` | `editor/preview/motion/previewMotionAdapter.ts` | `editor/export/motion/exportMotionAdapter.ts` | [docs/product/SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) | `test:media-motion`, motion sprint | Authoritative |
+| Transitions | Story transition fields + timeline events | `transition.effect`, `transition.durationMs` | Preview overlay layer | Export transition frame resolution | [docs/product/TRANSITIONS-SCOPE.md](./docs/product/TRANSITIONS-SCOPE.md) | `test:transitions-scope` | Scope-locked (visual-only) |
 | Caption content | Story + subtitle timing | Scene captions / subtitle chunks | Overlay components | Export caption manifests | DATA_MODEL | subtitle / export caption suites | Authoritative |
 | Caption layout | `src/features/caption-layout/` | `CaptionLayout`, `CaptionResolvedLayout` | Caption/Subtitle overlays | `export/domain/resolve-export-caption-layout.ts` | Module | `caption-layout.verify.ts` | Authoritative |
 | Caption style | `src/features/caption-style/` + caption-engine | `CaptionStyle`, presets | `caption-style.adapters.ts` / preview style resolvers | Export draw + `resolve-export-caption-style` | Module | caption-style / subtitle QA | Authoritative |
 | Caption animation | `src/features/caption-animation/` | `CaptionAnimation`, `CaptionAnimationState` | `resolvePreviewCaptionAnimation` | `resolveExportCaptionAnimation*` | Module | caption-animation / timeline caption QA | Authoritative |
 | Voiceover | `src/features/audio/` + story voice settings | Voiceover tracks / duration | Preview voice gain utils | Export audio prep / mux | GENERATION / AUDIO_MIXER | audio verifies | Authoritative |
-| Audio mixing | `src/features/audio-mixer/` | `ProjectAudioMixerSettings`, `ResolvedAudioMixSettings` | Preview stem gains | Export mix + FFmpeg peak | [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) | `test:audio-mixer*` | **Frozen v1** |
+| Audio mixing | `src/features/audio-mixer/` | `ProjectAudioMixerSettings`, `ResolvedAudioMixSettings` | Preview stem gains | Export mix + FFmpeg peak | [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) | `test:audio-mixer*` | **Frozen v1** |
 | Preview | `src/features/preview/` | Preview playback scope types | Interactive browser render | N/A | EDITING / RENDERING (partially stale on export path) | preview / timeline verifies | Authoritative |
-| Export semantics | `src/features/export/domain/` | `ExportManifest` | N/A | Manifest freeze | [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md) | `test:export-manifest*` | **Authoritative** |
-| Export runtime state | `src/features/export/runtime/` | `ExportRenderContext` | N/A | `renderExport` | [docs/EXPORT_RENDERER_ARCHITECTURE.md](./docs/EXPORT_RENDERER_ARCHITECTURE.md) | `test:export-render-context`, manifest-renderer | Authoritative |
+| Export semantics | `src/features/export/domain/` | `ExportManifest` | N/A | Manifest freeze | [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) | `test:export-manifest*` | **Authoritative** |
+| Export runtime state | `src/features/export/runtime/` | `ExportRenderContext` | N/A | `renderExport` | [docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md](./docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md) | `test:export-render-context`, manifest-renderer | Authoritative |
 | Export session UX | `src/features/export/session/` | `ExportSession` (options only) | N/A | Fresh manifest per attempt | EXPORT_CONTRACT 6F.1 | `test:export-session`, reconfiguration | Authoritative |
-| Export capability | `src/features/export/domain/` + `capabilities/` | `ExportCapabilityResult` | Preflight UI | `prepareExportRequest` gate | [docs/EXPORT_CAPABILITIES.md](./docs/EXPORT_CAPABILITIES.md) | `test:export-capability-*` | Authoritative |
+| Export capability | `src/features/export/domain/` + `capabilities/` | `ExportCapabilityResult` | Preflight UI | `prepareExportRequest` gate | [docs/product/EXPORT_CAPABILITIES.md](./docs/product/EXPORT_CAPABILITIES.md) | `test:export-capability-*` | Authoritative |
 | Export output validation | `src/features/export/validation/` | `ExportArtifactValidation` | N/A | `validateFinalExportArtifact` | EXPORT_CONTRACT / AUDIO_AND_FORMATS | `test:export-final-artifact` | Authoritative |
 | QA fixtures | `src/features/export/qa/` + `src/verification/` | Golden A–G | `/dev/export-qa` | Semantic goldens | [docs/qa/](./docs/qa/) | `test:export-golden-*`, export-reliability | Authoritative for recorded evidence |
 | Final spoken hook | Opening span of `FootieScript.narration` (story generation commits) | `FootieScript.narration` — **not** a second narration field | N/A (story text) | Snapshotted with narration into export | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) (**Accepted**) | Sprint 7E (future) | Contract accepted; generation integration in 7D |
 | Hook planning / strategy library | `src/features/hook-engine/` (`domain/`, `strategies/`) | `NormalizedHookRequest`, `HookPlan`, `HookPlanSnapshot`, `resolveHookStrategy` | N/A | Must not patch export runtime | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md), [HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) | `test:hook-strategy-library` | **7B accepted** |
 | Hook validation / repair | `src/features/hook-engine/` (`validation/`, `repair/`) | `HookCandidate`, `HookValidationResult`, `HookSelection`, `HookDiagnostics`, `runBoundedHookRepair`, `activePlan` | N/A | Must not patch export runtime | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | `test:hook-validator` | **7C accepted** |
 | Hook generation integration | `src/features/hook-engine/integration/` + story services + `/api/generate-script` | `HookGenerationContext`, `HookDirective`, `approvedNarration`, response `hookPlan` | Optional `StoryCreationBrief.hookPlan` snapshot | Upstream of VO/scenes | [HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | `test:hook-sprint` · `test:hook-core-live-qa` | **7E complete — Core frozen**; Evidence Surprise live capability-gated |
-| Visual / scene hook (SI) | `src/features/studio-intelligence/` | `NarrativeBeatType = "hook"`, `hook_opener`, SI-only `StoryStrategyHookStrategy` | Scene/visual planning | Derived excerpts only | [STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | SI verifies | Downstream of narration — not spoken authority |
+| Visual / scene hook (SI) | `src/features/studio-intelligence/` | `NarrativeBeatType = "hook"`, `hook_opener`, SI-only `StoryStrategyHookStrategy` | Scene/visual planning | Derived excerpts only | [STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) | SI verifies | Downstream of narration — not spoken authority |
 | Publishing/social metadata hook | Publishing metadata utils (`buildStyleHook`) | Derived packaging copy | N/A | N/A | HOOK_CONTRACT §13 | Publishing verifies (existing) | Outside Hook Engine |
 
 **Existing hook collision note:** Today “hook” also appears as generic prompt guidance (`src/lib/ai/prompts.ts`), Prompt Intelligence `NarrativeBeat.openingHook`, creator-template `openingStyle`, SI beat/kind/validator rules, and publishing/social metadata helpers. These are **not** one narration-level Hook Contract — see the audit collision matrix. Publishing “hook” must be qualified as packaging metadata.
@@ -254,14 +254,14 @@ Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_REND
 - **Role:** Canonical editable story model and generation services.
 - **Module:** [`src/features/story/`](./src/features/story/)
 - **Key types:** `FootieScript`, `FootieScene`, `SceneMedia`, `SceneMediaMotion` — [`story/types/story.types.ts`](./src/features/story/types/story.types.ts)
-- **Docs:** [docs/DATA_MODEL.md](./docs/DATA_MODEL.md), [docs/GENERATION.md](./docs/GENERATION.md)
+- **Docs:** [docs/architecture/DATA_MODEL.md](./docs/architecture/DATA_MODEL.md), [docs/product/GENERATION.md](./docs/product/GENERATION.md)
 - **Related store:** drafts `StoryDocument` store holds `FootieScript`
 
 ### Intelligence Runtime
 
 - **Role:** Intent → entities → research → Knowledge Graph → Graph Context → Prompt Intelligence.
 - **Modules:** [`src/features/intelligence/`](./src/features/intelligence/), [`src/features/intent-engine/`](./src/features/intent-engine/), [`src/features/research/`](./src/features/research/)
-- **Docs:** Root [ARCHITECTURE.md](./ARCHITECTURE.md), [docs/GENERATION.md](./docs/GENERATION.md)
+- **Docs:** Root [ARCHITECTURE.md](./ARCHITECTURE.md), [docs/product/GENERATION.md](./docs/product/GENERATION.md)
 - **Milestone:** CHANGELOG **2.5.0**
 - **Verification:** `src/verification/{graph,research,entity,football,canonical,intent-engine}/`
 
@@ -276,7 +276,7 @@ Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_REND
 
 - **Role:** Planning subsystem — beats, arcs, blueprints → optional FootieScript materialization.
 - **Module:** [`src/features/studio-intelligence/`](./src/features/studio-intelligence/)
-- **Docs:** [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) (**Authoritative**, v1 frozen)
+- **Docs:** [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) (**Authoritative**, v1 frozen)
 - **Gates:** Dual opt-in (`STUDIO_INTELLIGENCE_SCENE_PLAN_ENABLED` + request flag); default remains AI scene planner
 - **Verification:** `src/verification/studio-intelligence/`
 
@@ -300,13 +300,13 @@ Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_REND
 - **Key API:** `buildMasterTimeline()` — [`build-master-timeline.ts`](./src/features/timeline-intelligence/build-master-timeline.ts)
 - **Types:** [`timeline.types.ts`](./src/features/timeline-intelligence/timeline.types.ts)
 - **Milestone:** **2.6.0**
-- **Note:** Timeline image-motion track is foundation/QA; production motion uses Shared Media Motion ([SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md))
+- **Note:** Timeline image-motion track is foundation/QA; production motion uses Shared Media Motion ([SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md))
 
 ### Timeline Editor
 
 - **Role:** Studio timeline UI — layout, reorder, resize, trim, playhead.
 - **Module:** [`src/features/timeline-editor/`](./src/features/timeline-editor/)
-- **Docs:** [docs/EDITING.md](./docs/EDITING.md)
+- **Docs:** [docs/product/EDITING.md](./docs/product/EDITING.md)
 
 ### Media Playback Engine
 
@@ -330,14 +330,14 @@ Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_REND
 - **Module:** [`src/features/media-motion/`](./src/features/media-motion/)
 - **Resolver:** `resolveMediaMotionState()` — [`media-motion.engine.ts`](./src/features/media-motion/media-motion.engine.ts)
 - **Adapters:** Preview / Export under `src/features/editor/{preview,export}/motion/`
-- **Docs:** [docs/SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md) (**Authoritative**)
+- **Docs:** [docs/product/SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) (**Authoritative**)
 - **QA:** [docs/qa/shared-media-motion-sprint-5.md](./docs/qa/shared-media-motion-sprint-5.md) (freeze candidate; sign-off blank)
 
 ### Media Framing
 
 - **Module:** [`src/features/media-framing/`](./src/features/media-framing/)
 - **Resolver:** `resolveSceneMediaFraming()` — [`resolve-scene-media-framing.ts`](./src/features/media-framing/resolve-scene-media-framing.ts)
-- **Docs:** [docs/MEDIA_FRAMING.md](./docs/MEDIA_FRAMING.md) (**Authoritative** for framing)
+- **Docs:** [docs/product/MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) (**Authoritative** for framing)
 
 ### Caption Engine
 
@@ -354,7 +354,7 @@ Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_REND
 - **Audio engine:** [`src/features/audio/`](./src/features/audio/)
 - **Mixer:** [`src/features/audio-mixer/`](./src/features/audio-mixer/) — `resolveAudioMixerSettings()`
 - **Voice library / preview:** [`src/features/voice-library/`](./src/features/voice-library/), [`src/features/voice-preview/`](./src/features/voice-preview/)
-- **Docs:** [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) (**Authoritative**, frozen v1)
+- **Docs:** [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) (**Authoritative**, frozen v1)
 
 ### Preview Engine
 
@@ -367,11 +367,11 @@ Sources: [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md), [docs/EXPORT_REND
 - **Module:** [`src/features/export/`](./src/features/export/)
 - **Subdomains:** `domain/`, `runtime/`, `session/`, `validation/`, `formats/`, `audio/`, `timing/`, `chunking/`, `capabilities/`, `qa/`
 - **Docs (authoritative set):**
-  - [EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md)
+  - [EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md)
   - [EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md)
-  - [EXPORT_RENDERER_ARCHITECTURE.md](./docs/EXPORT_RENDERER_ARCHITECTURE.md)
-  - [EXPORT_AUDIO_AND_FORMATS.md](./docs/EXPORT_AUDIO_AND_FORMATS.md)
-  - [EXPORT_CAPABILITIES.md](./docs/EXPORT_CAPABILITIES.md)
+  - [EXPORT_RENDERER_ARCHITECTURE.md](./docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md)
+  - [EXPORT_AUDIO_AND_FORMATS.md](./docs/product/EXPORT_AUDIO_AND_FORMATS.md)
+  - [EXPORT_CAPABILITIES.md](./docs/product/EXPORT_CAPABILITIES.md)
 - **Formats:** [`webm-export-format-adapter.ts`](./src/features/export/formats/webm-export-format-adapter.ts), [`mp4-export-format-adapter.ts`](./src/features/export/formats/mp4-export-format-adapter.ts)
 
 ### Golden QA and verification system
@@ -430,7 +430,7 @@ Do not duplicate full interfaces here. Link production types.
 | **Purpose** | Persistent pan/zoom/rotation/fit inside 9:16 |
 | **Types** | [`SceneMediaFraming`](./src/features/media-framing/media-framing.types.ts) |
 | **Resolver** | `resolveSceneMediaFraming()` |
-| **Docs** | [MEDIA_FRAMING.md](./docs/MEDIA_FRAMING.md) |
+| **Docs** | [MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) |
 
 ### Scene media motion
 
@@ -439,7 +439,7 @@ Do not duplicate full interfaces here. Link production types.
 | **Purpose** | Shared motion semantics (presets, easing, transform composition) |
 | **Persistence** | `scene.media.motion` (`SceneMediaMotion` in story types) |
 | **Engine state** | [`MediaMotionState`](./src/features/media-motion/media-motion.types.ts) via `resolveMediaMotionState()` |
-| **Docs** | [SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md) |
+| **Docs** | [SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) |
 
 ### Caption contracts
 
@@ -457,7 +457,7 @@ Do not duplicate full interfaces here. Link production types.
 |--|--|
 | **Types** | [`ProjectAudioMixerSettings`](./src/features/audio-mixer/audio-mixer.types.ts), `ResolvedAudioMixSettings` |
 | **Resolver** | `resolveAudioMixerSettings(script)` |
-| **Docs** | [AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) — **frozen v1** |
+| **Docs** | [AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) — **frozen v1** |
 
 ### ExportManifest
 
@@ -600,7 +600,7 @@ Statuses use repository evidence only.
 | **Status** | **Complete and frozen** (STUDIO_INTELLIGENCE.md, ROADMAP) |
 | **Purpose** | Narrative planning → blueprints → optional materialization |
 | **Architectural outcome** | Dual-gated opt-in SI path; default AI planner unchanged |
-| **Canonical documentation** | [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) |
+| **Canonical documentation** | [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) |
 | **Primary implementation** | `src/features/studio-intelligence/` |
 | **Verification** | `src/verification/studio-intelligence/` |
 | **Known remaining debt** | Next SI product milestone historically pointed at Asset Search 3.8 |
@@ -648,7 +648,7 @@ Statuses use repository evidence only.
 | **Status** | **Complete and frozen** |
 | **Purpose** | Independent voice/music/master buses with preview/export parity |
 | **Architectural outcome** | Shared `resolveAudioMixerSettings` + ducking + peak protection |
-| **Canonical documentation** | [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) |
+| **Canonical documentation** | [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) |
 | **Primary implementation** | `src/features/audio-mixer/` |
 | **Verification** | `test:audio-mixer*` |
 | **Known remaining debt** | Normalize voice, limiter UI, preview music boost >100% (post-v1) |
@@ -660,10 +660,10 @@ Statuses use repository evidence only.
 | **Status** | Production architecture documented; QA checklist = **freeze candidate** (sign-off blank) |
 | **Purpose** | One motion engine; preview/export adapters only differ in units |
 | **Architectural outcome** | `scene.media.motion` → shared resolver → adapters |
-| **Canonical documentation** | [SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md) |
+| **Canonical documentation** | [SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) |
 | **Primary implementation** | `src/features/media-motion/` + editor motion adapters |
 | **Verification** | `test:media-motion`, `test:motion-sprint`, [qa/shared-media-motion-sprint-5.md](./docs/qa/shared-media-motion-sprint-5.md) |
-| **Known remaining debt** | Opacity motion channel; retire legacy `imageMotion` writes ([FUTURE.md](./docs/FUTURE.md)) |
+| **Known remaining debt** | Opacity motion channel; retire legacy `imageMotion` writes ([FUTURE.md](./docs/product/FUTURE.md)) |
 
 ### Persistent Media Framing
 
@@ -672,7 +672,7 @@ Statuses use repository evidence only.
 | **Status** | Implemented; contract short and current |
 | **Purpose** | Persistent framing for image + video |
 | **Architectural outcome** | Shared `resolveSceneMediaFraming` for preview/export |
-| **Canonical documentation** | [MEDIA_FRAMING.md](./docs/MEDIA_FRAMING.md) |
+| **Canonical documentation** | [MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) |
 | **Primary implementation** | `src/features/media-framing/` |
 | **Verification** | `test:media-framing-*`, export framing suites |
 | **Known remaining debt** | Fit/fill single-field migration (Export 6G note) |
@@ -685,7 +685,7 @@ Statuses use repository evidence only.
 |-------|----------|
 | **Status** | Completed as audit / contract acceptance |
 | **Purpose** | Inventory export architecture, capabilities, timing, parity |
-| **Architectural outcome** | Accepted [EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md) |
+| **Architectural outcome** | Accepted [EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) |
 | **Canonical documentation** | EXPORT_ARCHITECTURE_AUDIT, CAPABILITIES, TIMING_MODEL, parity matrix, CONTRACT |
 | **Primary implementation** | Documentation phase (see 6A.1 non-goals) |
 | **Verification / QA** | Audit docs + parity matrix |
@@ -698,7 +698,7 @@ Statuses use repository evidence only.
 | **Status** | Documentation non-goals phase recorded in EXPORT_CONTRACT |
 | **Purpose** | Accept contract without implementing manifest/preflight/chunking |
 | **Architectural outcome** | Explicit non-goals list; 6B+ implements gates |
-| **Canonical documentation** | [EXPORT_CONTRACT.md § Non-Goals (Sprint 6A.1)](./docs/EXPORT_CONTRACT.md) |
+| **Canonical documentation** | [EXPORT_CONTRACT.md § Non-Goals (Sprint 6A.1)](./docs/architecture/EXPORT_CONTRACT.md) |
 | **Primary implementation** | Docs only |
 | **Verification / QA** | N/A (docs) |
 | **Known remaining debt** | None for 6A.1 itself |
@@ -746,7 +746,7 @@ Statuses use repository evidence only.
 | **Status** | **Implemented** |
 | **Purpose** | Format adapters, audio end policy, artifact validation |
 | **Architectural outcome** | WebM/MP4 adapters; no silent capability loss |
-| **Canonical documentation** | [EXPORT_AUDIO_AND_FORMATS.md](./docs/EXPORT_AUDIO_AND_FORMATS.md) |
+| **Canonical documentation** | [EXPORT_AUDIO_AND_FORMATS.md](./docs/product/EXPORT_AUDIO_AND_FORMATS.md) |
 | **Primary implementation** | `export/formats/`, `export/audio/`, `export/validation/` |
 | **Verification** | `test:export-webm-format`, `test:export-mp4-format`, `test:export-final-artifact`, audio suites |
 | **Known remaining debt** | Full cancellation UI (Future on contract) |
@@ -809,7 +809,7 @@ Future work must **not casually reinterpret** these systems:
 | Shared motion semantics | SHARED_MEDIA_MOTION.md |
 | Persistent media framing | MEDIA_FRAMING.md |
 | Caption timing/layout/style contracts | caption-* modules + export caption suites |
-| Transition visual-only scope | [docs/TRANSITIONS-SCOPE.md](./docs/TRANSITIONS-SCOPE.md) + [`.cursor/rules/transitions-visual-only.mdc`](./.cursor/rules/transitions-visual-only.mdc) |
+| Transition visual-only scope | [docs/product/TRANSITIONS-SCOPE.md](./docs/product/TRANSITIONS-SCOPE.md) + [`.cursor/rules/transitions-visual-only.mdc`](./.cursor/rules/transitions-visual-only.mdc) |
 | ExportManifest lifecycle | EXPORT_CONTRACT.md |
 | Export capability preflight | EXPORT_CONTRACT / CAPABILITIES |
 | Chunked renderer | EXPORT_RENDERER_ARCHITECTURE.md |
@@ -865,31 +865,31 @@ Legend:
 | Document | Purpose | Authority level | Current status | Superseded by | When to update |
 |----------|---------|-----------------|----------------|---------------|----------------|
 | [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) | Canonical navigation index | **Authoritative (index)** | Current | — | Every major sprint |
-| [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md) | Export guarantees | **Authoritative** | Current (6B–6F.1) | — | Any export contract change |
+| [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) | Export guarantees | **Authoritative** | Current (6B–6F.1) | — | Any export contract change |
 | [docs/EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md) | Export sprint plan / backlog | **Authoritative** | Current | — | Phase status changes |
-| [docs/EXPORT_RENDERER_ARCHITECTURE.md](./docs/EXPORT_RENDERER_ARCHITECTURE.md) | Production renderer | **Authoritative** | Current (chunked-browser-v1) | — | Renderer changes |
-| [docs/EXPORT_AUDIO_AND_FORMATS.md](./docs/EXPORT_AUDIO_AND_FORMATS.md) | Audio/format adapters | **Authoritative** | Current (6E) | — | Format/audio policy changes |
-| [docs/EXPORT_CAPABILITIES.md](./docs/EXPORT_CAPABILITIES.md) | Capability inventory | Current supporting | Updated for 6F/6F.1 | — | Capability matrix changes |
-| [docs/SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md) | Motion semantics | **Authoritative** | Current | — | Motion engine changes |
-| [docs/MEDIA_FRAMING.md](./docs/MEDIA_FRAMING.md) | Framing contract | **Authoritative** | Current | — | Framing model changes |
-| [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) | Mixer v1 | **Authoritative** | Frozen | — | Versioned mixer milestones |
-| [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) | SI v1 | **Authoritative** | Frozen | — | Explicit SI milestones |
-| [docs/TRANSITIONS-SCOPE.md](./docs/TRANSITIONS-SCOPE.md) | Transition scope lock | Authoritative for scope; partially stale on `renderTransitions` enablement notes | Locked | Production transition status in export parity / capabilities | Before any transition work |
+| [docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md](./docs/architecture/EXPORT_RENDERER_ARCHITECTURE.md) | Production renderer | **Authoritative** | Current (chunked-browser-v1) | — | Renderer changes |
+| [docs/product/EXPORT_AUDIO_AND_FORMATS.md](./docs/product/EXPORT_AUDIO_AND_FORMATS.md) | Audio/format adapters | **Authoritative** | Current (6E) | — | Format/audio policy changes |
+| [docs/product/EXPORT_CAPABILITIES.md](./docs/product/EXPORT_CAPABILITIES.md) | Capability inventory | Current supporting | Updated for 6F/6F.1 | — | Capability matrix changes |
+| [docs/product/SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) | Motion semantics | **Authoritative** | Current | — | Motion engine changes |
+| [docs/product/MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) | Framing contract | **Authoritative** | Current | — | Framing model changes |
+| [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) | Mixer v1 | **Authoritative** | Frozen | — | Versioned mixer milestones |
+| [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) | SI v1 | **Authoritative** | Frozen | — | Explicit SI milestones |
+| [docs/product/TRANSITIONS-SCOPE.md](./docs/product/TRANSITIONS-SCOPE.md) | Transition scope lock | Authoritative for scope; partially stale on `renderTransitions` enablement notes | Locked | Production transition status in export parity / capabilities | Before any transition work |
 | [ROADMAP.md](./ROADMAP.md) | Product milestones | Authoritative for 3.x product backlog + Sprint 7 naming | Names Sprint 7; **7A–7E Core frozen**; Evidence Surprise live capability-gated | This index + HOOK_CONTRACT for Hook architecture detail | Product planning / acceptance status changes |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) (root) | High-level system design | Current supporting | Current for Intelligence/Timeline story | docs/* for implementation | Major pipeline changes |
 | [README.md](./README.md) | Product overview | Partially stale | “Latest v2.6.0”; underplays Sprint 6 | This index + EXPORT_* for export | Release / capability updates |
 | [CHANGELOG.md](./CHANGELOG.md) | Release history | Partially stale / conflicting | `[3.0.0]` Feature frozen vs ROADMAP in-progress items | Prefer ROADMAP + contracts for “what’s frozen now” | Real releases only |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Route-level implementation | **Partially stale** | Still describes MediaRecorder-centric export / “6B must migrate” | EXPORT_CONTRACT + RENDERER_ARCHITECTURE | After reconciling export section |
-| [docs/RENDERING.md](./docs/RENDERING.md) | Preview/export mechanics | **Partially stale** | MediaRecorder + WebM-centric export table | EXPORT_* authoritative set | Export path rewrite |
-| [docs/FEATURES.md](./docs/FEATURES.md) | Feature catalog | Partially stale | Some limitations contradict EDITING/Timeline | EDITING + contracts | Feature truth changes |
-| [docs/DATA_MODEL.md](./docs/DATA_MODEL.md) | Story data model | Current supporting | May lag motion/mixer/manifest richness | story.types.ts | Model changes |
-| [docs/GENERATION.md](./docs/GENERATION.md) | Generation pipeline | Current supporting | Current for audio-first | SI doc for dual-gate detail | Generation changes |
-| [docs/EDITING.md](./docs/EDITING.md) | Editor behavior | Current supporting | Stronger than FEATURES on VO refit | — | Editor contract changes |
-| [docs/FUTURE.md](./docs/FUTURE.md) | Vision / debt | Future planning | Not shipped status | — | Vision updates |
-| [docs/EXPORT_ARCHITECTURE_AUDIT.md](./docs/EXPORT_ARCHITECTURE_AUDIT.md) | 6A audit evidence | **Historical** | Pre-chunked production narrative | EXPORT_RENDERER_ARCHITECTURE | Freeze as historical |
-| [docs/EXPORT_TIMING_MODEL.md](./docs/EXPORT_TIMING_MODEL.md) | Clock hierarchy | Partially stale | Encode path MediaRecorder-era | Clock sections still useful; renderer arch for encode | Timing policy changes |
-| [docs/EXPORT_DETERMINISTIC_CAPTURE.md](./docs/EXPORT_DETERMINISTIC_CAPTURE.md) | 4.2C-8 capture rules | Historical / supporting | Semantic frame rules useful | Chunked renderer arch for production encode | Capture rule changes |
-| [docs/EXPORT_FAILURE_FORENSICS.md](./docs/EXPORT_FAILURE_FORENSICS.md) | Failure staging | Current supporting | Debug model useful | — | Forensics taxonomy changes |
+| [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | Route-level implementation | **Partially stale** | Still describes MediaRecorder-centric export / “6B must migrate” | EXPORT_CONTRACT + RENDERER_ARCHITECTURE | After reconciling export section |
+| [docs/product/RENDERING.md](./docs/product/RENDERING.md) | Preview/export mechanics | **Partially stale** | MediaRecorder + WebM-centric export table | EXPORT_* authoritative set | Export path rewrite |
+| [docs/product/FEATURES.md](./docs/product/FEATURES.md) | Feature catalog | Partially stale | Some limitations contradict EDITING/Timeline | EDITING + contracts | Feature truth changes |
+| [docs/architecture/DATA_MODEL.md](./docs/architecture/DATA_MODEL.md) | Story data model | Current supporting | May lag motion/mixer/manifest richness | story.types.ts | Model changes |
+| [docs/product/GENERATION.md](./docs/product/GENERATION.md) | Generation pipeline | Current supporting | Current for audio-first | SI doc for dual-gate detail | Generation changes |
+| [docs/product/EDITING.md](./docs/product/EDITING.md) | Editor behavior | Current supporting | Stronger than FEATURES on VO refit | — | Editor contract changes |
+| [docs/product/FUTURE.md](./docs/product/FUTURE.md) | Vision / debt | Future planning | Not shipped status | — | Vision updates |
+| [docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md](./docs/architecture/EXPORT_ARCHITECTURE_AUDIT.md) | 6A audit evidence | **Historical** | Pre-chunked production narrative | EXPORT_RENDERER_ARCHITECTURE | Freeze as historical |
+| [docs/product/EXPORT_TIMING_MODEL.md](./docs/product/EXPORT_TIMING_MODEL.md) | Clock hierarchy | Partially stale | Encode path MediaRecorder-era | Clock sections still useful; renderer arch for encode | Timing policy changes |
+| [docs/product/EXPORT_DETERMINISTIC_CAPTURE.md](./docs/product/EXPORT_DETERMINISTIC_CAPTURE.md) | 4.2C-8 capture rules | Historical / supporting | Semantic frame rules useful | Chunked renderer arch for production encode | Capture rule changes |
+| [docs/operations/EXPORT_FAILURE_FORENSICS.md](./docs/operations/EXPORT_FAILURE_FORENSICS.md) | Failure staging | Current supporting | Debug model useful | — | Forensics taxonomy changes |
 | [docs/qa/export-reliability-freeze.md](./docs/qa/export-reliability-freeze.md) | 6F freeze decision | **Authoritative** for freeze | APPROVED 720p; 1080p wording drifts vs 6F.1 | export-1080p-results for 1080p policy | New freeze decisions |
 | [docs/qa/export-device-results.md](./docs/qa/export-device-results.md) | Device evidence log | **Authoritative** for honesty | Automated pass; device Not tested | — | Each manual run |
 | [docs/qa/export-1080p-results.md](./docs/qa/export-1080p-results.md) | 1080p policy + device log | **Authoritative** for 1080p | Capability-gated; device Not tested | — | Device fills / policy |
@@ -900,7 +900,7 @@ Legend:
 | [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) | Formal Hook Contract | **Accepted after Sprint 7A** | 7A–7E Core frozen; Evidence Surprise live capability-gated | — | Every Hook Engine change |
 | [docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md](./docs/RETENTION_STORY_ARCHITECTURE_AUDIT.md) | Sprint 10A evidence audit | **Accepted** | Accepted (10A) | RETENTION_STORY_CONTRACT | After generation-path changes affecting story planning |
 | [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) | Formal Retention Story Contract | **Accepted after Sprint 10A.2** | 10B module implemented; not production-ready/frozen; generation unwired | `src/features/retention-story/` | Every Retention Story Intelligence change |
-| [docs/ENV_AND_FEATURE_FLAGS.md](./docs/ENV_AND_FEATURE_FLAGS.md) | Env / feature-flag ledger | Supporting tracker | Multi-image flag retired 8E.3; multi-image default | scene-media-sprint-8-freeze | Any env or client-gate change |
+| [docs/operations/ENV_AND_FEATURE_FLAGS.md](./docs/operations/ENV_AND_FEATURE_FLAGS.md) | Env / feature-flag ledger | Supporting tracker | Multi-image flag retired 8E.3; multi-image default | scene-media-sprint-8-freeze | Any env or client-gate change |
 | [docs/qa/hook-engine-sprint-7-freeze.md](./docs/qa/hook-engine-sprint-7-freeze.md) | Sprint 7 freeze evidence | **Authoritative for freeze verdict** | AWAITING LIVE-MODEL SIGN-OFF | hook-live-model-results | After live smoke or defect |
 | [docs/qa/hook-live-model-results.md](./docs/qa/hook-live-model-results.md) | Live-model smoke log | **Authoritative for live honesty** | All rows Not tested until HOOK_LIVE_QA=1 | — | Each live run |
 | [CLAUDE.md](./CLAUDE.md) | Points at AGENTS.md | Non-architecture | Stub | AGENTS.md / Next.js docs | — |
@@ -909,8 +909,8 @@ Legend:
 ### Documented drift (do not silently rewrite history)
 
 1. **Version lines:** README “Latest v2.6.0” vs CHANGELOG `[3.0.0]` vs `package.json` `0.1.0`.
-2. **Export production path:** chunked-browser-v1 (authoritative) vs MediaRecorder narratives in `docs/ARCHITECTURE.md`, `docs/RENDERING.md`, audit/timing/deterministic-capture docs.
-3. **“6B must migrate”** language in `docs/ARCHITECTURE.md` vs Implemented 6B–6F.1 in EXPORT_CONTRACT.
+2. **Export production path:** chunked-browser-v1 (authoritative) vs MediaRecorder narratives in `docs/architecture/ARCHITECTURE.md`, `docs/product/RENDERING.md`, audit/timing/deterministic-capture docs.
+3. **“6B must migrate”** language in `docs/architecture/ARCHITECTURE.md` vs Implemented 6B–6F.1 in EXPORT_CONTRACT.
 4. **1080p:** freeze doc “not approved / blocked” vs 6F.1 capability-gated policy.
 5. **Creator Templates / CHANGELOG 3.0.0 Feature frozen** vs ROADMAP In Progress 3.10.
 6. **Transitions:** TRANSITIONS-SCOPE `renderTransitions: false` guidance vs later export parity “transitions Yes/Partial”.
@@ -1101,7 +1101,7 @@ Recommended reading order:
 1. MASTER_ARCHITECTURE.md          ← you are here
 2. README.md                       ← product overview (watch version drift)
 3. ARCHITECTURE.md                 ← high-level pipelines
-4. docs/DATA_MODEL.md              ← FootieScript model
+4. docs/architecture/DATA_MODEL.md              ← FootieScript model
 5. Relevant subsystem contract     ← e.g. EXPORT_CONTRACT, SHARED_MEDIA_MOTION, AUDIO_MIXER, STUDIO_INTELLIGENCE
 6. Relevant production module      ← src/features/<engine>/
 7. Relevant verification suites    ← src/verification/ + npm test:* scripts
@@ -1137,7 +1137,7 @@ Also:
 
 | Need | Go to |
 |------|-------|
-| Export contract | [docs/EXPORT_CONTRACT.md](./docs/EXPORT_CONTRACT.md) |
+| Export contract | [docs/architecture/EXPORT_CONTRACT.md](./docs/architecture/EXPORT_CONTRACT.md) |
 | Export sprint plan | [docs/EXPORT_RELIABILITY_SPRINT.md](./docs/EXPORT_RELIABILITY_SPRINT.md) |
 | Hook audit (7A) | [docs/HOOK_ARCHITECTURE_AUDIT.md](./docs/HOOK_ARCHITECTURE_AUDIT.md) |
 | Hook contract (Accepted) | [docs/HOOK_CONTRACT.md](./docs/HOOK_CONTRACT.md) |
@@ -1145,10 +1145,10 @@ Also:
 | Retention Story contract (10A) | [docs/RETENTION_STORY_CONTRACT.md](./docs/RETENTION_STORY_CONTRACT.md) |
 | Retention Story module (10B) | [src/features/retention-story/](./src/features/retention-story/) |
 | Hook Engine module | [src/features/hook-engine/](./src/features/hook-engine/) |
-| Motion | [docs/SHARED_MEDIA_MOTION.md](./docs/SHARED_MEDIA_MOTION.md) |
-| Framing | [docs/MEDIA_FRAMING.md](./docs/MEDIA_FRAMING.md) |
-| Mixer | [docs/AUDIO_MIXER.md](./docs/AUDIO_MIXER.md) |
-| Studio Intelligence | [docs/STUDIO_INTELLIGENCE.md](./docs/STUDIO_INTELLIGENCE.md) |
-| Transitions lock | [docs/TRANSITIONS-SCOPE.md](./docs/TRANSITIONS-SCOPE.md) |
+| Motion | [docs/product/SHARED_MEDIA_MOTION.md](./docs/product/SHARED_MEDIA_MOTION.md) |
+| Framing | [docs/product/MEDIA_FRAMING.md](./docs/product/MEDIA_FRAMING.md) |
+| Mixer | [docs/product/AUDIO_MIXER.md](./docs/product/AUDIO_MIXER.md) |
+| Studio Intelligence | [docs/product/STUDIO_INTELLIGENCE.md](./docs/product/STUDIO_INTELLIGENCE.md) |
+| Transitions lock | [docs/product/TRANSITIONS-SCOPE.md](./docs/product/TRANSITIONS-SCOPE.md) |
 | Product roadmap | [ROADMAP.md](./ROADMAP.md) |
 | Verification README | [src/verification/README.md](./src/verification/README.md) |
