@@ -193,6 +193,7 @@
     "test:headless-fly-render-smoke-frame-plan-authority": "tsx src/verification/headless-renderer/execution/headlessFlyRenderSmokeFramePlanAuthority.verify.ts",
     "test:headless-fly-render-4k-capacity-authority": "tsx src/verification/headless-renderer/platform/headlessFlyRender4kCapacityAuthority.verify.ts",
     "test:headless-fly-render-4k-capacity-harness-authority": "tsx src/verification/headless-renderer/platform/headlessFlyRender4kCapacityHarnessAuthority.verify.ts",
+    "test:headless-render-frame-progress-authority": "tsx src/verification/headless-renderer/platform/headlessRenderFrameProgressAuthority.verify.ts",
     "test:headless-fly-render-4k-process-tree-memory-authority": "tsx src/verification/headless-renderer/platform/headlessFlyRender4kProcessTreeMemoryAuthority.verify.ts",
     "test:headless-fly-render-4k-process-tree-sampler-authority": "tsx src/verification/headless-renderer/platform/headlessFlyRender4kProcessTreeSamplerAuthority.verify.ts",
     "test:headless-fly-render-4k-process-tree-sampler-lifecycle-authority": "tsx src/verification/headless-renderer/platform/headlessFlyRender4kProcessTreeSamplerLifecycleAuthority.verify.ts",

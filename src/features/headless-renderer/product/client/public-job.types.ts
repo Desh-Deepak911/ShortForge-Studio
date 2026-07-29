@@ -33,6 +33,8 @@ export type HeadlessTerminalPublicState =
 export interface HeadlessPublicAdvisoryProgress {
   readonly percent: number | null;
   readonly stage: string | null;
+  readonly completedFrames?: number | null;
+  readonly totalFrames?: number | null;
 }
 
 export interface HeadlessPublicTerminalReason {

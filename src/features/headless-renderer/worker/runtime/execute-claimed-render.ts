@@ -10,6 +10,13 @@ import {
   applyHeadlessJobTransition,
   isHeadlessTerminalState,
 } from "../../domain";
+import {
+  HEADLESS_ENCODING_PROGRESS_PERCENT,
+  HEADLESS_RENDERING_PROGRESS_FLOOR,
+  HEADLESS_UPLOADING_PROGRESS_PERCENT,
+  HEADLESS_VALIDATING_PROGRESS_PERCENT,
+} from "../../domain/headless-render-constants";
+import type { HeadlessAdvisoryProgress } from "../../domain/headless-render.types";
 import type { HeadlessArtifactCleanupPort } from "../../control-plane/ports/artifact-cleanup.port";
 import type { HeadlessJobStorePort } from "../../control-plane/ports/job-store.port";
 import type {
@@ -28,6 +35,11 @@ import {
   type ClaimCoherenceRejectionId,
 } from "./confirm-durable-claim-coherence";
 import { executeHeadlessRenderJob } from "./execute-render-job";
+import {
+  buildAdvisoryFrameProgress,
+  deriveRenderingFrameProgressPercent,
+  shouldEmitFrameProgressWrite,
+} from "./frame-render-progress";
 import { assertPhase3WorkerCapability } from "./capability-preflight";
 import {
   createJobDeadline,
@@ -268,6 +280,9 @@ export async function executeClaimedRender(
   const advance = async (
     toState: "rendering" | "encoding" | "validating" | "uploading",
     percent: number,
+    progressPatch?: Partial<
+      Pick<HeadlessAdvisoryProgress, "completedFrames" | "totalFrames">
+    >,
   ): Promise<
     | { ok: true }
     | {
@@ -285,7 +300,17 @@ export async function executeClaimedRender(
         toState,
         attempt: record.canonicalJob.attempt,
         updatedAtMs: t,
-        progress: { percent, stage: toState, updatedAtMs: t },
+        progress: {
+          percent,
+          stage: toState,
+          updatedAtMs: t,
+          ...(progressPatch?.completedFrames != null
+            ? { completedFrames: progressPatch.completedFrames }
+            : {}),
+          ...(progressPatch?.totalFrames != null
+            ? { totalFrames: progressPatch.totalFrames }
+            : {}),
+        },
       });
       if (!step.ok) {
         return {
@@ -342,6 +367,50 @@ export async function executeClaimedRender(
         message: scrubWorkerMessage("stage"),
         retryable: true,
       };
+    }
+  };
+
+  let lastFrameProgressPercent: number | null = HEADLESS_RENDERING_PROGRESS_FLOOR;
+  let lastFrameProgressWriteAtMs: number | null = null;
+
+  const advanceFrameProgress = async (frameProgress: {
+    readonly completedFrames: number;
+    readonly totalFrames: number;
+  }): Promise<void> => {
+    if (isHeadlessTerminalState(record.canonicalJob.state)) return;
+    const nowMs = Math.max(input.nowMs(), record.canonicalJob.updatedAtMs + 1);
+    const nextPercent = deriveRenderingFrameProgressPercent(
+      frameProgress.completedFrames,
+      frameProgress.totalFrames,
+    );
+    if (
+      !shouldEmitFrameProgressWrite({
+        lastEmittedPercent: lastFrameProgressPercent,
+        nextPercent,
+        completedFrames: frameProgress.completedFrames,
+        totalFrames: frameProgress.totalFrames,
+        lastWriteAtMs: lastFrameProgressWriteAtMs,
+        nowMs,
+      })
+    ) {
+      return;
+    }
+    const patch = buildAdvisoryFrameProgress({
+      completedFrames: frameProgress.completedFrames,
+      totalFrames: frameProgress.totalFrames,
+      nowMs,
+    });
+    const stepped = await advance(
+      "rendering",
+      patch.percent ?? HEADLESS_RENDERING_PROGRESS_FLOOR,
+      {
+        completedFrames: patch.completedFrames ?? frameProgress.completedFrames,
+        totalFrames: patch.totalFrames ?? frameProgress.totalFrames,
+      },
+    );
+    if (stepped.ok) {
+      lastFrameProgressPercent = patch.percent;
+      lastFrameProgressWriteAtMs = nowMs;
     }
   };
 
@@ -576,7 +645,11 @@ export async function executeClaimedRender(
       providerContext,
       onStage: async (stage) => {
         const percent =
-          stage === "rendering" ? 35 : stage === "encoding" ? 60 : 80;
+          stage === "rendering"
+            ? HEADLESS_RENDERING_PROGRESS_FLOOR
+            : stage === "encoding"
+              ? HEADLESS_ENCODING_PROGRESS_PERCENT
+              : HEADLESS_VALIDATING_PROGRESS_PERCENT;
         lastKnownExecutionSubstage = mapStageAdvanceToExecutionSubstage(stage);
         const stepped = await advance(stage, percent);
         if (!stepped.ok) {
@@ -588,7 +661,12 @@ export async function executeClaimedRender(
             lastKnownExecutionSubstage;
           throw err;
         }
+        if (stage === "rendering") {
+          lastFrameProgressPercent = HEADLESS_RENDERING_PROGRESS_FLOOR;
+          lastFrameProgressWriteAtMs = input.nowMs();
+        }
       },
+      onFrameProgress: advanceFrameProgress,
     });
 
     if (!executed.ok) {
@@ -633,7 +711,7 @@ export async function executeClaimedRender(
 
     const artifactLease = executed.artifactLease;
     try {
-      const toUploading = await advance("uploading", 90);
+      const toUploading = await advance("uploading", HEADLESS_UPLOADING_PROGRESS_PERCENT);
       if (!toUploading.ok) {
         lastKnownExecutionSubstage = "artifact_upload";
         const storeVersionAtTerminalAttempt = record.storeVersion;

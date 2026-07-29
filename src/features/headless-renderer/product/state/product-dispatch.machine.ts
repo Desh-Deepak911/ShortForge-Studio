@@ -51,13 +51,24 @@ function applyJobView(
 ): HeadlessProductModel {
   const nextState = mapJobStateToProduct(view.state);
   const busy = !TERMINAL.has(view.state) && nextState !== "cancelling";
+  const incomingPercent = view.progress?.percent ?? null;
+  const nextPercent =
+    incomingPercent != null && model.ctx.advisoryPercent != null
+      ? Math.max(incomingPercent, model.ctx.advisoryPercent)
+      : incomingPercent ?? model.ctx.advisoryPercent;
+  const completedFrames =
+    view.progress?.completedFrames ?? model.ctx.advisoryCompletedFrames;
+  const totalFrames =
+    view.progress?.totalFrames ?? model.ctx.advisoryTotalFrames;
   return {
     state: nextState,
     ctx: {
       ...model.ctx,
       jobId: view.jobId,
       jobView: view,
-      advisoryPercent: view.progress?.percent ?? model.ctx.advisoryPercent,
+      advisoryPercent: nextPercent,
+      advisoryCompletedFrames: completedFrames,
+      advisoryTotalFrames: totalFrames,
       busy: nextState === "cancelling" ? true : busy,
       safeMessage: null,
       clientErrorCode: null,

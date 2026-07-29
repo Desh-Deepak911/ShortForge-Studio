@@ -82,6 +82,8 @@ async function main(): Promise<void> {
     assert.ok(src.includes("Cancel"));
     assert.ok(src.includes("Retry"));
     assert.ok(src.includes("Download"));
+    assert.ok(src.includes("Rendering frame"));
+    assert.ok(src.includes("advisoryCompletedFrames"));
     assert.equal(src.includes("stack"), false);
     assert.equal(src.includes("fingerprint"), false);
   });

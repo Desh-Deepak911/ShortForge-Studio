@@ -30,6 +30,15 @@ export const HEADLESS_CLAIM_LEASE_MS = 10 * 60 * 1000;
 export const HEADLESS_MAX_PROGRESS_STAGE_LENGTH = 32;
 export const HEADLESS_MAX_CODEC_LENGTH = 32;
 
+/** Advisory worker progress boundaries — frozen for website polling coherence. */
+export const HEADLESS_RENDERING_PROGRESS_FLOOR = 35 as const;
+export const HEADLESS_RENDERING_PROGRESS_CEILING = 59 as const;
+/** Upper bound for advisory totalFrames on public progress DTOs. */
+export const HEADLESS_MAX_ADVISORY_FRAME_COUNT = 1812 as const;
+export const HEADLESS_ENCODING_PROGRESS_PERCENT = 60 as const;
+export const HEADLESS_VALIDATING_PROGRESS_PERCENT = 80 as const;
+export const HEADLESS_UPLOADING_PROGRESS_PERCENT = 90 as const;
+
 export const HEADLESS_RESOLUTION_PIXELS = Object.freeze({
   "720p": Object.freeze({ width: 720, height: 1280 }),
   "1080p": Object.freeze({ width: 1080, height: 1920 }),

@@ -196,6 +196,9 @@ export interface HeadlessAdvisoryProgress {
   readonly percent: number | null;
   readonly stage: string | null;
   readonly updatedAtMs: number | null;
+  /** Frame-aware rendering progress — never identity-bearing. */
+  readonly completedFrames?: number | null;
+  readonly totalFrames?: number | null;
 }
 
 export interface HeadlessTerminalReason {
