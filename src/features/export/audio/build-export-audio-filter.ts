@@ -66,12 +66,12 @@ export function buildExportAudioFilterGraph(
     description.push(`music.volume=${prepared.music.volume}`);
     if (music?.duckingEnabled) {
       description.push(
-        `music.ducking=step-gain strength=${music.duckingStrength} while voice active`,
+        `music.ducking=release-ramped strength=${music.duckingStrength} while voice active`,
       );
     }
     if ((music?.fadeInMs ?? 0) > 0) {
       description.push(
-        `music.fadeIn=${music!.fadeInMs}ms (envelope; WebM browser-mix applies; FFmpeg path step-gain)`,
+        `music.fadeIn=${music!.fadeInMs}ms (canonical envelope; browser + FFmpeg paths)`,
       );
     }
     if ((music?.fadeOutMs ?? 0) > 0) {

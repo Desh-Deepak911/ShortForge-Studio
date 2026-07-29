@@ -5,6 +5,7 @@
 
 import { EXPORT_FFMPEG_PEAK_LIMITER_FILTER } from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
 import { assertExportDoesNotApplyVoiceSpeed } from "@/features/export/audio";
+import { buildExportMusicVolumeExpression } from "@/features/export/audio/build-export-music-volume-expression";
 import { EXPORT_FFMPEG_AUDIO_FORMAT_FILTERS } from "@/features/export/utils/export-background-music.utils";
 import {
   resolveExportMusicEnvelopeGainAtSec,
@@ -46,30 +47,7 @@ function musicEnvelopeInput(music: HeadlessMusicPlan): ExportMusicEnvelopeInput 
  * `resolveExportMusicEnvelopeGainAtSec` algebra.
  */
 export function buildMusicVolumeExpression(music: HeadlessMusicPlan): string {
-  const full = formatGain(music.volumeGain);
-  const ducked = formatGain(music.duckedVolumeGain);
-  const durationSec = formatSec(music.loopUntilOutputMs);
-  const voiceDur = formatSec(music.duckUntilMs);
-  const fadeInSec = formatSec(music.fadeInMs);
-  const fadeOutSec = formatSec(music.fadeOutMs);
-
-  const base =
-    music.applyDucking && music.duckUntilMs > 0
-      ? `if(lt(t\\,${voiceDur})\\,${ducked}\\,${full})`
-      : full;
-
-  const fadeIn =
-    music.fadeInMs > 0
-      ? `*if(lt(t\\,${fadeInSec})\\,t/${fadeInSec}\\,1)`
-      : "";
-
-  const fadeOutStartMs = music.loopUntilOutputMs - music.fadeOutMs;
-  const fadeOut =
-    music.fadeOutMs > 0 && fadeOutStartMs > 0
-      ? `*if(gt(t\\,${formatSec(fadeOutStartMs)})\\,(${durationSec}-t)/${fadeOutSec}\\,1)`
-      : "";
-
-  return `${base}${fadeIn}${fadeOut}`;
+  return buildExportMusicVolumeExpression(musicEnvelopeInput(music));
 }
 
 /** Sample canonical envelope at a checkpoint (for parity fixtures). */

@@ -14,6 +14,7 @@ import {
   resolveExportMusicEnvelopeGainAtSec,
   toExportMusicEnvelopeInput,
 } from "./export-music-envelope.utils";
+import { buildExportMusicVolumeExpression } from "@/features/export/audio/build-export-music-volume-expression";
 
 /** Attempt browser export mixing when background music is enabled. */
 export const EXPORT_BACKGROUND_MUSIC_MIXING_ENABLED = true;
@@ -221,10 +222,12 @@ export function buildExportBackgroundMusicFilterChain(
   ];
 
   if (settings.applyDucking && settings.duckingEnabled && settings.voiceoverDurationSec > 0) {
-    const duckedGain = resolveExportDuckedMusicGain(musicGain, settings.duckingStrength);
-    const voiceDur = settings.voiceoverDurationSec.toFixed(3);
     filters.push(
-      `volume='if(lt(t\\,${voiceDur})\\,${duckedGain.toFixed(4)}\\,${musicGain.toFixed(4)})':eval=frame`,
+      `volume='${buildExportMusicVolumeExpression(toExportMusicEnvelopeInput(settings))}':eval=frame`,
+    );
+  } else if (settings.fadeIn || settings.fadeOut) {
+    filters.push(
+      `volume='${buildExportMusicVolumeExpression(toExportMusicEnvelopeInput(settings))}':eval=frame`,
     );
   } else {
     filters.push(`volume=${musicGain.toFixed(4)}`);
