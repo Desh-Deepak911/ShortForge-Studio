@@ -1,3 +1,5 @@
+import { HEADLESS_MAX_ADVISORY_FRAME_COUNT } from "@/features/headless-renderer/domain/headless-render-constants";
+
 import {
   HEADLESS_PUBLIC_JOB_STATES,
   type HeadlessDownloadCapabilityV1,
@@ -48,7 +50,48 @@ export function validateHeadlessPublicJobView(
           ? value.progress.stage.slice(0, 64)
           : null;
     if (value.progress.stage !== null && stage === null) return null;
-    progress = Object.freeze({ percent, stage });
+    let completedFrames: number | null = null;
+    if (value.progress.completedFrames !== undefined) {
+      if (value.progress.completedFrames === null) {
+        completedFrames = null;
+      } else if (
+        typeof value.progress.completedFrames === "number" &&
+        Number.isInteger(value.progress.completedFrames) &&
+        value.progress.completedFrames >= 0
+      ) {
+        completedFrames = value.progress.completedFrames;
+      } else {
+        return null;
+      }
+    }
+    let totalFrames: number | null = null;
+    if (value.progress.totalFrames !== undefined) {
+      if (value.progress.totalFrames === null) {
+        totalFrames = null;
+      } else if (
+        typeof value.progress.totalFrames === "number" &&
+        Number.isInteger(value.progress.totalFrames) &&
+        value.progress.totalFrames > 0 &&
+        value.progress.totalFrames <= HEADLESS_MAX_ADVISORY_FRAME_COUNT
+      ) {
+        totalFrames = value.progress.totalFrames;
+      } else {
+        return null;
+      }
+    }
+    if (
+      completedFrames != null &&
+      totalFrames != null &&
+      completedFrames > totalFrames
+    ) {
+      return null;
+    }
+    progress = Object.freeze({
+      percent,
+      stage,
+      ...(completedFrames != null ? { completedFrames } : {}),
+      ...(totalFrames != null ? { totalFrames } : {}),
+    });
   }
 
   let terminalReason: HeadlessPublicJobView["terminalReason"] = null;

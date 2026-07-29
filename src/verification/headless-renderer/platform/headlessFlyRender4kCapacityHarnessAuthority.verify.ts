@@ -20,6 +20,19 @@ import {
   writeFlyRender4kCapacityEvidence,
 } from "../fly-render-4k-capacity/capacity-4k-evidence";
 import {
+  classifyCurrentFlyStagingImageEligibility,
+  classifyFlyStagingImagePageArtifactEligibility,
+  classifyFlyStagingImageWorkerArtifactEligibility,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_BUILD_INFO_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_CURRENT_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_PAGE_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
+  resolveCurrentFlyStagingAcceptedImageDigestSha256,
+  resolveCurrentFlyStagingAcceptedImageRecord,
+} from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
+import {
   FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
   buildFlyRender4kCapacitySchemaFingerprint,
 } from "../fly-render-4k-capacity/capacity-4k-evidence-authority";
@@ -27,6 +40,7 @@ import {
   buildCapacity4kShortFunctionalMatrixBoundaries,
   assertCapacity4kShortSmokeDoesNotInferOperationalCapacity,
 } from "../fly-render-4k-capacity/capacity-4k-workload";
+import { FLY_RENDER_4K_SHORT_FUNCTIONAL_PASS_EVIDENCE_SHA } from "../fly-render-4k-capacity/capacity-4k-operational-evidence-authority";
 import {
   HEADLESS_FLY_RENDER_4K_QA_GATE_ENV,
   isFlyRender4kCapacityGateOn,
@@ -50,6 +64,10 @@ const OFFICIAL_4K_CAPACITY_FAIL_SHA_8K3 =
 
 const OFFICIAL_4K_CAPACITY_FAIL_SHA_8K4 =
   "cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e";
+
+const SEVEN_MIGRATION_IDS =
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_CURRENT_IMAGE_RECORD
+    .schemaFingerprint.migrationIds;
 
 let passed = 0;
 
@@ -87,11 +105,76 @@ async function main() {
     assert.equal(isFlyRender4kCapacityGateOn({ HEADLESS_FLY_RENDER_4K_QA: "1" }), true);
   });
 
-  await test("accepted image digest matches staging authority 7a97f472", () => {
+  await test("4K harness resolves current 2G.20 staging image through canonical authority", () => {
+    const current = resolveCurrentFlyStagingAcceptedImageRecord();
+    assert.equal(current.recordId, "post_007_2g20_manifest_contract_alignment_current");
+    assert.equal(current.lifecycle, "current");
     assert.equal(
       FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
-      "7a97f472859f5f8071d0311ee4d77c29f44ff44cb402aa57eed8f13872a74794",
+      resolveCurrentFlyStagingAcceptedImageDigestSha256(),
     );
+    assert.equal(
+      FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+    );
+    assert.notEqual(
+      FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
+      HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
+    );
+    assert.notEqual(
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_BUILD_INFO_SHA256,
+      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+    );
+  });
+
+  await test("8I.5 historical image digest is ineligible for current staging readiness", () => {
+    const result = classifyCurrentFlyStagingImageEligibility({
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
+      schemaMigrationIds: SEVEN_MIGRATION_IDS,
+    });
+    assert.equal(result.eligible, false);
+    if (!result.eligible) {
+      assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
+    }
+  });
+
+  await test("2G.20 current image bindings accept canonical worker and page artifacts", () => {
+    const worker = classifyFlyStagingImageWorkerArtifactEligibility({
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+      hostedWorkerArtifactSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+    });
+    assert.equal(worker.ok, true);
+    const page = classifyFlyStagingImagePageArtifactEligibility({
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+      hostedPageArtifactSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_PAGE_ARTIFACT_SHA256,
+    });
+    assert.equal(page.ok, true);
+  });
+
+  await test("wrong worker and page artifact bindings fail closed for current image", () => {
+    const wrongWorker = classifyFlyStagingImageWorkerArtifactEligibility({
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+      hostedWorkerArtifactSha256: "0".repeat(64),
+    });
+    assert.equal(wrongWorker.ok, false);
+    if (!wrongWorker.ok) {
+      assert.equal(wrongWorker.reasonId, "wrong_hosted_worker_artifact");
+    }
+    const wrongPage = classifyFlyStagingImagePageArtifactEligibility({
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+      hostedPageArtifactSha256: "0".repeat(64),
+    });
+    assert.equal(wrongPage.ok, false);
+    if (!wrongPage.ok) {
+      assert.equal(wrongPage.reasonId, "wrong_hosted_page_artifact");
+    }
   });
 
   await test("frozen short matrix has 35 cases covering both 4K profiles", () => {
@@ -150,9 +233,18 @@ async function main() {
     assert.equal(sha, OFFICIAL_4K_CAPACITY_FAIL_SHA_8K3);
   });
 
-  await test("official 8K.4 4K capacity FAIL evidence byte-identical", () => {
-    const sha = sha256FileSync("docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md");
+  await test("official 8K.4 4K capacity FAIL archive byte-identical", () => {
+    const sha = sha256FileSync(
+      "docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.pre-8k4-cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e.md",
+    );
     assert.equal(sha, OFFICIAL_4K_CAPACITY_FAIL_SHA_8K4);
+  });
+
+  await test("official 4K short functional PASS evidence byte-identical", () => {
+    const sha = sha256FileSync(
+      "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md",
+    );
+    assert.equal(sha, FLY_RENDER_4K_SHORT_FUNCTIONAL_PASS_EVIDENCE_SHA);
   });
 
   console.log(`\n${passed} passed\n`);

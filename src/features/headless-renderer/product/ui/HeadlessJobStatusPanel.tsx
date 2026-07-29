@@ -35,6 +35,16 @@ export function HeadlessJobStatusPanel({
   const state = model.state;
   const label = statusLabelForProductState(state);
   const percent = model.ctx.advisoryPercent;
+  const completedFrames = model.ctx.advisoryCompletedFrames;
+  const totalFrames = model.ctx.advisoryTotalFrames;
+  const showFrameProgress =
+    state === "rendering" &&
+    completedFrames != null &&
+    totalFrames != null &&
+    totalFrames > 0;
+  const frameProgressLabel = showFrameProgress
+    ? `Rendering frame ${completedFrames.toLocaleString()} of ${totalFrames.toLocaleString()}`
+    : null;
 
   const isTerminalSuccess = state === "succeeded";
   const isTerminalError =
@@ -45,7 +55,9 @@ export function HeadlessJobStatusPanel({
     : null;
   const activeMessage =
     !isTerminalError && !isTerminalSuccess
-      ? model.ctx.safeMessage ?? statusDescriptionForProductState(state)
+      ? frameProgressLabel ??
+        model.ctx.safeMessage ??
+        statusDescriptionForProductState(state)
       : null;
   const announcedMessage = isTerminalSuccess
     ? statusDescriptionForProductState(state)

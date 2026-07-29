@@ -60,6 +60,11 @@ export async function executeHeadlessRenderJob(input: {
   onStage?: (
     stage: "rendering" | "encoding" | "validating",
   ) => Promise<void>;
+  /** Advisory frame progress — throttled CAS writes during rendering only. */
+  onFrameProgress?: (input: {
+    readonly completedFrames: number;
+    readonly totalFrames: number;
+  }) => Promise<void>;
   boundaryTelemetry?: ProviderBackedBoundaryTelemetryPort;
   providerContext?: ProviderContextClassifications;
 }): Promise<HeadlessWorkerRunResult> {
@@ -416,6 +421,8 @@ export async function executeHeadlessRenderJob(input: {
 
     const overlappedStarted = Date.now();
     const renderStarted = Date.now();
+    let completedFrames = 0;
+    const totalFrames = plan.plan.totalFrames;
     const rendered = await renderFramesWithChromium({
       chromeExecutable: chrome.executable,
       workspace,
@@ -444,6 +451,17 @@ export async function executeHeadlessRenderJob(input: {
             cancelled: accepted.reason === "aborted",
             quota: accepted.reason === "frame_too_large",
           };
+        }
+        completedFrames += 1;
+        if (input.onFrameProgress) {
+          try {
+            await input.onFrameProgress({
+              completedFrames,
+              totalFrames,
+            });
+          } catch {
+            /* progress must never fail render */
+          }
         }
         return { ok: true };
       },

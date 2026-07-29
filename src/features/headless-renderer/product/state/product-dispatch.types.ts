@@ -50,6 +50,8 @@ export interface HeadlessProductContext {
   readonly jobId: string | null;
   readonly jobView: HeadlessPublicJobView | null;
   readonly advisoryPercent: number | null;
+  readonly advisoryCompletedFrames: number | null;
+  readonly advisoryTotalFrames: number | null;
   readonly safeMessage: string | null;
   readonly clientErrorCode: HeadlessClientErrorCode | null;
   readonly busy: boolean;
@@ -159,6 +161,8 @@ export function createInitialProductModel(
       jobId: null,
       jobView: null,
       advisoryPercent: null,
+      advisoryCompletedFrames: null,
+      advisoryTotalFrames: null,
       safeMessage: null,
       clientErrorCode: null,
       busy: false,

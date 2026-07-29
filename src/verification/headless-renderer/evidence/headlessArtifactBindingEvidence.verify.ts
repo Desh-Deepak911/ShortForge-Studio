@@ -22,9 +22,16 @@ import { HEADLESS_WORKER_RENDERER_BUILD_ID } from "@/features/headless-renderer/
 import type { HeadlessArtifactCleanupIntentV1 } from "@/features/headless-renderer/control-plane/types/artifact-cleanup-intent";
 import { buildHeadlessReferenceFixture } from "@/features/headless-renderer/worker/testing/build-reference-fixture";
 import { seedAndCreateReferenceJob } from "@/features/headless-renderer/worker/testing/seed-reference-job";
+import {
+  assertHeadlessPreserved4k60sEvidenceArchive,
+  HEADLESS_PRESERVED_4K_60S_ARTIFACT_BYTE_LENGTH,
+  HEADLESS_PRESERVED_4K_60S_ARTIFACT_DIGEST,
+  HEADLESS_PRESERVED_4K_60S_EVIDENCE_ARCHIVE_REL,
+  HEADLESS_PRESERVED_4K_60S_EVIDENCE_ARCHIVE_SHA256,
+  resolveHeadlessPreserved4k60sEvidencePath,
+} from "../support/headless-local-evidence-registry";
 
 const EVIDENCE_DIR = join(process.cwd(), ".tmp/headless-11d-evidence");
-const PHASE33_4K = "phase33-4k-mp4-60s-streamed-upload-evidence.json";
 const PRESERVED = "phase33a-preserved-4k-60s-checksum.json";
 
 type Status = "REAL_LOCAL_PASS" | "HONESTLY_BLOCKED" | "PRESERVED";
@@ -165,7 +172,7 @@ async function recoverPendingCleanupAfterDeleteFail(input: {
   return Object.freeze({ recovered, ownedObjectStore, objectIo });
 }
 
-function validatePhase33EvidenceShape(value: unknown): {
+function validatePreserved4k60sEvidenceShape(value: unknown): {
   readonly ok: true;
   readonly artifactDigest: string;
   readonly artifactByteLength: number;
@@ -190,23 +197,40 @@ function validatePhase33EvidenceShape(value: unknown): {
   ) {
     return { ok: false, message: "evidence artifact digest invalid" };
   }
+  if (rec.digest !== HEADLESS_PRESERVED_4K_60S_ARTIFACT_DIGEST) {
+    return { ok: false, message: "evidence artifact digest mismatch" };
+  }
   if (
     typeof rec.byteLength !== "number" ||
     !Number.isSafeInteger(rec.byteLength) ||
-    rec.byteLength < 1
+    rec.byteLength !== HEADLESS_PRESERVED_4K_60S_ARTIFACT_BYTE_LENGTH
   ) {
     return { ok: false, message: "evidence artifact byteLength invalid" };
   }
   if (rec.contentDurationMs !== 60000) {
     return { ok: false, message: "evidence contentDurationMs invalid" };
   }
-  if (
-    !rec.streamedDelivery ||
-    typeof rec.streamedDelivery !== "object" ||
-    (rec.streamedDelivery as { wholeArtifactBufferUsed?: unknown })
-      .wholeArtifactBufferUsed !== false
-  ) {
-    return { ok: false, message: "evidence streamedDelivery invalid" };
+  const streamedDelivery =
+    rec.streamedDelivery != null && typeof rec.streamedDelivery === "object"
+      ? (rec.streamedDelivery as { wholeArtifactBufferUsed?: unknown })
+      : null;
+  const streaming =
+    rec.streaming != null && typeof rec.streaming === "object"
+      ? (rec.streaming as { totalFramesAccepted?: unknown })
+      : null;
+  if (streamedDelivery != null) {
+    if (streamedDelivery.wholeArtifactBufferUsed !== false) {
+      return { ok: false, message: "evidence streamedDelivery invalid" };
+    }
+  } else if (streaming != null) {
+    if (
+      typeof streaming.totalFramesAccepted !== "number" ||
+      streaming.totalFramesAccepted !== 1812
+    ) {
+      return { ok: false, message: "evidence streaming frame count invalid" };
+    }
+  } else {
+    return { ok: false, message: "evidence delivery facts missing" };
   }
   return {
     ok: true,
@@ -222,24 +246,27 @@ async function main() {
 
   const summary: Record<string, Status> = {};
 
-  // Preserve Phase 3.3 60s evidence-file checksum (do not relabel as newly rendered).
-  const sourcePath = join(EVIDENCE_DIR, PHASE33_4K);
-  if (!existsSync(sourcePath)) {
-    console.error(`Missing required source evidence: ${PHASE33_4K}`);
+  // Preserve canonical Phase 3.2 60s 4K evidence archive (do not relabel as newly rendered).
+  assertHeadlessPreserved4k60sEvidenceArchive();
+  const sourcePath = resolveHeadlessPreserved4k60sEvidencePath();
+  const sourceBytes = readFileSync(sourcePath);
+  const evidenceFileSha256 = `sha256:${HEADLESS_PRESERVED_4K_60S_EVIDENCE_ARCHIVE_SHA256}`;
+  if (sha256FileBytes(sourceBytes) !== evidenceFileSha256) {
+    console.error("Canonical preserved 4k 60s evidence archive SHA mismatch.");
     process.exit(1);
   }
-  const sourceBytes = readFileSync(sourcePath);
-  const evidenceFileSha256 = sha256FileBytes(sourceBytes);
   let parsed: unknown;
   try {
     parsed = JSON.parse(sourceBytes.toString("utf8"));
   } catch {
-    console.error(`Malformed source evidence JSON: ${PHASE33_4K}`);
+    console.error(
+      `Malformed canonical preserved evidence JSON: ${HEADLESS_PRESERVED_4K_60S_EVIDENCE_ARCHIVE_REL}`,
+    );
     process.exit(1);
   }
-  const shape = validatePhase33EvidenceShape(parsed);
+  const shape = validatePreserved4k60sEvidenceShape(parsed);
   if (!shape.ok) {
-    console.error(`Invalid source evidence shape: ${shape.message}`);
+    console.error(`Invalid canonical preserved evidence shape: ${shape.message}`);
     process.exit(1);
   }
 
@@ -265,19 +292,21 @@ async function main() {
     JSON.stringify(
       {
         status: "PRESERVED",
-        sourceFile: PHASE33_4K,
+        sourceFile: HEADLESS_PRESERVED_4K_60S_EVIDENCE_ARCHIVE_REL,
         evidenceFileSha256,
         artifactDigest: shape.artifactDigest,
         artifactByteLength: shape.artifactByteLength,
         rendererBuildId: shape.rendererBuildId,
-        note: "Phase 3.3 60s 4K streamed delivery evidence-file SHA-256 preserved; not re-rendered in 3.3A/3.3A.1. evidenceFileSha256 is of the JSON evidence file bytes — not the artifact digest.",
+        note: "Canonical Phase 3.2 60s 4K REAL_LOCAL_PASS archive preserved; not re-rendered in 3.3A/3.3A.1. evidenceFileSha256 is of the JSON evidence file bytes — not the artifact digest.",
       },
       null,
       2,
     ),
   );
   summary[PRESERVED] = "PRESERVED";
-  console.log(`  → preserved ${PHASE33_4K} evidence-file checksum`);
+  console.log(
+    `  → preserved ${HEADLESS_PRESERVED_4K_60S_EVIDENCE_ARCHIVE_REL} evidence-file checksum`,
+  );
 
   // Short success: binding survives workspace cleanup + owned retrieval.
   {
@@ -579,7 +608,7 @@ async function main() {
         rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
         summary,
         coreAcceptance: requiredOk ? "PASS" : "FAIL",
-        preservedPhase33Evidence: PHASE33_4K,
+        preservedPhase33Evidence: HEADLESS_PRESERVED_4K_60S_EVIDENCE_ARCHIVE_REL,
         preservedEvidenceFileSha256: evidenceFileSha256,
       },
       null,

@@ -834,7 +834,7 @@ async function main() {
       schemaMigrationIds: SIX_MIGRATION_IDS,
     });
     assert.equal(result.eligible, false);
-    assert.equal(result.reasonId, "schema_fingerprint_count_mismatch");
+    assert.equal(result.reasonId, "post_007_digest_with_six_migrations");
   });
 
   await test("unknown digest rejected", () => {

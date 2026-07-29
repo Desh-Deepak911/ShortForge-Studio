@@ -16,11 +16,18 @@ import type {
   HeadlessRendererProfile,
   HeadlessTerminalReason,
 } from "./headless-render.types";
+import { HEADLESS_MAX_ADVISORY_FRAME_COUNT } from "./headless-render-constants";
 import { hasUnknownFields, isPlainObject } from "./headless-hostile-guard";
 
 const OWNERSHIP_FIELDS = ["ownerId", "projectId"] as const;
 const PROFILE_FIELDS = ["resolution", "format", "fps", "quality"] as const;
-const PROGRESS_FIELDS = ["percent", "stage", "updatedAtMs"] as const;
+const PROGRESS_FIELDS = [
+  "percent",
+  "stage",
+  "updatedAtMs",
+  "completedFrames",
+  "totalFrames",
+] as const;
 const TERMINAL_FIELDS = ["reasonId", "retryable"] as const;
 
 export function isNonEmptyId(value: unknown): value is string {
@@ -211,7 +218,75 @@ export function parseHeadlessProgress(
     updatedAtMs = value.updatedAtMs;
   }
 
-  return { ok: true, progress: { percent, stage, updatedAtMs } };
+  let completedFrames: number | null = null;
+  if (value.completedFrames !== undefined && value.completedFrames !== null) {
+    if (
+      typeof value.completedFrames !== "number" ||
+      !Number.isInteger(value.completedFrames) ||
+      value.completedFrames < 0 ||
+      !Number.isSafeInteger(value.completedFrames)
+    ) {
+      return {
+        ok: false,
+        issues: [
+          headlessIssue(
+            "INVALID_PROGRESS",
+            "completedFrames must be a safe non-negative integer or null.",
+          ),
+        ],
+      };
+    }
+    completedFrames = value.completedFrames;
+  }
+
+  let totalFrames: number | null = null;
+  if (value.totalFrames !== undefined && value.totalFrames !== null) {
+    if (
+      typeof value.totalFrames !== "number" ||
+      !Number.isInteger(value.totalFrames) ||
+      value.totalFrames <= 0 ||
+      value.totalFrames > HEADLESS_MAX_ADVISORY_FRAME_COUNT ||
+      !Number.isSafeInteger(value.totalFrames)
+    ) {
+      return {
+        ok: false,
+        issues: [
+          headlessIssue(
+            "INVALID_PROGRESS",
+            "totalFrames must be a safe positive integer within advisory bounds or null.",
+          ),
+        ],
+      };
+    }
+    totalFrames = value.totalFrames;
+  }
+
+  if (
+    completedFrames != null &&
+    totalFrames != null &&
+    completedFrames > totalFrames
+  ) {
+    return {
+      ok: false,
+      issues: [
+        headlessIssue(
+          "INVALID_PROGRESS",
+          "completedFrames must not exceed totalFrames.",
+        ),
+      ],
+    };
+  }
+
+  return {
+    ok: true,
+    progress: {
+      percent,
+      stage,
+      updatedAtMs,
+      ...(completedFrames != null ? { completedFrames } : {}),
+      ...(totalFrames != null ? { totalFrames } : {}),
+    },
+  };
 }
 
 export function parseHeadlessTerminalReason(
