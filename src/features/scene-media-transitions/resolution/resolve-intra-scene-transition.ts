@@ -10,6 +10,8 @@ import {
 } from "@/features/scene-media-timeline/adapters/project-scene-media-timeline";
 import { getSceneDurationMs } from "@/features/story/utils/scene.utils";
 
+import { resolveCanonicalIntraSceneTransitionProgress } from "@/features/timeline-intelligence/resolve-canonical-transition-frame.utils";
+
 import { normalizeSceneMediaTransitionTrack } from "../domain/normalize-track";
 import { resolveEffectiveIntraSceneTransitionDurationMs } from "./resolve-effective-duration";
 
@@ -63,6 +65,7 @@ function inactiveResult(
 export function resolveIntraSceneTransitionAtElapsed(
   scene: FootieScene,
   sceneElapsedMs: number,
+  fps = 30,
 ): ResolvedIntraSceneTransition {
   const sceneId = scene.id;
   const sceneDurationMs = getSceneDurationMs(scene);
@@ -114,14 +117,16 @@ export function resolveIntraSceneTransitionAtElapsed(
       continue;
     }
 
-    // elapsed ∈ [overlayStart, overlayEnd) ⇒ progress ∈ [0, 1)
-    const progress = Math.max(
-      0,
-      Math.min(
-        0.999999999999,
-        (elapsed - overlayStartMs) / effectiveDurationMs,
-      ),
-    );
+    const progress = resolveCanonicalIntraSceneTransitionProgress({
+      sceneElapsedMs: elapsed,
+      overlayStartOffsetMs: overlayStartMs,
+      overlayEndOffsetMs: overlayEndMs,
+      effectiveDurationMs,
+      fps,
+    });
+    if (progress === null) {
+      continue;
+    }
 
     return {
       sceneId,

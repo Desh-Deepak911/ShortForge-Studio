@@ -2,7 +2,7 @@ import type { TransitionEffect } from "@/features/story/types";
 import { normalizeTransitionEffect } from "@/features/story/utils/timeline.utils";
 
 import type { TransitionTimelineEvent } from "./timeline.types";
-import { getTimelineProgress } from "./timeline-playback.utils";
+import { resolveCanonicalTransitionProgressForSample } from "./resolve-canonical-transition-frame.utils";
 
 export interface TransitionEffectLayers {
   opacityFrom: number;
@@ -132,34 +132,36 @@ export function resolveTransitionEffectLayers(
   }
 }
 
-/** Resolves preview/export transition compositing state from a timeline event and absolute time. */
+/** Resolves preview/export transition compositing state from a timeline event and frame sample time. */
 export function resolveTransitionState(
   event: TransitionTimelineEvent,
   timeMs: number,
+  fps = 30,
 ): TransitionState {
-  const timelineProgress = getTimelineProgress(event, timeMs);
+  const progress = resolveCanonicalTransitionProgressForSample({
+    sampleTimeMs: timeMs,
+    windowStartMs: event.startMs,
+    windowEndMs: event.endMs,
+    fps,
+  });
 
-  if (!timelineProgress.isWithinWindow) {
+  if (progress === null) {
     return {
       ...INACTIVE_TRANSITION_STATE,
-      progress: timelineProgress.progress,
+      progress: timeMs >= event.endMs ? 1 : 0,
     };
   }
 
   const transitionType = normalizeTransitionEffect(
     event.metadata.transitionType ?? event.metadata.effect,
   );
-  let progress = timelineProgress.progress;
+  const resolvedProgress = transitionType === "cut" ? 1 : progress;
 
-  if (transitionType === "cut") {
-    progress = 1;
-  }
-
-  const layers = resolveTransitionEffectLayers(transitionType, progress);
+  const layers = resolveTransitionEffectLayers(transitionType, resolvedProgress);
 
   return {
     isActive: true,
-    progress,
+    progress: resolvedProgress,
     ...layers,
     shouldRenderBothScenes: true,
   };

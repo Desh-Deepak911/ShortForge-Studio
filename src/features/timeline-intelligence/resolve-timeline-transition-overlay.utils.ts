@@ -30,7 +30,7 @@ export function resolveTimelineTransitionOverlay(
     return null;
   }
 
-  const transitionState = resolveTransitionState(active.event, visualTimeMs);
+  const transitionState = resolveTransitionState(active.event, visualTimeMs, 30);
   if (!transitionState.isActive || !transitionState.shouldRenderBothScenes) {
     return null;
   }

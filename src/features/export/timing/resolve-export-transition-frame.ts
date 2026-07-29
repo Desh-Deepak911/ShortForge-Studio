@@ -4,6 +4,8 @@
  */
 
 import type { ExportManifest } from "@/features/export/domain/export-manifest.types";
+import { resolveCanonicalTransitionProgressForSample } from "@/features/timeline-intelligence/resolve-canonical-transition-frame.utils";
+
 import type { ResolvedExportTransitionFrame } from "./export-timing.types";
 import { resolveExportVisualTimeMs } from "./resolve-export-render-end";
 
@@ -29,7 +31,15 @@ export function resolveExportTransitionFrame(
     const endMs = fromScene.endMs;
     const startMs = Math.max(fromScene.startMs, endMs - transition.durationMs);
 
-    if (visualTimeMs >= startMs && visualTimeMs < endMs) {
+    const fps = manifest.output.fps > 0 ? manifest.output.fps : 30;
+    const progress = resolveCanonicalTransitionProgressForSample({
+      sampleTimeMs: visualTimeMs,
+      windowStartMs: startMs,
+      windowEndMs: endMs,
+      fps,
+    });
+
+    if (progress !== null) {
       const durationMs = Math.max(1, endMs - startMs);
       const elapsedMs = Math.max(0, visualTimeMs - startMs);
       return {
@@ -42,7 +52,7 @@ export function resolveExportTransitionFrame(
         endMs,
         elapsedMs,
         durationMs,
-        progress: Math.min(1, elapsedMs / durationMs),
+        progress,
       };
     }
   }

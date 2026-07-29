@@ -3,6 +3,8 @@
  * Consumes frozen ExportManifestV3 scene fields only — no Story/Preview/editor.
  */
 
+import { resolveCanonicalIntraSceneTransitionProgress } from "@/features/timeline-intelligence/resolve-canonical-transition-frame.utils";
+
 import type {
   ExportSceneManifestV3,
   ExportSceneMediaTimelineItemManifest,
@@ -34,6 +36,7 @@ export interface ResolvedExportIntraSceneTransition {
 export function resolveExportIntraSceneTransitionAtElapsed(
   scene: ExportSceneManifestV3,
   sceneElapsedMs: number,
+  fps = 30,
 ): ResolvedExportIntraSceneTransition | null {
   const sceneDurationMs =
     typeof scene.durationMs === "number" && Number.isFinite(scene.durationMs)
@@ -79,13 +82,16 @@ export function resolveExportIntraSceneTransitionAtElapsed(
       continue;
     }
 
-    const progress = Math.max(
-      0,
-      Math.min(
-        0.999999999999,
-        (elapsed - boundary.overlayStartOffsetMs) / effectiveDurationMs,
-      ),
-    );
+    const progress = resolveCanonicalIntraSceneTransitionProgress({
+      sceneElapsedMs: elapsed,
+      overlayStartOffsetMs: boundary.overlayStartOffsetMs,
+      overlayEndOffsetMs: boundary.overlayEndOffsetMs,
+      effectiveDurationMs,
+      fps,
+    });
+    if (progress === null) {
+      continue;
+    }
 
     return {
       sceneId: scene.id,

@@ -132,6 +132,7 @@ export async function prepareExportFrame(
     const resolved = resolveExportIntraSceneTransitionAtElapsed(
       manifestScene,
       scene.sceneElapsedMs,
+      fps,
     );
 
     if (resolved) {

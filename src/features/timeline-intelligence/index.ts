@@ -21,6 +21,14 @@ export {
 export type { BuildOptimizedMasterTimelineOptions } from "./build-optimized-master-timeline.utils";
 export { applyMasterTimelineSceneTiming } from "./apply-master-timeline-scenes.utils";
 export {
+  clampCanonicalTransitionProgress,
+  resolveCanonicalIntraSceneTransitionProgress,
+  resolveCanonicalTransitionEffectLayers,
+  resolveCanonicalTransitionFrame,
+  resolveCanonicalTransitionProgressForSample,
+} from "./resolve-canonical-transition-frame.utils";
+export type { CanonicalTransitionFrameResolution } from "./resolve-canonical-transition-frame.utils";
+export {
   resolveTransitionEffectLayers,
   resolveTransitionPreviewFilters,
   resolveTransitionState,
