@@ -1,3 +1,6 @@
+/** Deterministic duck release ramp — avoids step discontinuity at voice end. */
+export const EXPORT_DUCKING_RELEASE_MS = 50 as const;
+
 /**
  * Canonical export music-envelope authority (Sprint 11D Phase 2.1).
  *
@@ -76,12 +79,19 @@ export function resolveExportMusicEnvelopeGainAtSec(
   const fullGain = Math.max(0, settings.musicGain);
 
   let baseGain = fullGain;
-  if (
-    settings.applyDucking &&
-    settings.duckingEnabled &&
-    clampedTime < settings.voiceoverDurationSec
-  ) {
-    baseGain = duckedGain(fullGain, settings.duckingStrength);
+  if (settings.applyDucking && settings.duckingEnabled && settings.voiceoverDurationSec > 0) {
+    const ducked = duckedGain(fullGain, settings.duckingStrength);
+    const voiceEnd = Math.min(settings.voiceoverDurationSec, durationSec);
+    const rampSec = EXPORT_DUCKING_RELEASE_MS / 1000;
+    const releaseStart = Math.max(0, voiceEnd - rampSec);
+    if (clampedTime < releaseStart) {
+      baseGain = ducked;
+    } else if (clampedTime < voiceEnd) {
+      const rampProgress = rampSec > 0 ? (clampedTime - releaseStart) / rampSec : 1;
+      baseGain = ducked + (fullGain - ducked) * Math.min(1, Math.max(0, rampProgress));
+    } else {
+      baseGain = fullGain;
+    }
   }
 
   let fadeMultiplier = 1;

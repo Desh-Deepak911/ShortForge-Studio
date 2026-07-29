@@ -31,6 +31,28 @@ export {
 } from "./build-export-audio-filter";
 
 export {
+  buildExportMusicVolumeExpression,
+  sampleExportMusicVolumeExpressionGain,
+} from "./build-export-music-volume-expression";
+
+export type {
+  ExportAudioMixCombination,
+  ExportAudioMixMusicPlan,
+  ExportAudioMixPlan,
+  ExportAudioMixVoicePlan,
+} from "./export-audio-mix-plan.types";
+
+export {
+  EXPORT_AUDIO_MIX_TARGET_CHANNELS,
+  EXPORT_AUDIO_MIX_TARGET_SAMPLE_RATE_HZ,
+} from "./export-audio-mix-plan.types";
+
+export {
+  resolveExportAudioMixPlan,
+  type ResolveExportAudioMixPlanResult,
+} from "./resolve-export-audio-mix-plan";
+
+export {
   prepareExportAudio,
   validatePreparedExportAudio,
   type PrepareExportAudioOptions,
