@@ -9,6 +9,7 @@ import { join } from "node:path";
 
 import {
   buildExportManifest,
+  buildExportManifestFingerprint,
   estimateExportCost,
   ExportPreflightError,
   prepareExportRequest,
@@ -166,7 +167,7 @@ function mixedStory(
   });
 }
 
-/** Sprint 6F.1 — video-heavy long 1080p remains capability-blocked without server. */
+/** Sprint 6F.1 — video-heavy long 1080p warns without server (2G.24B). */
 function longVideoHeavyStory(
   resolution: "720x1280" | "1080x1920" = "1080x1920",
 ): FootieScript {
@@ -209,6 +210,47 @@ function longVideoHeavyStory(
       type: "scene" as const,
       scene,
     })),
+  });
+}
+
+function longImageStory1080p(durationSec: number): FootieScript {
+  const durationMs = durationSec * 1000;
+  const scene = {
+    id: "img-long",
+    start: 0,
+    end: durationSec,
+    duration: durationSec,
+    startMs: 0,
+    endMs: durationMs,
+    durationMs,
+    subtitle: "Long image",
+    media: {
+      type: "image" as const,
+      url: "https://example.com/long.jpg",
+      source: "upload" as const,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+    },
+    image: {
+      url: "https://example.com/long.jpg",
+      scale: 1,
+      x: 0,
+      y: 0,
+      rotation: 0,
+      fitMode: "fit" as const,
+    },
+  };
+  return syncFootieScript({
+    title: "Long Image 1080",
+    narration: "Long image only",
+    totalDuration: durationSec,
+    exportSettings: {
+      fileName: "long-image-1080",
+      format: "webm",
+      quality: "standard",
+      resolution: "1080x1920",
+    },
+    scenes: [scene],
+    timelineItems: [{ id: "ti-long", type: "scene", scene }],
   });
 }
 
@@ -262,23 +304,32 @@ async function main() {
     );
   });
 
-  await test("video-heavy long 1080p is blocked without server (6F.1)", () => {
+  await test("video-heavy long 1080p is browser-approved with warning (2G.24B)", () => {
     const manifest = build(longVideoHeavyStory("1080x1920"));
     const result = runExportCapabilityPreflight(manifest);
-    assert.equal(result.renderer, "blocked");
-    assert.ok(result.blockers.some((b) => b.code === "SERVER_RENDERER_REQUIRED"));
-    assert.match(result.blockers[0]!.message, /720p browser export/i);
+    assert.equal(result.renderer, "browser");
+    assert.equal(result.supported, true);
+    assert.equal(result.blockers.length, 0);
+    assert.ok(
+      result.warnings.some((w) => w.code === "RESOLUTION_PERFORMANCE_WARNING"),
+    );
+    assert.doesNotMatch(
+      JSON.stringify(result.blockers),
+      /SERVER_RENDERER_REQUIRED/,
+    );
   });
 
-  await test("video-heavy long 1080p + server available selects server", () => {
+  await test("video-heavy long 1080p stays on browser when server available (2G.24B)", () => {
     const withServer = buildExportManifest({
       story: longVideoHeavyStory("1080x1920"),
       environment: { ...CAPABLE_ENV, serverRendererAvailable: true },
     });
-    assert.equal(withServer.capabilities.serverRendererAvailable, true);
     const result = runExportCapabilityPreflight(withServer);
-    assert.equal(result.renderer, "server");
-    assert.equal(result.blockers.length, 0);
+    assert.equal(result.renderer, "browser");
+    assert.equal(result.supported, true);
+    assert.ok(
+      result.warnings.some((w) => w.code === "RESOLUTION_PERFORMANCE_WARNING"),
+    );
   });
 
   await test("missing media blocks export", () => {
@@ -335,6 +386,7 @@ async function main() {
         ...base.scenes.slice(1),
       ],
     };
+    manifest.fingerprint = buildExportManifestFingerprint(manifest);
     const result = runExportCapabilityPreflight(manifest as never);
     assert.ok(result.blockers.some((b) => b.code === "UNSUPPORTED_TRANSITION"));
   });
@@ -388,7 +440,7 @@ async function main() {
       environment: { ...CAPABLE_ENV, serverRendererAvailable: true },
     });
     const serverResult = runExportCapabilityPreflight(serverManifest);
-    assert.equal(serverResult.renderer, "server");
+    assert.equal(serverResult.renderer, "browser");
   });
 
   await test("cost estimate is conservative and deterministic", () => {
@@ -406,31 +458,33 @@ async function main() {
     assert.equal(a.risk, "borderline");
   });
 
-  await test("prepareExportRequest throws typed preflight error when blocked", async () => {
+  await test("prepareExportRequest throws when memory estimate is unsafe (2G.24B)", async () => {
     await assert.rejects(
       () =>
         prepareExportRequest({
-          story: longVideoHeavyStory("1080x1920"),
+          story: longImageStory1080p(90),
           environment: CAPABLE_ENV,
           throwIfBlocked: true,
         }),
       (error: unknown) => {
         assert.ok(error instanceof ExportPreflightError);
         assert.equal(error.code, "EXPORT_PREFLIGHT_BLOCKED");
-        assert.ok(error.result.blockers.length > 0);
+        assert.ok(
+          error.result.blockers.some((b) => b.code === "UNSAFE_MEMORY_ESTIMATE"),
+        );
         return true;
       },
     );
   });
 
-  await test("prepareExportRequest allows inspection when throwIfBlocked=false", async () => {
+  await test("prepareExportRequest allows warning-approved long 1080p browser export (2G.24B)", async () => {
     const prepared = await prepareExportRequest({
       story: longVideoHeavyStory("1080x1920"),
       environment: CAPABLE_ENV,
-      throwIfBlocked: false,
+      throwIfBlocked: true,
     });
-    assert.equal(prepared.renderer, "blocked");
-    assert.ok(prepared.preflight.blockers.length > 0);
+    assert.equal(prepared.renderer, "browser");
+    assert.equal(prepared.preflight.blockers.length, 0);
     assert.ok(prepared.manifest.fingerprint);
   });
 

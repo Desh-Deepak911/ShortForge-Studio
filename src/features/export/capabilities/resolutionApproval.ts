@@ -37,11 +37,12 @@ export const EXPORT_1080P_BLOCKED_USER_MESSAGE = [
   "Try:",
   "• 720p browser export",
   "• reduce video-heavy scenes",
-  "• future server renderer (coming later)",
+  "• Headless export (renders in the background on a server)",
 ].join("\n");
 
+/** Shown when 1080p is approved but may stress the local browser. */
 export const EXPORT_1080P_WARNING_USER_MESSAGE =
-  "1080p export may be slower or use more memory on this project. You can continue, or switch to 720p for a more reliable browser export.";
+  "1080p browser export may use significant device resources. Keep this tab open until the download finishes. You can use Headless instead to render in the background.";
 
 export function approveExportResolution(input: {
   readonly estimate: ExportDeviceCapabilityEstimate;
@@ -136,12 +137,12 @@ export function approveExportResolution(input: {
     estimate.estimatedFrames > policy.maxEstimatedFrames
   ) {
     reasons.push("duration-exceeded");
-    return blocked1080(estimate, reasons);
+    return warn1080(estimate, reasons);
   }
 
   if (videoHeavy && estimate.durationClass !== "short") {
     reasons.push("video-heavy-non-short");
-    return blocked1080(estimate, reasons);
+    return warn1080(estimate, reasons);
   }
 
   if (videoHeavy && estimate.videoSceneCount > policy.maxVideoScenes) {
@@ -151,7 +152,7 @@ export function approveExportResolution(input: {
 
   if (estimate.durationClass === "long" && estimate.videoSceneCount > 0) {
     reasons.push("long-with-video");
-    return blocked1080(estimate, reasons);
+    return warn1080(estimate, reasons);
   }
 
   if (mixed || (videoHeavy && estimate.durationClass === "short")) {
@@ -194,6 +195,20 @@ export function approveExportResolution(input: {
   }
 
   reasons.push("default-1080p-warning");
+  return {
+    classification: "approved-with-warning",
+    resolution: "1080p",
+    overrideApplied: false,
+    message: EXPORT_1080P_WARNING_USER_MESSAGE,
+    reasons,
+    estimate,
+  };
+}
+
+function warn1080(
+  estimate: ExportDeviceCapabilityEstimate,
+  reasons: string[],
+): ExportResolutionApproval {
   return {
     classification: "approved-with-warning",
     resolution: "1080p",

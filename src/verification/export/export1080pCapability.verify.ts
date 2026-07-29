@@ -179,7 +179,7 @@ test("1080p image-heavy short is approved (not blanket blocked)", () => {
   });
 });
 
-test("flag missing → normal 1080p policy applies (video-heavy long blocked)", () => {
+test("flag missing → normal 1080p policy applies (video-heavy long warns)", () => {
   withOverrideEnv(undefined, () => {
     assert.equal(is1080pBrowserOverrideEnabled(), false);
     const result = runExportCapabilityPreflight(
@@ -188,14 +188,22 @@ test("flag missing → normal 1080p policy applies (video-heavy long blocked)", 
         environment: CAPABLE,
       }),
     );
-    assert.equal(result.renderer, "blocked");
+    assert.equal(result.renderer, "browser");
+    assert.equal(result.supported, true);
+    assert.equal(result.blockers.length, 0);
     assert.ok(
-      result.blockers.some((b) => b.code === "SERVER_RENDERER_REQUIRED"),
+      result.warnings.some((w) => w.code === "RESOLUTION_PERFORMANCE_WARNING"),
     );
+    assert.match(
+      result.warnings.find((w) => w.code === "RESOLUTION_PERFORMANCE_WARNING")!
+        .message,
+      /Keep this tab open/i,
+    );
+    assert.doesNotMatch(JSON.stringify(result.blockers), /SERVER_RENDERER_REQUIRED/);
   });
 });
 
-test("flag 0 → normal policy applies", () => {
+test("flag 0 → normal policy applies with warning", () => {
   withOverrideEnv("0", () => {
     assert.equal(is1080pBrowserOverrideEnabled(), false);
     const result = runExportCapabilityPreflight(
@@ -204,7 +212,8 @@ test("flag 0 → normal policy applies", () => {
         environment: CAPABLE,
       }),
     );
-    assert.equal(result.renderer, "blocked");
+    assert.equal(result.renderer, "browser");
+    assert.equal(result.supported, true);
   });
 });
 
@@ -273,10 +282,12 @@ test("override does not bypass codec / format probe blocker", () => {
   });
 });
 
-test("UI maps ready-with-warnings so export stays enabled for override-only", () => {
+test("UI maps ready-with-warnings so export stays enabled for resource warnings", () => {
   const panel = read("src/components/ExportPanel.tsx");
   assert.match(panel, /ready-with-warnings/);
   assert.match(panel, /capabilityBlocked/);
+  assert.match(panel, /Browser export supports 720p and 1080p/i);
+  assert.match(panel, /4K is available[\s\S]*Headless/i);
   // Blocked only for blocked/server-required/checking — not ready-with-warnings.
   assert.match(
     panel,
