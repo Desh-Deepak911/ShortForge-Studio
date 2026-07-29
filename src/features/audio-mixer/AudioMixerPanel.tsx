@@ -121,8 +121,9 @@ export default function AudioMixerPanel({
   return (
     <div className="space-y-1">
       <p className={`${studioSubtleText} text-[11px]`}>
-        Independent voice, music, and master levels for preview and export. Voice above 100%
-        uses a measured perceptual boost with peak protection.
+        Independent voice, music, and master levels for preview and export. Values above
+        100% boost narration linearly; peak protection may limit extremely loud source
+        audio. Music volume and master volume remain separate controls.
       </p>
 
       <MixerSection title="Voice">

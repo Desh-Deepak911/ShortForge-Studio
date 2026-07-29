@@ -349,6 +349,19 @@ test("uploaded and generated voiceover preview paths remain unchanged", () => {
   assert.match(audioEngineSource, /getStableVoiceoverPlaybackUrl/);
 });
 
+test("voice percentage gain is strictly monotonic through 200%", () => {
+  let prev = -1;
+  for (const voiceVolume of [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]) {
+    const gain = resolveVoiceVolumeGain(voiceVolume);
+    if (voiceVolume === 0) {
+      assert.equal(gain, 0);
+    } else {
+      assert.ok(gain > prev);
+    }
+    prev = gain;
+  }
+});
+
 test("music preview volume path is unaffected by voice boost routing", () => {
   const previewMusicUtils = readFileSync(
     join(process.cwd(), "src/features/preview/utils/preview-background-music.utils.ts"),

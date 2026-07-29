@@ -22,7 +22,7 @@ export const MIN_MIX_VOLUME = 0;
 export const MAX_MIX_VOLUME = 2;
 /** Frozen voice/music stem ceiling accepted by hosted audio plans. */
 export const MAX_AUDIO_STEM_GAIN = 4;
-/** 100→200% voice control maps to 0→+10 dB perceived-boost range. */
+/** @deprecated Legacy perceptual boost constant — linear percentage contract since 2G.24E. */
 export const MAX_VOICE_BOOST_DB = 10;
 
 export const MIN_DUCKING_STRENGTH = 0;

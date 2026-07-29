@@ -11,10 +11,10 @@ import {
   MAX_AUDIO_STEM_GAIN,
   MAX_DUCKING_STRENGTH,
   MAX_MIX_VOLUME,
-  MAX_VOICE_BOOST_DB,
   MIN_DUCKING_STRENGTH,
   MIN_MIX_VOLUME,
 } from "./audio-mixer.defaults";
+import { resolvePeakProtectionFromMixer } from "./audio-mixer.peak-protection.utils";
 import type {
   MasterMixSettings,
   MusicMixSettings,
@@ -147,16 +147,47 @@ export function resolveAudioMixerSettings(
 }
 
 /**
- * Voice control is linear through 100%. Above unity it becomes an explicit
- * perceptual boost: 100→200% maps to 0→+10 dB before the master bus.
+ * Linear voice percentage → gain (Sprint 11E 2G.24E).
+ * UI stores 0–2 representing 0–200%; gain equals the control value before master bus.
+ * 100% = 1.0× (+0 dB), 200% = 2.0× (~+6.02 dB), 50% = 0.5× (~−6.02 dB).
  */
 export function resolveVoiceVolumeGain(volume: number): number {
-  const bounded = Math.min(MAX_MIX_VOLUME, Math.max(MIN_MIX_VOLUME, volume));
-  if (bounded <= 1) return bounded;
-  return 10 ** (((bounded - 1) * MAX_VOICE_BOOST_DB) / 20);
+  return clampMixVolume(volume, DEFAULT_VOICE_MIX_SETTINGS.volume);
 }
 
-/** Voice bus gain before ducking/fades — perceptual voice control × master. */
+export interface VoiceGainAuthority {
+  /** UI control value 0–2 (0–200%). */
+  readonly requestedVoiceVolume: number;
+  readonly requestedVoicePercent: number;
+  /** Linear voice gain before master (`resolveVoiceVolumeGain`). */
+  readonly linearVoiceGain: number;
+  /** Final voice stem gain (`linearVoiceGain × master.volume`, capped). */
+  readonly resolvedVoiceGain: number;
+  readonly masterVolume: number;
+  readonly applyPeakProtection: boolean;
+  readonly peakProtectionPlacement: "final-bus";
+}
+
+export function resolveVoiceGainAuthority(
+  settings: ResolvedAudioMixSettings,
+): VoiceGainAuthority {
+  const requestedVoiceVolume = settings.voice.volume;
+  return {
+    requestedVoiceVolume,
+    requestedVoicePercent: Math.round(requestedVoiceVolume * 100),
+    linearVoiceGain: resolveVoiceVolumeGain(requestedVoiceVolume),
+    resolvedVoiceGain: resolveVoiceStemGain(settings),
+    masterVolume: settings.master.volume,
+    applyPeakProtection: resolvePeakProtectionFromMixer(
+      settings,
+      resolveVoiceStemGain(settings),
+      resolveMusicStemGain(settings),
+    ),
+    peakProtectionPlacement: "final-bus",
+  };
+}
+
+/** Voice bus gain before ducking/fades — linear voice control × master. */
 export function resolveVoiceStemGain(settings: ResolvedAudioMixSettings): number {
   return Math.min(
     MAX_AUDIO_STEM_GAIN,

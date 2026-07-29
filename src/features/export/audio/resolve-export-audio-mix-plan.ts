@@ -2,6 +2,8 @@
  * Resolve normalized export audio mix plan from frozen ExportManifest (Sprint 11E 2G.24D).
  */
 
+import { PEAK_PROTECTION_OUTPUT_CEILING } from "@/features/audio-mixer/audio-mixer.peak-protection.utils";
+
 import {
   EXPORT_VOICEOVER_OVERRUN_TOLERANCE_MS,
 } from "./export-audio.types";
@@ -14,6 +16,7 @@ import { resolveExportDuckedMusicGain } from "@/features/export/utils/export-bac
 
 import type {
   ExportAudioMixCombination,
+  ExportAudioMixGainAuthority,
   ExportAudioMixMusicPlan,
   ExportAudioMixPlan,
   ExportAudioMixVoicePlan,
@@ -153,6 +156,15 @@ export function resolveExportAudioMixPlan(
 
   const combination = combinationFor(voiceover != null, music != null);
 
+  const gainAuthority: ExportAudioMixGainAuthority = {
+    resolvedVoiceGain: voiceover?.volumeGain ?? 0,
+    resolvedMusicGain: music?.volumeGain ?? null,
+    masterVolumeApplied: true,
+    applyPeakProtection: manifest.audio.applyPeakProtection,
+    peakProtectionPlacement: "final-bus",
+    finalOutputCeiling: PEAK_PROTECTION_OUTPUT_CEILING,
+  };
+
   return {
     ok: true,
     plan: {
@@ -164,6 +176,7 @@ export function resolveExportAudioMixPlan(
       applyPeakProtection: manifest.audio.applyPeakProtection,
       limiterRequired: manifest.audio.applyPeakProtection,
       mixOrder: "amix-voice-first-duration-first",
+      gainAuthority,
       voiceover,
       music,
       captionsAffectMix: false,

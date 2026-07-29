@@ -380,3 +380,81 @@ export function writeMetricsReport(metrics: DecodedAudioMetrics): string {
     `ptsMonotonic=${metrics.ptsMonotonic}`,
   ].join(" ");
 }
+
+/** Linear amplitude → decibels (returns −∞ for non-positive). */
+export function linearAmplitudeToDb(value: number): number {
+  return value > 0 && Number.isFinite(value)
+    ? 20 * Math.log10(value)
+    : Number.NEGATIVE_INFINITY;
+}
+
+/** RMS delta in dB between two decoded waveforms (reference vs candidate). */
+export function decodedRmsDeltaDb(referenceRms: number, candidateRms: number): number {
+  if (referenceRms <= 0 || candidateRms <= 0) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  return 20 * Math.log10(candidateRms / referenceRms);
+}
+
+/** Bounded LUFS-style approximation from decoded PCM (K-weighting omitted). */
+export function approximateIntegratedLoudnessDb(pcm: Float32Array): number {
+  return linearAmplitudeToDb(analyzeDecodedPcm(pcm, 48_000).overallRms);
+}
+
+export function countClippedSamples(
+  pcm: Float32Array,
+  threshold = 0.999,
+): number {
+  let count = 0;
+  for (let i = 0; i < pcm.length; i += 1) {
+    if (Math.abs(pcm[i]!) >= threshold) count += 1;
+  }
+  return count;
+}
+
+export function crestFactorLinear(peak: number, rms: number): number {
+  return rms > 0 ? peak / rms : 0;
+}
+
+/** Deterministic sine with explicit peak amplitude (0–1 linear). */
+export function writeScaledSineWav(
+  bins: NativeFfmpegBins,
+  path: string,
+  frequency: number,
+  durationSec: number,
+  peakAmplitude: number,
+): void {
+  mkdirSync(join(path, ".."), { recursive: true });
+  const r = spawnSync(
+    bins.ffmpegExecutable,
+    [
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      `sine=frequency=${frequency}:duration=${durationSec.toFixed(3)}`,
+      "-filter:a",
+      `volume=${peakAmplitude.toFixed(6)}`,
+      "-ac",
+      "2",
+      "-ar",
+      "48000",
+      path,
+    ],
+    { encoding: "utf8" },
+  );
+  if (r.status !== 0) {
+    throw new Error(r.stderr || "writeScaledSineWav failed");
+  }
+}
+
+export function measureWindowRms(
+  pcm: Float32Array,
+  sampleRateHz: number,
+  startSec: number,
+  endSec: number,
+): number {
+  const start = Math.max(0, Math.floor(startSec * sampleRateHz));
+  const end = Math.min(pcm.length, Math.ceil(endSec * sampleRateHz));
+  return rmsLinear(pcm, start, end);
+}
