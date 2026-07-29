@@ -148,10 +148,18 @@ test("preview and export integrations route through AudioEngine", () => {
   assert.match(preview, /buildAudioMixFromStory/);
   assert.match(preview, /getNarrationAudioElementBySrc/);
   assert.match(preview, /getBackgroundMusicAudioElementBySrc/);
-  assert.match(exportRender, /buildAudioMixFromStory/);
+  assert.match(exportRender, /prepareExportRequest/);
   assert.match(exportRender, /voiceoverInput/);
   assert.match(exportRender, /backgroundMusicInput/);
   assert.match(ffmpegUtils, /normalizeExportAudioInput/);
+  assert.match(
+    readFileSync(join(root, "src/features/export/runtime/render-export.ts"), "utf8"),
+    /prepareExportAudio/,
+  );
+  assert.match(
+    readFileSync(join(root, "src/features/export/audio/resolve-export-audio-mix-plan.ts"), "utf8"),
+    /resolveExportAudioMixPlan/,
+  );
   assert.match(voiceApply, /applyVoiceoverRegeneration/);
   assert.match(voiceApply, /getCanonicalVoiceover/);
   assert.match(downloads, /getAudioEngine\(\)/);
