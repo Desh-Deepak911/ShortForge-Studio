@@ -71,13 +71,16 @@ test("1080p mixed is approved-with-warning", () => {
       videoSceneCount: 1,
       imageSceneCount: 2,
       sceneCount: 3,
+      mediaItemCount: 3,
+      videoMediaItemCount: 1,
+      imageMediaItemCount: 2,
       durationClass: "short",
     }),
   });
   assert.equal(result.classification, "approved-with-warning");
 });
 
-test("1080p video-heavy long is blocked with actionable message", () => {
+test("1080p video-heavy long is approved-with-warning (2G.24B)", () => {
   const result = approveExportResolution({
     estimate: estimate({
       resolution: "1080p",
@@ -89,10 +92,28 @@ test("1080p video-heavy long is blocked with actionable message", () => {
       durationClass: "long",
     }),
   });
+  assert.equal(result.classification, "approved-with-warning");
+  assert.match(result.message, /Keep this tab open/i);
+  assert.match(result.message, /Headless/i);
+  assert.ok(
+    result.reasons.some((reason) =>
+      ["video-heavy-non-short", "long-with-video", "duration-exceeded"].includes(
+        reason,
+      ),
+    ),
+  );
+});
+
+test("1080p peak-memory-unsafe remains blocked", () => {
+  const result = approveExportResolution({
+    estimate: estimate({
+      resolution: "1080p",
+      estimatedPeakMemoryBytes: 520 * 1024 * 1024,
+    }),
+  });
   assert.equal(result.classification, "blocked");
+  assert.ok(result.reasons.includes("peak-memory-unsafe"));
   assert.match(result.message, /720p browser export/);
-  assert.match(result.message, /reduce video-heavy scenes/);
-  assert.ok(EXPORT_1080P_RESOLUTION_POLICY.productionDefault !== "blocked");
 });
 
 test("developer override bypasses 1080p block with warning", () => {

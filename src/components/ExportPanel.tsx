@@ -1313,6 +1313,10 @@ export default function ExportPanel({
                 </select>
                 <ChevronDown className={studioSelectChevron} />
               </div>
+              <p className={`${studioSubtleText} mt-1.5`}>
+                Browser export supports 720p and 1080p on this device. 4K is available
+                with Headless below.
+              </p>
             </div>
             <div>
               <label htmlFor="export-quality-tier" className={studioFieldLabel}>
@@ -1399,7 +1403,8 @@ export default function ExportPanel({
 
           {showAudioMergeNote ? (
             <p className={studioSubtleText}>
-              Narration merge can take longer for high-quality 1080p exports.
+              Narration merge can take longer for high-quality browser exports — keep this
+              tab open until the download finishes.
             </p>
           ) : null}
         </ExportSettingsSection>

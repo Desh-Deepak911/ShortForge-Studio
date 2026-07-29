@@ -306,6 +306,7 @@
     "test:export-reconfiguration": "tsx src/verification/export/exportReconfiguration.verify.ts",
     "test:export-resolution-policy": "tsx src/verification/export/exportResolutionPolicy.verify.ts",
     "test:export-1080p-capability": "tsx src/verification/export/export1080pCapability.verify.ts",
+    "test:export-browser-1080p-capability-restored": "tsx src/verification/export/exportBrowser1080pCapabilityRestored.verify.ts",
     "test:export-mixed-media-final": "tsx src/verification/export/exportMixedMediaFinalQa.verify.ts",
     "test:export-reliability": "node scripts/run-export-reliability.mjs",
     "test:preview-video-clip": "tsx src/verification/features/preview/utils/preview-video-clip.verify.ts",
