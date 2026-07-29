@@ -8,7 +8,7 @@ import { HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT } from "@/features/headless-render
 import { HEADLESS_FLY_STAGING_VERIFY_FIRST_PASS_IMAGE_DIGEST } from "./fly-staging-verify-first-pass-evidence";
 
 /** Frozen authority schema version — bump only when record shape or selection rules change. */
-export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 32 as const;
+export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 33 as const;
 
 export type HeadlessFlyStagingImageLifecycle = "historical" | "current";
 
@@ -34,7 +34,8 @@ export type HeadlessFlyStagingVersionedImageRecordId =
   | "post_007_2g20_manifest_contract_alignment_historical"
   | "post_007_2g23_frame_progress_prospective"
   | "post_007_2g23_frame_progress_current"
-  | "post_007_2g24_export_correctness_prospective";
+  | "post_007_2g24_export_correctness_prospective"
+  | "post_007_2g24_export_correctness_current";
 
 export type HeadlessFlyStagingVersionedImageSchemaFingerprint = {
   readonly migrationIds: readonly string[];
@@ -919,11 +920,11 @@ export const HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_PROSPECTIVE_IMAGE
     eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** Post-007 2G.23 frame-progress current — deployed runtime-ready. */
+/** Post-007 2G.23 frame-progress current — superseded by 2G.24 export-correctness rollout. */
 export const HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_CURRENT_IMAGE_RECORD =
   Object.freeze({
     recordId: "post_007_2g23_frame_progress_current",
-    lifecycle: "current",
+    lifecycle: "historical",
     imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
     schemaFingerprint: buildSchemaFingerprint(POST_007_MIGRATIONS),
     hostedWorkerArtifactSha256:
@@ -932,9 +933,9 @@ export const HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_CURRENT_IMAGE_REC
       HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_PAGE_ARTIFACT_SHA256,
     telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
     pageTelemetryCapabilityVersion: HEADLESS_FLY_STAGING_FRAME_PROGRESS_CAPABILITY_VERSION,
-    eligibleForVerifyLiveHarness: true,
-    eligibleForRenderLiveHarness: true,
-    eligibleForCurrentStagingReadiness: true,
+    eligibleForVerifyLiveHarness: false,
+    eligibleForRenderLiveHarness: false,
+    eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
 /** Post-007 2G.24 export-correctness prospective — pre-rollout; not deployment-eligible. */
@@ -954,6 +955,25 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_I
     eligibleForVerifyLiveHarness: false,
     eligibleForRenderLiveHarness: false,
     eligibleForCurrentStagingReadiness: false,
+  } satisfies HeadlessFlyStagingVersionedImageRecord);
+
+/** Post-007 2G.24 export-correctness current — deployed runtime-ready (rollout 2G.24G). */
+export const HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD =
+  Object.freeze({
+    recordId: "post_007_2g24_export_correctness_current",
+    lifecycle: "current",
+    imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+    schemaFingerprint: buildSchemaFingerprint(POST_007_MIGRATIONS),
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
+    telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
+    pageTelemetryCapabilityVersion:
+      HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
+    eligibleForVerifyLiveHarness: true,
+    eligibleForRenderLiveHarness: true,
+    eligibleForCurrentStagingReadiness: true,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
 /** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8F5_PAGE_ATTRIBUTION_CURRENT_IMAGE_RECORD */
@@ -983,6 +1003,7 @@ export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS = Object.freeze([
   HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_CURRENT_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD,
 ] as const);
 
 const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>(
@@ -993,12 +1014,12 @@ const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>
 );
 
 export function resolveCurrentFlyStagingAcceptedImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_CURRENT_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD;
 }
 
 /** Pre-rollout prospective selector for the next controlled image rollout. */
 export function resolveProspectiveFlyStagingRolloutImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD;
 }
 
 export function resolveProspectiveFlyStaging8f5AttributionImageRecord(): HeadlessFlyStagingVersionedImageRecord {
@@ -1153,7 +1174,8 @@ function isPost007VersionedImageRecord(
     record.recordId === "post_007_2g20_manifest_contract_alignment_historical" ||
     record.recordId === "post_007_2g23_frame_progress_prospective" ||
     record.recordId === "post_007_2g23_frame_progress_current" ||
-    record.recordId === "post_007_2g24_export_correctness_prospective"
+    record.recordId === "post_007_2g24_export_correctness_prospective" ||
+    record.recordId === "post_007_2g24_export_correctness_current"
   );
 }
 

@@ -612,13 +612,52 @@ fly_staging_bridge_cleanup() {
   set -e
 }
 
-# Trusted public staging [env] from local authority — never from credential bridge.
-fly_staging_apply_public_environment() {
+# Trusted public staging [env] from digest-bound deployment pair authority — never from credential bridge.
+fly_staging_deployment_pair_cli() {
+  npx tsx "${FOOTIEBITZ_ROOT}/scripts/fly-staging/fly-staging-deployment-pair-cli.ts" "$@"
+}
+
+fly_staging_apply_public_environment_for_digest() {
+  _digest="$1"
+  if [ -z "${_digest}" ]; then
+    fly_staging_die "fail_class=image_environment_authority_incoherent reason=missing_digest"
+  fi
+  _build_id="$(fly_staging_deployment_pair_cli resolve-public-env-build-id "${_digest}" 2>/dev/null)" || \
+    fly_staging_die "fail_class=image_environment_authority_incoherent"
   export HEADLESS_ENV_NAME="staging"
   export HEADLESS_CHROME_PATH="/usr/bin/chromium"
   export HEADLESS_FFMPEG_PATH="/usr/bin/ffmpeg"
   export HEADLESS_FFPROBE_PATH="/usr/bin/ffprobe"
-  export HEADLESS_RENDERER_BUILD_ID="headless-local-chromium-ffmpeg-11e-phase2g.24e"
+  export HEADLESS_RENDERER_BUILD_ID="${_build_id}"
+  export HEADLESS_WORKER_CONCURRENCY="1"
+  export HEADLESS_WORKER_GRACEFUL_SHUTDOWN_MS="25000"
+  export HEADLESS_WORKER_WORKSPACE_ROOT="/tmp/footiebitz-headless-worker"
+  export HEADLESS_HOSTED_IMAGE_CLASS="deployable_worker"
+}
+
+fly_staging_validate_image_environment_coherence() {
+  _digest="$1"
+  _build_id="$2"
+  fly_staging_deployment_pair_cli validate-coherence "${_digest}" "${_build_id}" >/dev/null 2>&1 || \
+    fly_staging_die "fail_class=image_environment_authority_incoherent"
+}
+
+fly_staging_materialized_config_identity_for_digest() {
+  _kind="$1"
+  _digest="$2"
+  _sequence="$3"
+  _prefix="$(printf '%s' "${_digest}" | cut -c1-8)"
+  printf 'fly.staging.%s-%s-attempt-%s.materialized.toml' "${_kind}" "${_prefix}" "${_sequence}"
+}
+
+fly_staging_apply_public_environment() {
+  _build_id="$(fly_staging_deployment_pair_cli resolve-current-build-id 2>/dev/null)" || \
+    fly_staging_die "fail_class=image_environment_authority_incoherent"
+  export HEADLESS_ENV_NAME="staging"
+  export HEADLESS_CHROME_PATH="/usr/bin/chromium"
+  export HEADLESS_FFMPEG_PATH="/usr/bin/ffmpeg"
+  export HEADLESS_FFPROBE_PATH="/usr/bin/ffprobe"
+  export HEADLESS_RENDERER_BUILD_ID="${_build_id}"
   export HEADLESS_WORKER_CONCURRENCY="1"
   export HEADLESS_WORKER_GRACEFUL_SHUTDOWN_MS="25000"
   export HEADLESS_WORKER_WORKSPACE_ROOT="/tmp/footiebitz-headless-worker"
