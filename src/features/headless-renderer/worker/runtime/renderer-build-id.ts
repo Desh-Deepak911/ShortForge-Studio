@@ -5,7 +5,7 @@
 
 /** Canonical image2pipe streaming renderer identity (Phase 3.2 / 3.2A). */
 export const HEADLESS_PHASE3_RENDERER_BUILD_ID =
-  "headless-local-chromium-ffmpeg-11e-phase2g.24d" as const;
+  "headless-local-chromium-ffmpeg-11e-phase2g.24e" as const;
 
 /**
  * Superseded PNG-sequence / Phase 3.1A identity — fail closed where build

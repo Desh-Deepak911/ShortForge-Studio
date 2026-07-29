@@ -618,7 +618,7 @@ fly_staging_apply_public_environment() {
   export HEADLESS_CHROME_PATH="/usr/bin/chromium"
   export HEADLESS_FFMPEG_PATH="/usr/bin/ffmpeg"
   export HEADLESS_FFPROBE_PATH="/usr/bin/ffprobe"
-  export HEADLESS_RENDERER_BUILD_ID="headless-local-chromium-ffmpeg-11e-phase2g.24d"
+  export HEADLESS_RENDERER_BUILD_ID="headless-local-chromium-ffmpeg-11e-phase2g.24e"
   export HEADLESS_WORKER_CONCURRENCY="1"
   export HEADLESS_WORKER_GRACEFUL_SHUTDOWN_MS="25000"
   export HEADLESS_WORKER_WORKSPACE_ROOT="/tmp/footiebitz-headless-worker"

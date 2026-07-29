@@ -37,6 +37,7 @@ export {
 
 export type {
   ExportAudioMixCombination,
+  ExportAudioMixGainAuthority,
   ExportAudioMixMusicPlan,
   ExportAudioMixPlan,
   ExportAudioMixVoicePlan,

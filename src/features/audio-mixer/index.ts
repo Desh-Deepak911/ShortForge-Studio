@@ -25,7 +25,9 @@ export {
   resolveMusicStemGain,
   resolveVoiceVolumeGain,
   resolveVoiceStemGain,
+  resolveVoiceGainAuthority,
   linearGainToDecibels,
+  type VoiceGainAuthority,
 } from "./audio-mixer.utils";
 
 export {

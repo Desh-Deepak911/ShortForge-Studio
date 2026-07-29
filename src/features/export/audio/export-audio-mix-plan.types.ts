@@ -35,6 +35,18 @@ export interface ExportAudioMixMusicPlan {
   readonly fadeOutMs: number;
 }
 
+export interface ExportAudioMixGainAuthority {
+  /** Resolved voice stem gain frozen on the manifest (linear × master, capped). */
+  readonly resolvedVoiceGain: number;
+  readonly resolvedMusicGain: number | null;
+  /** Master bus multiplier is baked into resolved stem gains on the manifest. */
+  readonly masterVolumeApplied: boolean;
+  readonly applyPeakProtection: boolean;
+  readonly peakProtectionPlacement: "final-bus";
+  /** Safe final peak ceiling when peak protection is active (linear). */
+  readonly finalOutputCeiling: number;
+}
+
 /** Deterministic mix authority — no FFmpeg/runtime specifics. */
 export interface ExportAudioMixPlan {
   readonly combination: ExportAudioMixCombination;
@@ -45,6 +57,7 @@ export interface ExportAudioMixPlan {
   readonly applyPeakProtection: boolean;
   readonly limiterRequired: boolean;
   readonly mixOrder: "amix-voice-first-duration-first";
+  readonly gainAuthority: ExportAudioMixGainAuthority;
   readonly voiceover: ExportAudioMixVoicePlan | null;
   readonly music: ExportAudioMixMusicPlan | null;
   /** Visual transitions and captions never alter this plan. */

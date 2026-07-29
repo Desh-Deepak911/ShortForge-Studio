@@ -99,13 +99,14 @@ test("image, video preview, and export renderer share the filter authority", () 
   assert.match(exportRenderer, /ctx\.restore\(\)/);
 });
 
-test("voice control is linear to 100% and adds ten decibels at 200%", () => {
+test("voice control is linear percentage gain through 200%", () => {
   assert.equal(resolveVoiceVolumeGain(0), 0);
   assert.equal(resolveVoiceVolumeGain(0.5), 0.5);
   assert.equal(resolveVoiceVolumeGain(1), 1);
-  assert.ok(Math.abs(resolveVoiceVolumeGain(1.5) - 10 ** (5 / 20)) < 1e-12);
-  assert.ok(Math.abs(resolveVoiceVolumeGain(2) - Math.sqrt(10)) < 1e-12);
-  assert.ok(Math.abs(linearGainToDecibels(resolveVoiceVolumeGain(2)) - 10) < 1e-12);
+  assert.equal(resolveVoiceVolumeGain(1.5), 1.5);
+  assert.equal(resolveVoiceVolumeGain(2), 2);
+  assert.ok(Math.abs(linearGainToDecibels(2) - 6.020599913279624) < 0.01);
+  assert.ok(Math.abs(linearGainToDecibels(0.5) + 6.020599913279624) < 0.01);
 });
 
 test("preview, browser export, and hosted FFmpeg consume the same effective gain", () => {
