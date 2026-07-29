@@ -117,7 +117,7 @@ async function main() {
   await test("renderer build ID unchanged — fingerprint correction is additive", () => {
     assert.equal(
       HEADLESS_PHASE3_RENDERER_BUILD_ID,
-      "headless-local-chromium-ffmpeg-11e-phase2g.13",
+      "headless-local-chromium-ffmpeg-11e-phase2g.24c",
     );
   });
 

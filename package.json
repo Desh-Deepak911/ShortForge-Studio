@@ -372,6 +372,7 @@
     "test:transitions-scope": "tsx src/verification/timeline/transitionsScope.verify.ts",
     "test:transition-overlay": "tsx src/verification/timeline/transitionOverlay.verify.ts",
     "test:export-transition": "tsx src/verification/export/exportTransition.verify.ts",
+    "test:export-transition-continuity-authority": "tsx src/verification/export/exportTransitionContinuityAuthority.verify.ts",
     "test:transition-qa": "tsx src/verification/timeline/transitionQa.verify.ts",
     "test:export-settings": "tsx src/verification/export/exportSettings.verify.ts",
     "test:export-profiles": "tsx src/verification/features/export-profiles/export-profile.verify.ts",

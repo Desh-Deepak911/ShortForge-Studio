@@ -525,7 +525,7 @@ test("resolveTransitionState uses absolute timeline event window", () => {
   assert.equal(atStart.isActive, true);
   assert.equal(atStart.progress, 0);
   assert.equal(atMid.progress, 0.5);
-  assert.ok(atEnd.progress > 0.99);
+  assert.equal(atEnd.progress, 1);
 });
 
 test("resolveTransitionState matches getTransitionLayerStyles for existing effects", () => {
