@@ -23,8 +23,13 @@ import {
   classifyCurrentFlyStagingImageEligibility,
   classifyFlyStagingImagePageArtifactEligibility,
   classifyFlyStagingImageWorkerArtifactEligibility,
+  HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_BUILD_INFO_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_CURRENT_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_BUILD_INFO_SHA256,
-  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_CURRENT_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HISTORICAL_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_PAGE_ARTIFACT_SHA256,
@@ -66,7 +71,7 @@ const OFFICIAL_4K_CAPACITY_FAIL_SHA_8K4 =
   "cf84dd669c28a469b38107393fead005029d5d6660267c4a4dda813e1e79d63e";
 
 const SEVEN_MIGRATION_IDS =
-  HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_CURRENT_IMAGE_RECORD
+  HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_CURRENT_IMAGE_RECORD
     .schemaFingerprint.migrationIds;
 
 let passed = 0;
@@ -105,9 +110,9 @@ async function main() {
     assert.equal(isFlyRender4kCapacityGateOn({ HEADLESS_FLY_RENDER_4K_QA: "1" }), true);
   });
 
-  await test("4K harness resolves current 2G.20 staging image through canonical authority", () => {
+  await test("4K harness resolves current 2G.23 staging image through canonical authority", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
-    assert.equal(current.recordId, "post_007_2g20_manifest_contract_alignment_current");
+    assert.equal(current.recordId, "post_007_2g23_frame_progress_current");
     assert.equal(current.lifecycle, "current");
     assert.equal(
       FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
@@ -115,15 +120,15 @@ async function main() {
     );
     assert.equal(
       FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
-      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+      HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
     );
     assert.notEqual(
       FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
       HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_PROSPECTIVE_IMAGE_DIGEST,
     );
     assert.notEqual(
-      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_BUILD_INFO_SHA256,
-      HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+      HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_BUILD_INFO_SHA256,
+      HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
     );
   });
 
@@ -139,19 +144,19 @@ async function main() {
     }
   });
 
-  await test("2G.20 current image bindings accept canonical worker and page artifacts", () => {
+  await test("2G.23 current image bindings accept canonical worker and page artifacts", () => {
     const worker = classifyFlyStagingImageWorkerArtifactEligibility({
       imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
       hostedWorkerArtifactSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+        HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_HOSTED_WORKER_ARTIFACT_SHA256,
     });
     assert.equal(worker.ok, true);
     const page = classifyFlyStagingImagePageArtifactEligibility({
       imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
       hostedPageArtifactSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_PAGE_ARTIFACT_SHA256,
+        HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_PAGE_ARTIFACT_SHA256,
     });
     assert.equal(page.ok, true);
   });
@@ -159,7 +164,7 @@ async function main() {
   await test("wrong worker and page artifact bindings fail closed for current image", () => {
     const wrongWorker = classifyFlyStagingImageWorkerArtifactEligibility({
       imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
       hostedWorkerArtifactSha256: "0".repeat(64),
     });
     assert.equal(wrongWorker.ok, false);
@@ -168,7 +173,7 @@ async function main() {
     }
     const wrongPage = classifyFlyStagingImagePageArtifactEligibility({
       imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G20_MANIFEST_CONTRACT_ALIGNMENT_IMAGE_DIGEST,
+        HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
       hostedPageArtifactSha256: "0".repeat(64),
     });
     assert.equal(wrongPage.ok, false);
