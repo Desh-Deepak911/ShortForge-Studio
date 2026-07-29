@@ -525,17 +525,19 @@ async function main() {
     assert.equal(historical2g20.overall, "FAIL");
     assert.equal(historical2g20.connectionFactoryCalls, 0);
 
-    const current2g23 = await runFlyRenderExecutionProbe({
+    const demoted2g23 = await runFlyRenderExecutionProbe({
       env,
       forceGateOn: true,
       evidencePath: tempExecutionProbeEvidencePath(),
       renderMachineImageDigestSha256:
         HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
-      connectionProbe: () => {},
+      connectionProbe: () => {
+        throw new Error("provider contact forbidden");
+      },
     });
-    assert.equal(current2g23.exitCode, 1);
-    assert.equal(current2g23.overall, "FAIL");
-    assert.equal(current2g23.connectionFactoryCalls, 1);
+    assert.equal(demoted2g23.exitCode, 1);
+    assert.equal(demoted2g23.overall, "FAIL");
+    assert.equal(demoted2g23.connectionFactoryCalls, 0);
   });
 
   await test("execution probe gate-on without render digest fails telemetry authority closed", async () => {
