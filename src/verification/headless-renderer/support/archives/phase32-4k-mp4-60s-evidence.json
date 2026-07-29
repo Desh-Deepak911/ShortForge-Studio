@@ -1,0 +1,42 @@
+{
+  "kind": "measured",
+  "status": "REAL_LOCAL_PASS",
+  "profileId": "4k-mp4-30",
+  "rendererBuildId": "headless-local-chromium-ffmpeg-11d-phase3.1a",
+  "digest": "sha256:273e4f7f346c8ac58dd8a85b545e79989c8986e575eb0e25c2b630133d2d4167",
+  "byteLength": 58498941,
+  "contentDurationMs": 60000,
+  "renderDurationMs": 60400,
+  "artifactDurationMs": 60400,
+  "width": 2160,
+  "height": 3840,
+  "fps": 30,
+  "videoCodec": "h264",
+  "audioPresent": true,
+  "audioCodec": "aac",
+  "frameCount": 1812,
+  "streaming": {
+    "totalFramesProduced": 1812,
+    "totalFramesAccepted": 1812,
+    "totalFrameBytesStreamed": 3116229834,
+    "peakSingleFrameBytes": 3452536,
+    "peakWritableBufferedBytes": 0,
+    "chromiumRenderElapsedMs": 353559,
+    "ffmpegEncodeElapsedMs": 355500,
+    "overlappedRenderEncodeElapsedMs": 355497
+  },
+  "workspacePeakBytes": 71592740,
+  "nodeCoordinatorPeakRssBytes": 246693888,
+  "memoryScope": {
+    "nodeCoordinatorPeakRssBytes": "node_process_only",
+    "excludes": [
+      "chrome",
+      "ffmpeg"
+    ],
+    "notTotalWorkerMemoryAuthority": true
+  },
+  "elapsedMs": 357428,
+  "chromeVersion": "Google Chrome 150.0.7871.125",
+  "ffmpegVersion": "ffmpeg version 7.1 Copyright (c) 2000-2024 the FFmpeg developers",
+  "ffprobeVersion": "ffprobe version 7.1 Copyright (c) 2007-2024 the FFmpeg developers"
+}
