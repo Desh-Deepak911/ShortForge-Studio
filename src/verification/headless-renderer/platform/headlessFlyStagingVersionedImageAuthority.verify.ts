@@ -78,6 +78,12 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_FRAME_PROGRESS_CAPABILITY_VERSION,
+  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_BUILD_INFO_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_MANIFEST_CONTRACT_ALIGNMENT_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_COHERENCE_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_CLEANUP_CORRECTION_CAPABILITY_VERSION,
@@ -205,9 +211,9 @@ async function main() {
     "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 31 with twenty-one immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 31);
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 21);
+  await test("authority version is frozen at 32 with twenty-two immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 32);
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 22);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
       [
@@ -232,6 +238,7 @@ async function main() {
         "post_007_2g20_manifest_contract_alignment_historical",
         "post_007_2g23_frame_progress_prospective",
         "post_007_2g23_frame_progress_current",
+        "post_007_2g24_export_correctness_prospective",
       ],
     );
   });
@@ -682,11 +689,44 @@ async function main() {
     );
   });
 
-  await test("current and prospective selectors resolve 2G.23 frame-progress current", () => {
+  await test("2G.24 prospective record binds export-correctness artifacts and is not deployment-eligible", () => {
+    const record =
+      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD;
+    assert.equal(
+      record.imageDigestSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+    );
+    assert.equal(
+      record.hostedWorkerArtifactSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_HOSTED_WORKER_ARTIFACT_SHA256,
+    );
+    assert.equal(
+      record.hostedPageArtifactSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
+    );
+    assert.equal(
+      record.pageTelemetryCapabilityVersion,
+      HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
+    );
+    assert.equal(
+      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_BUILD_INFO_SHA256,
+      "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a",
+    );
+    assert.equal(record.lifecycle, "historical");
+    assert.equal(record.eligibleForCurrentStagingReadiness, false);
+    assert.equal(record.eligibleForRenderLiveHarness, false);
+    assert.equal(record.eligibleForVerifyLiveHarness, false);
+    assert.notEqual(
+      record.imageDigestSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
+    );
+  });
+
+  await test("current and prospective selectors resolve 2G.23 current and 2G.24 prospective", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(current.recordId, "post_007_2g23_frame_progress_current");
-    assert.equal(prospective.recordId, "post_007_2g23_frame_progress_current");
+    assert.equal(prospective.recordId, "post_007_2g24_export_correctness_prospective");
     assert.equal(
       resolveProspectiveFlyStaging8i3ArtifactBindingCoherenceImageRecord().recordId,
       "post_007_8i3_artifact_binding_coherence_historical",
