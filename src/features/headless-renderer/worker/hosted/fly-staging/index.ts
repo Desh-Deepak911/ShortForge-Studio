@@ -81,6 +81,53 @@ export {
 } from "./fly-staging-deployment-plan";
 
 export {
+  HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_AUTHORITY_VERSION,
+  HEADLESS_FLY_STAGING_2G23_ROLLBACK_RENDERER_BUILD_ID,
+  HEADLESS_FLY_STAGING_2G24_FORWARD_RENDERER_BUILD_ID,
+  HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_CONTRACT,
+  HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIRS,
+  HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
+  buildHeadlessFlyStagingPublicEnvironmentForDeploymentPair,
+  buildHeadlessFlyStagingPublicEnvironmentForImageDigestSha256,
+  classifyHeadlessFlyStagingDeploymentProviderContactGate,
+  classifyHeadlessFlyStagingImageEnvironmentDeploymentCoherence,
+  extractHeadlessFlyStagingMaterializedRendererBuildId,
+  materializeHeadlessFlyStagingTomlForDeploymentPair,
+  materializeHeadlessFlyStagingTomlForImageDigestSha256,
+  resolveHeadlessFlyStagingCurrentDeploymentPairDigestSha256,
+  resolveHeadlessFlyStagingCurrentForwardDeploymentPair,
+  resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256,
+  resolveHeadlessFlyStagingDeploymentPairFromImageRecord,
+  resolveHeadlessFlyStagingRollbackDeploymentPair,
+  validateHeadlessFlyStagingImageEnvironmentDeploymentPairTable,
+  type HeadlessFlyStagingImageEnvironmentCoherenceReasonId,
+  type HeadlessFlyStagingImageEnvironmentDeploymentPair,
+  type HeadlessFlyStagingImageEnvironmentDeploymentPairId,
+  type HeadlessFlyStagingImageEnvironmentDeploymentPairRole,
+} from "./fly-staging-image-environment-deployment-pair-authority";
+
+export {
+  HEADLESS_FLY_STAGING_CONTROLLED_ROLLOUT_ATTEMPT_AUTHORITY_VERSION,
+  HEADLESS_FLY_STAGING_2G24G_CONTROLLED_ROLLOUT_INCIDENT_RECORD,
+  HEADLESS_FLY_STAGING_CONTROLLED_ROLLOUT_ATTEMPT_CONTRACT,
+  buildHeadlessFlyStaging2G24GRecoveredAttemptLedger,
+  buildHeadlessFlyStagingMaterializedConfigAttemptIdentity,
+  classifyHeadlessFlyStagingMaterializedConfigCleanupContract,
+  classifyHeadlessFlyStagingMaterializedConfigCrossAttemptReuse,
+  classifyHeadlessFlyStagingSecondForwardAttemptProtocolCompliance,
+  mergeHeadlessFlyStagingControlledRolloutAttemptLedgers,
+  summarizeHeadlessFlyStagingControlledRolloutAttemptTotals,
+  type HeadlessFlyStagingControlledRolloutAttemptKind,
+  type HeadlessFlyStagingControlledRolloutAttemptLedgerEntry,
+  type HeadlessFlyStagingControlledRolloutAttemptTotals,
+  type HeadlessFlyStagingControlledRolloutFinalRuntimeState,
+  type HeadlessFlyStagingControlledRolloutProtocolCompliance,
+  type HeadlessFlyStagingControlledRolloutResultClassification,
+  type HeadlessFlyStagingMaterializedConfigAttemptIdentity,
+} from "./fly-staging-controlled-rollout-attempt-authority";
+
+export {
   HEADLESS_FLY_STAGING_TEMPLATE_RELATIVE_PATH,
   HEADLESS_FLY_STAGING_VERIFY_FIRST_TEMPLATE_RELATIVE_PATH,
   HEADLESS_FLY_STAGING_APP_PLACEHOLDER,
