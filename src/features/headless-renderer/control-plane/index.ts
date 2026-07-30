@@ -398,9 +398,8 @@ export {
   type HeadlessTerminalCleanupResult,
 } from "./services/headless-terminal-cleanup-coordinator";
 export {
-  claimHeadlessMaintenanceLease,
-  releaseHeadlessMaintenanceLease,
   runHeadlessExportMaintenanceBatchOnce,
+  HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
   HEADLESS_MAINTENANCE_DEFAULT_BATCH_SIZE,
   HEADLESS_MAINTENANCE_MAX_DELETIONS_PER_RUN,
   HEADLESS_MAINTENANCE_LEASE_MS,
@@ -413,6 +412,12 @@ export {
 } from "./services/headless-export-maintenance-scheduler";
 export { performOwnedObjectMaintenanceDelete } from "./services/perform-owned-object-maintenance-delete";
 export { scheduleHeadlessExportDeleteNow } from "./services/schedule-export-delete-now";
+export {
+  buildHeadlessMaintenanceHealthMetrics,
+  validateHeadlessMaintenanceHealthMetricsPrivacy,
+  type HeadlessMaintenanceHealthMetricsV1,
+} from "./services/headless-export-maintenance-health-metrics";
+export { dryRunHeadlessStagingR2LifecycleMerge } from "./services/headless-r2-lifecycle-policy-merge";
 export {
   buildHeadlessExportCleanupMetrics,
   validateHeadlessExportCleanupMetricsPrivacy,

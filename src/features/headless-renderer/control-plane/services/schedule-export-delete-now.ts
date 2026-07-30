@@ -64,6 +64,7 @@ export async function scheduleHeadlessExportDeleteNow(input: {
     return cpFail("INTERNAL_ERROR", "Export delete unavailable.");
   }
 
+  const scheduleAnchorMs = loaded.value.canonicalJob.updatedAtMs;
   const draft = {
     version: HEADLESS_ARTIFACT_CLEANUP_INTENT_VERSION,
     cleanupId: `delete_now_${input.jobId}_${loaded.value.canonicalJob.attempt}`,
@@ -75,8 +76,8 @@ export async function scheduleHeadlessExportDeleteNow(input: {
     storageLocator: binding.storageLocator,
     contentDigest: binding.contentDigest,
     reasonId: DELETE_NOW_REASON,
-    createdAtMs: input.nowMs,
-    expiresAtMs: input.nowMs,
+    createdAtMs: scheduleAnchorMs,
+    expiresAtMs: scheduleAnchorMs,
   };
   const validated = validateHeadlessArtifactCleanupIntent(draft);
   if (!validated.ok) {

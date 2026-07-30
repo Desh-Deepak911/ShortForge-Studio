@@ -2,12 +2,11 @@
  * Typed R2 lifecycle policy generation for staging headless export storage.
  *
  * Lifecycle rules are a storage backstop only — durable database authority remains
- * the source of truth for deletion eligibility. Bucket-wide expiration must never
- * target project source prefixes.
+ * the source of truth for deletion eligibility. Unrelated provider lifecycle rules
+ * are preserved during merge; only application-owned rules are compared or updated.
  */
 
 import { HEADLESS_ARTIFACT_DOWNLOAD_RETENTION_MS } from "./headless-export-retention-authority";
-import { buildHeadlessStagingArtifactPrefixPattern } from "../control-plane/services/headless-r2-lifecycle-prefix-authority";
 
 export type HeadlessR2LifecycleBucketClass = "assets" | "artifacts";
 
@@ -26,32 +25,29 @@ export type HeadlessR2LifecycleRuleSpec = {
  */
 export const HEADLESS_R2_ARTIFACT_LIFECYCLE_EXPIRATION_DAYS = 2 as const;
 
+export const HEADLESS_R2_OWNED_ARTIFACT_RULE_ID =
+  "staging-artifacts-export-prefix-lifecycle" as const;
+
+export const HEADLESS_R2_OWNED_ASSETS_RULE_ID =
+  "staging-assets-abort-incomplete-multipart-only" as const;
+
 /**
- * Builds the exact desired lifecycle policy for staging buckets.
+ * Builds the exact two owned lifecycle rules for staging buckets.
  * Does not contact providers — comparison tooling uses this spec only.
  */
 export function buildHeadlessStagingR2LifecyclePolicyRules(): readonly HeadlessR2LifecycleRuleSpec[] {
-  const artifactPrefix = buildHeadlessStagingArtifactPrefixPattern();
   return Object.freeze([
     Object.freeze({
-      ruleId: "staging-artifacts-export-prefix-expiration",
+      ruleId: HEADLESS_R2_OWNED_ARTIFACT_RULE_ID,
       bucketClass: "artifacts",
       prefixClassification: "staging_export_artifact",
       expirationDays: HEADLESS_R2_ARTIFACT_LIFECYCLE_EXPIRATION_DAYS,
       abortIncompleteMultipartUploadDays: 1,
       description:
-        "Expire finalized staging export artifacts under the canonical prefix only.",
+        "Expire finalized staging export artifacts under the canonical prefix and abort stale multipart uploads.",
     }),
     Object.freeze({
-      ruleId: "staging-artifacts-abort-incomplete-multipart",
-      bucketClass: "artifacts",
-      prefixClassification: "staging_export_artifact",
-      expirationDays: null,
-      abortIncompleteMultipartUploadDays: 1,
-      description: "Abort stale multipart uploads for staging artifact prefix.",
-    }),
-    Object.freeze({
-      ruleId: "staging-assets-abort-incomplete-multipart-only",
+      ruleId: HEADLESS_R2_OWNED_ASSETS_RULE_ID,
       bucketClass: "assets",
       prefixClassification: "none",
       expirationDays: null,
@@ -69,7 +65,7 @@ export type HeadlessR2LifecyclePolicyComparison = {
 };
 
 /**
- * Compares a sanitized live policy snapshot to the expected staging rules.
+ * Compares a sanitized live policy snapshot to the expected owned staging rules.
  * Inputs must not contain bucket names, account IDs, or credentials.
  */
 export function compareHeadlessStagingR2LifecyclePolicy(input: {

@@ -405,6 +405,8 @@ export async function runHostedWorkerEntrypoint(
             typeof env[HEADLESS_EXPORT_MAINTENANCE_ENABLE_ENV] === "string"
               ? (env[HEADLESS_EXPORT_MAINTENANCE_ENABLE_ENV] as string)
               : null,
+          leasePort: adapters.maintenanceLease,
+          maintenanceState: adapters.maintenanceState,
           cleanup: adapters.artifactCleanup,
           ownedObjectStore: adapters.ownedObjectStore,
           jobStore: adapters.jobStore,

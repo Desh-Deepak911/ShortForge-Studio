@@ -2,9 +2,11 @@
  * Scheduled export maintenance sweeps for the hosted verify worker loop.
  *
  * Reuses the existing verify process group — no additional Machine is required.
- * When maintenance is disabled, the scheduler performs no provider or database work.
+ * When maintenance is enabled, durable Neon lease and state ports are required;
+ * disabled mode performs zero lease, database, Redis or provider work.
  */
 
+import { randomUUID } from "node:crypto";
 
 import {
   evaluateHeadlessExportMaintenanceEnablement,
@@ -13,13 +15,13 @@ import {
 import type { HeadlessArtifactCleanupPort } from "../ports/artifact-cleanup.port";
 import type { HeadlessArtifactObjectIOPort } from "../ports/artifact-object-io.port";
 import type { HeadlessJobStorePort } from "../ports/job-store.port";
+import type { HeadlessMaintenanceLeasePort } from "../ports/maintenance-lease.port";
+import type { HeadlessMaintenanceStatePort } from "../ports/maintenance-state.port";
 import type { HeadlessOwnedObjectStorePort } from "../ports/owned-object-store.port";
 import {
-  claimHeadlessMaintenanceLease,
-  releaseHeadlessMaintenanceLease,
   runHeadlessExportMaintenanceBatchOnce,
+  HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
   HEADLESS_MAINTENANCE_LEASE_MS,
-  type HeadlessMaintenanceBatchCursor,
 } from "./headless-export-maintenance-batch";
 import type { HeadlessControlPlaneResult } from "../types/control-plane.types";
 
@@ -30,7 +32,7 @@ export type HeadlessMaintenanceSweepTelemetry = {
   readonly leaseContention: boolean;
 };
 
-const GLOBAL_MAINTENANCE_OWNER = "export_cleanup_global" as const;
+const GLOBAL_MAINTENANCE_OWNER = HEADLESS_MAINTENANCE_GLOBAL_SCOPE;
 
 /**
  * Creates a stoppable maintenance scheduler with bounded single-flight sweeps.
@@ -38,12 +40,15 @@ const GLOBAL_MAINTENANCE_OWNER = "export_cleanup_global" as const;
 export function createHeadlessExportMaintenanceScheduler(input: {
   readonly envName: string;
   readonly maintenanceEnabledFlag: string | null | undefined;
+  readonly leasePort: HeadlessMaintenanceLeasePort | null;
+  readonly maintenanceState: HeadlessMaintenanceStatePort | null;
   readonly cleanup: HeadlessArtifactCleanupPort;
   readonly ownedObjectStore: HeadlessOwnedObjectStorePort;
   readonly jobStore: HeadlessJobStorePort;
   readonly objectIo: HeadlessArtifactObjectIOPort;
   readonly nowMs?: () => number;
   readonly intervalMs?: number;
+  readonly holderClass?: string;
   readonly onSweep?: (telemetry: HeadlessMaintenanceSweepTelemetry) => void;
 }): {
   readonly runOnce: () => Promise<
@@ -62,7 +67,6 @@ export function createHeadlessExportMaintenanceScheduler(input: {
   let accepting = enablement.ok;
   let timer: ReturnType<typeof setInterval> | null = null;
   let sweepActive = false;
-  let cursor: HeadlessMaintenanceBatchCursor | null = null;
 
   const runOnce = async () => {
     if (!accepting || !enablement.ok) {
@@ -74,7 +78,31 @@ export function createHeadlessExportMaintenanceScheduler(input: {
       });
       return { ok: true as const, value: { processed: 0 } };
     }
+    if (
+      input.leasePort == null ||
+      input.maintenanceState == null
+    ) {
+      input.onSweep?.({
+        action: "maintenance_sweep",
+        status: "failed",
+        processed: 0,
+        leaseContention: false,
+      });
+      return {
+        ok: false as const,
+        issues: [
+          {
+            code: "CONFIGURATION_UNAVAILABLE" as const,
+            message: "Maintenance lease authority unavailable.",
+          },
+        ],
+      };
+    }
     if (sweepActive) {
+      await input.maintenanceState.recordLeaseContention({
+        scope: GLOBAL_MAINTENANCE_OWNER,
+        nowMs: nowMs(),
+      });
       input.onSweep?.({
         action: "maintenance_sweep",
         status: "skipped",
@@ -90,11 +118,29 @@ export function createHeadlessExportMaintenanceScheduler(input: {
       processed: 0,
       leaseContention: false,
     });
-    const lease = claimHeadlessMaintenanceLease({
-      ownerId: GLOBAL_MAINTENANCE_OWNER,
+    const leaseToken = randomUUID();
+    const lease = await input.leasePort.claim({
+      scope: GLOBAL_MAINTENANCE_OWNER,
+      leaseToken,
       nowMs: nowMs(),
+      leaseMs: HEADLESS_MAINTENANCE_LEASE_MS,
+      holderClass: input.holderClass ?? "verify_worker",
     });
     if (!lease.ok) {
+      sweepActive = false;
+      input.onSweep?.({
+        action: "maintenance_sweep",
+        status: "failed",
+        processed: 0,
+        leaseContention: false,
+      });
+      return lease as HeadlessControlPlaneResult<{ processed: number }>;
+    }
+    if (lease.value.kind === "lease_rejected") {
+      await input.maintenanceState.recordLeaseContention({
+        scope: GLOBAL_MAINTENANCE_OWNER,
+        nowMs: nowMs(),
+      });
       sweepActive = false;
       input.onSweep?.({
         action: "maintenance_sweep",
@@ -105,11 +151,17 @@ export function createHeadlessExportMaintenanceScheduler(input: {
       return { ok: true as const, value: { processed: 0 } };
     }
     try {
+      const cursorResult = await input.maintenanceState.readCursor({
+        scope: GLOBAL_MAINTENANCE_OWNER,
+      });
+      const cursor = cursorResult.ok ? cursorResult.value : null;
       const batch = await runHeadlessExportMaintenanceBatchOnce({
         envName: input.envName,
         ownerId: GLOBAL_MAINTENANCE_OWNER,
         nowMs,
-        leaseToken: lease.leaseToken,
+        leaseToken,
+        leasePort: input.leasePort,
+        maintenanceState: input.maintenanceState,
         cleanup: input.cleanup,
         ownedObjectStore: input.ownedObjectStore,
         jobStore: input.jobStore,
@@ -134,7 +186,19 @@ export function createHeadlessExportMaintenanceScheduler(input: {
         });
         return batch as HeadlessControlPlaneResult<{ processed: number }>;
       }
-      cursor = batch.value.nextCursor;
+      if (batch.value.status === "lease_rejected") {
+        await input.maintenanceState.recordLeaseContention({
+          scope: GLOBAL_MAINTENANCE_OWNER,
+          nowMs: nowMs(),
+        });
+        input.onSweep?.({
+          action: "maintenance_sweep",
+          status: "skipped",
+          processed: 0,
+          leaseContention: true,
+        });
+        return { ok: true as const, value: { processed: 0 } };
+      }
       input.onSweep?.({
         action: "maintenance_sweep",
         status: "completed",
@@ -143,9 +207,10 @@ export function createHeadlessExportMaintenanceScheduler(input: {
       });
       return { ok: true as const, value: { processed: batch.value.processed } };
     } finally {
-      releaseHeadlessMaintenanceLease({
-        ownerId: GLOBAL_MAINTENANCE_OWNER,
-        leaseToken: lease.leaseToken,
+      await input.leasePort.release({
+        scope: GLOBAL_MAINTENANCE_OWNER,
+        leaseToken,
+        nowMs: nowMs(),
       });
     }
   };

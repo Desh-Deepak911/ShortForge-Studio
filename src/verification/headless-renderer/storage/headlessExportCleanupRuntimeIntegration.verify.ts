@@ -7,12 +7,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import { randomUUID } from "node:crypto";
+
 import { MemoryHeadlessArtifactCleanupAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-artifact-cleanup.adapter";
 import { MemoryHeadlessOwnedObjectStoreAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-owned-object-store.adapter";
-import { resetMemoryMaintenanceLeasesForTests } from "@/features/headless-renderer/control-plane/adapters/memory-maintenance-lease.adapter";
 import {
-  claimHeadlessMaintenanceLease,
-  releaseHeadlessMaintenanceLease,
+  MemoryHeadlessMaintenanceLeaseAdapter,
+  resetMemoryMaintenanceLeasesForTests,
+} from "@/features/headless-renderer/control-plane/adapters/memory-maintenance-lease.adapter";
+import {
+  HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
   runHeadlessExportMaintenanceBatchOnce,
 } from "@/features/headless-renderer/control-plane/services/headless-export-maintenance-batch";
 import { createHeadlessExportMaintenanceScheduler } from "@/features/headless-renderer/control-plane/services/headless-export-maintenance-scheduler";
@@ -211,18 +215,27 @@ async function main() {
     assert.equal(outcome.kind, "already_absent");
   });
 
-  await test("lease prevents concurrent maintenance", () => {
+  await test("lease prevents concurrent maintenance", async () => {
     resetMemoryMaintenanceLeasesForTests();
-    const first = claimHeadlessMaintenanceLease({ ownerId: "export_cleanup_global", nowMs: 1 });
-    const second = claimHeadlessMaintenanceLease({ ownerId: "export_cleanup_global", nowMs: 2 });
+    const lease = new MemoryHeadlessMaintenanceLeaseAdapter();
+    const first = await lease.claim({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: randomUUID(),
+      nowMs: 1,
+      leaseMs: 60_000,
+      holderClass: "verify_worker",
+    });
+    const second = await lease.claim({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: randomUUID(),
+      nowMs: 2,
+      leaseMs: 60_000,
+      holderClass: "verify_worker",
+    });
     assert.equal(first.ok, true);
-    assert.equal(second.ok, false);
-    if (first.ok) {
-      releaseHeadlessMaintenanceLease({
-        ownerId: "export_cleanup_global",
-        leaseToken: first.leaseToken,
-      });
-    }
+    assert.equal(first.value.kind, "claimed");
+    assert.equal(second.ok, true);
+    assert.equal(second.value.kind, "lease_rejected");
   });
 
   await test("artifact lifecycle rule matches only staging artifact prefix", () => {
@@ -231,8 +244,9 @@ async function main() {
     assert.equal(isHeadlessProductionPrefixCandidate(prefix), false);
   });
 
-  await test("assets lifecycle has no completed-object expiration", () => {
+  await test("owned lifecycle policy contains exactly two rules", () => {
     const rules = buildHeadlessStagingR2LifecyclePolicyRules();
+    assert.equal(rules.length, 2);
     const assets = rules.filter((r) => r.bucketClass === "assets");
     assert.ok(assets.every((r) => r.expirationDays == null));
   });
@@ -303,6 +317,8 @@ async function main() {
     const scheduler = createHeadlessExportMaintenanceScheduler({
       envName: "staging",
       maintenanceEnabledFlag: "0",
+      leasePort: null,
+      maintenanceState: null,
       cleanup: new MemoryHeadlessArtifactCleanupAdapter(),
       ownedObjectStore: new MemoryHeadlessOwnedObjectStoreAdapter(),
       jobStore: new MemoryHeadlessJobStoreAdapter(),

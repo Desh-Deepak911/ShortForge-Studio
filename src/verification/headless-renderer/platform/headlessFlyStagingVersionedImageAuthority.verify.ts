@@ -84,14 +84,9 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_HOSTED_WORKER_ARTIFACT_SHA256,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_IMAGE_DIGEST,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD,
-  HEADLESS_FLY_STAGING_EXPORT_CLEANUP_RUNTIME_CAPABILITY_VERSION,
-  HEADLESS_FLY_STAGING_POST_008_MIGRATION_CHECKSUM_SHA256,
   HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
+  HEADLESS_FLY_STAGING_LOCAL_INTEGRATION_PLACEHOLDER_IMAGE_DIGEST,
+  isHeadlessFlyStagingPlaceholderImageDigest,
   HEADLESS_FLY_STAGING_MANIFEST_CONTRACT_ALIGNMENT_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_COHERENCE_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_CLEANUP_CORRECTION_CAPABILITY_VERSION,
@@ -219,9 +214,9 @@ async function main() {
     "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 34 with twenty-four immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 34);
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 24);
+  await test("authority version is frozen at 33 with twenty-three immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 33);
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 23);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
       [
@@ -248,7 +243,6 @@ async function main() {
         "post_007_2g23_frame_progress_current",
         "post_007_2g24_export_correctness_prospective",
         "post_007_2g24_export_correctness_current",
-        "post_007_2g25_cleanup_runtime_prospective",
       ],
     );
   });
@@ -745,48 +739,17 @@ async function main() {
     );
   });
 
-  await test("2G.25 prospective record binds cleanup-runtime artifacts and is not deployment-eligible", () => {
-    const record =
-      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD;
-    assert.equal(
-      record.imageDigestSha256,
-      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_IMAGE_DIGEST,
-    );
-    assert.equal(
-      record.hostedWorkerArtifactSha256,
-      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_HOSTED_WORKER_ARTIFACT_SHA256,
-    );
-    assert.equal(
-      record.hostedPageArtifactSha256,
-      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
-    );
-    assert.equal(
-      record.pageTelemetryCapabilityVersion,
-      HEADLESS_FLY_STAGING_EXPORT_CLEANUP_RUNTIME_CAPABILITY_VERSION,
-    );
-    assert.equal(
-      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
-      "be2ea06854ea298f8da2da58de07e3799be391244ed17224f91ec14c6f0ab369",
-    );
-    assert.equal(
-      record.schemaFingerprint.checksumSha256.at(-1),
-      HEADLESS_FLY_STAGING_POST_008_MIGRATION_CHECKSUM_SHA256,
-    );
-    assert.equal(record.lifecycle, "historical");
-    assert.equal(record.eligibleForCurrentStagingReadiness, false);
-    assert.equal(record.eligibleForRenderLiveHarness, false);
-    assert.equal(record.eligibleForVerifyLiveHarness, false);
-    assert.notEqual(
-      record.imageDigestSha256,
-      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
-    );
+  await test("immutable versioned records reject placeholder image digests", () => {
+    for (const record of HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS) {
+      assert.equal(isHeadlessFlyStagingPlaceholderImageDigest(record.imageDigestSha256), false);
+    }
   });
 
-  await test("current selector resolves 2G.24 export-correctness; prospective resolves 2G.25 cleanup-runtime", () => {
+  await test("current and prospective selectors resolve 2G.24 export-correctness current", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(current.recordId, "post_007_2g24_export_correctness_current");
-    assert.equal(prospective.recordId, "post_007_2g25_cleanup_runtime_prospective");
+    assert.equal(prospective.recordId, "post_007_2g24_export_correctness_current");
     assert.equal(
       resolveProspectiveFlyStaging8i3ArtifactBindingCoherenceImageRecord().recordId,
       "post_007_8i3_artifact_binding_coherence_historical",
