@@ -22,11 +22,13 @@ import {
   evaluateOwnedObjectDeletionAuthority,
   type HeadlessOwnedObjectDeletionExpectation,
 } from "./evaluate-owned-object-deletion-authority";
-import { cpOk, type HeadlessControlPlaneResult } from "../types/control-plane.types";
+import { performOwnedObjectMaintenanceDelete } from "./perform-owned-object-maintenance-delete";
+import { cpOk, cpFail, type HeadlessControlPlaneResult } from "../types/control-plane.types";
 
 export const HEADLESS_MAINTENANCE_DEFAULT_BATCH_SIZE = 25 as const;
 export const HEADLESS_MAINTENANCE_MAX_DELETIONS_PER_RUN = 50 as const;
 export const HEADLESS_MAINTENANCE_LEASE_MS = 120_000 as const;
+export const HEADLESS_MAINTENANCE_MAX_RUNTIME_MS = 120_000 as const;
 
 export type HeadlessMaintenanceBatchCursor = {
   readonly ownerId: string;
@@ -95,11 +97,11 @@ export function releaseHeadlessMaintenanceLease(input: {
 }
 
 /**
- * Processes one bounded maintenance batch using durable deletion authority only.
+ * Processes one bounded maintenance batch using durable deletion authority.
  *
- * Does not perform provider deletes directly — artifact orphan intents are
- * replayed through the existing deletion saga. Dry-run mode classifies items
- * without mutating storage.
+ * Provider deletes run only after reference-safe eligibility is proven. Lifecycle
+ * policy is never treated as deletion authority. Dry-run mode classifies without
+ * contacting object storage.
  */
 export async function runHeadlessExportMaintenanceBatchOnce(input: {
   readonly envName: string;
@@ -114,7 +116,9 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
   readonly cursor?: HeadlessMaintenanceBatchCursor | null;
   readonly batchSize?: number;
   readonly maxDeletions?: number;
+  readonly maxRuntimeMs?: number;
   readonly dryRun?: boolean;
+  readonly startedAtMs?: number;
   readonly countExternalReferences?: (input: {
     readonly objectId: string;
     readonly ownerId: string;
@@ -168,11 +172,19 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
   }
 
   const batchSize = input.batchSize ?? HEADLESS_MAINTENANCE_DEFAULT_BATCH_SIZE;
+  const maxDeletions =
+    input.maxDeletions ?? HEADLESS_MAINTENANCE_MAX_DELETIONS_PER_RUN;
+  const maxRuntimeMs =
+    input.maxRuntimeMs ?? HEADLESS_MAINTENANCE_MAX_RUNTIME_MS;
+  const startedAtMs = input.startedAtMs ?? input.nowMs();
   const items: HeadlessMaintenanceBatchItemResult[] = [];
   let rejectedUnsafe = 0;
   let projectSourceAttempts = 0;
   let orphanCandidates = 0;
   let expiredArtifacts = 0;
+  let deletionCount = 0;
+  let cleanupSuccesses = 0;
+  let cleanupFailures = 0;
 
   const intentBatch = await processHeadlessArtifactCleanupOnce({
     cleanup: input.cleanup,
@@ -181,15 +193,23 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
     objectIo: input.objectIo,
     ownerId: input.ownerId,
     nowMs: input.nowMs,
-    limit: batchSize,
+    limit: Math.min(batchSize, maxDeletions),
   });
-  if (intentBatch.ok) {
+  if (!intentBatch.ok) {
+    return cpFail(
+      intentBatch.issues[0]?.code ?? "INTERNAL_ERROR",
+      "Cleanup intent batch incoherent.",
+    ) as HeadlessControlPlaneResult<HeadlessMaintenanceBatchResult>;
+  }
+  if (intentBatch.value.processed > 0) {
     items.push(
       Object.freeze({
         kind: "retry_scheduled",
         classification: "cleanup_intent_batch",
       }),
     );
+    cleanupSuccesses += intentBatch.value.completed;
+    cleanupFailures += intentBatch.value.retryableFailed;
   }
 
   const candidates = await input.ownedObjectStore.listCleanupCandidates({
@@ -203,6 +223,19 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
   let processed = 0;
   for (const stored of candidates.value) {
     if (processed >= batchSize) break;
+    if (deletionCount >= maxDeletions) break;
+    if (input.nowMs() - startedAtMs >= maxRuntimeMs) break;
+    if (stored.record.ownerId !== input.ownerId) {
+      rejectedUnsafe += 1;
+      items.push(
+        Object.freeze({
+          kind: "rejected",
+          classification: "cross_owner",
+        }),
+      );
+      processed += 1;
+      continue;
+    }
     const record = stored.record;
     orphanCandidates += 1;
     const job = await input.jobStore.getByJobIdAndOwner(
@@ -229,7 +262,13 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
       })) ?? 0;
 
     const decision = evaluateOwnedObjectDeletionAuthority({
-      expectation: input.expectation,
+      expectation: {
+        ...input.expectation,
+        ownerId: record.ownerId,
+        projectId: record.projectId,
+        jobId: record.jobId,
+        operationId: record.operationId,
+      },
       job: job.value,
       record,
       locator: {
@@ -253,9 +292,6 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
       ) {
         rejectedUnsafe += 1;
       }
-      if (decision.safeClassification === "downloadable_artifact") {
-        expiredArtifacts += 0;
-      }
       items.push(
         Object.freeze({
           kind: decision.kind === "protected" ? "protected" : "rejected",
@@ -277,22 +313,54 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
           classification: decision.deletionClass,
         }),
       );
-    } else {
+      processed += 1;
+      continue;
+    }
+
+    const deleteOutcome = await performOwnedObjectMaintenanceDelete({
+      stored,
+      decision,
+      ownedObjectStore: input.ownedObjectStore,
+      objectIo: input.objectIo,
+      nowMs: input.nowMs(),
+    });
+    deletionCount += 1;
+    if (deleteOutcome.kind === "deleted" || deleteOutcome.kind === "already_absent") {
+      cleanupSuccesses += 1;
       items.push(
         Object.freeze({
-          kind: "dry_run_eligible",
-          classification: decision.deletionClass,
+          kind: deleteOutcome.kind === "already_absent" ? "already_absent" : "deleted",
+          classification: deleteOutcome.classification,
         }),
       );
+    } else if (deleteOutcome.kind === "retryable" || deleteOutcome.kind === "unconfirmed") {
+      cleanupFailures += 1;
+      items.push(
+        Object.freeze({
+          kind: "retry_scheduled",
+          classification: deleteOutcome.classification,
+        }),
+      );
+    } else {
+      rejectedUnsafe += 1;
+      items.push(
+        Object.freeze({
+          kind: "rejected",
+          classification: deleteOutcome.classification,
+        }),
+      );
+      if (deleteOutcome.classification === "provider_authorization") {
+        break;
+      }
     }
     processed += 1;
   }
 
   const metrics = buildHeadlessExportCleanupMetrics({
-    cleanupAttempts: processed,
-    cleanupSuccesses: items.filter((i) => i.kind === "dry_run_eligible").length,
-    cleanupFailures: items.filter((i) => i.kind === "rejected").length,
-    retryBacklog: intentBatch.ok ? intentBatch.value.retryableFailed : 0,
+    cleanupAttempts: processed + (intentBatch.value.processed ?? 0),
+    cleanupSuccesses,
+    cleanupFailures,
+    retryBacklog: intentBatch.value.retryableFailed,
     rejectedUnsafeDeletions: rejectedUnsafe,
     projectSourceDeletionAttempts: projectSourceAttempts,
     expiredArtifactCount: expiredArtifacts,

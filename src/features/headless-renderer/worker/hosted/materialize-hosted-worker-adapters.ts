@@ -152,6 +152,7 @@ export function materializeHostedWorkerAdapters(input: {
           claimToken: hookInput.claimToken,
           jobStore,
           artifactCleanup,
+          envName: input.config.envName,
           signal: hookInput.signal,
           nowMs: () => Date.now(),
           boundaryTelemetry,

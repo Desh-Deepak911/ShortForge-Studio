@@ -408,6 +408,12 @@ export {
   type HeadlessMaintenanceBatchResult,
 } from "./services/headless-export-maintenance-batch";
 export {
+  createHeadlessExportMaintenanceScheduler,
+  type HeadlessMaintenanceSweepTelemetry,
+} from "./services/headless-export-maintenance-scheduler";
+export { performOwnedObjectMaintenanceDelete } from "./services/perform-owned-object-maintenance-delete";
+export { scheduleHeadlessExportDeleteNow } from "./services/schedule-export-delete-now";
+export {
   buildHeadlessExportCleanupMetrics,
   validateHeadlessExportCleanupMetricsPrivacy,
   type HeadlessExportCleanupMetricsV1,
