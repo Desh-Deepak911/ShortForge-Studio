@@ -1,32 +1,37 @@
 /**
  * Provider-independent maintenance batch for export cleanup and retention.
  *
- * Consumes durable eligibility only — never contacts object storage directly.
- * A later phase wires this core to a scheduler; overlapping runs are rejected
- * through a lease/claim boundary.
+ * Consumes durable eligibility only. Provider deletes require an active durable
+ * lease fencing token; stale holders cannot persist outcomes or advance cursors.
+ * Database or lease incoherence fail closed with zero provider deletion.
  */
-
-import { randomUUID } from "node:crypto";
 
 import { assertHeadlessCleanupStagingEnvironment } from "../../domain/headless-export-retention-authority";
 import type { HeadlessArtifactCleanupPort } from "../ports/artifact-cleanup.port";
 import type { HeadlessArtifactObjectIOPort } from "../ports/artifact-object-io.port";
 import type { HeadlessJobStorePort } from "../ports/job-store.port";
+import type { HeadlessMaintenanceLeasePort } from "../ports/maintenance-lease.port";
+import type { HeadlessMaintenanceStatePort } from "../ports/maintenance-state.port";
 import type { HeadlessOwnedObjectStorePort } from "../ports/owned-object-store.port";
 import {
   buildHeadlessExportCleanupMetrics,
   type HeadlessExportCleanupMetricsV1,
 } from "./headless-export-cleanup-metrics";
+
 import { processHeadlessArtifactCleanupOnce } from "./process-artifact-cleanup";
 import {
   evaluateOwnedObjectDeletionAuthority,
   type HeadlessOwnedObjectDeletionExpectation,
 } from "./evaluate-owned-object-deletion-authority";
-import { cpOk, type HeadlessControlPlaneResult } from "../types/control-plane.types";
+import { performOwnedObjectMaintenanceDelete } from "./perform-owned-object-maintenance-delete";
+import { cpOk, cpFail, type HeadlessControlPlaneResult } from "../types/control-plane.types";
 
 export const HEADLESS_MAINTENANCE_DEFAULT_BATCH_SIZE = 25 as const;
 export const HEADLESS_MAINTENANCE_MAX_DELETIONS_PER_RUN = 50 as const;
 export const HEADLESS_MAINTENANCE_LEASE_MS = 120_000 as const;
+export const HEADLESS_MAINTENANCE_MAX_RUNTIME_MS = 120_000 as const;
+
+export const HEADLESS_MAINTENANCE_GLOBAL_SCOPE = "export_cleanup_global" as const;
 
 export type HeadlessMaintenanceBatchCursor = {
   readonly ownerId: string;
@@ -49,63 +54,48 @@ export type HeadlessMaintenanceBatchResult = {
   readonly nextCursor: HeadlessMaintenanceBatchCursor | null;
 };
 
-type MaintenanceLeaseRecord = {
+function emptyMetrics(): HeadlessExportCleanupMetricsV1 {
+  return buildHeadlessExportCleanupMetrics({
+    cleanupAttempts: 0,
+    cleanupSuccesses: 0,
+    cleanupFailures: 0,
+    retryBacklog: 0,
+    rejectedUnsafeDeletions: 0,
+    projectSourceDeletionAttempts: 0,
+    expiredArtifactCount: 0,
+    orphanCandidates: 0,
+    storedArtifactCount: 0,
+    estimatedStoredArtifactBytesClass: "unknown",
+    oldestPendingCleanupAgeClass: "none",
+  });
+}
+
+async function assertLeaseFence(input: {
+  readonly leasePort: HeadlessMaintenanceLeasePort;
   readonly leaseToken: string;
-  readonly ownerId: string;
-  readonly expiresAtMs: number;
-};
-
-const inMemoryLeases = new Map<string, MaintenanceLeaseRecord>();
-
-/**
- * Claims an exclusive maintenance lease for one owner scope. Concurrent claims
- * fail closed until the prior lease expires.
- */
-export function claimHeadlessMaintenanceLease(input: {
-  readonly ownerId: string;
   readonly nowMs: number;
-  readonly leaseMs?: number;
-}):
-  | { readonly ok: true; readonly leaseToken: string }
-  | { readonly ok: false; readonly reason: "lease_rejected" } {
-  const existing = inMemoryLeases.get(input.ownerId);
-  if (existing != null && existing.expiresAtMs > input.nowMs) {
-    return { ok: false, reason: "lease_rejected" };
-  }
-  const leaseToken = randomUUID();
-  inMemoryLeases.set(
-    input.ownerId,
-    Object.freeze({
-      leaseToken,
-      ownerId: input.ownerId,
-      expiresAtMs: input.nowMs + (input.leaseMs ?? HEADLESS_MAINTENANCE_LEASE_MS),
-    }),
-  );
-  return { ok: true, leaseToken };
-}
-
-export function releaseHeadlessMaintenanceLease(input: {
-  readonly ownerId: string;
-  readonly leaseToken: string;
-}): void {
-  const existing = inMemoryLeases.get(input.ownerId);
-  if (existing?.leaseToken === input.leaseToken) {
-    inMemoryLeases.delete(input.ownerId);
-  }
+}) {
+  return input.leasePort.assertActiveLease({
+    scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+    leaseToken: input.leaseToken,
+    nowMs: input.nowMs,
+  });
 }
 
 /**
- * Processes one bounded maintenance batch using durable deletion authority only.
+ * Processes one bounded maintenance batch using durable deletion authority.
  *
- * Does not perform provider deletes directly — artifact orphan intents are
- * replayed through the existing deletion saga. Dry-run mode classifies items
- * without mutating storage.
+ * Provider deletes run only after reference-safe eligibility is proven and the
+ * active lease fencing token is validated. Lifecycle policy is never treated as
+ * deletion authority.
  */
 export async function runHeadlessExportMaintenanceBatchOnce(input: {
   readonly envName: string;
   readonly ownerId: string;
   readonly nowMs: () => number;
   readonly leaseToken: string;
+  readonly leasePort: HeadlessMaintenanceLeasePort;
+  readonly maintenanceState: HeadlessMaintenanceStatePort;
   readonly cleanup: HeadlessArtifactCleanupPort;
   readonly ownedObjectStore: HeadlessOwnedObjectStorePort;
   readonly jobStore: HeadlessJobStorePort;
@@ -114,7 +104,9 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
   readonly cursor?: HeadlessMaintenanceBatchCursor | null;
   readonly batchSize?: number;
   readonly maxDeletions?: number;
+  readonly maxRuntimeMs?: number;
   readonly dryRun?: boolean;
+  readonly startedAtMs?: number;
   readonly countExternalReferences?: (input: {
     readonly objectId: string;
     readonly ownerId: string;
@@ -127,52 +119,45 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
       status: "environment_rejected",
       processed: 0,
       items: Object.freeze([]),
-      metrics: buildHeadlessExportCleanupMetrics({
-        cleanupAttempts: 0,
-        cleanupSuccesses: 0,
-        cleanupFailures: 0,
-        retryBacklog: 0,
-        rejectedUnsafeDeletions: 0,
-        projectSourceDeletionAttempts: 0,
-        expiredArtifactCount: 0,
-        orphanCandidates: 0,
-        storedArtifactCount: 0,
-        estimatedStoredArtifactBytesClass: "unknown",
-        oldestPendingCleanupAgeClass: "none",
-      }),
+      metrics: emptyMetrics(),
       nextCursor: null,
     });
   }
 
-  const lease = inMemoryLeases.get(input.ownerId);
-  if (lease?.leaseToken !== input.leaseToken || lease.expiresAtMs <= input.nowMs()) {
+  const leaseCheck = await assertLeaseFence({
+    leasePort: input.leasePort,
+    leaseToken: input.leaseToken,
+    nowMs: input.nowMs(),
+  });
+  if (!leaseCheck.ok) {
+    return leaseCheck as HeadlessControlPlaneResult<HeadlessMaintenanceBatchResult>;
+  }
+  if (leaseCheck.value.kind === "stale") {
     return cpOk({
       status: "lease_rejected",
       processed: 0,
       items: Object.freeze([]),
-      metrics: buildHeadlessExportCleanupMetrics({
-        cleanupAttempts: 0,
-        cleanupSuccesses: 0,
-        cleanupFailures: 0,
-        retryBacklog: 0,
-        rejectedUnsafeDeletions: 0,
-        projectSourceDeletionAttempts: 0,
-        expiredArtifactCount: 0,
-        orphanCandidates: 0,
-        storedArtifactCount: 0,
-        estimatedStoredArtifactBytesClass: "unknown",
-        oldestPendingCleanupAgeClass: "none",
-      }),
+      metrics: emptyMetrics(),
       nextCursor: input.cursor ?? null,
     });
   }
 
   const batchSize = input.batchSize ?? HEADLESS_MAINTENANCE_DEFAULT_BATCH_SIZE;
+  const maxDeletions =
+    input.maxDeletions ?? HEADLESS_MAINTENANCE_MAX_DELETIONS_PER_RUN;
+  const maxRuntimeMs =
+    input.maxRuntimeMs ?? HEADLESS_MAINTENANCE_MAX_RUNTIME_MS;
+  const startedAtMs = input.startedAtMs ?? input.nowMs();
   const items: HeadlessMaintenanceBatchItemResult[] = [];
   let rejectedUnsafe = 0;
   let projectSourceAttempts = 0;
   let orphanCandidates = 0;
   let expiredArtifacts = 0;
+  let deletionCount = 0;
+  let cleanupSuccesses = 0;
+  let cleanupFailures = 0;
+  let providerDeletionSuccesses = 0;
+  let providerDeletionFailures = 0;
 
   const intentBatch = await processHeadlessArtifactCleanupOnce({
     cleanup: input.cleanup,
@@ -181,15 +166,35 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
     objectIo: input.objectIo,
     ownerId: input.ownerId,
     nowMs: input.nowMs,
-    limit: batchSize,
+    limit: Math.min(batchSize, maxDeletions),
   });
-  if (intentBatch.ok) {
+  if (!intentBatch.ok) {
+    await input.maintenanceState.recordSweepOutcome({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: input.leaseToken,
+      nowMs: input.nowMs(),
+      outcome: "failure",
+      providerDeletionSuccesses: 0,
+      providerDeletionFailures: 0,
+      unsafeDeletionRejections: rejectedUnsafe,
+      projectSourceDeletionAttempts: projectSourceAttempts,
+      cleanupBacklogCount: orphanCandidates,
+      oldestPendingCleanupAgeClass: orphanCandidates > 0 ? "hours" : "none",
+    });
+    return cpFail(
+      intentBatch.issues[0]?.code ?? "INTERNAL_ERROR",
+      "Cleanup intent batch incoherent.",
+    ) as HeadlessControlPlaneResult<HeadlessMaintenanceBatchResult>;
+  }
+  if (intentBatch.value.processed > 0) {
     items.push(
       Object.freeze({
         kind: "retry_scheduled",
         classification: "cleanup_intent_batch",
       }),
     );
+    cleanupSuccesses += intentBatch.value.completed;
+    cleanupFailures += intentBatch.value.retryableFailed;
   }
 
   const candidates = await input.ownedObjectStore.listCleanupCandidates({
@@ -197,12 +202,49 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
     nowMs: input.nowMs(),
   });
   if (!candidates.ok) {
+    await input.maintenanceState.recordSweepOutcome({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: input.leaseToken,
+      nowMs: input.nowMs(),
+      outcome: "failure",
+      providerDeletionSuccesses,
+      providerDeletionFailures,
+      unsafeDeletionRejections: rejectedUnsafe,
+      projectSourceDeletionAttempts: projectSourceAttempts,
+      cleanupBacklogCount: orphanCandidates,
+      oldestPendingCleanupAgeClass: "none",
+    });
     return candidates as HeadlessControlPlaneResult<HeadlessMaintenanceBatchResult>;
   }
 
   let processed = 0;
+  let nextCursor: HeadlessMaintenanceBatchCursor | null = input.cursor ?? null;
+
   for (const stored of candidates.value) {
     if (processed >= batchSize) break;
+    if (deletionCount >= maxDeletions) break;
+    if (input.nowMs() - startedAtMs >= maxRuntimeMs) break;
+
+    const fence = await assertLeaseFence({
+      leasePort: input.leasePort,
+      leaseToken: input.leaseToken,
+      nowMs: input.nowMs(),
+    });
+    if (!fence.ok || fence.value.kind === "stale") {
+      break;
+    }
+
+    if (stored.record.ownerId !== input.ownerId) {
+      rejectedUnsafe += 1;
+      items.push(
+        Object.freeze({
+          kind: "rejected",
+          classification: "cross_owner",
+        }),
+      );
+      processed += 1;
+      continue;
+    }
     const record = stored.record;
     orphanCandidates += 1;
     const job = await input.jobStore.getByJobIdAndOwner(
@@ -229,7 +271,13 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
       })) ?? 0;
 
     const decision = evaluateOwnedObjectDeletionAuthority({
-      expectation: input.expectation,
+      expectation: {
+        ...input.expectation,
+        ownerId: record.ownerId,
+        projectId: record.projectId,
+        jobId: record.jobId,
+        operationId: record.operationId,
+      },
       job: job.value,
       record,
       locator: {
@@ -253,9 +301,6 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
       ) {
         rejectedUnsafe += 1;
       }
-      if (decision.safeClassification === "downloadable_artifact") {
-        expiredArtifacts += 0;
-      }
       items.push(
         Object.freeze({
           kind: decision.kind === "protected" ? "protected" : "rejected",
@@ -277,22 +322,67 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
           classification: decision.deletionClass,
         }),
       );
-    } else {
+      processed += 1;
+      continue;
+    }
+
+    const deleteOutcome = await performOwnedObjectMaintenanceDelete({
+      stored,
+      decision,
+      ownedObjectStore: input.ownedObjectStore,
+      objectIo: input.objectIo,
+      nowMs: input.nowMs(),
+    });
+    deletionCount += 1;
+    if (deleteOutcome.kind === "deleted" || deleteOutcome.kind === "already_absent") {
+      cleanupSuccesses += 1;
+      providerDeletionSuccesses += 1;
       items.push(
         Object.freeze({
-          kind: "dry_run_eligible",
-          classification: decision.deletionClass,
+          kind: deleteOutcome.kind === "already_absent" ? "already_absent" : "deleted",
+          classification: deleteOutcome.classification,
         }),
       );
+    } else if (deleteOutcome.kind === "retryable" || deleteOutcome.kind === "unconfirmed") {
+      cleanupFailures += 1;
+      providerDeletionFailures += 1;
+      items.push(
+        Object.freeze({
+          kind: "retry_scheduled",
+          classification: deleteOutcome.classification,
+        }),
+      );
+    } else {
+      rejectedUnsafe += 1;
+      items.push(
+        Object.freeze({
+          kind: "rejected",
+          classification: deleteOutcome.classification,
+        }),
+      );
+      if (deleteOutcome.classification === "provider_authorization") {
+        break;
+      }
     }
     processed += 1;
   }
 
+  if (candidates.value.length > 0) {
+    nextCursor = Object.freeze({
+      ownerId: input.ownerId,
+      lastObjectId:
+        candidates.value[candidates.value.length - 1]?.record.objectId ?? null,
+    });
+  }
+
+  const oldestPendingCleanupAgeClass =
+    orphanCandidates > 0 ? "hours" : "none";
+
   const metrics = buildHeadlessExportCleanupMetrics({
-    cleanupAttempts: processed,
-    cleanupSuccesses: items.filter((i) => i.kind === "dry_run_eligible").length,
-    cleanupFailures: items.filter((i) => i.kind === "rejected").length,
-    retryBacklog: intentBatch.ok ? intentBatch.value.retryableFailed : 0,
+    cleanupAttempts: processed + (intentBatch.value.processed ?? 0),
+    cleanupSuccesses,
+    cleanupFailures,
+    retryBacklog: intentBatch.value.retryableFailed,
     rejectedUnsafeDeletions: rejectedUnsafe,
     projectSourceDeletionAttempts: projectSourceAttempts,
     expiredArtifactCount: expiredArtifacts,
@@ -302,23 +392,54 @@ export async function runHeadlessExportMaintenanceBatchOnce(input: {
     ).length,
     estimatedStoredArtifactBytesClass:
       candidates.value.length > 10 ? "large" : "small",
-    oldestPendingCleanupAgeClass:
-      orphanCandidates > 0 ? "hours" : "none",
+    oldestPendingCleanupAgeClass,
   });
+
+  const sweepOutcome = await input.maintenanceState.recordSweepOutcome({
+    scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+    leaseToken: input.leaseToken,
+    nowMs: input.nowMs(),
+    outcome: "success",
+    providerDeletionSuccesses,
+    providerDeletionFailures,
+    unsafeDeletionRejections: rejectedUnsafe,
+    projectSourceDeletionAttempts: projectSourceAttempts,
+    cleanupBacklogCount: orphanCandidates,
+    oldestPendingCleanupAgeClass,
+  });
+  if (sweepOutcome.ok && sweepOutcome.value.kind === "stale_fence") {
+    return cpOk({
+      status: "lease_rejected",
+      processed,
+      items: Object.freeze(items),
+      metrics,
+      nextCursor: input.cursor ?? null,
+    });
+  }
+
+  if (nextCursor != null) {
+    const cursorAdvance = await input.maintenanceState.advanceCursor({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: input.leaseToken,
+      nowMs: input.nowMs(),
+      cursor: nextCursor,
+    });
+    if (cursorAdvance.ok && cursorAdvance.value.kind === "stale_fence") {
+      return cpOk({
+        status: "lease_rejected",
+        processed,
+        items: Object.freeze(items),
+        metrics,
+        nextCursor: input.cursor ?? null,
+      });
+    }
+  }
 
   return cpOk({
     status: "completed",
     processed,
     items: Object.freeze(items),
     metrics,
-    nextCursor:
-      candidates.value.length > 0
-        ? Object.freeze({
-            ownerId: input.ownerId,
-            lastObjectId:
-              candidates.value[candidates.value.length - 1]?.record.objectId ??
-              null,
-          })
-        : input.cursor ?? null,
+    nextCursor,
   });
 }

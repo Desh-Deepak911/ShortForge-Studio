@@ -389,7 +389,7 @@ export const HEADLESS_FLY_STAGING_FRAME_PROGRESS_CAPABILITY_VERSION =
 export const HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION =
   "2G.24" as const;
 
-/** Migration 007 checksum — bound to post-007 records (historical + current). */
+/** Migration 007 checksum — bound to post-007 records through migration 007 only. */
 export const HEADLESS_FLY_STAGING_POST_007_MIGRATION_CHECKSUM_SHA256 =
   "699a3565d7e12bf9245891e47a1a20a425a0d266fcdaf4b03bd9515611c60244" as const;
 
@@ -413,11 +413,27 @@ function buildSchemaFingerprint(
 
 const PRE_007_MIGRATIONS = Object.freeze(
   HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT.migrations.filter(
-    (m) => m.migrationId !== "007_headless_owned_object_slot_key_capacity",
+    (m) =>
+      m.migrationId !== "007_headless_owned_object_slot_key_capacity" &&
+      m.migrationId !== "008_headless_export_maintenance_lease",
   ),
 );
 
-const POST_007_MIGRATIONS = HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT.migrations;
+const POST_007_MIGRATIONS = Object.freeze(
+  HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT.migrations.filter(
+    (m) => m.migrationId !== "008_headless_export_maintenance_lease",
+  ),
+);
+
+/** Local-only digest marker — must never appear in immutable versioned image records. */
+export const HEADLESS_FLY_STAGING_LOCAL_INTEGRATION_PLACEHOLDER_IMAGE_DIGEST =
+  "0223f439a3b0144e15a8ae08ff531f1c330dc9a4aaae14279906586318ecc977" as const;
+
+export function isHeadlessFlyStagingPlaceholderImageDigest(
+  digest: unknown,
+): digest is string {
+  return digest === HEADLESS_FLY_STAGING_LOCAL_INTEGRATION_PLACEHOLDER_IMAGE_DIGEST;
+}
 
 export const HEADLESS_FLY_STAGING_PRE_007_HISTORICAL_IMAGE_RECORD =
   Object.freeze({

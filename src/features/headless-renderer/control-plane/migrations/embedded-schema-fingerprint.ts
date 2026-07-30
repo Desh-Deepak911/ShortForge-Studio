@@ -62,6 +62,11 @@ export const HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT: HeadlessEmbeddedSchemaFingerp
         checksumSha256:
           "699a3565d7e12bf9245891e47a1a20a425a0d266fcdaf4b03bd9515611c60244",
       }),
+      Object.freeze({
+        migrationId: "008_headless_export_maintenance_lease",
+        checksumSha256:
+          "5ed409d7e0bc42b44c38d74ee99f6f94de541c6cce5b31e39c39bd6d2b99f3de",
+      }),
     ]),
   });
 

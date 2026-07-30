@@ -8,6 +8,8 @@
  * render composition wiring; consumer loop still packaging-blocked.
  */
 
+import { NeonHeadlessMaintenanceLeaseAdapter } from "../../control-plane/adapters/neon-maintenance-lease.adapter";
+import { NeonHeadlessMaintenanceStateAdapter } from "../../control-plane/adapters/neon-maintenance-state.adapter";
 import { NeonHeadlessArtifactCleanupAdapter } from "../../control-plane/adapters/neon-artifact-cleanup.adapter";
 import { NeonHeadlessJobStoreAdapter } from "../../control-plane/adapters/neon-job-store.adapter";
 import { NeonHeadlessOwnedObjectStoreAdapter } from "../../control-plane/adapters/neon-owned-object-store.adapter";
@@ -18,6 +20,8 @@ import {
   type HostedJobBoundStorageContext,
 } from "../../control-plane/adapters/r2-job-bound-storage.adapter";
 import { R2StorageAdapter } from "../../control-plane/adapters/r2-storage.adapter";
+import type { HeadlessMaintenanceLeasePort } from "../../control-plane/ports/maintenance-lease.port";
+import type { HeadlessMaintenanceStatePort } from "../../control-plane/ports/maintenance-state.port";
 import type { HeadlessArtifactCleanupPort } from "../../control-plane/ports/artifact-cleanup.port";
 import type { HeadlessJobStorePort } from "../../control-plane/ports/job-store.port";
 import type { HeadlessOwnedObjectStorePort } from "../../control-plane/ports/owned-object-store.port";
@@ -57,6 +61,8 @@ export function materializeHostedWorkerAdapters(input: {
   readonly jobStore: HeadlessJobStorePort;
   readonly ownedObjectStore: HeadlessOwnedObjectStorePort;
   readonly artifactCleanup: HeadlessArtifactCleanupPort;
+  readonly maintenanceLease: HeadlessMaintenanceLeasePort;
+  readonly maintenanceState: HeadlessMaintenanceStatePort;
   readonly dispatchOutbox: HeadlessRenderDispatchOutboxPort;
   readonly streamQueue: HeadlessStreamQueuePort & {
     close?: () => Promise<void>;
@@ -108,6 +114,8 @@ export function materializeHostedWorkerAdapters(input: {
   const jobStore = new NeonHeadlessJobStoreAdapter(sql);
   const ownedObjectStore = new NeonHeadlessOwnedObjectStoreAdapter(sql);
   const artifactCleanup = new NeonHeadlessArtifactCleanupAdapter(sql);
+  const maintenanceLease = new NeonHeadlessMaintenanceLeaseAdapter(sql);
+  const maintenanceState = new NeonHeadlessMaintenanceStateAdapter(sql);
   const dispatchOutbox = new NeonHeadlessRenderDispatchOutboxAdapter(sql);
   const streamQueue = new UpstashTcpStreamConsumerAdapter({
     config: upstashConfig,
@@ -122,6 +130,8 @@ export function materializeHostedWorkerAdapters(input: {
     jobStore,
     ownedObjectStore,
     artifactCleanup,
+    maintenanceLease,
+    maintenanceState,
     dispatchOutbox,
     streamQueue,
     r2ObjectIo,
@@ -152,6 +162,7 @@ export function materializeHostedWorkerAdapters(input: {
           claimToken: hookInput.claimToken,
           jobStore,
           artifactCleanup,
+          envName: input.config.envName,
           signal: hookInput.signal,
           nowMs: () => Date.now(),
           boundaryTelemetry,

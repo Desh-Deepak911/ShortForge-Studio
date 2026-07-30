@@ -85,6 +85,8 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
+  HEADLESS_FLY_STAGING_LOCAL_INTEGRATION_PLACEHOLDER_IMAGE_DIGEST,
+  isHeadlessFlyStagingPlaceholderImageDigest,
   HEADLESS_FLY_STAGING_MANIFEST_CONTRACT_ALIGNMENT_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_COHERENCE_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_CLEANUP_CORRECTION_CAPABILITY_VERSION,
@@ -735,6 +737,12 @@ async function main() {
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_POST_007_2G23_FRAME_PROGRESS_IMAGE_DIGEST,
     );
+  });
+
+  await test("immutable versioned records reject placeholder image digests", () => {
+    for (const record of HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS) {
+      assert.equal(isHeadlessFlyStagingPlaceholderImageDigest(record.imageDigestSha256), false);
+    }
   });
 
   await test("current and prospective selectors resolve 2G.24 export-correctness current", () => {

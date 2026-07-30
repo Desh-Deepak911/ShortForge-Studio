@@ -23,9 +23,11 @@ import type {
   HeadlessObjectMetadata,
   HeadlessStoragePort,
 } from "../../control-plane/ports/storage.port";
-import { deriveAttemptBoundArtifactObjectId } from "../../control-plane/services/attempt-bound-artifact-key";
-import { deleteOrScheduleArtifactCleanup } from "../../control-plane/services/schedule-artifact-cleanup";
 import { evaluateArtifactObjectBindingCoherence } from "../../control-plane/services/evaluate-artifact-object-binding-coherence";
+import {
+  createClaimedRenderTerminalCleanupSession,
+  deriveClaimedRenderOrphanObjectId,
+} from "./claimed-render-terminal-cleanup-runtime";
 import type { HeadlessArtifactCleanupReasonId } from "../../control-plane/types/artifact-cleanup-intent";
 import type { HeadlessCanonicalStoredJobRecord } from "../../control-plane/types/stored-job-record";
 import type { HeadlessStorageLocatorIdentity } from "../../domain/headless-render.types";
@@ -126,6 +128,8 @@ export type ExecuteClaimedRenderInput = {
   readonly signal?: AbortSignal;
   readonly nowMs: () => number;
   readonly limits?: Partial<HeadlessWorkerLimits>;
+  /** Staging cleanup authority — defaults to process HEADLESS_ENV_NAME or local. */
+  readonly envName?: string;
   /** Owning-boundary telemetry — no-op when omitted (local/non-hosted). */
   readonly boundaryTelemetry?: ProviderBackedBoundaryTelemetryPort;
   /** Safe storage adapter classification for provider context attribution. */
@@ -270,7 +274,31 @@ export async function executeClaimedRender(
 
   const jobId = record.jobId;
   const ownerId = record.ownerId;
+  const envName =
+    input.envName ??
+    (typeof process !== "undefined" &&
+    typeof process.env?.HEADLESS_ENV_NAME === "string"
+      ? process.env.HEADLESS_ENV_NAME
+      : "local");
+  const cleanupSession = createClaimedRenderTerminalCleanupSession();
   const storage = await input.resolveStorage(record);
+
+  const runPostTerminalCleanup = async (
+    terminalState: "succeeded" | "failed" | "cancelled",
+  ) => {
+    return cleanupSession.runOnceAfterTerminalization({
+      envName,
+      terminalState,
+      job: record,
+      nowMs: input.nowMs(),
+      local: {},
+      cleanup: input.artifactCleanup,
+      storage: {
+        deleteObject: (locator, locatorOwnerId) =>
+          storage.deleteObject(locator, locatorOwnerId),
+      },
+    });
+  };
 
   const deadline = createJobDeadline({
     timeoutMs: limits.jobTimeoutMs,
@@ -615,6 +643,9 @@ export async function executeClaimedRender(
       reasonId: capabilityFailure.reasonId,
       retryable: capabilityFailure.retryable,
     });
+    await runPostTerminalCleanup(
+      outcome === "cancelled" ? "cancelled" : "failed",
+    );
     return mapTerminal(
       outcome,
       "render",
@@ -680,6 +711,9 @@ export async function executeClaimedRender(
             ? true
             : executed.retryable,
       });
+      await runPostTerminalCleanup(
+        outcome === "cancelled" ? "cancelled" : "failed",
+      );
       const failureSubstage =
         executed.executionSubstage ??
         (mapped === "UNSUPPORTED_CAPABILITY"
@@ -719,6 +753,9 @@ export async function executeClaimedRender(
           reasonId: toUploading.reasonId,
           retryable: toUploading.retryable,
         });
+        await runPostTerminalCleanup(
+          outcome === "cancelled" ? "cancelled" : "failed",
+        );
         return mapTerminal(
           outcome,
           "upload",
@@ -757,44 +794,33 @@ export async function executeClaimedRender(
       let finalizedMeta: HeadlessObjectMetadata | null = null;
       let orphanLocator: HeadlessStorageLocatorIdentity | null = null;
       let lastOrphanCleanup: HeadlessOrphanCleanupReport | null = null;
-      let cleanupUnconfirmed = false;
 
-      const cleanupOrphan = async (
+      const queueOrphanForTerminalCleanup = (
         locator: HeadlessStorageLocatorIdentity | null,
         reasonId: HeadlessArtifactCleanupReasonId,
-      ): Promise<HeadlessOrphanCleanupReport> => {
-        if (!locator) {
-          return { status: "deleted", cleanupId: null };
+      ): void => {
+        if (locator == null) {
+          return;
         }
-        const objectId = deriveAttemptBoundArtifactObjectId({
+        const objectId = deriveClaimedRenderOrphanObjectId({
           jobId,
           operationId: record.operationId,
           attempt: record.canonicalJob.attempt,
         });
         if (objectId == null) {
-          return { status: "unconfirmed", cleanupId: null };
+          return;
         }
-        const outcome = await deleteOrScheduleArtifactCleanup({
-          storage,
-          cleanup: input.artifactCleanup,
+        cleanupSession.queueOrphanTarget({
           locator,
+          reasonId,
           objectId,
           ownerId,
           projectId: request.ownership.projectId,
           jobId,
           attempt: record.canonicalJob.attempt,
           contentDigest: executed.artifact.contentDigest,
-          reasonId,
-          nowMs: input.nowMs(),
           expiresAtMs: executed.artifact.expiresAtMs,
         });
-        if (outcome.status === "deleted") {
-          return { status: "deleted", cleanupId: null };
-        }
-        if (outcome.status === "scheduled") {
-          return { status: "scheduled", cleanupId: outcome.cleanupId };
-        }
-        return { status: "unconfirmed", cleanupId: null };
       };
 
       try {
@@ -838,14 +864,7 @@ export async function executeClaimedRender(
               }),
             });
             if (!written.ok) {
-              const cleaned = await cleanupOrphan(
-                orphanLocator,
-                "UPLOAD_SESSION_ORPHAN",
-              );
-              lastOrphanCleanup = cleaned;
-              if (cleaned.status === "unconfirmed") {
-                cleanupUnconfirmed = true;
-              }
+              queueOrphanForTerminalCleanup(orphanLocator, "UPLOAD_SESSION_ORPHAN");
               orphanLocator = null;
               const uploadCode = written.issues[0]?.code;
               uploadFailed = {
@@ -859,14 +878,7 @@ export async function executeClaimedRender(
             } else if (
               written.value.byteLength !== executed.artifact.byteLength
             ) {
-              const cleaned = await cleanupOrphan(
-                orphanLocator,
-                "UPLOAD_SESSION_ORPHAN",
-              );
-              lastOrphanCleanup = cleaned;
-              if (cleaned.status === "unconfirmed") {
-                cleanupUnconfirmed = true;
-              }
+              queueOrphanForTerminalCleanup(orphanLocator, "UPLOAD_SESSION_ORPHAN");
               orphanLocator = null;
               uploadFailed = {
                 reasonId: "WORKER_FAILED",
@@ -895,14 +907,7 @@ export async function executeClaimedRender(
                   finalizeOutcomeClass: "failed",
                   finalizeSubstage: "r2_upload",
                 });
-                const cleaned = await cleanupOrphan(
-                  orphanLocator,
-                  "UPLOAD_SESSION_ORPHAN",
-                );
-                lastOrphanCleanup = cleaned;
-                if (cleaned.status === "unconfirmed") {
-                  cleanupUnconfirmed = true;
-                }
+                queueOrphanForTerminalCleanup(orphanLocator, "UPLOAD_SESSION_ORPHAN");
                 orphanLocator = null;
                 finalizeFailed = {
                   reasonId: "WORKER_FAILED",
@@ -916,14 +921,7 @@ export async function executeClaimedRender(
           }
         }
       } catch {
-        const cleaned = await cleanupOrphan(
-          orphanLocator,
-          "UPLOAD_SESSION_ORPHAN",
-        );
-        lastOrphanCleanup = cleaned;
-        if (cleaned.status === "unconfirmed") {
-          cleanupUnconfirmed = true;
-        }
+        queueOrphanForTerminalCleanup(orphanLocator, "UPLOAD_SESSION_ORPHAN");
         orphanLocator = null;
         uploadFailed = {
           reasonId: "WORKER_FAILED",
@@ -940,7 +938,11 @@ export async function executeClaimedRender(
           reasonId: uploadFailed.reasonId,
           retryable: uploadFailed.retryable,
         });
-        if (cleanupUnconfirmed) {
+        const terminalCleanup = await runPostTerminalCleanup(
+          outcome === "cancelled" ? "cancelled" : "failed",
+        );
+        lastOrphanCleanup = terminalCleanup.orphanReports[0] ?? null;
+        if (terminalCleanup.hasUnconfirmed) {
           return resultOf({
             kind: "cleanup_unconfirmed",
             phase: "cleanup",
@@ -977,7 +979,11 @@ export async function executeClaimedRender(
           reasonId: finalizeFailed.reasonId,
           retryable: finalizeFailed.retryable,
         });
-        if (cleanupUnconfirmed) {
+        const terminalCleanup = await runPostTerminalCleanup(
+          outcome === "cancelled" ? "cancelled" : "failed",
+        );
+        lastOrphanCleanup = terminalCleanup.orphanReports[0] ?? null;
+        if (terminalCleanup.hasUnconfirmed) {
           return resultOf({
             kind: "cleanup_unconfirmed",
             phase: "cleanup",
@@ -1031,20 +1037,18 @@ export async function executeClaimedRender(
         });
         if (!succeededJob.ok || !finalizedMeta) {
           const storeVersionAtTerminalAttempt = record.storeVersion;
+          queueOrphanForTerminalCleanup(orphanLocator, "SUCCEEDED_CAS_REJECTED");
+          orphanLocator = null;
           const outcome = await terminalize({
             reasonId: "WORKER_FAILED",
             retryable: true,
           });
-          const cleaned = await cleanupOrphan(
-            orphanLocator,
-            "SUCCEEDED_CAS_REJECTED",
+          const terminalCleanup = await runPostTerminalCleanup(
+            outcome === "cancelled" ? "cancelled" : "failed",
           );
+          const cleaned = terminalCleanup.orphanReports[0] ?? null;
           lastOrphanCleanup = cleaned;
-          orphanLocator = null;
-          if (cleaned.status === "unconfirmed") {
-            cleanupUnconfirmed = true;
-          }
-          if (cleanupUnconfirmed) {
+          if (terminalCleanup.hasUnconfirmed) {
             return resultOf({
               kind: "cleanup_unconfirmed",
               phase: "cleanup",
@@ -1098,20 +1102,21 @@ export async function executeClaimedRender(
           });
           lastKnownExecutionSubstage = "artifact_binding_validation";
           const storeVersionAtTerminalAttempt = record.storeVersion;
+          queueOrphanForTerminalCleanup(
+            orphanLocator,
+            "BINDING_VALIDATION_FAILED",
+          );
+          orphanLocator = null;
           const outcome = await terminalize({
             reasonId: "WORKER_FAILED",
             retryable: true,
           });
-          const cleaned = await cleanupOrphan(
-            orphanLocator,
-            "BINDING_VALIDATION_FAILED",
+          const terminalCleanup = await runPostTerminalCleanup(
+            outcome === "cancelled" ? "cancelled" : "failed",
           );
+          const cleaned = terminalCleanup.orphanReports[0] ?? null;
           lastOrphanCleanup = cleaned;
-          orphanLocator = null;
-          if (cleaned.status === "unconfirmed") {
-            cleanupUnconfirmed = true;
-          }
-          if (cleanupUnconfirmed) {
+          if (terminalCleanup.hasUnconfirmed) {
             return resultOf({
               kind: "cleanup_unconfirmed",
               phase: "cleanup",
@@ -1165,14 +1170,13 @@ export async function executeClaimedRender(
               : cas.ok && cas.value.kind === "stale"
                 ? "SUCCEEDED_CAS_STALE"
                 : "SUCCEEDED_CAS_REJECTED";
-          const cleaned = await cleanupOrphan(orphanLocator, cleanupReason);
-          lastOrphanCleanup = cleaned;
+          queueOrphanForTerminalCleanup(orphanLocator, cleanupReason);
           orphanLocator = null;
-          if (cleaned.status === "unconfirmed") {
-            cleanupUnconfirmed = true;
-          }
           if (cas.ok && cas.value.kind === "terminal_locked") {
-            if (cleanupUnconfirmed) {
+            const terminalCleanup = await runPostTerminalCleanup("failed");
+            const cleaned = terminalCleanup.orphanReports[0] ?? null;
+            lastOrphanCleanup = cleaned;
+            if (terminalCleanup.hasUnconfirmed) {
               return resultOf({
                 kind: "cleanup_unconfirmed",
                 phase: "cleanup",
@@ -1190,15 +1194,15 @@ export async function executeClaimedRender(
             });
           }
           const outcome = await terminalize({
-            reasonId:
-              cleaned.status === "unconfirmed"
-                ? "ARTIFACT_CLEANUP_UNCONFIRMED"
-                : cleaned.status === "deleted"
-                  ? "STALE_ATTEMPT"
-                  : "WORKER_FAILED",
-            retryable: cleaned.status !== "deleted",
+            reasonId: "WORKER_FAILED",
+            retryable: true,
           });
-          if (cleanupUnconfirmed) {
+          const terminalCleanup = await runPostTerminalCleanup(
+            outcome === "cancelled" ? "cancelled" : "failed",
+          );
+          const cleaned = terminalCleanup.orphanReports[0] ?? null;
+          lastOrphanCleanup = cleaned;
+          if (terminalCleanup.hasUnconfirmed) {
             return resultOf({
               kind: "cleanup_unconfirmed",
               phase: "cleanup",
@@ -1210,7 +1214,7 @@ export async function executeClaimedRender(
           return mapTerminal(
             outcome,
             "succeeded_cas",
-            cleaned.status === "deleted" ? "STALE_ATTEMPT" : "WORKER_FAILED",
+            "WORKER_FAILED",
             cleaned,
             true,
           );
@@ -1237,6 +1241,8 @@ export async function executeClaimedRender(
           },
         };
 
+        await runPostTerminalCleanup("succeeded");
+
         return resultOf({
           kind: "succeeded",
           phase: "succeeded_cas",
@@ -1252,23 +1258,18 @@ export async function executeClaimedRender(
           sourceBindingAttribution: executed.sourceBindingAttribution,
         });
       } catch {
-        const cleaned = await cleanupOrphan(
-          orphanLocator,
-          "SUCCEEDED_CAS_THROWN",
-        );
-        lastOrphanCleanup = cleaned;
+        queueOrphanForTerminalCleanup(orphanLocator, "SUCCEEDED_CAS_THROWN");
         orphanLocator = null;
-        if (cleaned.status === "unconfirmed") {
-          cleanupUnconfirmed = true;
-        }
         const outcome = await terminalize({
-          reasonId:
-            cleaned.status === "unconfirmed"
-              ? "ARTIFACT_CLEANUP_UNCONFIRMED"
-              : "WORKER_FAILED",
+          reasonId: "WORKER_FAILED",
           retryable: true,
         });
-        if (cleanupUnconfirmed) {
+        const terminalCleanup = await runPostTerminalCleanup(
+          outcome === "cancelled" ? "cancelled" : "failed",
+        );
+        const cleaned = terminalCleanup.orphanReports[0] ?? null;
+        lastOrphanCleanup = cleaned;
+        if (terminalCleanup.hasUnconfirmed) {
           return resultOf({
             kind: "cleanup_unconfirmed",
             phase: "cleanup",
@@ -1302,6 +1303,9 @@ export async function executeClaimedRender(
       reasonId,
       retryable: reasonId === "WORKER_TIMEOUT",
     });
+    await runPostTerminalCleanup(
+      outcome === "cancelled" ? "cancelled" : "failed",
+    );
     return mapTerminal(
       outcome,
       "render",

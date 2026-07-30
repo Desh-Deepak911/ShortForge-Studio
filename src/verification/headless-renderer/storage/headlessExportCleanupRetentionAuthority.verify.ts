@@ -4,6 +4,7 @@
  */
 
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -20,6 +21,11 @@ import {
 import { validateHeadlessPublicJobView } from "@/features/headless-renderer/product/client/validate-public-job-view";
 
 import { MemoryHeadlessArtifactCleanupAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-artifact-cleanup.adapter";
+import {
+  MemoryHeadlessMaintenanceLeaseAdapter,
+  resetMemoryMaintenanceLeasesForTests,
+} from "@/features/headless-renderer/control-plane/adapters/memory-maintenance-lease.adapter";
+import { MemoryHeadlessMaintenanceStateAdapter, resetMemoryMaintenanceStateForTests } from "@/features/headless-renderer/control-plane/adapters/memory-maintenance-state.adapter";
 import { MemoryHeadlessOwnedObjectStoreAdapter } from "@/features/headless-renderer/control-plane/adapters/memory-owned-object-store.adapter";
 import {
   buildHeadlessExportCleanupMetrics,
@@ -27,8 +33,8 @@ import {
 } from "@/features/headless-renderer/control-plane/services/headless-export-cleanup-metrics";
 import { evaluateOwnedObjectDeletionAuthority } from "@/features/headless-renderer/control-plane/services/evaluate-owned-object-deletion-authority";
 import {
-  claimHeadlessMaintenanceLease,
-  releaseHeadlessMaintenanceLease,
+  HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+  HEADLESS_MAINTENANCE_LEASE_MS,
   runHeadlessExportMaintenanceBatchOnce,
 } from "@/features/headless-renderer/control-plane/services/headless-export-maintenance-batch";
 import { runHeadlessTerminalCleanupCoordinator } from "@/features/headless-renderer/control-plane/services/headless-terminal-cleanup-coordinator";
@@ -60,6 +66,33 @@ const RETENTION_FILE = path.join(
 );
 
 let passed = 0;
+
+async function claimMaintenanceLease(nowMs: number) {
+  resetMemoryMaintenanceLeasesForTests();
+  resetMemoryMaintenanceStateForTests();
+  const leasePort = new MemoryHeadlessMaintenanceLeaseAdapter();
+  const leaseToken = randomUUID();
+  const claim = await leasePort.claim({
+    scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+    leaseToken,
+    nowMs,
+    leaseMs: HEADLESS_MAINTENANCE_LEASE_MS,
+    holderClass: "verify_worker",
+  });
+  return { leasePort, leaseToken, claim };
+}
+
+async function releaseMaintenanceLease(
+  leasePort: MemoryHeadlessMaintenanceLeaseAdapter,
+  leaseToken: string,
+  nowMs: number,
+) {
+  return leasePort.release({
+    scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+    leaseToken,
+    nowMs,
+  });
+}
 
 function test(name: string, fn: () => void | Promise<void>) {
   return Promise.resolve()
@@ -547,17 +580,16 @@ async function main() {
         createdAtMs: now - HEADLESS_ABANDONED_PROVISIONAL_UPLOAD_MS - 1,
       });
     }
-    const lease = claimHeadlessMaintenanceLease({
-      ownerId: "owner_a",
-      nowMs: now,
-    });
-    assert.equal(lease.ok, true);
-    if (!lease.ok) return;
+    const { leasePort, leaseToken, claim } = await claimMaintenanceLease(now);
+    assert.equal(claim.ok, true);
+    if (!claim.ok) return;
     const batch = await runHeadlessExportMaintenanceBatchOnce({
       envName: "staging",
       ownerId: "owner_a",
       nowMs: () => now,
-      leaseToken: lease.leaseToken,
+      leaseToken,
+      leasePort,
+      maintenanceState: new MemoryHeadlessMaintenanceStateAdapter(),
       cleanup: new MemoryHeadlessArtifactCleanupAdapter(),
       ownedObjectStore: owned,
       jobStore: {
@@ -582,24 +614,38 @@ async function main() {
     });
     assert.equal(batch.ok, true);
     if (batch.ok) assert.ok(batch.value.processed <= 10);
-    releaseHeadlessMaintenanceLease({
-      ownerId: "owner_a",
-      leaseToken: lease.leaseToken,
-    });
+    await releaseMaintenanceLease(leasePort, leaseToken, now);
   });
 
-  await test("concurrent maintenance lease is rejected", () => {
+  await test("concurrent maintenance lease is rejected", async () => {
+    resetMemoryMaintenanceLeasesForTests();
+    resetMemoryMaintenanceStateForTests();
     const now = 1_000;
-    const first = claimHeadlessMaintenanceLease({ ownerId: "owner_a", nowMs: now });
-    const second = claimHeadlessMaintenanceLease({ ownerId: "owner_a", nowMs: now + 1 });
+    const leasePort = new MemoryHeadlessMaintenanceLeaseAdapter();
+    const firstToken = randomUUID();
+    const first = await leasePort.claim({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: firstToken,
+      nowMs: now,
+      leaseMs: HEADLESS_MAINTENANCE_LEASE_MS,
+      holderClass: "verify_worker",
+    });
+    const second = await leasePort.claim({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: randomUUID(),
+      nowMs: now + 1,
+      leaseMs: HEADLESS_MAINTENANCE_LEASE_MS,
+      holderClass: "verify_worker",
+    });
     assert.equal(first.ok, true);
-    assert.equal(second.ok, false);
-    if (first.ok) {
-      releaseHeadlessMaintenanceLease({
-        ownerId: "owner_a",
-        leaseToken: first.leaseToken,
-      });
-    }
+    assert.equal(first.value.kind, "claimed");
+    assert.equal(second.ok, true);
+    assert.equal(second.value.kind, "lease_rejected");
+    await leasePort.release({
+      scope: HEADLESS_MAINTENANCE_GLOBAL_SCOPE,
+      leaseToken: firstToken,
+      nowMs: now + 2,
+    });
   });
 
   await test("cleanup metrics contain no private fields", () => {
@@ -845,14 +891,16 @@ async function main() {
       });
       assert.equal(created.ok, true, created.ok ? "" : JSON.stringify(created));
     }
-    const lease = claimHeadlessMaintenanceLease({ ownerId: "owner_a", nowMs: now });
-    assert.equal(lease.ok, true);
-    if (!lease.ok) return;
+    const { leasePort, leaseToken, claim } = await claimMaintenanceLease(now);
+    assert.equal(claim.ok, true);
+    if (!claim.ok) return;
     const batch = await runHeadlessExportMaintenanceBatchOnce({
       envName: "staging",
       ownerId: "owner_a",
       nowMs: () => now,
-      leaseToken: lease.leaseToken,
+      leaseToken,
+      leasePort,
+      maintenanceState: new MemoryHeadlessMaintenanceStateAdapter(),
       cleanup: new MemoryHeadlessArtifactCleanupAdapter(),
       ownedObjectStore: owned,
       jobStore: {
@@ -875,10 +923,7 @@ async function main() {
       batchSize: 3,
       dryRun: true,
     });
-    releaseHeadlessMaintenanceLease({
-      ownerId: "owner_a",
-      leaseToken: lease.leaseToken,
-    });
+    await releaseMaintenanceLease(leasePort, leaseToken, now);
     assert.equal(batch.ok, true);
     if (batch.ok) {
       assert.equal(batch.value.processed, 3);

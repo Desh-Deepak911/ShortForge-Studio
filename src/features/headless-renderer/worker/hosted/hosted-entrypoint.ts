@@ -13,6 +13,9 @@
  */
 
 import { createRenderDispatchOutboxScheduler } from "../../control-plane/services/dispatch-render-outbox";
+import { createHeadlessExportMaintenanceScheduler } from "../../control-plane/services/headless-export-maintenance-scheduler";
+import { createR2ArtifactObjectIO } from "../../control-plane/adapters/r2-artifact-object-io.adapter";
+import { HEADLESS_EXPORT_MAINTENANCE_ENABLE_ENV } from "../../domain/headless-export-maintenance-enablement";
 import { embeddedSchemaFingerprintAsPreflightSources } from "../../control-plane/migrations/embedded-schema-fingerprint";
 import { runHeadlessSchemaPreflight } from "../../control-plane/runtime/neon-schema-preflight";
 import type { HeadlessSqlExecutor } from "../../control-plane/runtime/sql-client";
@@ -394,6 +397,37 @@ export async function runHostedWorkerEntrypoint(
     },
   });
 
+  const maintenance =
+    config.mode === "verify"
+      ? createHeadlessExportMaintenanceScheduler({
+          envName: config.envName,
+          maintenanceEnabledFlag:
+            typeof env[HEADLESS_EXPORT_MAINTENANCE_ENABLE_ENV] === "string"
+              ? (env[HEADLESS_EXPORT_MAINTENANCE_ENABLE_ENV] as string)
+              : null,
+          leasePort: adapters.maintenanceLease,
+          maintenanceState: adapters.maintenanceState,
+          cleanup: adapters.artifactCleanup,
+          ownedObjectStore: adapters.ownedObjectStore,
+          jobStore: adapters.jobStore,
+          objectIo: createR2ArtifactObjectIO(adapters.r2ObjectIo),
+          nowMs,
+          onSweep: (telemetry) => {
+            emitHostedWorkerEvent(eventSink, {
+              name: "hosted.loop.delivery",
+              atMs: nowMs(),
+              mode: "verify",
+              reasonId: telemetry.status,
+              action: telemetry.action,
+              facts: {
+                processed: telemetry.processed,
+                leaseContention: telemetry.leaseContention ? 1 : 0,
+              },
+            });
+          },
+        })
+      : null;
+
   const unifiedBusy = () =>
     loop.isBusy() ||
     dispatch.isSweepActive() ||
@@ -434,9 +468,11 @@ export async function runHostedWorkerEntrypoint(
     await dispatch.runOnce();
     startupDispatchActive = false;
     dispatch.start();
+    maintenance?.start();
 
     const result = await loop.run();
     shutdown.clearDeadline();
+    maintenance?.stop();
     const drain = await dispatch.stop({
       drainDeadlineMs: config.gracefulShutdownDeadlineMs,
     });
