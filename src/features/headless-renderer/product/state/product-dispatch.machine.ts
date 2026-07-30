@@ -1,4 +1,10 @@
 import {
+  deriveHeadlessGlobalProgressPercent,
+  deriveHeadlessMaterializeProgressPercent,
+  normalizeHeadlessAdvisoryFrameCounts,
+  reconcileHeadlessMonotonicProgress,
+} from "../../domain/headless-export-progress-authority";
+import {
   HEADLESS_TERMINAL_PUBLIC_STATES,
   type HeadlessPublicJobState,
   type HeadlessPublicJobView,
@@ -11,6 +17,18 @@ import {
 } from "./product-dispatch.types";
 
 const TERMINAL = new Set<string>(HEADLESS_TERMINAL_PUBLIC_STATES);
+
+const SERVER_DRIVEN_PRODUCT_STATES = new Set<HeadlessProductState>([
+  "queued",
+  "rendering",
+  "encoding",
+  "validating",
+  "uploading_artifact",
+  "succeeded",
+  "failed",
+  "cancelled",
+  "expired",
+]);
 
 function isStale(model: HeadlessProductModel, runId: number): boolean {
   return runId !== model.ctx.runId;
@@ -51,15 +69,29 @@ function applyJobView(
 ): HeadlessProductModel {
   const nextState = mapJobStateToProduct(view.state);
   const busy = !TERMINAL.has(view.state) && nextState !== "cancelling";
-  const incomingPercent = view.progress?.percent ?? null;
-  const nextPercent =
-    incomingPercent != null && model.ctx.advisoryPercent != null
-      ? Math.max(incomingPercent, model.ctx.advisoryPercent)
-      : incomingPercent ?? model.ctx.advisoryPercent;
-  const completedFrames =
-    view.progress?.completedFrames ?? model.ctx.advisoryCompletedFrames;
-  const totalFrames =
-    view.progress?.totalFrames ?? model.ctx.advisoryTotalFrames;
+  const frameCounts = normalizeHeadlessAdvisoryFrameCounts({
+    completedFrames: view.progress?.completedFrames,
+    totalFrames: view.progress?.totalFrames,
+    previousCompletedFrames: model.ctx.advisoryCompletedFrames,
+    previousTotalFrames: model.ctx.advisoryTotalFrames,
+  });
+  const derivedPercent = deriveHeadlessGlobalProgressPercent({
+    state: view.state,
+    progress: view.progress,
+  });
+  const nextPercent = reconcileHeadlessMonotonicProgress({
+    previousPercent: model.ctx.advisoryPercent,
+    incomingPercent: derivedPercent,
+    state: view.state,
+  });
+  const renderingPollsWithoutFrameTelemetry =
+    nextState === "rendering" &&
+    (frameCounts.completedFrames == null || frameCounts.totalFrames == null)
+      ? model.ctx.renderingPollsWithoutFrameTelemetry + 1
+      : 0;
+  const clearPreparationMessage =
+    SERVER_DRIVEN_PRODUCT_STATES.has(nextState) &&
+    !SERVER_DRIVEN_PRODUCT_STATES.has(model.state);
   return {
     state: nextState,
     ctx: {
@@ -67,10 +99,11 @@ function applyJobView(
       jobId: view.jobId,
       jobView: view,
       advisoryPercent: nextPercent,
-      advisoryCompletedFrames: completedFrames,
-      advisoryTotalFrames: totalFrames,
+      advisoryCompletedFrames: frameCounts.completedFrames,
+      advisoryTotalFrames: frameCounts.totalFrames,
+      renderingPollsWithoutFrameTelemetry,
       busy: nextState === "cancelling" ? true : busy,
-      safeMessage: null,
+      safeMessage: clearPreparationMessage ? null : model.ctx.safeMessage,
       clientErrorCode: null,
       ...extra,
     },
@@ -176,6 +209,9 @@ export function reduceHeadlessProduct(
           jobId: null,
           jobView: null,
           advisoryPercent: null,
+          advisoryCompletedFrames: null,
+          advisoryTotalFrames: null,
+          renderingPollsWithoutFrameTelemetry: 0,
           busy: true,
           safeMessage: null,
           clientErrorCode: null,
@@ -191,7 +227,7 @@ export function reduceHeadlessProduct(
         ctx: {
           ...model.ctx,
           busy: true,
-          advisoryPercent: 10,
+          advisoryPercent: 5,
           safeMessage: "Verifying the frozen story and media package…",
         },
       };
@@ -200,12 +236,19 @@ export function reduceHeadlessProduct(
     case "MATERIALIZE_PROGRESS": {
       if (isStale(model, event.runId)) return model;
       if (model.state === "cancelling") return model;
+      const mappedPercent =
+        deriveHeadlessMaterializeProgressPercent(event.percent) ??
+        model.ctx.advisoryPercent;
+      const nextPercent =
+        mappedPercent != null && model.ctx.advisoryPercent != null
+          ? Math.max(mappedPercent, model.ctx.advisoryPercent)
+          : mappedPercent ?? model.ctx.advisoryPercent;
       return {
         state: event.phase,
         ctx: {
           ...model.ctx,
           busy: true,
-          advisoryPercent: event.percent ?? model.ctx.advisoryPercent,
+          advisoryPercent: nextPercent,
           safeMessage: event.message ?? model.ctx.safeMessage,
         },
       };

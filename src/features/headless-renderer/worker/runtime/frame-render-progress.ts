@@ -3,33 +3,16 @@
  * Never affects render output, fingerprints, or artifact identity.
  */
 
+import { deriveRenderingFrameProgressPercent } from "../../domain/headless-export-progress-authority";
 import {
   HEADLESS_RENDERING_PROGRESS_CEILING,
   HEADLESS_RENDERING_PROGRESS_FLOOR,
 } from "../../domain/headless-render-constants";
 import type { HeadlessAdvisoryProgress } from "../../domain/headless-render.types";
 
-export const HEADLESS_FRAME_PROGRESS_MIN_WRITE_INTERVAL_MS = 750;
+export { deriveRenderingFrameProgressPercent } from "../../domain/headless-export-progress-authority";
 
-export function deriveRenderingFrameProgressPercent(
-  completedFrames: number,
-  totalFrames: number,
-): number {
-  if (
-    !Number.isInteger(completedFrames) ||
-    !Number.isInteger(totalFrames) ||
-    totalFrames <= 0 ||
-    completedFrames <= 0
-  ) {
-    return HEADLESS_RENDERING_PROGRESS_FLOOR;
-  }
-  const clamped = Math.min(completedFrames, totalFrames);
-  const span = HEADLESS_RENDERING_PROGRESS_CEILING - HEADLESS_RENDERING_PROGRESS_FLOOR;
-  const derived =
-    HEADLESS_RENDERING_PROGRESS_FLOOR +
-    Math.floor((clamped / totalFrames) * span);
-  return Math.min(derived, HEADLESS_RENDERING_PROGRESS_CEILING);
-}
+export const HEADLESS_FRAME_PROGRESS_MIN_WRITE_INTERVAL_MS = 750;
 
 export function shouldEmitFrameProgressWrite(input: {
   readonly lastEmittedPercent: number | null;
@@ -75,7 +58,7 @@ export function shouldEmitFrameProgressWrite(input: {
   return true;
 }
 
-/** Upper bound on distinct percent-step writes during rendering (35–59 inclusive). */
+/** Upper bound on distinct percent-step writes during rendering. */
 export function countMaxRenderingProgressPercentWrites(totalFrames: number): number {
   if (totalFrames <= 0) return 0;
   const span = HEADLESS_RENDERING_PROGRESS_CEILING - HEADLESS_RENDERING_PROGRESS_FLOOR;

@@ -8,6 +8,10 @@ import {
   studioPrimaryButton,
   studioSecondaryButton,
 } from "@/lib/utils/studioUi";
+import {
+  classifyHeadlessMissingFrameTelemetry,
+  HEADLESS_RENDERING_FRAME_TELEMETRY_UNAVAILABLE_MESSAGE,
+} from "@/features/headless-renderer/domain/headless-export-progress-authority";
 
 import { creatorMessageForReasonId } from "../client/creator-messages";
 import {
@@ -41,10 +45,21 @@ export function HeadlessJobStatusPanel({
     state === "rendering" &&
     completedFrames != null &&
     totalFrames != null &&
-    totalFrames > 0;
+    totalFrames > 0 &&
+    completedFrames >= 0 &&
+    completedFrames <= totalFrames;
   const frameProgressLabel = showFrameProgress
     ? `Rendering frame ${completedFrames.toLocaleString()} of ${totalFrames.toLocaleString()}`
     : null;
+  const missingFrameTelemetryClass = classifyHeadlessMissingFrameTelemetry({
+    state,
+    completedFrames,
+    totalFrames,
+    pollsWithoutFrameTelemetry: model.ctx.renderingPollsWithoutFrameTelemetry,
+  });
+  const renderingStatusDescription = statusDescriptionForProductState("rendering");
+  const renderingTelemetryUnavailable =
+    missingFrameTelemetryClass === "missing_after_bounded_polls";
 
   const isTerminalSuccess = state === "succeeded";
   const isTerminalError =
@@ -55,13 +70,23 @@ export function HeadlessJobStatusPanel({
     : null;
   const activeMessage =
     !isTerminalError && !isTerminalSuccess
-      ? frameProgressLabel ??
-        model.ctx.safeMessage ??
-        statusDescriptionForProductState(state)
+      ? showFrameProgress
+        ? frameProgressLabel
+        : state === "rendering"
+          ? renderingTelemetryUnavailable
+            ? HEADLESS_RENDERING_FRAME_TELEMETRY_UNAVAILABLE_MESSAGE
+            : renderingStatusDescription
+          : model.ctx.safeMessage ?? statusDescriptionForProductState(state)
       : null;
   const announcedMessage = isTerminalSuccess
     ? statusDescriptionForProductState(state)
-    : reasonMessage ?? activeMessage;
+    : isTerminalError
+      ? reasonMessage
+      : showFrameProgress
+        ? frameProgressLabel
+        : activeMessage != null
+          ? activeMessage
+          : label;
   const isCancelling = state === "cancelling";
   const canCancel =
     Boolean(model.ctx.jobId) &&
@@ -94,6 +119,7 @@ export function HeadlessJobStatusPanel({
       tabIndex={-1}
       className="space-y-3 rounded-lg border border-border/30 bg-surface/40 p-4 outline-none"
       aria-labelledby="headless-job-status-label"
+      data-headless-frame-telemetry={missingFrameTelemetryClass}
     >
       <div className="flex items-center justify-between gap-3">
         <p
@@ -115,8 +141,7 @@ export function HeadlessJobStatusPanel({
         aria-atomic="true"
         className="sr-only"
       >
-        {label}
-        {announcedMessage ? `. ${announcedMessage}` : ""}
+        {announcedMessage}
       </div>
 
       {model.ctx.busy && percent != null ? (
