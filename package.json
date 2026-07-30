@@ -148,6 +148,7 @@
     "test:headless-hosted-worker-2e2a-render-storage-cleanup": "tsx src/verification/headless-renderer/platform/headlessHostedWorker2E2ARenderStorageCleanup.verify.ts",
     "test:headless-artifact-deletion-saga": "tsx src/verification/headless-renderer/storage/headlessArtifactDeletionSaga.verify.ts",
     "test:headless-cleanup-terminal-disposition": "tsx src/verification/headless-renderer/storage/headlessCleanupTerminalDisposition.verify.ts",
+    "test:headless-export-cleanup-retention-authority": "tsx src/verification/headless-renderer/storage/headlessExportCleanupRetentionAuthority.verify.ts",
     "test:headless-trusted-verify-promotion": "tsx src/verification/headless-renderer/control-plane/headlessTrustedVerifyPromotion.verify.ts",
     "test:headless-hosted-execution-correction-2e2b1": "tsx src/verification/headless-renderer/platform/headlessHostedExecutionCorrection2E2B1.verify.ts",
     "test:headless-render-dispatch-outbox-sql-schema": "tsx src/verification/headless-renderer/contracts/headlessRenderDispatchOutboxSqlSchema.verify.ts",

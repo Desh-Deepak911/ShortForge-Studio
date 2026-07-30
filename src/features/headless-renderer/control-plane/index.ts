@@ -386,6 +386,33 @@ export {
   stableHeadlessVerifyDeliveryId,
 } from "./services/stable-delivery-id";
 
+export {
+  evaluateOwnedObjectDeletionAuthority,
+  type HeadlessOwnedObjectDeletionDecision,
+  type HeadlessOwnedObjectDeletionExpectation,
+} from "./services/evaluate-owned-object-deletion-authority";
+export {
+  runHeadlessTerminalCleanupCoordinator,
+  type HeadlessTerminalCleanupLocalHooks,
+  type HeadlessTerminalCleanupOrphanTarget,
+  type HeadlessTerminalCleanupResult,
+} from "./services/headless-terminal-cleanup-coordinator";
+export {
+  claimHeadlessMaintenanceLease,
+  releaseHeadlessMaintenanceLease,
+  runHeadlessExportMaintenanceBatchOnce,
+  HEADLESS_MAINTENANCE_DEFAULT_BATCH_SIZE,
+  HEADLESS_MAINTENANCE_MAX_DELETIONS_PER_RUN,
+  HEADLESS_MAINTENANCE_LEASE_MS,
+  type HeadlessMaintenanceBatchCursor,
+  type HeadlessMaintenanceBatchResult,
+} from "./services/headless-export-maintenance-batch";
+export {
+  buildHeadlessExportCleanupMetrics,
+  validateHeadlessExportCleanupMetricsPrivacy,
+  type HeadlessExportCleanupMetricsV1,
+} from "./services/headless-export-cleanup-metrics";
+
 export { composeProductionHeadlessControlPlane } from "./runtime/compose-production-control-plane";
 export {
   interpretExactXpendingResponse,

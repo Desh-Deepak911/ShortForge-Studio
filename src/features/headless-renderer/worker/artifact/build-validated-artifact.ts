@@ -4,6 +4,7 @@
  * Never invent probe facts (no codec/channel/sample-rate fallbacks).
  */
 
+import { HEADLESS_ARTIFACT_DOWNLOAD_RETENTION_MS } from "../../domain/headless-export-retention-authority";
 import { HEADLESS_ARTIFACT_DURATION_TOLERANCE_MS } from "../../domain/headless-render-constants";
 import {
   finalizeHeadlessRenderArtifact,
@@ -208,7 +209,7 @@ export function buildValidatedHeadlessArtifact(input: {
     manifestFingerprint: input.request.manifestFingerprint,
     assetBundleFingerprint: input.request.assetBundle.fingerprint,
     renderJobFingerprint: input.job.renderJobFingerprint,
-    expiresAtMs: input.nowMs + 86_400_000,
+    expiresAtMs: input.nowMs + HEADLESS_ARTIFACT_DOWNLOAD_RETENTION_MS,
   });
 
   if (!finalized.ok) {
