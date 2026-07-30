@@ -30,14 +30,19 @@ export const HEADLESS_CLAIM_LEASE_MS = 10 * 60 * 1000;
 export const HEADLESS_MAX_PROGRESS_STAGE_LENGTH = 32;
 export const HEADLESS_MAX_CODEC_LENGTH = 32;
 
-/** Advisory worker progress boundaries — frozen for website polling coherence. */
-export const HEADLESS_RENDERING_PROGRESS_FLOOR = 35 as const;
-export const HEADLESS_RENDERING_PROGRESS_CEILING = 59 as const;
+/** Global monotonic export bands — website + worker share one authority (2G.25A). */
+export const HEADLESS_PREPARATION_PROGRESS_MAX = 35 as const;
+export const HEADLESS_QUEUE_PROGRESS_FLOOR = 35 as const;
+export const HEADLESS_QUEUE_PROGRESS_MAX = 40 as const;
+/** Frame capture band — wide enough for meaningful frame-derived updates. */
+export const HEADLESS_RENDERING_PROGRESS_FLOOR = 40 as const;
+export const HEADLESS_RENDERING_PROGRESS_CEILING = 82 as const;
 /** Upper bound for advisory totalFrames on public progress DTOs. */
 export const HEADLESS_MAX_ADVISORY_FRAME_COUNT = 1812 as const;
-export const HEADLESS_ENCODING_PROGRESS_PERCENT = 60 as const;
-export const HEADLESS_VALIDATING_PROGRESS_PERCENT = 80 as const;
-export const HEADLESS_UPLOADING_PROGRESS_PERCENT = 90 as const;
+export const HEADLESS_ENCODING_PROGRESS_PERCENT = 85 as const;
+export const HEADLESS_VALIDATING_PROGRESS_PERCENT = 93 as const;
+export const HEADLESS_UPLOADING_PROGRESS_PERCENT = 97 as const;
+export const HEADLESS_SUCCEEDED_PROGRESS_PERCENT = 100 as const;
 
 export const HEADLESS_RESOLUTION_PIXELS = Object.freeze({
   "720p": Object.freeze({ width: 720, height: 1280 }),

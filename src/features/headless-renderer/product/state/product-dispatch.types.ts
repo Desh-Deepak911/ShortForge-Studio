@@ -52,6 +52,7 @@ export interface HeadlessProductContext {
   readonly advisoryPercent: number | null;
   readonly advisoryCompletedFrames: number | null;
   readonly advisoryTotalFrames: number | null;
+  readonly renderingPollsWithoutFrameTelemetry: number;
   readonly safeMessage: string | null;
   readonly clientErrorCode: HeadlessClientErrorCode | null;
   readonly busy: boolean;
@@ -163,6 +164,7 @@ export function createInitialProductModel(
       advisoryPercent: null,
       advisoryCompletedFrames: null,
       advisoryTotalFrames: null,
+      renderingPollsWithoutFrameTelemetry: 0,
       safeMessage: null,
       clientErrorCode: null,
       busy: false,
