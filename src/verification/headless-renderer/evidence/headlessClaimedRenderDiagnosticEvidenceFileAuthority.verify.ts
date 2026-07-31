@@ -62,8 +62,8 @@ const EVIDENCE_8F6E_SHA =
   "c6d92173cdc5c4cceef0ca3a0f584bee5dd5632f568231c864064e77a0c30925";
 const EVIDENCE_8F6F_SHA =
   "720ffc97a6b0e9062bdabeeb8274042c932c4c70d2cafeb45edd0cde1b0ae012";
-const EXECUTION_PROBE_SHA =
-  "e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3";
+const EXECUTION_PROBE_CURRENT_PASS_SHA =
+  "1342cc902cd0051effb4a4f3b466d9d6b717401a4776a073678f16a1072eac7b";
 const PAGE_DIAG_SHA =
   "20c848203e0932511b531b477958169b8d254f5a7b287869bd21e42f33a1bd8b";
 
@@ -176,7 +176,7 @@ async function main() {
     );
     assert.equal(
       sha256Bytes(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"))),
-      EXECUTION_PROBE_SHA,
+      EXECUTION_PROBE_CURRENT_PASS_SHA,
     );
     assert.equal(
       sha256Bytes(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_HOSTED_PAGE_DIAGNOSTIC.md"))),

@@ -15,12 +15,14 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CURRENT_DEPLOYMENT_PAIR,
   buildHeadlessFlyStagingPublicEnvironmentForDeploymentPair,
   buildHeadlessFlyStagingPublicEnvironmentForImageDigestSha256,
   classifyHeadlessFlyStagingDeploymentProviderContactGate,
   classifyHeadlessFlyStagingImageEnvironmentDeploymentCoherence,
   extractHeadlessFlyStagingMaterializedRendererBuildId,
   materializeHeadlessFlyStagingTomlForImageDigestSha256,
+  resolveHeadlessFlyStagingCurrentForwardDeploymentPair,
   resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256,
   validateHeadlessFlyStagingImageEnvironmentDeploymentPairTable,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
@@ -60,10 +62,10 @@ async function main() {
     "\nSprint 11E Phase 2G.24G.1 — Fly staging image/environment deployment pair authority\n",
   );
 
-  await test("deployment pair authority version frozen at 5 with unique digest table", () => {
+  await test("deployment pair authority version frozen at 6 with unique digest table", () => {
     assert.equal(
       HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_AUTHORITY_VERSION,
-      5,
+      6,
     );
     assert.equal(validateHeadlessFlyStagingImageEnvironmentDeploymentPairTable().ok, true);
   });
@@ -160,6 +162,23 @@ async function main() {
     if (!resolved.ok) {
       assert.equal(resolved.reasonId, "rejected_permanent_digest");
     }
+  });
+
+  await test("6c: promoted cleanup-runtime finalization correction digest resolves to current forward pair", () => {
+    const resolved = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
+      HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CURRENT_DEPLOYMENT_PAIR.imageDigestSha256,
+    );
+    assert.equal(resolved.ok, true);
+    if (resolved.ok) {
+      assert.equal(
+        resolved.pair.pairId,
+        "post_008_2g25_cleanup_runtime_finalization_correction_current_pair",
+      );
+    }
+    assert.deepEqual(
+      resolveHeadlessFlyStagingCurrentForwardDeploymentPair(),
+      HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CURRENT_DEPLOYMENT_PAIR,
+    );
   });
 
   await test("7: missing build ID is rejected", () => {

@@ -251,8 +251,12 @@ export function isHeadlessFlyRenderCandidateValidationGateOn(
 export function readHeadlessFlyRenderCandidateDigestPin(
   env: NodeJS.ProcessEnv | Record<string, unknown>,
 ): string | null {
-  return asDigest(
-    (env as Record<string, unknown>)[HEADLESS_FLY_RENDER_CANDIDATE_DIGEST_PIN_ENV],
+  const record = env as Record<string, unknown>;
+  // Accept the operator plan alias HEADLESS_FLY_RENDER_CANDIDATE_DIGEST_SHA256
+  // as an equivalent pin source; PIN remains the canonical env name.
+  return (
+    asDigest(record[HEADLESS_FLY_RENDER_CANDIDATE_DIGEST_PIN_ENV]) ??
+    asDigest(record.HEADLESS_FLY_RENDER_CANDIDATE_DIGEST_SHA256)
   );
 }
 

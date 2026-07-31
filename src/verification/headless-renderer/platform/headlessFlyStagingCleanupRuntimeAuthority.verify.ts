@@ -160,13 +160,20 @@ async function main() {
     assert.equal(probe.ok, false);
   });
 
-  await test("bridge temporary current authority remains rollback-eligible", () => {
-    const bridge = resolveCurrentFlyStagingAcceptedImageRecord();
-    assert.equal(bridge.recordId, "post_007_2g24e_bridge008_rollback_bridge");
-    assert.equal(bridge.lifecycle, "current");
+  await test("cleanup-runtime correction is current authority; bridge remains rollback-eligible", () => {
+    const current = resolveCurrentFlyStagingAcceptedImageRecord();
+    assert.equal(
+      current.recordId,
+      "post_008_2g25_cleanup_runtime_finalization_correction_current",
+    );
+    assert.equal(current.lifecycle, "current");
     assert.equal(
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD.eligibleForRollbackSelection,
       true,
+    );
+    assert.equal(
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD.lifecycle,
+      "historical",
     );
     assert.notEqual(
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_IMAGE_DIGEST,
@@ -174,7 +181,7 @@ async function main() {
     );
   });
 
-  await test("rollout selector exposes rejected finalization-correction with bridge current", () => {
+  await test("rollout selector exposes rejected finalization-correction; current authority is the promoted correction", () => {
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(
       prospective.recordId,
@@ -184,7 +191,7 @@ async function main() {
     assert.equal(prospective.eligibleForRenderLiveHarness, false);
     assert.equal(
       resolveCurrentFlyStagingAcceptedImageRecord().recordId,
-      "post_007_2g24e_bridge008_rollback_bridge",
+      "post_008_2g25_cleanup_runtime_finalization_correction_current",
     );
   });
 

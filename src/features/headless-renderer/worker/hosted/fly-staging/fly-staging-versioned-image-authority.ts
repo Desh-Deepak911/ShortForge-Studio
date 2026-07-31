@@ -34,7 +34,7 @@ import {
 } from "./fly-staging-rollback-bridge-authority";
 
 /** Frozen authority schema version — bump only when record shape or selection rules change. */
-export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 39 as const;
+export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 40 as const;
 
 /**
  * Image lifecycle:
@@ -77,7 +77,8 @@ export type HeadlessFlyStagingVersionedImageRecordId =
   | "post_007_2g25_cleanup_runtime_live_finalization_failed"
   | "post_007_2g25_cleanup_runtime_prospective"
   | "post_008_2g25_cleanup_runtime_finalization_correction_prospective"
-  | "post_008_2g25_cleanup_runtime_finalization_correction_rejected";
+  | "post_008_2g25_cleanup_runtime_finalization_correction_rejected"
+  | "post_008_2g25_cleanup_runtime_finalization_correction_current";
 
 export type HeadlessFlyStagingVersionedImageSchemaFingerprint = {
   readonly migrationIds: readonly string[];
@@ -1052,11 +1053,17 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE
     eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** Schema-008 rollback bridge — temporary current after controlled rollout acceptance. */
+/**
+ * Schema-008 rollback bridge — demoted to historical (Part 2G.25D Part F.2
+ * Part K) after the cleanup-runtime finalization correction was promoted to
+ * `current`. Bridge digest remains rollback-eligible via the dedicated
+ * rollback-bridge authority; it is no longer ordinary current staging
+ * authority here.
+ */
 export const HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD =
   Object.freeze({
     recordId: "post_007_2g24e_bridge008_rollback_bridge",
-    lifecycle: "current",
+    lifecycle: "historical",
     imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
     schemaFingerprint: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_ACCEPTED_SCHEMA_FINGERPRINT,
     hostedWorkerArtifactSha256:
@@ -1066,9 +1073,9 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE
     telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
     pageTelemetryCapabilityVersion:
       HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
-    eligibleForVerifyLiveHarness: true,
-    eligibleForRenderLiveHarness: true,
-    eligibleForCurrentStagingReadiness: true,
+    eligibleForVerifyLiveHarness: false,
+    eligibleForRenderLiveHarness: false,
+    eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
 /** Post-007 2G.25 cleanup-runtime rejected — packaged worker rejected cleanup build ID. */
@@ -1129,6 +1136,31 @@ export const HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_COR
     eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
+/**
+ * Post-008 2G.25 cleanup-runtime finalization correction — promoted to
+ * `current` via one-time candidate recovery (Part 2G.25D Part F.2 Part K)
+ * after operational recovery PASS. The sealed rejected record above is
+ * preserved unchanged as historical rejection evidence from Part F.
+ */
+export const HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CURRENT_IMAGE_RECORD =
+  Object.freeze({
+    recordId: "post_008_2g25_cleanup_runtime_finalization_correction_current",
+    lifecycle: "current",
+    imageDigestSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+    schemaFingerprint: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT,
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
+    telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
+    pageTelemetryCapabilityVersion:
+      HEADLESS_FLY_STAGING_EXPORT_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CAPABILITY_VERSION,
+    eligibleForVerifyLiveHarness: true,
+    eligibleForRenderLiveHarness: true,
+    eligibleForCurrentStagingReadiness: true,
+  } satisfies HeadlessFlyStagingVersionedImageRecord);
+
 /** @deprecated Prefer HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD */
 export const HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD =
   HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD;
@@ -1173,6 +1205,7 @@ export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS = Object.freeze([
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CURRENT_IMAGE_RECORD,
 ] as const);
 
 const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>(
@@ -1183,7 +1216,7 @@ const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>
 );
 
 export function resolveCurrentFlyStagingAcceptedImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CURRENT_IMAGE_RECORD;
 }
 
 /** No deployable prospective cleanup-runtime digest remains after Part F rejection. */
@@ -1381,7 +1414,9 @@ function isPost007VersionedImageRecord(
     record.recordId ===
       "post_008_2g25_cleanup_runtime_finalization_correction_prospective" ||
     record.recordId ===
-      "post_008_2g25_cleanup_runtime_finalization_correction_rejected"
+      "post_008_2g25_cleanup_runtime_finalization_correction_rejected" ||
+    record.recordId ===
+      "post_008_2g25_cleanup_runtime_finalization_correction_current"
   );
 }
 

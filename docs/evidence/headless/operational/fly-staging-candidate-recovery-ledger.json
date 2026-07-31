@@ -1,0 +1,54 @@
+{
+  "authorityVersion": 1,
+  "appName": "shortforge-hw-staging-4def8fa0",
+  "candidateDigestSha256": "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde",
+  "rollbackDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+  "incidentCommitSha": "7bd84c355163f5238242d0ee7945c56778b981da",
+  "candidateAuthorityCommitSha": "36dba1c0240a091b63f1ad2bdd48f33974c84503",
+  "recoveryDecision": "READY_FOR_ONE_TIME_CANDIDATE_RECOVERY",
+  "recoveryAuthorizationConsumed": true,
+  "candidateProbeAuthorizationConsumed": true,
+  "promoted": true,
+  "entries": [
+    {
+      "kind": "one_time_candidate_recovery",
+      "targetDigestSha256": "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde",
+      "sequence": 1,
+      "recordedAtIso": "2026-07-31T22:40:59.583Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "probeJobCreated": null,
+      "sanitizedNote": "one_time_candidate_recovery"
+    },
+    {
+      "kind": "candidate_validation_probe",
+      "targetDigestSha256": "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde",
+      "sequence": 1,
+      "recordedAtIso": "2026-07-31T22:48:21.089Z",
+      "deployPerformed": false,
+      "acceptancePassed": null,
+      "probeJobCreated": null,
+      "sanitizedNote": "candidate_probe_attempt_consumed_pre_job"
+    },
+    {
+      "kind": "candidate_validation_probe",
+      "targetDigestSha256": "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde",
+      "sequence": 2,
+      "recordedAtIso": "2026-07-31T22:52:46.205Z",
+      "deployPerformed": false,
+      "acceptancePassed": true,
+      "probeJobCreated": true,
+      "sanitizedNote": "candidate_probe_pass"
+    },
+    {
+      "kind": "candidate_promotion",
+      "targetDigestSha256": "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde",
+      "sequence": 1,
+      "recordedAtIso": "2026-07-31T22:52:48.992Z",
+      "deployPerformed": false,
+      "acceptancePassed": true,
+      "probeJobCreated": true,
+      "sanitizedNote": "candidate_promoted_current"
+    }
+  ]
+}

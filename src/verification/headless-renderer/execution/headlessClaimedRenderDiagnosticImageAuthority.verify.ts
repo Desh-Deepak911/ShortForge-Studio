@@ -39,16 +39,16 @@ const DIST = path.join(ROOT, "dist/headless-worker");
 const DEPLOY = path.join(ROOT, "deploy/headless-worker");
 
 const PRODUCTION_WORKER_SHA =
-  "aedf20f675a75b3b071081d111d0ac0131d83cb7a179eb94080ca8b72d62aced";
+  "a9baf3ea910eeae41b4eadfb10d9dfb100b74042500884c761a8c5b946774e1b";
 const PRODUCTION_PAGE_SHA =
-  "7a5c3e20c9ae6ce4aa3064a371eb445f52e9871f6303ecd481a43417b4fc2372";
+  "e0c6fd819d6b2c6738e0cba1971a320fefda281c3ef5798cd011bf6fab981d2c";
 const PRODUCTION_BUILD_INFO_SHA =
-  "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a";
+  "815d289dcbe71a5fd3192da59bad12462c914e20362f6fe5f71bfacc39ab9b9d";
 
 const EXECUTION_PROBE_CURRENT_FAIL_SHA =
   "e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3";
 const EXECUTION_PROBE_CURRENT_PASS_SHA =
-  "c7f944dba578539ad4f3ebc2431f38fb60640c041cb582bb28e239067adf500a";
+  "1342cc902cd0051effb4a4f3b466d9d6b717401a4776a073678f16a1072eac7b";
 const EXECUTION_PROBE_PRIOR_FAIL_SHA =
   "f0f4a92d987653cd236b12640d65bb2b870fc444c6d847b063a671dd2e8ff010";
 const PAGE_DIAGNOSTIC_PASS_EVIDENCE_SHA =
@@ -123,7 +123,7 @@ async function main() {
         readFileSync(
           path.join(
             ROOT,
-            `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-run-${EXECUTION_PROBE_PRIOR_FAIL_SHA}.md`,
+            `docs/evidence/headless/archive/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.pre-8f51-real-shape-${EXECUTION_PROBE_PRIOR_FAIL_SHA}.md`,
           ),
         ),
       ),

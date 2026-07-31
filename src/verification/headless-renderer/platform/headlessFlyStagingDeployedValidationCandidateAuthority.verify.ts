@@ -45,14 +45,25 @@ async function test(name: string, fn: () => void | Promise<void>): Promise<void>
 async function main(): Promise<void> {
   console.log("\nDeployed validation-candidate probe authority\n");
 
-  await test("1. prospective/rejected correction cannot use normal execution probe", () => {
+  await test("1. promoted correction digest now uses normal execution probe as current", () => {
     const probe = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
       renderImageDigestSha256:
         HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
     });
-    assert.equal(probe.ok, false);
-    if (!probe.ok) {
-      assert.equal(probe.reasonId, "historical_lifecycle_not_current_ready");
+    assert.equal(probe.ok, true);
+    if (probe.ok) {
+      assert.equal(probe.record.lifecycle, "current");
+      assert.equal(
+        probe.record.recordId,
+        "post_008_2g25_cleanup_runtime_finalization_correction_current",
+      );
+    }
+    const stillRejected = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
+      renderImageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
+    });
+    assert.equal(stillRejected.ok, false);
+    if (!stillRejected.ok) {
+      assert.equal(stillRejected.reasonId, "historical_lifecycle_not_current_ready");
     }
   });
 

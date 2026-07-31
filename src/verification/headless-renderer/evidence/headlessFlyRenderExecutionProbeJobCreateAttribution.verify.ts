@@ -42,8 +42,8 @@ import { emptyFlyRenderLiveSession } from "../fly-render-live/types";
 import type { FlyRenderLiveMatrixContext } from "../fly-render-live/types";
 
 const ROOT = path.resolve(import.meta.dirname, "../../../..");
-const CURRENT_PROBE_FAIL_SHA =
-  "d23acb8c1b25db87319018c7899128f75e30938a986c5725756d7fc334dd44ef";
+const CURRENT_PROBE_PASS_SHA =
+  "1342cc902cd0051effb4a4f3b466d9d6b717401a4776a073678f16a1072eac7b";
 const PRE_RUN_ARCHIVE_SHA =
   "535c7cc07f06866ebbc148ff9cd406e0d01bb1285505bcecf56db4e289b806f0";
 const PRIOR_PROBE_FAIL_SHA =
@@ -145,7 +145,7 @@ async function main() {
       createHash("sha256")
         .update(readFileSync(path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md")))
         .digest("hex"),
-      CURRENT_PROBE_FAIL_SHA,
+      CURRENT_PROBE_PASS_SHA,
     );
     assert.equal(
       createHash("sha256")
@@ -479,12 +479,12 @@ async function main() {
     );
   });
 
-  await test("production worker artifact hash unchanged at ae04b7eb", () => {
+  await test("production worker artifact hash matches cleanup-runtime finalization correction worker at a9baf3ea", () => {
     const workerPath = path.join(ROOT, "dist/headless-worker/hosted-worker.js");
     const hash = createHash("sha256").update(readFileSync(workerPath)).digest("hex");
     assert.equal(
       hash,
-      "ae04b7ebb37e34c4399454a25d9635694573b6651dd60148cba4cd91c4af0f0a",
+      "a9baf3ea910eeae41b4eadfb10d9dfb100b74042500884c761a8c5b946774e1b",
     );
   });
 

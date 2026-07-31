@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { HEADLESS_FLY_STAGING_POST_007_8F2_PAGE_TELEMETRY_CURRENT_PAGE_ARTIFACT_SHA256 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
+import { HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-authority";
 import {
   assertPageDiagnosticImageManifest,
   buildHeadlessPageDiagnosticBuildManifest,
@@ -32,12 +32,14 @@ const DIST = path.join(ROOT, "dist/headless-worker");
 const DEPLOY = path.join(ROOT, "deploy/headless-worker");
 
 const PRODUCTION_WORKER_SHA =
-  "ef9c43b8b8e27f6a53359939d4fc6b3939dd41f9ab8e069671eca8c02f928e2a";
+  "a9baf3ea910eeae41b4eadfb10d9dfb100b74042500884c761a8c5b946774e1b";
 const PRODUCTION_PAGE_SHA =
-  "424ad4a06e374162c1052682aa626126840dbcf3c54464d64719527fa7b7ea7d";
+  "e0c6fd819d6b2c6738e0cba1971a320fefda281c3ef5798cd011bf6fab981d2c";
 const PRODUCTION_BUILD_INFO_SHA =
-  "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a";
+  "815d289dcbe71a5fd3192da59bad12462c914e20362f6fe5f71bfacc39ab9b9d";
 
+const EXECUTION_PROBE_CURRENT_PASS_EVIDENCE_SHA =
+  "1342cc902cd0051effb4a4f3b466d9d6b717401a4776a073678f16a1072eac7b";
 const EXECUTION_PROBE_CURRENT_FAIL_EVIDENCE_SHA =
   "e8aac3bfb4abcc384b7ddfc614d00d1005d065cc0f678d53bdc8af7b38b01da3";
 const EXECUTION_PROBE_PRIOR_REAL_SHAPE_FAIL_EVIDENCE_SHA =
@@ -83,7 +85,7 @@ async function main() {
           path.join(ROOT, "docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md"),
         ),
       ),
-      EXECUTION_PROBE_CURRENT_FAIL_EVIDENCE_SHA,
+      EXECUTION_PROBE_CURRENT_PASS_EVIDENCE_SHA,
     );
     assert.equal(
       sha256Bytes(
@@ -364,7 +366,7 @@ async function main() {
     assert.equal(sha256Bytes(readFileSync(path.join(DIST, "BUILD_INFO.json"))), PRODUCTION_BUILD_INFO_SHA);
     assert.equal(
       sha256Bytes(readFileSync(path.join(DIST, "page-render.iife.js"))),
-      HEADLESS_FLY_STAGING_POST_007_8F2_PAGE_TELEMETRY_CURRENT_PAGE_ARTIFACT_SHA256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
     );
   });
 

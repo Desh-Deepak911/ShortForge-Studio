@@ -11,7 +11,7 @@ import { HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID } from "@/features/headless-
 
 import { HEADLESS_FLY_STAGING_PUBLIC_ENV } from "./fly-staging-env-ledger";
 
-export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_AUTHORITY_VERSION = 4 as const;
+export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_AUTHORITY_VERSION = 5 as const;
 
 /** Rejected by fail-closed gates until replaced by a real registry manifest digest. */
 export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PLACEHOLDER_IMAGE_DIGEST =
@@ -49,9 +49,10 @@ export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTI
 
 /**
  * Corrected finalization cleanup-runtime image digest (build-only push Part E).
- * Permanently rejected after Part F probe eligibility closed before job creation
- * (`FAIL_TELEMETRY_IMAGE` / `historical_lifecycle_not_current_ready`).
- * Forward budget exhausted; no second forward authorized.
+ * Was permanently rejected after Part F probe eligibility closed before job
+ * creation (`FAIL_TELEMETRY_IMAGE` / `historical_lifecycle_not_current_ready`).
+ * Promoted to `current` via one-time candidate recovery (Part 2G.25D Part F.2
+ * Part K) after operational recovery PASS: probe topology 1/1/0, gate-off PASS.
  */
 export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST =
   "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde" as const;
@@ -108,6 +109,7 @@ export type HeadlessFlyStagingCleanupRuntimeLifecycle =
   | "prospective"
   | "historical"
   | "rejected"
+  | "current"
   | "deployed_validation_candidate";
 
 export type HeadlessFlyStagingCleanupRuntimeImageRecord = {
@@ -115,7 +117,8 @@ export type HeadlessFlyStagingCleanupRuntimeImageRecord = {
     | "post_007_2g25_cleanup_runtime_rejected"
     | "post_007_2g25_cleanup_runtime_live_finalization_failed"
     | "post_008_2g25_cleanup_runtime_finalization_correction_prospective"
-    | "post_008_2g25_cleanup_runtime_finalization_correction_rejected";
+    | "post_008_2g25_cleanup_runtime_finalization_correction_rejected"
+    | "post_008_2g25_cleanup_runtime_finalization_correction_current";
   readonly lifecycle: HeadlessFlyStagingCleanupRuntimeLifecycle;
   readonly imageDigestSha256: string;
   readonly rendererBuildId: typeof HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID;
@@ -225,6 +228,37 @@ export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECT
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PROBE_INELIGIBLE_REASON_ID,
   } satisfies HeadlessFlyStagingCleanupRuntimeImageRecord);
 
+/**
+ * Corrected cleanup-runtime — promoted to `current` via one-time candidate
+ * recovery (Part 2G.25D Part F.2 Part K) after operational recovery PASS.
+ * The sealed rejected record above is preserved unchanged as historical
+ * rejection evidence from Part F; this is a new, separate record.
+ */
+export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CURRENT_IMAGE_RECORD =
+  Object.freeze({
+    recordId: "post_008_2g25_cleanup_runtime_finalization_correction_current",
+    lifecycle: "current",
+    imageDigestSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+    rendererBuildId: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
+    schemaFingerprint: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT,
+    cleanupCapabilityVersion:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_CAPABILITY_VERSION,
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
+    buildInfoSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
+    maintenanceEnabled: false,
+    eligibleForVerifyLiveHarness: true,
+    eligibleForRenderLiveHarness: true,
+    eligibleForCurrentStagingReadiness: true,
+    eligibleForRollbackSelection: false,
+    eligibleForDeploy: true,
+    eligibleForRuntimeReady: true,
+    eligibleForProbe: true,
+  } satisfies HeadlessFlyStagingCleanupRuntimeImageRecord);
+
 /** @deprecated Prefer HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD */
 export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD =
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD;
@@ -265,9 +299,7 @@ export function isHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDigest(
   return (
     typeof digest === "string" &&
     (digest === HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST ||
-      digest === HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST ||
-      digest ===
-        HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST)
+      digest === HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST)
   );
 }
 
@@ -302,18 +334,6 @@ export function classifyHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDiges
       reasonId:
         HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_REASON_ID,
       record: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD,
-    });
-  }
-  if (
-    typeof digest === "string" &&
-    digest ===
-      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST
-  ) {
-    return Object.freeze({
-      rejected: true,
-      reasonId: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PROBE_INELIGIBLE_REASON_ID,
-      record:
-        HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD,
     });
   }
   return Object.freeze({ rejected: false });
