@@ -8,6 +8,14 @@ import {
   type HeadlessFlyStagingPublicEnvKey,
 } from "./fly-staging-env-ledger";
 import {
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_BUILD_INFO_SHA256,
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PAGE_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+  buildHeadlessFlyStagingRollbackBridgePublicEnvironment,
+} from "./fly-staging-rollback-bridge-authority";
+import {
   materializeHeadlessFlyStagingToml,
   type HeadlessFlyStagingMaterializeResult,
 } from "./fly-staging-template";
@@ -41,11 +49,13 @@ export const HEADLESS_FLY_STAGING_2G24_FORWARD_RENDERER_BUILD_ID =
 
 export type HeadlessFlyStagingImageEnvironmentDeploymentPairId =
   | "post_007_2g23_frame_progress_rollback_pair"
-  | "post_007_2g24_export_correctness_forward_pair";
+  | "post_007_2g24_export_correctness_forward_pair"
+  | "post_007_2g24e_bridge008_rollback_bridge_pair";
 
 export type HeadlessFlyStagingImageEnvironmentDeploymentPairRole =
   | "rollback_anchor"
-  | "forward_target";
+  | "forward_target"
+  | "temporary_rollback_bridge";
 
 export type HeadlessFlyStagingImageEnvironmentDeploymentPair = {
   readonly pairId: HeadlessFlyStagingImageEnvironmentDeploymentPairId;
@@ -96,9 +106,24 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR =
       HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_BUILD_INFO_SHA256,
   } satisfies HeadlessFlyStagingImageEnvironmentDeploymentPair);
 
+export const HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR =
+  Object.freeze({
+    pairId: "post_007_2g24e_bridge008_rollback_bridge_pair",
+    role: "temporary_rollback_bridge",
+    imageRecordId: "post_007_2g24e_bridge008_rollback_bridge",
+    imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
+    rendererBuildId: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PAGE_ARTIFACT_SHA256,
+    buildInfoSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_BUILD_INFO_SHA256,
+  } satisfies HeadlessFlyStagingImageEnvironmentDeploymentPair);
+
 export const HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIRS = Object.freeze([
   HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR,
 ] as const);
 
 const DEPLOYMENT_PAIR_BY_DIGEST = new Map<
@@ -175,7 +200,10 @@ export function resolveHeadlessFlyStagingRollbackDeploymentPair(): HeadlessFlySt
 
 export function buildHeadlessFlyStagingPublicEnvironmentForDeploymentPair(
   pair: HeadlessFlyStagingImageEnvironmentDeploymentPair,
-): Readonly<Record<HeadlessFlyStagingPublicEnvKey, string>> {
+): Readonly<Record<string, string>> {
+  if (pair.pairId === "post_007_2g24e_bridge008_rollback_bridge_pair") {
+    return buildHeadlessFlyStagingRollbackBridgePublicEnvironment();
+  }
   return Object.freeze({
     ...HEADLESS_FLY_STAGING_PUBLIC_ENV,
     HEADLESS_RENDERER_BUILD_ID: pair.rendererBuildId,

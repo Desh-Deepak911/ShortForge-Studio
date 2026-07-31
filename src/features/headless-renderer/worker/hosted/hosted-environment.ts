@@ -20,9 +20,18 @@ import {
   type HeadlessQueueLeaseSettings,
   type HeadlessUpstashConsumerEnvironmentStatus,
 } from "../../control-plane/runtime/upstash-environment";
-import { HEADLESS_PHASE3_RENDERER_BUILD_ID } from "../runtime/renderer-build-id";
+import {
+  classifyHeadlessSchemaPreflightCompatibilityBinding,
+  assertHeadlessExportMaintenanceDisabledForBridge,
+  HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV,
+  HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
+} from "../../control-plane/runtime/headless-schema-preflight-compatibility-authority";
+import {
+  HEADLESS_PHASE3_RENDERER_BUILD_ID,
+  HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+} from "../runtime/renderer-build-id";
 
-/** Hosted workers require the Phase 3.2 renderer build id. */
+/** Hosted workers require the Phase 3.2 renderer build id (strict mode). */
 const HEADLESS_WORKER_RENDERER_BUILD_ID = HEADLESS_PHASE3_RENDERER_BUILD_ID;
 
 export type HeadlessHostedWorkerMode = "verify" | "render";
@@ -47,6 +56,8 @@ export type HeadlessHostedWorkerEnvironmentReasonId =
   | "invalid_upstash_tcp"
   | "invalid_binary_path"
   | "invalid_renderer_build_id"
+  | "invalid_schema_compatibility_mode"
+  | "maintenance_enabled_forbidden"
   | "invalid_concurrency"
   | "invalid_shutdown_deadline"
   | "invalid_isolation_flag"
@@ -245,6 +256,14 @@ export function classifyHeadlessHostedWorkerEnvironment(
     const ffmpeg = classifyBinaryPath(env, "HEADLESS_FFMPEG_PATH");
     const ffprobe = classifyBinaryPath(env, "HEADLESS_FFPROBE_PATH");
     const buildIdRead = readEnvString(env, "HEADLESS_RENDERER_BUILD_ID");
+    const compatibilityModeRead = readEnvString(
+      env,
+      HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV,
+    );
+    const maintenanceEnabledRead = readEnvString(
+      env,
+      "HEADLESS_EXPORT_MAINTENANCE_ENABLED",
+    );
     const concurrencyRead = readEnvString(env, "HEADLESS_WORKER_CONCURRENCY");
     const shutdownRead = readEnvString(
       env,
@@ -262,6 +281,8 @@ export function classifyHeadlessHostedWorkerEnvironment(
       ffmpeg.kind === "hostile" ||
       ffprobe.kind === "hostile" ||
       buildIdRead.kind === "hostile" ||
+      compatibilityModeRead.kind === "hostile" ||
+      maintenanceEnabledRead.kind === "hostile" ||
       concurrencyRead.kind === "hostile" ||
       shutdownRead.kind === "hostile" ||
       isolationRead.kind === "hostile"
@@ -343,10 +364,42 @@ export function classifyHeadlessHostedWorkerEnvironment(
       buildIdRead.value.length === 0 ||
       buildIdRead.value.length > BUILD_ID_MAX ||
       buildIdRead.value !== buildIdRead.value.trim() ||
-      /\s/.test(buildIdRead.value) ||
-      buildIdRead.value !== HEADLESS_WORKER_RENDERER_BUILD_ID
+      /\s/.test(buildIdRead.value)
     ) {
       return result("invalid", "invalid_renderer_build_id");
+    }
+
+    const compatibilityBinding =
+      classifyHeadlessSchemaPreflightCompatibilityBinding({
+        compatibilityMode:
+          compatibilityModeRead.kind === "present"
+            ? compatibilityModeRead.value
+            : undefined,
+        rendererBuildId: buildIdRead.value,
+      });
+    if (!compatibilityBinding.ok) {
+      return result("invalid", "invalid_schema_compatibility_mode");
+    }
+
+    const acceptedBuildIds = new Set<string>([
+      HEADLESS_WORKER_RENDERER_BUILD_ID,
+      HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+    ]);
+    if (!acceptedBuildIds.has(buildIdRead.value)) {
+      return result("invalid", "invalid_renderer_build_id");
+    }
+
+    if (
+      compatibilityBinding.mode ===
+        HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE &&
+      !assertHeadlessExportMaintenanceDisabledForBridge({
+        maintenanceEnabledRaw:
+          maintenanceEnabledRead.kind === "present"
+            ? maintenanceEnabledRead.value
+            : undefined,
+      })
+    ) {
+      return result("invalid", "maintenance_enabled_forbidden");
     }
 
     let concurrency = mode === "render"
@@ -476,4 +529,6 @@ export const HEADLESS_HOSTED_FLY_NONSECRET_ENV_NAMES = Object.freeze([
   "HEADLESS_RENDER_CLAIM_LEASE_MS",
   "HEADLESS_VERIFY_DELIVERY_IDLE_MS",
   "HEADLESS_VERIFY_CLAIM_LEASE_MS",
+  HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV,
+  "HEADLESS_EXPORT_MAINTENANCE_ENABLED",
 ] as const);

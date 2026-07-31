@@ -14,6 +14,10 @@
 
 import { createRenderDispatchOutboxScheduler } from "../../control-plane/services/dispatch-render-outbox";
 import { embeddedSchemaFingerprintAsPreflightSources } from "../../control-plane/migrations/embedded-schema-fingerprint";
+import {
+  HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV,
+  resolveHeadlessSchemaPreflightCompatibilityMode,
+} from "../../control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import { runHeadlessSchemaPreflight } from "../../control-plane/runtime/neon-schema-preflight";
 import type { HeadlessSqlExecutor } from "../../control-plane/runtime/sql-client";
 import { composeHostedHeadlessWorker } from "./compose-hosted-worker";
@@ -259,12 +263,18 @@ export async function runHostedWorkerEntrypoint(
   }
 
   // 5. Exact Neon schema preflight using embedded fingerprint
+  const compatibilityMode = resolveHeadlessSchemaPreflightCompatibilityMode(
+    typeof env[HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV] === "string"
+      ? env[HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV]
+      : undefined,
+  );
   const schemaRunner =
     options.runSchemaPreflight ??
     ((sql: HeadlessSqlExecutor) =>
       runHeadlessSchemaPreflight({
         sql,
         expectedSources: embeddedSchemaFingerprintAsPreflightSources(),
+        compatibilityMode,
       }));
 
   let schemaResult: Awaited<ReturnType<typeof runHeadlessSchemaPreflight>>;
