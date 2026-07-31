@@ -5,6 +5,8 @@
 
 export type HeadlessHostedWorkerEventName =
   | "hosted.env.classified"
+  | "hosted.packaged_startup.classified"
+  | "hosted.packaged_startup.loop_readiness"
   | "hosted.binary.preflight"
   | "hosted.composition.ready"
   | "hosted.composition.blocked"

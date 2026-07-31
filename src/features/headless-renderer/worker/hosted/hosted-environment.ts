@@ -27,6 +27,7 @@ import {
   HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
 } from "../../control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import {
+  HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
   HEADLESS_PHASE3_RENDERER_BUILD_ID,
   HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
 } from "../runtime/renderer-build-id";
@@ -384,20 +385,37 @@ export function classifyHeadlessHostedWorkerEnvironment(
     const acceptedBuildIds = new Set<string>([
       HEADLESS_WORKER_RENDERER_BUILD_ID,
       HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+      HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
     ]);
     if (!acceptedBuildIds.has(buildIdRead.value)) {
       return result("invalid", "invalid_renderer_build_id");
     }
 
+    const maintenanceDisabled = assertHeadlessExportMaintenanceDisabledForBridge({
+      maintenanceEnabledRaw:
+        maintenanceEnabledRead.kind === "present"
+          ? maintenanceEnabledRead.value
+          : undefined,
+    });
+
     if (
       compatibilityBinding.mode ===
         HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE &&
-      !assertHeadlessExportMaintenanceDisabledForBridge({
-        maintenanceEnabledRaw:
-          maintenanceEnabledRead.kind === "present"
-            ? maintenanceEnabledRead.value
-            : undefined,
-      })
+      !maintenanceDisabled
+    ) {
+      return result("invalid", "maintenance_enabled_forbidden");
+    }
+
+    if (
+      buildIdRead.value === HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID &&
+      compatibilityBinding.mode !== "strict"
+    ) {
+      return result("invalid", "invalid_schema_compatibility_mode");
+    }
+
+    if (
+      buildIdRead.value === HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID &&
+      !maintenanceDisabled
     ) {
       return result("invalid", "maintenance_enabled_forbidden");
     }

@@ -11,7 +11,7 @@ import {
   HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
 } from "@/features/headless-renderer/control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import {
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
   materializeHeadlessFlyStagingTomlForDeploymentPair,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
 import {
@@ -21,11 +21,13 @@ import {
 import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_CAPABILITY_VERSION,
-  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_HOSTED_WORKER_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PLACEHOLDER_IMAGE_DIGEST,
-  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT,
   buildHeadlessFlyStagingCleanupRuntimePublicEnvironment,
@@ -34,9 +36,10 @@ import {
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-authority";
 import { HEADLESS_FLY_STAGING_TEMPLATE_RELATIVE_PATH } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-template";
 import {
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS,
   classifyCurrentFlyStagingImageEligibility,
+  classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority,
   resolveCurrentFlyStagingAcceptedImageRecord,
   resolveProspectiveFlyStagingRolloutImageRecord,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
@@ -79,31 +82,48 @@ async function main() {
     );
   });
 
-  await test("prospective record binds real digest and remains non-runtime", () => {
-    const record = HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD;
+  await test("prospective record binds replacement digest and remains non-runtime", () => {
+    const record = HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD;
     assert.equal(record.lifecycle, "prospective");
     assert.equal(record.maintenanceEnabled, false);
-    assert.equal(record.eligibleForRollbackSelection, false);
-    assert.equal(record.eligibleForCurrentStagingReadiness, false);
+    assert.equal(record.eligibleForDeploy, false);
+    assert.equal(record.eligibleForProbe, false);
     assert.equal(isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest(record.imageDigestSha256), false);
     assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord().ok, true);
     assert.notEqual(
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
     );
+    assert.notEqual(
+      record.imageDigestSha256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
+    );
   });
 
-  await test("versioned prospective record remains non-current and probe-ineligible", () => {
+  await test("rejected record remains permanently undeployable", () => {
+    const record = HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_RECORD;
+    assert.equal(record.lifecycle, "rejected");
+    assert.equal(record.eligibleForDeploy, false);
+    assert.equal(record.rejectionReasonId, "invalid_renderer_build_id_packaged_worker");
+    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord(record).ok, false);
+  });
+
+  await test("versioned prospective record accepts rollout probe but not current readiness", () => {
     const versioned =
-      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD;
+      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD;
     assert.equal(versioned.lifecycle, "historical");
-    assert.equal(versioned.pageTelemetryCapabilityVersion, HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_CAPABILITY_VERSION);
+    assert.equal(versioned.eligibleForRenderLiveHarness, true);
+    assert.equal(versioned.eligibleForCurrentStagingReadiness, false);
     const eligibility = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: versioned.imageDigestSha256,
       schemaMigrationIds:
         HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT.migrationIds,
     });
     assert.equal(eligibility.eligible, false);
+    const probe = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
+      renderImageDigestSha256: versioned.imageDigestSha256,
+    });
+    assert.equal(probe.ok, true);
   });
 
   await test("bridge temporary current authority remains rollback-eligible", () => {
@@ -123,7 +143,7 @@ async function main() {
   await test("prospective rollout selector targets cleanup runtime not bridge", () => {
     assert.equal(
       resolveProspectiveFlyStagingRolloutImageRecord().recordId,
-      "post_007_2g25_cleanup_runtime_prospective",
+      "post_007_2g25_cleanup_runtime_replacement_prospective",
     );
     assert.equal(
       resolveCurrentFlyStagingAcceptedImageRecord().recordId,
@@ -146,7 +166,7 @@ async function main() {
     const materialized = materializeHeadlessFlyStagingTomlForDeploymentPair({
       templateToml,
       appName: "shortforge-hw-staging-test",
-      pair: HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR,
+      pair: HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
     });
     assert.equal(materialized.status, "ok");
     if (materialized.status === "ok" && materialized.toml != null) {
@@ -158,17 +178,22 @@ async function main() {
     }
   });
 
-  await test("versioned records include exactly one cleanup-runtime prospective entry", () => {
-    const matches = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
-      (record) => record.recordId === "post_007_2g25_cleanup_runtime_prospective",
+  await test("versioned records include rejected and replacement cleanup-runtime entries", () => {
+    const rejected = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
+      (record) => record.recordId === "post_007_2g25_cleanup_runtime_rejected",
     );
-    assert.equal(matches.length, 1);
+    const replacement = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
+      (record) =>
+        record.recordId === "post_007_2g25_cleanup_runtime_replacement_prospective",
+    );
+    assert.equal(rejected.length, 1);
+    assert.equal(replacement.length, 1);
     assert.equal(
-      matches[0]?.hostedWorkerArtifactSha256,
-      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_HOSTED_WORKER_ARTIFACT_SHA256,
+      replacement[0]?.hostedWorkerArtifactSha256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTIFACT_SHA256,
     );
     assert.equal(
-      matches[0]?.hostedPageArtifactSha256,
+      replacement[0]?.hostedPageArtifactSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
     );
     assert.notEqual(

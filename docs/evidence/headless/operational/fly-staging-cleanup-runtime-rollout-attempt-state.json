@@ -1,0 +1,99 @@
+{
+  "authorityVersion": 1,
+  "rolloutIdentity": "post_007_2g25d_cleanup_runtime_rollout",
+  "appName": "shortforge-hw-staging-4def8fa0",
+  "authorizedForwardLimitPerDigest": 1,
+  "incidentSealed": true,
+  "entries": [
+    {
+      "kind": "forward",
+      "targetDigestSha256": "9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60",
+      "sequence": 1,
+      "recordedAtIso": "2026-07-31T12:39:33.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": false,
+      "protocolDeviation": true,
+      "sanitizedNote": "recovered_part_b_incident"
+    },
+    {
+      "kind": "rollback",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 1,
+      "recordedAtIso": "2026-07-31T12:44:09.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": false,
+      "sanitizedNote": "recovered_part_b_incident"
+    },
+    {
+      "kind": "forward",
+      "targetDigestSha256": "9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60",
+      "sequence": 2,
+      "recordedAtIso": "2026-07-31T12:39:33.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": false,
+      "protocolDeviation": true,
+      "sanitizedNote": "recovered_part_b_incident"
+    },
+    {
+      "kind": "rollback",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 2,
+      "recordedAtIso": "2026-07-31T12:44:09.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": false,
+      "sanitizedNote": "recovered_part_b_incident"
+    },
+    {
+      "kind": "forward",
+      "targetDigestSha256": "9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60",
+      "sequence": 3,
+      "recordedAtIso": "2026-07-31T12:39:33.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": false,
+      "protocolDeviation": true,
+      "sanitizedNote": "recovered_part_b_incident"
+    },
+    {
+      "kind": "manual_recovery",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 1,
+      "recordedAtIso": "2026-07-31T12:48:21.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": false,
+      "sanitizedNote": "manual_bridge_recovery_v49"
+    },
+    {
+      "kind": "rollback",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 3,
+      "recordedAtIso": "2026-07-31T12:44:09.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": false,
+      "protocolDeviation": false,
+      "sanitizedNote": "recovered_part_b_incident"
+    },
+    {
+      "kind": "rollback",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 4,
+      "recordedAtIso": "2026-07-31T12:44:09.000Z",
+      "deployPerformed": true,
+      "acceptancePassed": false,
+      "protocolDeviation": false,
+      "sanitizedNote": "recovered_part_b_incident"
+    },
+    {
+      "kind": "read_only_preflight",
+      "targetDigestSha256": "9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60",
+      "sequence": 1,
+      "recordedAtIso": "2026-07-31T12:36:11.000Z",
+      "deployPerformed": false,
+      "acceptancePassed": null,
+      "protocolDeviation": false,
+      "sanitizedNote": "live4_topology_classification_failed"
+    }
+  ]
+}
