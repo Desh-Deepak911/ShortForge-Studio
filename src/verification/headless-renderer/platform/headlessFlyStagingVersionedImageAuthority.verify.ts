@@ -252,7 +252,7 @@ async function main() {
         "post_007_2g24_export_correctness_current",
         "post_007_2g24e_bridge008_rollback_bridge",
         "post_007_2g25_cleanup_runtime_rejected",
-        "post_007_2g25_cleanup_runtime_replacement_prospective",
+        "post_007_2g25_cleanup_runtime_live_finalization_failed",
       ],
     );
   });
@@ -771,11 +771,16 @@ async function main() {
     }
   });
 
-  await test("current and prospective selectors resolve bridge current and cleanup prospective", () => {
+  await test("current and prospective selectors resolve bridge current and rejected cleanup digest", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
-    assert.equal(prospective.recordId, "post_007_2g25_cleanup_runtime_replacement_prospective");
+    assert.equal(
+      prospective.recordId,
+      "post_007_2g25_cleanup_runtime_live_finalization_failed",
+    );
+    assert.equal(prospective.lifecycle, "historical");
+    assert.equal(prospective.eligibleForCurrentStagingReadiness, false);
     assert.equal(
       resolveProspectiveFlyStaging8i3ArtifactBindingCoherenceImageRecord().recordId,
       "post_007_8i3_artifact_binding_coherence_historical",

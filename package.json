@@ -171,6 +171,7 @@
     "test:headless-fly-staging-cleanup-runtime-rollout-probe-config": "tsx src/verification/headless-renderer/platform/headlessFlyStagingCleanupRuntimeRolloutProbeConfig.verify.ts",
     "test:headless-fly-staging-bridge-rollout-worker-preflight": "tsx src/verification/headless-renderer/platform/headlessFlyStagingBridgeRolloutWorkerPreflight.verify.ts",
     "test:headless-claimed-render-finalization-ordering": "tsx src/verification/headless-renderer/execution/headlessClaimedRenderFinalizationOrdering.verify.ts",
+    "test:headless-schema-008-artifact-finalization-closure": "tsx src/verification/headless-renderer/execution/headlessSchema008ArtifactFinalizationClosure.verify.ts",
     "test:headless-hosted-worker-packaged-startup": "tsx src/verification/headless-renderer/platform/headlessHostedWorkerPackagedStartup.verify.ts",
     "test:headless-fly-staging-deployment-authority-2e2d4": "tsx src/verification/headless-renderer/platform/headlessFlyStagingDeploymentAuthority2E2D4.verify.ts",
     "test:headless-fly-staging-machine-id-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingMachineIdAuthority.verify.ts",

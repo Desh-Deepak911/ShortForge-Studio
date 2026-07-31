@@ -412,10 +412,25 @@ export class R2JobBoundStorageAdapter implements HeadlessStoragePort {
 
     const observedAt = this.ctx.nowMs();
     if (typeof this.ownedObjectStore.markUploadedObserved === "function") {
+      const stagingBeforeObserve =
+        await this.ownedObjectStore.getByObjectIdAndOwner({
+          objectId: session.objectId,
+          ownerId: this.ctx.ownerId,
+        });
+      if (
+        !stagingBeforeObserve.ok ||
+        stagingBeforeObserve.value == null ||
+        stagingBeforeObserve.value.record.stage !== "staging"
+      ) {
+        return cpFail(
+          "MANIFEST_NOT_FOUND",
+          "Durable staging artifact missing before upload observation.",
+        );
+      }
       const observed = await this.ownedObjectStore.markUploadedObserved({
         objectId: session.objectId,
         ownerId: this.ctx.ownerId,
-        expectedStoreVersion: durable.value.storeVersion,
+        expectedStoreVersion: stagingBeforeObserve.value.storeVersion,
         uploadedObservedAtMs: observedAt,
         nowMs: observedAt,
       });
@@ -490,7 +505,18 @@ export class R2JobBoundStorageAdapter implements HeadlessStoragePort {
       nowMs,
       verifiedBy: "trusted_worker_upload_stream",
     });
-    if (!finalized.ok) return finalized;
+    if (!finalized.ok) {
+      if (typeof this.ownedObjectStore.failVerificationClaim === "function") {
+        await this.ownedObjectStore.failVerificationClaim({
+          objectId: session.objectId,
+          ownerId: this.ctx.ownerId,
+          claimToken,
+          expectedStoreVersion: claimed.value.storeVersion,
+          nowMs,
+        });
+      }
+      return finalized;
+    }
 
     session.consumed = true;
     this.capabilities.delete(input.capabilityToken);
