@@ -36,6 +36,7 @@ export const HEADLESS_FLY_STAGING_GATE_IDS = Object.freeze([
   "secrets_install",
   "image_deploy",
   "bridge_build_only",
+  "cleanup_runtime_build_only",
   "bridge_rollout",
   "verify_scale_up",
   "render_scale_up",
@@ -59,6 +60,8 @@ export function headlessFlyStagingGateEnvName(
       return "HEADLESS_FLY_STAGING_AUTHORIZE_IMAGE_DEPLOY";
     case "bridge_build_only":
       return "HEADLESS_FLY_STAGING_AUTHORIZE_BRIDGE_BUILD_ONLY";
+    case "cleanup_runtime_build_only":
+      return "HEADLESS_FLY_STAGING_AUTHORIZE_CLEANUP_RUNTIME_BUILD_ONLY";
     case "bridge_rollout":
       return "HEADLESS_FLY_STAGING_AUTHORIZE_BRIDGE_ROLLOUT";
     case "verify_scale_up":

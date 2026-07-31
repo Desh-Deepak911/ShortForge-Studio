@@ -85,6 +85,7 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_LOCAL_INTEGRATION_PLACEHOLDER_IMAGE_DIGEST,
   isHeadlessFlyStagingPlaceholderImageDigest,
@@ -220,9 +221,9 @@ async function main() {
     "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 35 with twenty-four immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 35);
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 24);
+  await test("authority version is frozen at 36 with twenty-five immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 36);
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 25);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
       [
@@ -250,6 +251,7 @@ async function main() {
         "post_007_2g24_export_correctness_prospective",
         "post_007_2g24_export_correctness_current",
         "post_007_2g24e_bridge008_rollback_bridge",
+        "post_007_2g25_cleanup_runtime_prospective",
       ],
     );
   });
@@ -768,11 +770,11 @@ async function main() {
     }
   });
 
-  await test("current and prospective selectors resolve schema-008 rollback bridge", () => {
+  await test("current and prospective selectors resolve bridge current and cleanup prospective", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
-    assert.equal(prospective.recordId, "post_007_2g24e_bridge008_rollback_bridge");
+    assert.equal(prospective.recordId, "post_007_2g25_cleanup_runtime_prospective");
     assert.equal(
       resolveProspectiveFlyStaging8i3ArtifactBindingCoherenceImageRecord().recordId,
       "post_007_8i3_artifact_binding_coherence_historical",
@@ -1049,13 +1051,14 @@ async function main() {
     assert.equal(result.eligible, true);
   });
 
-  await test("bridge placeholder digest is rejected as unknown", () => {
+  await test("cleanup prospective digest is ineligible for current readiness", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
-      imageDigestSha256: "0".repeat(64),
-      schemaMigrationIds: SEVEN_MIGRATION_IDS,
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD.imageDigestSha256,
+      schemaMigrationIds: EIGHT_MIGRATION_IDS,
     });
     assert.equal(result.eligible, false);
-    assert.equal(result.reasonId, "unknown_digest");
+    assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
   });
 
   await test("2G.23 current digest with bound worker artifact accepted for artifact eligibility", () => {
