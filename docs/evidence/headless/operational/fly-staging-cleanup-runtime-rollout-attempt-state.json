@@ -94,6 +94,62 @@
       "acceptancePassed": null,
       "protocolDeviation": false,
       "sanitizedNote": "live4_topology_classification_failed"
+    },
+    {
+      "kind": "forward",
+      "targetDigestSha256": "e0224b93f12113e922d21e99e702bd6d333eb3997076b005700623837d837916",
+      "sequence": 4,
+      "recordedAtIso": "2026-07-31T13:46:44.094Z",
+      "deployPerformed": true,
+      "acceptancePassed": false,
+      "protocolDeviation": true,
+      "sanitizedNote": "orchestrator_record_forward"
+    },
+    {
+      "kind": "rollback",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 5,
+      "recordedAtIso": "2026-07-31T13:49:51.450Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": false,
+      "sanitizedNote": "orchestrator_record_rollback"
+    },
+    {
+      "kind": "forward",
+      "targetDigestSha256": "e0224b93f12113e922d21e99e702bd6d333eb3997076b005700623837d837916",
+      "sequence": 5,
+      "recordedAtIso": "2026-07-31T13:59:45.336Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": true,
+      "sanitizedNote": "orchestrator_record_forward"
+    },
+    {
+      "kind": "rollback",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 6,
+      "recordedAtIso": "2026-07-31T14:10:36.085Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": false,
+      "sanitizedNote": "orchestrator_record_rollback"
+    }
+  ],
+  "authorizationAmendments": [
+    {
+      "targetDigestSha256": "e0224b93f12113e922d21e99e702bd6d333eb3997076b005700623837d837916",
+      "originalAuthorizedForwardLimit": 1,
+      "originalForwardUsed": 1,
+      "originalRuntimeAcceptance": "pass",
+      "originalProbeResult": "config_only_failure_before_job_creation",
+      "rollbackPerformed": true,
+      "amendedTotalForwardLimit": 2,
+      "additionalForwardAuthorization": 1,
+      "reasonId": "operator_probe_credential_surface_correction",
+      "imageRebuildForbidden": true,
+      "furtherAmendmentForbidden": true,
+      "recordedAtIso": "2026-07-31T13:57:32.972Z"
     }
   ]
 }

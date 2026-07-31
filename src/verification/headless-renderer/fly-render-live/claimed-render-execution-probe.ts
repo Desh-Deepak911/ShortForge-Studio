@@ -212,6 +212,9 @@ export async function runFlyRenderExecutionProbe(
         cleanupStatus: "not_run",
       },
     });
+    console.log(
+      `execution_probe_eligibility_verdict=${EXECUTION_PROBE_ELIGIBILITY.FAIL_CONFIG}`,
+    );
     return { exitCode: 1, overall: "FAIL", connectionFactoryCalls: 0 };
   }
 
@@ -243,6 +246,9 @@ export async function runFlyRenderExecutionProbe(
         cleanupStatus: "not_run",
       },
     });
+    console.log(
+      `execution_probe_eligibility_verdict=${EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE}`,
+    );
     return { exitCode: 1, overall: "FAIL", connectionFactoryCalls: 0 };
   }
 

@@ -17,6 +17,12 @@ import {
   buildValidatedArtifactObjectBinding,
   validateHeadlessArtifactObjectBinding,
 } from "@/features/headless-renderer/control-plane/services/validate-artifact-object-binding";
+import {
+  assertClaimedRenderCleanupWiringComplete,
+  readClaimedRenderCleanupWiringSources,
+  runClaimedRenderCleanupReleaseBehaviorFixtures,
+  validateClaimedRenderCleanupWiring,
+} from "@/features/headless-renderer/worker/testing/claimed-render-artifact-cleanup-release-authority";
 import { buildHeadlessReferenceFixture } from "@/features/headless-renderer/worker/testing/build-reference-fixture";
 import { seedAndCreateReferenceJob } from "@/features/headless-renderer/worker/testing/seed-reference-job";
 
@@ -93,15 +99,33 @@ async function main() {
     assert.equal(runner.includes("testHooks"), false);
     assert.equal(runner.includes("LocalHeadlessWorkerTestHooks"), false);
 
-    const claimed = readFileSync(
-      join(
-        process.cwd(),
-        "src/features/headless-renderer/worker/runtime/execute-claimed-render.ts",
+    assert.doesNotThrow(() => assertClaimedRenderCleanupWiringComplete());
+  });
+
+  test("claimed render cleanup wiring gate rejects stripped executor source", () => {
+    const sources = readClaimedRenderCleanupWiringSources();
+    const stripped = {
+      ...sources,
+      executeClaimedRender: sources.executeClaimedRender.replace(
+        /createClaimedRenderTerminalCleanupSession/g,
+        "",
       ),
-      "utf8",
-    );
-    assert.equal(claimed.includes("evaluateArtifactObjectBindingCoherence"), true);
-    assert.equal(claimed.includes("deleteOrScheduleArtifactCleanup"), true);
+    };
+    const validation = validateClaimedRenderCleanupWiring(stripped);
+    assert.equal(validation.ok, false);
+    if (validation.ok) return;
+    assert.ok(validation.missing.includes("terminal_cleanup_session_factory"));
+  });
+
+  await testAsync("artifact cleanup release behavior fixtures", async () => {
+    const behavior = await runClaimedRenderCleanupReleaseBehaviorFixtures();
+    assert.equal(behavior.successPathNoOrphanCleanup, true);
+    assert.equal(behavior.finalizeFailureSequenceCoherent, true);
+    assert.equal(behavior.bindingFailureWiringPresent, true);
+    assert.equal(behavior.deleteFailureSchedulesDurableWork, true);
+    assert.equal(behavior.idempotentAbsentCleanupOk, true);
+    assert.equal(behavior.projectSourceProtected, true);
+    assert.equal(behavior.privacySafe, true);
   });
 
   test("binding validator: total hostile-input safe (no throw)", () => {
@@ -529,7 +553,7 @@ async function main() {
       assert.equal(result.ok, true);
       if (!result.ok) return;
       assert.equal(result.value.lastOrphanCleanup?.status, "scheduled");
-      assert.ok(result.value.lastOrphanCleanup?.cleanupId);
+      assert.equal(result.value.lastOrphanCleanup?.cleanupId, null);
 
       stack.storage.testingDeleteFail = false;
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);

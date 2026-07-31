@@ -60,10 +60,10 @@ async function main() {
     "\nSprint 11E Phase 2G.24G.1 — Fly staging image/environment deployment pair authority\n",
   );
 
-  await test("deployment pair authority version frozen at 3 with unique digest table", () => {
+  await test("deployment pair authority version frozen at 4 with unique digest table", () => {
     assert.equal(
       HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_AUTHORITY_VERSION,
-      3,
+      4,
     );
     assert.equal(validateHeadlessFlyStagingImageEnvironmentDeploymentPairTable().ok, true);
   });
@@ -152,16 +152,13 @@ async function main() {
     }
   });
 
-  await test("6b: cleanup replacement prospective digest resolves to replacement pair", () => {
+  await test("6b: rejected cleanup-runtime live-finalization digest is not deployable", () => {
     const resolved = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
       HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR.imageDigestSha256,
     );
-    assert.equal(resolved.ok, true);
-    if (resolved.ok) {
-      assert.equal(
-        resolved.pair.pairId,
-        "post_007_2g25_cleanup_runtime_replacement_prospective_pair",
-      );
+    assert.equal(resolved.ok, false);
+    if (!resolved.ok) {
+      assert.equal(resolved.reasonId, "rejected_permanent_digest");
     }
   });
 

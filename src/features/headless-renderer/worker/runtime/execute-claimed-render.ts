@@ -74,6 +74,7 @@ import {
   type ProviderBackedBoundaryTelemetryPort,
   type StorageAdapterClass,
 } from "./provider-backed-boundary-telemetry";
+import { classifyStorageFinalizeFailureSubstage } from "./classify-storage-finalize-failure";
 
 /** Stable module identity — local + hosted must import this same executor. */
 export const CLAIMED_RENDER_EXECUTOR_ID = "executeClaimedRender" as const;
@@ -898,24 +899,48 @@ export async function executeClaimedRender(
               boundaryTelemetry.emit("owned_object_finalize_started", {
                 artifactLifecycleRole: "primary_output",
               });
-              const finalized = await storage.finalizeUploadedObject({
-                capabilityToken: upload.value.capabilityToken,
-                expectedContentDigest: executed.artifact.contentDigest,
-              });
-              if (!finalized.ok) {
+              try {
+                const finalized = await storage.finalizeUploadedObject({
+                  capabilityToken: upload.value.capabilityToken,
+                  expectedContentDigest: executed.artifact.contentDigest,
+                });
+                if (!finalized.ok) {
+                  boundaryTelemetry.emit("owned_object_finalize_completed", {
+                    finalizeOutcomeClass: "failed",
+                    finalizeSubstage: classifyStorageFinalizeFailureSubstage(
+                      finalized.issues[0]?.code,
+                    ),
+                    artifactLifecycleRole: "primary_output",
+                  });
+                  queueOrphanForTerminalCleanup(
+                    orphanLocator,
+                    "UPLOAD_SESSION_ORPHAN",
+                  );
+                  orphanLocator = null;
+                  finalizeFailed = {
+                    reasonId: "WORKER_FAILED",
+                    retryable: true,
+                  };
+                } else {
+                  finalizedMeta = finalized.value;
+                  orphanLocator = finalized.value.locator;
+                }
+              } catch {
+                // Finalize owns its terminal boundary — never fold into upload failure.
                 boundaryTelemetry.emit("owned_object_finalize_completed", {
                   finalizeOutcomeClass: "failed",
-                  finalizeSubstage: "r2_upload",
+                  finalizeSubstage: "provider_finalize",
+                  artifactLifecycleRole: "primary_output",
                 });
-                queueOrphanForTerminalCleanup(orphanLocator, "UPLOAD_SESSION_ORPHAN");
+                queueOrphanForTerminalCleanup(
+                  orphanLocator,
+                  "UPLOAD_SESSION_ORPHAN",
+                );
                 orphanLocator = null;
                 finalizeFailed = {
                   reasonId: "WORKER_FAILED",
                   retryable: true,
                 };
-              } else {
-                finalizedMeta = finalized.value;
-                orphanLocator = finalized.value.locator;
               }
             }
           }
@@ -1005,6 +1030,8 @@ export async function executeClaimedRender(
           executed.sourceBindingAttribution,
           {
             primaryExecutionSubstage: "artifact_finalize",
+            secondaryTerminalCasSubstage: "terminal_failure_cas",
+            secondaryTerminalCasOutcome: "confirmed",
             storeVersionAtTerminalAttempt,
           },
         );

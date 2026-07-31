@@ -13,6 +13,7 @@ import {
 } from "../../src/features/headless-renderer/control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import {
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_DEPLOYMENT_PAIR,
   materializeHeadlessFlyStagingTomlForDeploymentPair,
   resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256,
 } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
@@ -150,7 +151,16 @@ switch (command) {
     const rejectedPair = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
     );
-    if (!rejectedPair.ok || rejectedPair.pair.pairId !== "post_007_2g25_cleanup_runtime_rejected_pair") {
+    if (
+      rejectedPair.ok ||
+      rejectedPair.reasonId !== "rejected_permanent_digest"
+    ) {
+      die("rejected_pair_incoherent");
+    }
+    if (
+      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_DEPLOYMENT_PAIR.pairId !==
+      "post_007_2g25_cleanup_runtime_rejected_pair"
+    ) {
       die("rejected_pair_incoherent");
     }
     const cleanupPair = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
@@ -158,7 +168,7 @@ switch (command) {
     );
     if (
       !cleanupPair.ok ||
-      cleanupPair.pair.pairId !== "post_007_2g25_cleanup_runtime_replacement_prospective_pair"
+      cleanupPair.pair.pairId !== "post_007_2g25_cleanup_runtime_live_finalization_failed_pair"
     ) {
       die("cleanup_pair_incoherent");
     }

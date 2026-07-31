@@ -15,11 +15,14 @@ import {
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-rollout-incident-authority";
 import {
   appendHeadlessFlyStagingCleanupRuntimeRolloutAttemptEntry,
+  appendHeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment,
+  buildHeadlessFlyStagingCleanupRuntimeProbeCredentialAuthorizationAmendment,
   classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget,
   countForwardAttemptsForDigest,
   loadHeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
   persistHeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
   sealHeadlessFlyStagingCleanupRuntimeRolloutIncidentState,
+  summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-rollout-attempt-budget-authority";
 import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
@@ -165,7 +168,7 @@ async function main() {
     assert.equal(blocked.ok, true);
   });
 
-  await test("replacement digest with real authority requires rollout authorization flag", () => {
+  await test("live-finalization-failed digest is rejected before budget evaluation", () => {
     const state = sealHeadlessFlyStagingCleanupRuntimeRolloutIncidentState({ appName: APP });
     const blocked = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
       state,
@@ -173,31 +176,49 @@ async function main() {
       targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
       newTargetAuthorizationPresent: false,
     });
-    if (
-      isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest(
-        HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
-      )
-    ) {
-      assert.equal(blocked.ok, true);
-      return;
-    }
     assert.equal(blocked.ok, false);
-    if (!blocked.ok) {
-      assert.equal(blocked.reasonId, "new_target_digest_requires_new_authorization");
-    }
+    if (blocked.ok) throw new Error("expected blocked");
+    assert.equal(blocked.reasonId, "rejected_target_digest");
   });
 
   await test("missing attempt state fails closed after known deployment", () => {
     const gate = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
       state: null,
       appName: APP,
-      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+      targetDigestSha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       forwardDeployKnownCompleted: true,
     });
     assert.equal(gate.ok, false);
     if (!gate.ok) {
       assert.equal(gate.reasonId, "forward_after_known_deployment_without_state");
     }
+  });
+
+  await test("rejected live-finalization digest supersedes amendment authorization", () => {
+    const loaded = loadHeadlessFlyStagingCleanupRuntimeRolloutAttemptState({
+      footiebitzRoot: process.cwd(),
+      appName: APP,
+    });
+    assert.equal(loaded.ok, true);
+    if (!loaded.ok) return;
+    const state = loaded.state;
+    const blocked = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
+      state,
+      appName: APP,
+      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+      amendedForwardAuthorizationPresent: true,
+    });
+    assert.equal(blocked.ok, false);
+    if (!blocked.ok) {
+      assert.equal(blocked.reasonId, "rejected_target_digest");
+    }
+    const summary = summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
+      state,
+      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+    });
+    assert.equal(summary.used, 2);
+    assert.equal(summary.limit, 2);
+    assert.equal(summary.remaining, 0);
   });
 
   await test("rollback entries do not consume forward budget", () => {

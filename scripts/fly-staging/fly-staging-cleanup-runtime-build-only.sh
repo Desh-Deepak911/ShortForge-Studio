@@ -16,6 +16,8 @@ fi
 
 BRIDGE_DIGEST="7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206"
 ROLLBACK_FORBIDDEN_DIGEST="d38e45e24c579f56960611d48c15c92e38968d7290dbf04f926e0e572c56bd68"
+REJECTED_PART_A_DIGEST="9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60"
+REJECTED_LIVE_FINALIZATION_DIGEST="e0224b93f12113e922d21e99e702bd6d333eb3997076b005700623837d837916"
 
 TOPOLOGY_BEFORE="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-topology-before.XXXXXX")"
 TOPOLOGY_AFTER="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-topology-after.XXXXXX")"
@@ -136,6 +138,12 @@ if [ "${MANIFEST_DIGEST}" = "${BRIDGE_DIGEST}" ]; then
 fi
 if [ "${MANIFEST_DIGEST}" = "${ROLLBACK_FORBIDDEN_DIGEST}" ]; then
   fly_staging_die "fail_class=cleanup_digest_matches_forbidden_2g24"
+fi
+if [ "${MANIFEST_DIGEST}" = "${REJECTED_PART_A_DIGEST}" ]; then
+  fly_staging_die "fail_class=cleanup_digest_matches_rejected_part_a"
+fi
+if [ "${MANIFEST_DIGEST}" = "${REJECTED_LIVE_FINALIZATION_DIGEST}" ]; then
+  fly_staging_die "fail_class=cleanup_digest_matches_rejected_live_finalization"
 fi
 
 IMAGE_REF="registry.fly.io/${HEADLESS_FLY_STAGING_APP_NAME}@sha256:${MANIFEST_DIGEST}"

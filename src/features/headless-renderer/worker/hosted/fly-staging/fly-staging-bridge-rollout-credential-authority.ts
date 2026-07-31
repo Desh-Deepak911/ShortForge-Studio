@@ -214,6 +214,21 @@ export function deriveHostedWorkerBridgeLinesFromQaMaster(
   );
 }
 
+/** Derive eleven-key QA probe bridge lines from validated QA master body — never logs values. */
+export function deriveQaProbeBridgeLinesFromQaMaster(
+  qaMasterBody: string,
+): readonly string[] {
+  const byKey = new Map<string, string>();
+  for (const { key, value } of parseEnvFileAssignments(qaMasterBody)) {
+    byKey.set(key, value);
+  }
+  return Object.freeze(
+    FLY_VERIFY_LIVE_QA_SECRET_KEYS.map((key) =>
+      formatEnvAssignment(key, byKey.get(key) ?? ""),
+    ),
+  );
+}
+
 export function validateMigrationMasterBody(body: unknown): FlyStagingBridgeRolloutCredentialResult {
   if (typeof body !== "string") {
     return { ok: false, failClass: "hostile_input" };

@@ -513,7 +513,10 @@ async function main() {
       assert.equal(result.ok, true);
       if (!result.ok) throw new Error("process failed");
       assert.equal(result.value.lastOrphanCleanup?.status, "scheduled");
-      const cleanupId = result.value.lastOrphanCleanup!.cleanupId!;
+      assert.equal(result.value.lastOrphanCleanup?.cleanupId, null);
+      const cleanupId =
+        stack.artifactCleanup.testingFirstPendingCleanupIdForOwner(ownerId);
+      assert.ok(cleanupId);
       assert.ok(stack.storage.testingCountFinalizedArtifacts(ownerId) >= 1);
       assert.equal(stack.artifactCleanup.testingCountPendingForOwner(ownerId), 1);
 
