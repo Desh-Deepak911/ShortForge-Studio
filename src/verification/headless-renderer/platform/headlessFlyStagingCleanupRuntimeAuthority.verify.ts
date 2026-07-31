@@ -82,14 +82,15 @@ async function main() {
     );
   });
 
-  await test("prospective record binds replacement digest and remains non-runtime", () => {
+  await test("live finalization failed record is permanently rejected", () => {
     const record = HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD;
-    assert.equal(record.lifecycle, "prospective");
+    assert.equal(record.lifecycle, "rejected");
     assert.equal(record.maintenanceEnabled, false);
     assert.equal(record.eligibleForDeploy, false);
     assert.equal(record.eligibleForProbe, false);
+    assert.equal(record.rejectionReasonId, "live_owned_object_finalization_failure");
     assert.equal(isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest(record.imageDigestSha256), false);
-    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord().ok, true);
+    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord().ok, false);
     assert.notEqual(
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
@@ -108,11 +109,11 @@ async function main() {
     assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord(record).ok, false);
   });
 
-  await test("versioned prospective record accepts rollout probe but not current readiness", () => {
+  await test("versioned live-finalization-failed record is not rollout eligible", () => {
     const versioned =
       HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD;
     assert.equal(versioned.lifecycle, "historical");
-    assert.equal(versioned.eligibleForRenderLiveHarness, true);
+    assert.equal(versioned.eligibleForRenderLiveHarness, false);
     assert.equal(versioned.eligibleForCurrentStagingReadiness, false);
     const eligibility = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: versioned.imageDigestSha256,
@@ -123,7 +124,7 @@ async function main() {
     const probe = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
       renderImageDigestSha256: versioned.imageDigestSha256,
     });
-    assert.equal(probe.ok, true);
+    assert.equal(probe.ok, false);
   });
 
   await test("bridge temporary current authority remains rollback-eligible", () => {
@@ -140,10 +141,10 @@ async function main() {
     );
   });
 
-  await test("prospective rollout selector targets cleanup runtime not bridge", () => {
+  await test("rollout selector no longer exposes deployable cleanup runtime target", () => {
     assert.equal(
       resolveProspectiveFlyStagingRolloutImageRecord().recordId,
-      "post_007_2g25_cleanup_runtime_replacement_prospective",
+      "post_007_2g25_cleanup_runtime_live_finalization_failed",
     );
     assert.equal(
       resolveCurrentFlyStagingAcceptedImageRecord().recordId,
@@ -178,22 +179,22 @@ async function main() {
     }
   });
 
-  await test("versioned records include rejected and replacement cleanup-runtime entries", () => {
+  await test("versioned records include rejected and live-finalization-failed entries", () => {
     const rejected = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
       (record) => record.recordId === "post_007_2g25_cleanup_runtime_rejected",
     );
-    const replacement = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
+    const liveFailed = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
       (record) =>
-        record.recordId === "post_007_2g25_cleanup_runtime_replacement_prospective",
+        record.recordId === "post_007_2g25_cleanup_runtime_live_finalization_failed",
     );
     assert.equal(rejected.length, 1);
-    assert.equal(replacement.length, 1);
+    assert.equal(liveFailed.length, 1);
     assert.equal(
-      replacement[0]?.hostedWorkerArtifactSha256,
+      liveFailed[0]?.hostedWorkerArtifactSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTIFACT_SHA256,
     );
     assert.equal(
-      replacement[0]?.hostedPageArtifactSha256,
+      liveFailed[0]?.hostedPageArtifactSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
     );
     assert.notEqual(

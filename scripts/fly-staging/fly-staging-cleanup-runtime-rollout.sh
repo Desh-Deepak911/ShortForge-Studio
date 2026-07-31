@@ -201,6 +201,7 @@ rollback_to_bridge() {
     || fly_staging_die "fail_class=rollback_attempt_record_failed"
   export HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE="rollback_bridge_007_008"
   export HEADLESS_FLY_STAGING_PREFLIGHT_WORKER_MODE=verify
+  fly_staging_isolate_worker_bridge_preflight_env
   npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-preflight-cli.ts" \
     || fly_staging_die "fail_class=rollback_verify_preflight_failed"
 }

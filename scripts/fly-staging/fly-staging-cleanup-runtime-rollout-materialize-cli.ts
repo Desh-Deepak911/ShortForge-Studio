@@ -168,7 +168,7 @@ switch (command) {
     );
     if (
       !cleanupPair.ok ||
-      cleanupPair.pair.pairId !== "post_007_2g25_cleanup_runtime_replacement_prospective_pair"
+      cleanupPair.pair.pairId !== "post_007_2g25_cleanup_runtime_live_finalization_failed_pair"
     ) {
       die("cleanup_pair_incoherent");
     }

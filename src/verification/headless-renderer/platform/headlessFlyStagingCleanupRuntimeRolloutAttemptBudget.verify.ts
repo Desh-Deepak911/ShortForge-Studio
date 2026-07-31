@@ -168,7 +168,7 @@ async function main() {
     assert.equal(blocked.ok, true);
   });
 
-  await test("replacement digest with real authority requires rollout authorization flag", () => {
+  await test("live-finalization-failed digest is rejected before budget evaluation", () => {
     const state = sealHeadlessFlyStagingCleanupRuntimeRolloutIncidentState({ appName: APP });
     const blocked = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
       state,
@@ -176,25 +176,16 @@ async function main() {
       targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
       newTargetAuthorizationPresent: false,
     });
-    if (
-      isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest(
-        HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
-      )
-    ) {
-      assert.equal(blocked.ok, true);
-      return;
-    }
     assert.equal(blocked.ok, false);
-    if (!blocked.ok) {
-      assert.equal(blocked.reasonId, "new_target_digest_requires_new_authorization");
-    }
+    if (blocked.ok) throw new Error("expected blocked");
+    assert.equal(blocked.reasonId, "rejected_target_digest");
   });
 
   await test("missing attempt state fails closed after known deployment", () => {
     const gate = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
       state: null,
       appName: APP,
-      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+      targetDigestSha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       forwardDeployKnownCompleted: true,
     });
     assert.equal(gate.ok, false);
@@ -203,64 +194,31 @@ async function main() {
     }
   });
 
-  await test("authorization amendment allows one additional forward and refuses third", () => {
+  await test("rejected live-finalization digest supersedes amendment authorization", () => {
     const loaded = loadHeadlessFlyStagingCleanupRuntimeRolloutAttemptState({
       footiebitzRoot: process.cwd(),
       appName: APP,
     });
     assert.equal(loaded.ok, true);
     if (!loaded.ok) return;
-    let state = appendHeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment({
-      state: loaded.state,
-      amendment: buildHeadlessFlyStagingCleanupRuntimeProbeCredentialAuthorizationAmendment({
-        recordedAtIso: "2026-07-31T13:50:00.000Z",
-      }),
-    });
+    const state = loaded.state;
     const blocked = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
       state,
       appName: APP,
       targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
-      amendedForwardAuthorizationPresent: false,
+      amendedForwardAuthorizationPresent: true,
     });
     assert.equal(blocked.ok, false);
     if (!blocked.ok) {
-      assert.equal(blocked.reasonId, "amended_forward_authorization_required");
+      assert.equal(blocked.reasonId, "rejected_target_digest");
     }
-    const allowed = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
-      state,
-      appName: APP,
-      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
-      amendedForwardAuthorizationPresent: true,
-    });
-    assert.equal(allowed.ok, true);
     const summary = summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
       state,
       targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
     });
-    assert.equal(summary.used, 1);
+    assert.equal(summary.used, 2);
     assert.equal(summary.limit, 2);
-    assert.equal(summary.remaining, 1);
-    state = appendHeadlessFlyStagingCleanupRuntimeRolloutAttemptEntry({
-      state,
-      entry: {
-        kind: "forward",
-        targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
-        sequence: 5,
-        recordedAtIso: new Date().toISOString(),
-        deployPerformed: true,
-        acceptancePassed: true,
-        protocolDeviation: false,
-        sanitizedNote: "fixture_second_forward",
-      },
-    });
-    const exhausted = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
-      state,
-      appName: APP,
-      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
-      amendedForwardAuthorizationPresent: true,
-    });
-    assert.equal(exhausted.ok, false);
-    if (!exhausted.ok) assert.equal(exhausted.reasonId, "forward_budget_exhausted");
+    assert.equal(summary.remaining, 0);
   });
 
   await test("rollback entries do not consume forward budget", () => {

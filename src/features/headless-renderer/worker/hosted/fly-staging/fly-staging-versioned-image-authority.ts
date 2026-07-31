@@ -18,6 +18,7 @@ import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_REASON_ID,
   isHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDigest,
   isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest,
 } from "./fly-staging-cleanup-runtime-authority";
@@ -60,7 +61,7 @@ export type HeadlessFlyStagingVersionedImageRecordId =
   | "post_007_2g24_export_correctness_current"
   | "post_007_2g24e_bridge008_rollback_bridge"
   | "post_007_2g25_cleanup_runtime_rejected"
-  | "post_007_2g25_cleanup_runtime_replacement_prospective"
+  | "post_007_2g25_cleanup_runtime_live_finalization_failed"
   | "post_007_2g25_cleanup_runtime_prospective";
 
 export type HeadlessFlyStagingVersionedImageSchemaFingerprint = {
@@ -1070,10 +1071,10 @@ export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_IMAGE_R
     eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** Post-007 2G.25 cleanup-runtime replacement prospective — build-only registered, not current. */
-export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD =
+/** Post-007 2G.25 cleanup-runtime live finalization failure — permanently rejected. */
+export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD =
   Object.freeze({
-    recordId: "post_007_2g25_cleanup_runtime_replacement_prospective",
+    recordId: "post_007_2g25_cleanup_runtime_live_finalization_failed",
     lifecycle: "historical",
     imageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
     schemaFingerprint: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT,
@@ -1085,13 +1086,17 @@ export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROS
     pageTelemetryCapabilityVersion:
       HEADLESS_FLY_STAGING_EXPORT_CLEANUP_RUNTIME_CAPABILITY_VERSION,
     eligibleForVerifyLiveHarness: false,
-    eligibleForRenderLiveHarness: true,
+    eligibleForRenderLiveHarness: false,
     eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** @deprecated Prefer HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD */
+/** @deprecated Prefer HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD */
+export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD =
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD;
+
+/** @deprecated Prefer HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD */
 export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD =
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD;
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD;
 
 /** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8F5_PAGE_ATTRIBUTION_CURRENT_IMAGE_RECORD */
 export const HEADLESS_FLY_STAGING_POST_007_CURRENT_IMAGE_RECORD =
@@ -1123,7 +1128,7 @@ export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS = Object.freeze([
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_IMAGE_RECORD,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD,
 ] as const);
 
 const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>(
@@ -1137,9 +1142,9 @@ export function resolveCurrentFlyStagingAcceptedImageRecord(): HeadlessFlyStagin
   return HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD;
 }
 
-/** Pre-rollout prospective selector for the next controlled image rollout. */
+/** No prospective cleanup-runtime rollout target remains after live finalization failure. */
 export function resolveProspectiveFlyStagingRolloutImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_IMAGE_RECORD;
 }
 
 export function classifyHeadlessFlyStagingRejectedCleanupRuntimeDeployEligibility(input: {
@@ -1327,7 +1332,7 @@ function isPost007VersionedImageRecord(
     record.recordId === "post_007_2g24_export_correctness_current" ||
     record.recordId === "post_007_2g24e_bridge008_rollback_bridge" ||
     record.recordId === "post_007_2g25_cleanup_runtime_rejected" ||
-    record.recordId === "post_007_2g25_cleanup_runtime_replacement_prospective" ||
+    record.recordId === "post_007_2g25_cleanup_runtime_live_finalization_failed" ||
     record.recordId === "post_007_2g25_cleanup_runtime_prospective"
   );
 }
@@ -1569,7 +1574,7 @@ export function classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority(inp
     return { ok: false, reasonId: "missing_page_telemetry_capability" };
   }
   if (
-    (record.recordId === "post_007_2g25_cleanup_runtime_replacement_prospective" ||
+    (record.recordId === "post_007_2g25_cleanup_runtime_live_finalization_failed" ||
       record.recordId === "post_007_2g25_cleanup_runtime_prospective") &&
     record.eligibleForRenderLiveHarness
   ) {

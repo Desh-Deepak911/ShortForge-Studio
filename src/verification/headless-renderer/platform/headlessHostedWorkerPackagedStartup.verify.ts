@@ -77,7 +77,7 @@ function runPackagedProbe(
   const result = spawnSync(process.execPath, [WORKER], {
     cwd: DIST,
     encoding: "utf8",
-    env,
+    env: { ...process.env, ...env },
     timeout: 15_000,
   });
   return {

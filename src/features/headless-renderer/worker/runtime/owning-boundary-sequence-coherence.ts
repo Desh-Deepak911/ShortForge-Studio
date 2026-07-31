@@ -301,6 +301,21 @@ export function validateOwningBoundarySequenceCoherence(input: {
     };
   }
 
+  if (
+    hasBoundary(observed, "artifact_upload_completed") &&
+    hasBoundary(observed, "cleanup_completed") &&
+    !hasAnyBoundary(observed, [
+      "owned_object_finalize_started",
+      "owned_object_finalize_completed",
+    ])
+  ) {
+    return {
+      ok: false,
+      reasonId: BOUNDARY_SEQUENCE_INCOHERENT_REASON,
+      incoherenceClass: "non_monotonic_sequence",
+    };
+  }
+
   return { ok: true };
 }
 
