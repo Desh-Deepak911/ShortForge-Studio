@@ -10,8 +10,8 @@
 import { embeddedSchemaFingerprintAsPreflightSources } from "@/features/headless-renderer/control-plane/migrations/embedded-schema-fingerprint";
 import {
   HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV,
-  HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_CHECKSUM_SHA256,
   HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
+  HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_CHECKSUM_SHA256,
   HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
 } from "@/features/headless-renderer/control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import { HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID } from "@/features/headless-renderer/worker/runtime/renderer-build-id";
@@ -20,7 +20,7 @@ import {
   HEADLESS_FLY_STAGING_PUBLIC_ENV,
 } from "./fly-staging-env-ledger";
 
-export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_AUTHORITY_VERSION = 1 as const;
+export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_AUTHORITY_VERSION = 2 as const;
 
 /** Rejected by fail-closed gates until replaced by a real registry manifest digest. */
 export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PLACEHOLDER_IMAGE_DIGEST =
@@ -45,8 +45,20 @@ export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID =
 export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_COMPATIBILITY_MODE =
   HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE;
 
+const ACCEPTED_MIGRATION_SOURCES = embeddedSchemaFingerprintAsPreflightSources();
+
+export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_ACCEPTED_SCHEMA_FINGERPRINT =
+  Object.freeze({
+    migrationIds: ACCEPTED_MIGRATION_SOURCES.map((entry) => entry.migrationId),
+    checksumSha256: ACCEPTED_MIGRATION_SOURCES.map(
+      (entry) => entry.checksumSha256,
+    ),
+  });
+
 const CORE_MIGRATION_SOURCES = Object.freeze(
-  embeddedSchemaFingerprintAsPreflightSources(),
+  ACCEPTED_MIGRATION_SOURCES.filter(
+    (entry) => entry.migrationId !== HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
+  ),
 );
 
 export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_CORE_SCHEMA_FINGERPRINT =
@@ -108,6 +120,36 @@ export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD =
     eligibleForCurrentStagingReadiness: false,
     eligibleForRollbackSelection: false,
   } satisfies HeadlessFlyStagingRollbackBridgeImageRecord);
+
+/** Promoted after controlled rollout acceptance on schema 008. */
+export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD =
+  Object.freeze({
+    recordId: "post_007_2g24e_bridge008_rollback_bridge",
+    lifecycle: "temporary_current",
+    imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
+    rendererBuildId: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+    schemaPreflightCompatibilityMode:
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_COMPATIBILITY_MODE,
+    coreSchemaFingerprint: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_CORE_SCHEMA_FINGERPRINT,
+    recognizedOptionalMigration008Id:
+      HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
+    recognizedOptionalMigration008ChecksumSha256:
+      HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_CHECKSUM_SHA256,
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PAGE_ARTIFACT_SHA256,
+    buildInfoSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_BUILD_INFO_SHA256,
+    maintenanceEnabled: false,
+    eligibleForVerifyLiveHarness: true,
+    eligibleForRenderLiveHarness: true,
+    eligibleForCurrentStagingReadiness: true,
+    eligibleForRollbackSelection: true,
+  } satisfies HeadlessFlyStagingRollbackBridgeImageRecord);
+
+export function resolveHeadlessFlyStagingTemporaryCurrentRollbackBridgeImageRecord(): HeadlessFlyStagingRollbackBridgeImageRecord {
+  return HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD;
+}
 
 export type HeadlessFlyStagingRollbackBridgeCoherenceReasonId =
   | "ok"

@@ -35,7 +35,7 @@ import {
 } from "./fly-staging-versioned-image-authority";
 
 export const HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_AUTHORITY_VERSION =
-  1 as const;
+  2 as const;
 
 const DIGEST_RE = /^[a-f0-9]{64}$/;
 
@@ -191,7 +191,7 @@ export function resolveHeadlessFlyStagingDeploymentPairFromImageRecord(
 }
 
 export function resolveHeadlessFlyStagingCurrentForwardDeploymentPair(): HeadlessFlyStagingImageEnvironmentDeploymentPair {
-  return HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR;
+  return HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR;
 }
 
 export function resolveHeadlessFlyStagingRollbackDeploymentPair(): HeadlessFlyStagingImageEnvironmentDeploymentPair {

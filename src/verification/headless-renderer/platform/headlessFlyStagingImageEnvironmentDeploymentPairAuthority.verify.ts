@@ -59,10 +59,10 @@ async function main() {
     "\nSprint 11E Phase 2G.24G.1 — Fly staging image/environment deployment pair authority\n",
   );
 
-  await test("deployment pair authority version frozen at 1 with unique digest table", () => {
+  await test("deployment pair authority version frozen at 2 with unique digest table", () => {
     assert.equal(
       HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_AUTHORITY_VERSION,
-      1,
+      2,
     );
     assert.equal(validateHeadlessFlyStagingImageEnvironmentDeploymentPairTable().ok, true);
   });
