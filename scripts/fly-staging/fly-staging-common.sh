@@ -86,7 +86,7 @@ FLY_STAGING_TEMPLATE="${FOOTIEBITZ_ROOT}/deploy/headless-worker/fly.staging.temp
 FLY_STAGING_VERIFY_FIRST_TEMPLATE="${FOOTIEBITZ_ROOT}/deploy/headless-worker/fly.staging.verify-first.template.toml"
 FLY_STAGING_SECRET_NAMES="DATABASE_URL R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET_ASSETS R2_BUCKET_ARTIFACTS R2_ENDPOINT HEADLESS_ALLOWED_ORIGINS UPSTASH_REDIS_TCP_URL"
 FLY_STAGING_PUBLIC_ENV_NAMES="HEADLESS_ENV_NAME HEADLESS_CHROME_PATH HEADLESS_FFMPEG_PATH HEADLESS_FFPROBE_PATH HEADLESS_RENDERER_BUILD_ID HEADLESS_WORKER_CONCURRENCY HEADLESS_WORKER_GRACEFUL_SHUTDOWN_MS HEADLESS_WORKER_WORKSPACE_ROOT HEADLESS_HOSTED_IMAGE_CLASS"
-FLY_STAGING_GATE_ENV_NAMES="HEADLESS_FLY_STAGING_EXECUTION_AUTHORIZED HEADLESS_FLY_STAGING_AUTHORIZE_APP_CREATE HEADLESS_FLY_STAGING_AUTHORIZE_SECRETS_INSTALL HEADLESS_FLY_STAGING_AUTHORIZE_IMAGE_DEPLOY HEADLESS_FLY_STAGING_AUTHORIZE_VERIFY_SCALE_UP HEADLESS_FLY_STAGING_AUTHORIZE_RENDER_SCALE_UP HEADLESS_FLY_STAGING_AUTHORIZE_ROLLBACK HEADLESS_FLY_STAGING_AUTHORIZE_TEARDOWN"
+FLY_STAGING_GATE_ENV_NAMES="HEADLESS_FLY_STAGING_EXECUTION_AUTHORIZED HEADLESS_FLY_STAGING_AUTHORIZE_APP_CREATE HEADLESS_FLY_STAGING_AUTHORIZE_SECRETS_INSTALL HEADLESS_FLY_STAGING_AUTHORIZE_IMAGE_DEPLOY HEADLESS_FLY_STAGING_AUTHORIZE_BRIDGE_BUILD_ONLY HEADLESS_FLY_STAGING_AUTHORIZE_VERIFY_SCALE_UP HEADLESS_FLY_STAGING_AUTHORIZE_RENDER_SCALE_UP HEADLESS_FLY_STAGING_AUTHORIZE_ROLLBACK HEADLESS_FLY_STAGING_AUTHORIZE_TEARDOWN"
 FLY_STAGING_SECRETS_JSON_CLI="${FOOTIEBITZ_ROOT}/src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-secrets-json-cli.ts"
 FLY_STAGING_SECRETS_IMPORT_CLI="${FOOTIEBITZ_ROOT}/src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-secrets-import-cli.ts"
 FLY_STAGING_VERIFY_FIRST_ENTRYPOINT="${FOOTIEBITZ_ROOT}/scripts/fly-staging/fly-staging-verify-first.sh"
@@ -1053,6 +1053,103 @@ fly_staging_destroy_all_app_machines() {
     fly_staging_die "fail_class=machine_destroy_failed"
   fi
   fly_staging_assert_exact_zero_machines
+}
+
+# Capture verify=1/render=1 topology without requiring zero Machines.
+fly_staging_capture_dual_consumer_topology_proof() {
+  _out="$1"
+  _machine_json="$2"
+  _release_file="$3"
+  _app="${HEADLESS_FLY_STAGING_APP_NAME}"
+  set +e
+  fly_staging_provider_fly machine list -a "${_app}" --json >"${_machine_json}" 2>"${_machine_json}.err"
+  _list_rc=$?
+  fly_staging_provider_fly releases -a "${_app}" --json >"${_release_file}" 2>"${_release_file}.err"
+  _release_rc=$?
+  set -e
+  if [ "${_list_rc}" -ne 0 ] || [ "${_release_rc}" -ne 0 ]; then
+    fly_staging_die "fail_class=topology_provider_error"
+  fi
+  node -e '
+const fs = require("fs");
+const rows = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const releases = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (!Array.isArray(rows)) process.exit(2);
+let verify = 0, render = 0, other = 0;
+const ids = [];
+const digests = [];
+const digest = (m) => {
+  const img = m.config && m.config.image;
+  if (typeof img === "string") {
+    const match = /@sha256:([a-f0-9]{64})/i.exec(img);
+    if (match) return match[1].toLowerCase();
+  }
+  const ref = m.image_ref && m.image_ref.digest;
+  return typeof ref === "string" ? ref.toLowerCase() : "";
+};
+for (const row of rows) {
+  const meta = (row.config && row.config.metadata) || row.metadata || {};
+  const group = meta.fly_process_group;
+  if (group === "verify") verify += 1;
+  else if (group === "render") render += 1;
+  else other += 1;
+  if (typeof row.id === "string") ids.push(row.id);
+  if (row.region !== "iad") process.exit(3);
+  const state = row.state || row.Status || "";
+  if (state && state !== "started" && state !== "running" && state !== "Started") process.exit(4);
+  const d = digest(row);
+  if (!d) process.exit(5);
+  digests.push(d);
+}
+if (verify !== 1 || render !== 1 || other !== 0) process.exit(6);
+if (new Set(digests).size !== 1) process.exit(7);
+const active = Array.isArray(releases) && releases.length > 0 ? releases[0] : null;
+const activeVersion = active && typeof active.Version === "number" ? active.Version : (active && active.version) || "";
+const lines = [
+  "verify=1",
+  "render=1",
+  "other=0",
+  "region=iad",
+  "machine_count=2",
+  "machine_ids=" + ids.sort().join(","),
+  "unified_digest=" + digests[0],
+  "active_release=" + String(activeVersion),
+];
+fs.writeFileSync(process.argv[3], lines.join("\n") + "\n");
+' "${_machine_json}" "${_release_file}" "${_out}" || fly_staging_die "fail_class=topology_classification_failed"
+}
+
+fly_staging_assert_dual_consumer_topology_unchanged() {
+  _before_json="$1"
+  _after_json="$2"
+  _before_release="$3"
+  _after_release="$4"
+  node -e '
+const fs = require("fs");
+const before = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const after = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const beforeRelease = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+const afterRelease = JSON.parse(fs.readFileSync(process.argv[4], "utf8"));
+if (!Array.isArray(before) || !Array.isArray(after)) process.exit(1);
+if (before.length !== after.length) process.exit(2);
+const key = (m) => {
+  const meta = (m.config && m.config.metadata) || m.metadata || {};
+  return [m.id, m.region, m.state, meta.fly_process_group, (m.config && m.config.image) || "", (m.image_ref && m.image_ref.digest) || ""].join("|");
+};
+const beforeKeys = before.map(key).sort();
+const afterKeys = after.map(key).sort();
+if (beforeKeys.length !== afterKeys.length) process.exit(3);
+for (let i = 0; i < beforeKeys.length; i += 1) {
+  if (beforeKeys[i] !== afterKeys[i]) process.exit(4);
+}
+const activeVersion = (rows) => {
+  if (!Array.isArray(rows) || rows.length === 0) return "";
+  const active = rows[0];
+  return String((active && active.Version) || (active && active.version) || "");
+};
+if (activeVersion(beforeRelease) !== activeVersion(afterRelease)) process.exit(5);
+' "${_before_json}" "${_after_json}" "${_before_release}" "${_after_release}" || fly_staging_die "fail_class=topology_mutated_during_bridge_build_only"
+  printf 'topology_unchanged=PASS\n'
 }
 
 # Fixture-friendly: classify build-only push log file.

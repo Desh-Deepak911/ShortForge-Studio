@@ -84,6 +84,7 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_LOCAL_INTEGRATION_PLACEHOLDER_IMAGE_DIGEST,
   isHeadlessFlyStagingPlaceholderImageDigest,
@@ -214,9 +215,9 @@ async function main() {
     "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 33 with twenty-three immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 33);
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 23);
+  await test("authority version is frozen at 34 with twenty-four immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 34);
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 24);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
       [
@@ -243,6 +244,7 @@ async function main() {
         "post_007_2g23_frame_progress_current",
         "post_007_2g24_export_correctness_prospective",
         "post_007_2g24_export_correctness_current",
+        "post_007_2g24e_bridge008_rollback_bridge",
       ],
     );
   });
@@ -992,6 +994,24 @@ async function main() {
   });
 
   await test("unknown digest rejected", () => {
+    const result = classifyCurrentFlyStagingImageEligibility({
+      imageDigestSha256: "a".repeat(64),
+      schemaMigrationIds: SEVEN_MIGRATION_IDS,
+    });
+    assert.equal(result.eligible, false);
+    assert.equal(result.reasonId, "unknown_digest");
+  });
+
+  await test("bridge real digest is registered but not deployment-eligible", () => {
+    const result = classifyCurrentFlyStagingImageEligibility({
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD.imageDigestSha256,
+      schemaMigrationIds: SEVEN_MIGRATION_IDS,
+    });
+    assert.equal(result.eligible, false);
+    assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
+  });
+
+  await test("bridge placeholder digest is rejected as unknown", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: "0".repeat(64),
       schemaMigrationIds: SEVEN_MIGRATION_IDS,

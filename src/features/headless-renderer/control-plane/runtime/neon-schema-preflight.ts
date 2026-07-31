@@ -10,6 +10,11 @@ import {
 } from "../migrations/migration-catalog";
 import { HEADLESS_SOURCE_SLOT_KEY_MAX_LENGTH } from "../../domain/headless-source-slot-key";
 import type { HeadlessSqlClient, HeadlessSqlExecutor } from "./sql-client";
+import {
+  resolveHeadlessSchemaPreflightCompatibilityMode,
+  validateHeadlessSchemaPreflightLedgerForMode,
+  type HeadlessSchemaPreflightCompatibilityModeId,
+} from "./headless-schema-preflight-compatibility-authority";
 
 export type HeadlessSchemaPreflightResult =
   | {
@@ -42,6 +47,11 @@ export type HeadlessSchemaPreflightOptions = {
    */
   readonly migrationsDirectory?: string;
   readonly expectedSources?: readonly HeadlessSchemaPreflightSource[];
+  /**
+   * Strict mode requires an exact ledger match to expectedSources.
+   * Rollback-bridge mode accepts schema 007 or exact additive migration 008 only.
+   */
+  readonly compatibilityMode?: HeadlessSchemaPreflightCompatibilityModeId;
 };
 
 function resolveExpectedSources(
@@ -623,6 +633,9 @@ export async function runHeadlessSchemaPreflight(
   options: HeadlessSchemaPreflightOptions,
 ): Promise<HeadlessSchemaPreflightResult> {
   const sources = resolveExpectedSources(options);
+  const compatibilityMode = resolveHeadlessSchemaPreflightCompatibilityMode(
+    options.compatibilityMode,
+  );
 
   try {
     return await options.sql.withClient(async (client) => {
@@ -666,32 +679,13 @@ ORDER BY migration_id ASC
         byId.set(row.migration_id, row.checksum_sha256);
       }
 
-      if (byId.size !== sources.length) {
-        // Unexpected newer/extra IDs or missing IDs.
-        for (const id of byId.keys()) {
-          if (!sources.some((s) => s.migrationId === id)) {
-            return fail(
-              "SCHEMA_DRIFT",
-              "Schema readiness failed: unexpected migration ID in ledger.",
-            );
-          }
-        }
-      }
-
-      for (const source of sources) {
-        const applied = byId.get(source.migrationId);
-        if (applied == null) {
-          return fail(
-            "SCHEMA_MISSING",
-            "Schema readiness failed: required migration has not been applied.",
-          );
-        }
-        if (applied !== source.checksumSha256) {
-          return fail(
-            "SCHEMA_DRIFT",
-            "Schema readiness failed: migration checksum drift detected.",
-          );
-        }
+      const ledgerValidation = validateHeadlessSchemaPreflightLedgerForMode({
+        mode: compatibilityMode,
+        strictExpectedSources: sources,
+        ledgerById: byId,
+      });
+      if (!ledgerValidation.ok) {
+        return fail(ledgerValidation.code, ledgerValidation.message);
       }
 
       for (const constraint of REQUIRED_CONSTRAINTS) {
@@ -713,8 +707,10 @@ ORDER BY migration_id ASC
       return {
         ok: true,
         fingerprint: {
-          migrationIds: sources.map((s) => s.migrationId),
-          checksums: sources.map((s) => s.checksumSha256),
+          migrationIds: ledgerValidation.ledgerMigrationIds,
+          checksums: ledgerValidation.ledgerMigrationIds.map(
+            (id) => byId.get(id)!,
+          ),
         },
       };
     });
