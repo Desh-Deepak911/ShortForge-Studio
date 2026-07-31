@@ -30,7 +30,9 @@ export const HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_CHECKSUM_SHA256 =
 export { HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID };
 
 const CORE_MIGRATION_SOURCES = Object.freeze(
-  embeddedSchemaFingerprintAsPreflightSources(),
+  embeddedSchemaFingerprintAsPreflightSources().filter(
+    (entry) => entry.migrationId !== HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
+  ),
 );
 
 const CORE_MIGRATION_ID_SET = new Set<string>(

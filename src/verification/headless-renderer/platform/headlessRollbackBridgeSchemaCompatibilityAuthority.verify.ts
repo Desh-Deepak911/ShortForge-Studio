@@ -32,6 +32,8 @@ import {
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
 import {
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD,
+  resolveHeadlessFlyStagingTemporaryCurrentRollbackBridgeImageRecord,
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
   buildHeadlessFlyStagingRollbackBridgePublicEnvironment,
   classifyHeadlessFlyStagingCompatibilityModeOnNonBridgeImage,
@@ -63,8 +65,14 @@ function ledgerMap(
   return new Map(rows.map((row) => [row.migrationId, row.checksumSha256]));
 }
 
+function coreMigrationSources() {
+  return embeddedSchemaFingerprintAsPreflightSources().filter(
+    (entry) => entry.migrationId !== HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
+  );
+}
+
 function schema007Ledger(): Map<string, string> {
-  return ledgerMap(embeddedSchemaFingerprintAsPreflightSources());
+  return ledgerMap(coreMigrationSources());
 }
 
 function schema008Ledger(): Map<string, string> {
@@ -77,13 +85,7 @@ function schema008Ledger(): Map<string, string> {
 }
 
 function eightMigrationExpectedSources() {
-  return [
-    ...embeddedSchemaFingerprintAsPreflightSources(),
-    {
-      migrationId: HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
-      checksumSha256: HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_CHECKSUM_SHA256,
-    },
-  ];
+  return embeddedSchemaFingerprintAsPreflightSources();
 }
 
 function permissivePreflightExecutor(
@@ -145,7 +147,7 @@ function permissivePreflightExecutor(
 async function main() {
   console.log("\nSchema-008 rollback bridge compatibility authority\n");
 
-  const coreSources = embeddedSchemaFingerprintAsPreflightSources();
+  const coreSources = coreMigrationSources();
 
   await test("bridge accepts exact schema 007 ledger", () => {
     const result = validateHeadlessSchemaPreflightLedgerForMode({
@@ -435,6 +437,25 @@ async function main() {
     });
     assert.equal(reuse.ok, true);
     assert.notEqual(forwardIdentity.relativePath, bridgeIdentity.relativePath);
+  });
+
+  await test("temporary current rollback bridge is rollback-eligible after promotion", () => {
+    const record = resolveHeadlessFlyStagingTemporaryCurrentRollbackBridgeImageRecord();
+    assert.equal(record.lifecycle, "temporary_current");
+    assert.equal(record.eligibleForRollbackSelection, true);
+    assert.equal(record.eligibleForCurrentStagingReadiness, true);
+    assert.equal(
+      classifyHeadlessFlyStagingRollbackBridgeImageRecord(record).ok,
+      true,
+    );
+    assert.equal(
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD.lifecycle,
+      "prospective",
+    );
+    assert.equal(
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD.eligibleForRollbackSelection,
+      false,
+    );
   });
 
   await test("placeholder bridge digest is fail-closed", () => {

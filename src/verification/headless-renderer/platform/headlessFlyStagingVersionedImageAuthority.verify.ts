@@ -155,6 +155,8 @@ import {
   validateHistoricalPost0078fTelemetryFlyLiveImageAuthority,
   validateHistoricalPost007PreTelemetryFlyLiveImageAuthority,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
+import { HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-rollback-bridge-authority";
+import { HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID } from "@/features/headless-renderer/control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import { classifyPost007WorkerImageEligibility } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-slot-key-007-authority";
 import {
   classifyFlyVerifyLiveAmendedReadiness,
@@ -181,6 +183,9 @@ const OFFICIAL_EVIDENCE_SHAS = Object.freeze({
 
 const SEVEN_MIGRATION_IDS =
   HEADLESS_FLY_STAGING_POST_007_8I5_OBJECT_KEY_BINDING_VALIDATION_HISTORICAL_IMAGE_RECORD.schemaFingerprint
+    .migrationIds;
+const EIGHT_MIGRATION_IDS =
+  HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD.schemaFingerprint
     .migrationIds;
 const SIX_MIGRATION_IDS =
   HEADLESS_FLY_STAGING_PRE_007_HISTORICAL_IMAGE_RECORD.schemaFingerprint
@@ -215,8 +220,8 @@ async function main() {
     "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 34 with twenty-four immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 34);
+  await test("authority version is frozen at 35 with twenty-four immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 35);
     assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 24);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
@@ -332,7 +337,7 @@ async function main() {
     assert.equal(record.eligibleForVerifyLiveHarness, false);
   });
 
-  await test("2G.24 current record binds export-correctness worker and runtime image", () => {
+  await test("2G.24 current record demoted to historical after schema-008 bridge promotion", () => {
     const record =
       HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD;
     assert.equal(
@@ -355,10 +360,26 @@ async function main() {
       HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_BUILD_INFO_SHA256,
       "6b2285c3245e29b26c9b212bd35032dfcf2333d89b329a710803c243d2a0411a",
     );
+    assert.equal(record.lifecycle, "historical");
+    assert.equal(record.eligibleForCurrentStagingReadiness, false);
+    assert.equal(record.eligibleForRenderLiveHarness, false);
+    assert.equal(record.eligibleForVerifyLiveHarness, false);
+  });
+
+  await test("schema-008 bridge record is temporary current and runtime-ready", () => {
+    const record =
+      HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD;
+    assert.equal(record.recordId, "post_007_2g24e_bridge008_rollback_bridge");
     assert.equal(record.lifecycle, "current");
+    assert.equal(record.imageDigestSha256, HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST);
     assert.equal(record.eligibleForCurrentStagingReadiness, true);
     assert.equal(record.eligibleForRenderLiveHarness, true);
     assert.equal(record.eligibleForVerifyLiveHarness, true);
+    assert.equal(EIGHT_MIGRATION_IDS.length, 8);
+    assert.equal(
+      EIGHT_MIGRATION_IDS.at(-1),
+      HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
+    );
   });
 
   await test("observed staging runtime baseline historical record binds rollback pin digest and remote artifacts", () => {
@@ -747,11 +768,11 @@ async function main() {
     }
   });
 
-  await test("current and prospective selectors resolve 2G.24 export-correctness current", () => {
+  await test("current and prospective selectors resolve schema-008 rollback bridge", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
-    assert.equal(current.recordId, "post_007_2g24_export_correctness_current");
-    assert.equal(prospective.recordId, "post_007_2g24_export_correctness_current");
+    assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
+    assert.equal(prospective.recordId, "post_007_2g24e_bridge008_rollback_bridge");
     assert.equal(
       resolveProspectiveFlyStaging8i3ArtifactBindingCoherenceImageRecord().recordId,
       "post_007_8i3_artifact_binding_coherence_historical",
@@ -854,12 +875,12 @@ async function main() {
     assert.equal(record.eligibleForCurrentStagingReadiness, false);
   });
 
-  await test("current selection resolves 2G.24 export-correctness digest d38e45e2", () => {
+  await test("current selection resolves schema-008 rollback bridge digest 7de23dbd", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
-    assert.equal(current.recordId, "post_007_2g24_export_correctness_current");
+    assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
     assert.equal(
       resolveCurrentFlyStagingAcceptedImageDigestSha256(),
-      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
     );
     const historical8i3 =
       resolveHistoricalPost0078i3ArtifactBindingCoherenceFlyStagingImageRecord();
@@ -919,10 +940,28 @@ async function main() {
     assert.equal(SIX_MIGRATION_IDS.length, 6);
   });
 
-  await test("2G.24 current image + seven migrations accepted for current readiness", () => {
+  await test("2G.24 demoted digest ineligible for current readiness even on schema 007", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
       schemaMigrationIds: SEVEN_MIGRATION_IDS,
+    });
+    assert.equal(result.eligible, false);
+    assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
+  });
+
+  await test("2G.24 demoted digest is schema-008-ineligible", () => {
+    const result = classifyCurrentFlyStagingImageEligibility({
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+      schemaMigrationIds: EIGHT_MIGRATION_IDS,
+    });
+    assert.equal(result.eligible, false);
+    assert.equal(result.reasonId, "schema_008_ineligible_historical_digest");
+  });
+
+  await test("schema-008 bridge current image + eight migrations accepted for current readiness", () => {
+    const result = classifyCurrentFlyStagingImageEligibility({
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD.imageDigestSha256,
+      schemaMigrationIds: EIGHT_MIGRATION_IDS,
     });
     assert.equal(result.eligible, true);
   });
@@ -984,13 +1023,13 @@ async function main() {
     }
   });
 
-  await test("2G.24 current image + six migrations rejected", () => {
+  await test("2G.24 demoted image + six migrations rejected as historical", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
       schemaMigrationIds: SIX_MIGRATION_IDS,
     });
     assert.equal(result.eligible, false);
-    assert.equal(result.reasonId, "post_007_digest_with_six_migrations");
+    assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
   });
 
   await test("unknown digest rejected", () => {
@@ -1002,13 +1041,12 @@ async function main() {
     assert.equal(result.reasonId, "unknown_digest");
   });
 
-  await test("bridge real digest is registered but not deployment-eligible", () => {
+  await test("bridge real digest accepted on schema 008", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD.imageDigestSha256,
-      schemaMigrationIds: SEVEN_MIGRATION_IDS,
+      schemaMigrationIds: EIGHT_MIGRATION_IDS,
     });
-    assert.equal(result.eligible, false);
-    assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
+    assert.equal(result.eligible, true);
   });
 
   await test("bridge placeholder digest is rejected as unknown", () => {
@@ -1057,8 +1095,8 @@ async function main() {
     assert.equal(result.reasonId, "cross_bound_digest_mismatch");
   });
 
-  await test("cross-bound matching 2G.24 current digest accepted", () => {
-    const digest = HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST;
+  await test("cross-bound matching schema-008 bridge digest accepted", () => {
+    const digest = HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST;
     const result = classifyFlyStagingCrossBoundImageDigestMatch({
       verifyImageDigestSha256: digest,
       renderImageDigestSha256: digest,
@@ -1104,12 +1142,20 @@ async function main() {
     assert.equal(historical8f.reasonId, "missing_page_telemetry_capability");
   });
 
-  await test("execution probe accepts 2G.24 export-correctness current render image", () => {
+  await test("execution probe accepts schema-008 bridge current render image", () => {
+    const telemetry = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
+      renderImageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
+    });
+    assert.equal(telemetry.ok, true);
+  });
+
+  await test("execution probe rejects demoted 2G.24 export-correctness render image", () => {
     const telemetry = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
       renderImageDigestSha256:
         HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
     });
-    assert.equal(telemetry.ok, true);
+    assert.equal(telemetry.ok, false);
+    assert.equal(telemetry.reasonId, "historical_lifecycle_not_current_ready");
   });
 
   await test("execution probe rejects demoted 2G.23 frame-progress render image", () => {
@@ -1175,19 +1221,17 @@ async function main() {
     assert.equal(historical.reasonId, "historical_lifecycle_not_current_ready");
   });
 
-  await test("2G.24 current digest with bound worker and page artifacts accepted for artifact eligibility", () => {
+  await test("schema-008 bridge digest with bound worker and page artifacts accepted for artifact eligibility", () => {
     const worker = classifyFlyStagingImageWorkerArtifactEligibility({
-      imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+      imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
       hostedWorkerArtifactSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_HOSTED_WORKER_ARTIFACT_SHA256,
+        HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD.hostedWorkerArtifactSha256,
     });
     assert.equal(worker.ok, true);
     const page = classifyFlyStagingImagePageArtifactEligibility({
-      imageDigestSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+      imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
       hostedPageArtifactSha256:
-        HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
+        HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD.hostedPageArtifactSha256,
     });
     assert.equal(page.ok, true);
   });
@@ -1342,15 +1386,15 @@ async function main() {
       assert.equal(result.eligible, false, digest);
     }
     const current = classifyPost007WorkerImageEligibility({
-      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
-      schemaMigrationIds: SEVEN_MIGRATION_IDS,
+      imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
+      schemaMigrationIds: EIGHT_MIGRATION_IDS,
     });
     assert.equal(current.eligible, true);
   });
 
-  await test("current verifier topology with 2G.24 digest produces verify=1 readiness", () => {
+  await test("current verifier topology with schema-008 bridge digest produces verify=1 readiness", () => {
     const digest = resolveCurrentFlyStagingAcceptedImageDigestSha256();
-    assert.equal(digest, HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST);
+    assert.equal(digest, HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST);
     const readiness = classifyFlyVerifyLiveAmendedReadiness({
       machinesJson: machinesJson(digest),
       servicesJson: "[]",

@@ -37,6 +37,7 @@ import {
   resolveCurrentFlyStagingAcceptedImageDigestSha256,
   resolveCurrentFlyStagingAcceptedImageRecord,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
+import { HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-rollback-bridge-authority";
 import {
   FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
   buildFlyRender4kCapacitySchemaFingerprint,
@@ -110,9 +111,9 @@ async function main() {
     assert.equal(isFlyRender4kCapacityGateOn({ HEADLESS_FLY_RENDER_4K_QA: "1" }), true);
   });
 
-  await test("4K harness resolves current 2G.24 staging image through canonical authority", () => {
+  await test("4K harness resolves schema-008 bridge staging image through canonical authority", () => {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
-    assert.equal(current.recordId, "post_007_2g24_export_correctness_current");
+    assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
     assert.equal(current.lifecycle, "current");
     assert.equal(
       FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
@@ -120,7 +121,7 @@ async function main() {
     );
     assert.equal(
       FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,
-      HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
     );
     assert.notEqual(
       FLY_RENDER_4K_CAPACITY_ACCEPTED_IMAGE_DIGEST,

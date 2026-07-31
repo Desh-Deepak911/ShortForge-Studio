@@ -4,18 +4,19 @@
  */
 
 import { HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT } from "@/features/headless-renderer/control-plane/migrations/embedded-schema-fingerprint";
+import { HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID } from "@/features/headless-renderer/control-plane/runtime/headless-schema-preflight-compatibility-authority";
 
 import { HEADLESS_FLY_STAGING_VERIFY_FIRST_PASS_IMAGE_DIGEST } from "./fly-staging-verify-first-pass-evidence";
 import {
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_ACCEPTED_SCHEMA_FINGERPRINT,
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_BUILD_INFO_SHA256,
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HOSTED_WORKER_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PAGE_ARTIFACT_SHA256,
-  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_CORE_SCHEMA_FINGERPRINT,
 } from "./fly-staging-rollback-bridge-authority";
 
 /** Frozen authority schema version — bump only when record shape or selection rules change. */
-export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 34 as const;
+export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 35 as const;
 
 export type HeadlessFlyStagingImageLifecycle = "historical" | "current";
 
@@ -75,6 +76,7 @@ export type HeadlessFlyStagingVersionedImageIneligibilityReasonId =
   | "schema_fingerprint_migration_mismatch"
   | "schema_fingerprint_count_mismatch"
   | "historical_lifecycle_not_current_ready"
+  | "schema_008_ineligible_historical_digest"
   | "cross_bound_digest_mismatch"
   | "operator_digest_override_forbidden"
   | "wrong_hosted_worker_artifact"
@@ -981,11 +983,11 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_I
     eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** Post-007 2G.24 export-correctness current — deployed runtime-ready (rollout 2G.24G). */
+/** Post-007 2G.24 export-correctness current — demoted after schema-008 bridge promotion. */
 export const HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD =
   Object.freeze({
     recordId: "post_007_2g24_export_correctness_current",
-    lifecycle: "current",
+    lifecycle: "historical",
     imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
     schemaFingerprint: buildSchemaFingerprint(POST_007_MIGRATIONS),
     hostedWorkerArtifactSha256:
@@ -995,18 +997,18 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE
     telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
     pageTelemetryCapabilityVersion:
       HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
-    eligibleForVerifyLiveHarness: true,
-    eligibleForRenderLiveHarness: true,
-    eligibleForCurrentStagingReadiness: true,
+    eligibleForVerifyLiveHarness: false,
+    eligibleForRenderLiveHarness: false,
+    eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** Schema-008 rollback bridge — prospective until build-only push and rollout acceptance. */
+/** Schema-008 rollback bridge — temporary current after controlled rollout acceptance. */
 export const HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD =
   Object.freeze({
     recordId: "post_007_2g24e_bridge008_rollback_bridge",
-    lifecycle: "historical",
+    lifecycle: "current",
     imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
-    schemaFingerprint: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_CORE_SCHEMA_FINGERPRINT,
+    schemaFingerprint: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_ACCEPTED_SCHEMA_FINGERPRINT,
     hostedWorkerArtifactSha256:
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HOSTED_WORKER_ARTIFACT_SHA256,
     hostedPageArtifactSha256:
@@ -1014,9 +1016,9 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE
     telemetryCapabilityVersion: HEADLESS_FLY_STAGING_TELEMETRY_CAPABILITY_VERSION,
     pageTelemetryCapabilityVersion:
       HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
-    eligibleForVerifyLiveHarness: false,
-    eligibleForRenderLiveHarness: false,
-    eligibleForCurrentStagingReadiness: false,
+    eligibleForVerifyLiveHarness: true,
+    eligibleForRenderLiveHarness: true,
+    eligibleForCurrentStagingReadiness: true,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
 /** @deprecated Use HEADLESS_FLY_STAGING_POST_007_8F5_PAGE_ATTRIBUTION_CURRENT_IMAGE_RECORD */
@@ -1058,12 +1060,12 @@ const RECORD_BY_DIGEST = new Map<string, HeadlessFlyStagingVersionedImageRecord>
 );
 
 export function resolveCurrentFlyStagingAcceptedImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD;
 }
 
 /** Pre-rollout prospective selector for the next controlled image rollout. */
 export function resolveProspectiveFlyStagingRolloutImageRecord(): HeadlessFlyStagingVersionedImageRecord {
-  return HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD;
 }
 
 export function resolveProspectiveFlyStaging8f5AttributionImageRecord(): HeadlessFlyStagingVersionedImageRecord {
@@ -1219,7 +1221,8 @@ function isPost007VersionedImageRecord(
     record.recordId === "post_007_2g23_frame_progress_prospective" ||
     record.recordId === "post_007_2g23_frame_progress_current" ||
     record.recordId === "post_007_2g24_export_correctness_prospective" ||
-    record.recordId === "post_007_2g24_export_correctness_current"
+    record.recordId === "post_007_2g24_export_correctness_current" ||
+    record.recordId === "post_007_2g24e_bridge008_rollback_bridge"
   );
 }
 
@@ -1327,6 +1330,16 @@ export function classifyCurrentFlyStagingImageEligibility(input: {
     const record = resolveFlyStagingImageRecordByDigest(input.imageDigestSha256);
     if (record == null) {
       return { eligible: false, reasonId: "unknown_digest" };
+    }
+    if (
+      (record.recordId === "post_007_2g24_export_correctness_current" ||
+        record.recordId === "post_007_2g24_export_correctness_prospective") &&
+      input.schemaMigrationIds.includes(HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID)
+    ) {
+      return {
+        eligible: false,
+        reasonId: "schema_008_ineligible_historical_digest",
+      };
     }
     if (record.lifecycle !== "current") {
       return { eligible: false, reasonId: "historical_lifecycle_not_current_ready" };
