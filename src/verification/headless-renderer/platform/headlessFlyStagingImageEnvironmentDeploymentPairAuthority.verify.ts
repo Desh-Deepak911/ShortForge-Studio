@@ -14,6 +14,7 @@ import {
   HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_CONTRACT,
   HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR,
   buildHeadlessFlyStagingPublicEnvironmentForDeploymentPair,
   buildHeadlessFlyStagingPublicEnvironmentForImageDigestSha256,
   classifyHeadlessFlyStagingDeploymentProviderContactGate,
@@ -59,10 +60,10 @@ async function main() {
     "\nSprint 11E Phase 2G.24G.1 — Fly staging image/environment deployment pair authority\n",
   );
 
-  await test("deployment pair authority version frozen at 2 with unique digest table", () => {
+  await test("deployment pair authority version frozen at 3 with unique digest table", () => {
     assert.equal(
       HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_AUTHORITY_VERSION,
-      2,
+      3,
     );
     assert.equal(validateHeadlessFlyStagingImageEnvironmentDeploymentPairTable().ok, true);
   });
@@ -143,11 +144,21 @@ async function main() {
 
   await test("6: unknown digest is rejected", () => {
     const resolved = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
-      "0".repeat(64),
+      "f".repeat(64),
     );
     assert.equal(resolved.ok, false);
     if (!resolved.ok) {
       assert.equal(resolved.reasonId, "unknown_digest");
+    }
+  });
+
+  await test("6b: cleanup prospective digest resolves to prospective pair", () => {
+    const resolved = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
+      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR.imageDigestSha256,
+    );
+    assert.equal(resolved.ok, true);
+    if (resolved.ok) {
+      assert.equal(resolved.pair.pairId, "post_007_2g25_cleanup_runtime_prospective_pair");
     }
   });
 

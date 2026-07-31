@@ -99,6 +99,16 @@ export class MemoryHeadlessArtifactCleanupAdapter
     return n;
   }
 
+  /** Test-only: first pending cleanup id for owner when orphan reports omit cleanupId. */
+  testingFirstPendingCleanupIdForOwner(ownerId: string): string | null {
+    for (const r of this.byCleanupId.values()) {
+      if (r.intent.ownerId === ownerId && r.state === "pending") {
+        return r.intent.cleanupId;
+      }
+    }
+    return null;
+  }
+
   async createIfAbsent(input: {
     readonly idempotencyKey: string;
     readonly intent: HeadlessArtifactCleanupIntentV1;

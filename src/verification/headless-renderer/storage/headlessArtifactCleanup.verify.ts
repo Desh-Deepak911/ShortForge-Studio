@@ -31,6 +31,21 @@ async function testAsync(name: string, fn: () => Promise<void>) {
   console.log(`  ✓ ${name}`);
 }
 
+function resolveScheduledCleanupId(input: {
+  readonly artifactCleanup: {
+    testingFirstPendingCleanupIdForOwner(ownerId: string): string | null;
+  };
+  readonly ownerId: string;
+  readonly orphanCleanup: { readonly status: string; readonly cleanupId: string | null } | null | undefined;
+}): string {
+  assert.equal(input.orphanCleanup?.status, "scheduled");
+  assert.equal(input.orphanCleanup?.cleanupId, null);
+  const cleanupId =
+    input.artifactCleanup.testingFirstPendingCleanupIdForOwner(input.ownerId);
+  assert.ok(cleanupId);
+  return cleanupId;
+}
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -301,7 +316,11 @@ async function main() {
       assert.equal(result.ok, true);
       if (!result.ok) return;
       assert.equal(result.value.lastOrphanCleanup?.status, "scheduled");
-      const cleanupId = result.value.lastOrphanCleanup!.cleanupId!;
+      const cleanupId = resolveScheduledCleanupId({
+        artifactCleanup: stack.artifactCleanup,
+        ownerId,
+        orphanCleanup: result.value.lastOrphanCleanup,
+      });
       const stored = await stack.jobStore.getByJobIdAndOwner(jobId, ownerId);
       assert.equal(stored.ok, true);
       if (!stored.ok) return;
@@ -336,7 +355,11 @@ async function main() {
       assert.ok(stack.storage.testingCountFinalizedArtifacts(ownerId) >= 1);
 
       stack.storage.testingDeleteFail = false;
-      const cleanupId = result.value.lastOrphanCleanup!.cleanupId!;
+      const cleanupId = resolveScheduledCleanupId({
+        artifactCleanup: stack.artifactCleanup,
+        ownerId,
+        orphanCleanup: result.value.lastOrphanCleanup,
+      });
       const intentRow = await stack.artifactCleanup.getByCleanupIdAndOwner(
         cleanupId,
         ownerId,
@@ -472,7 +495,11 @@ async function main() {
     });
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    const cleanupId = result.value.lastOrphanCleanup!.cleanupId!;
+    const cleanupId = resolveScheduledCleanupId({
+      artifactCleanup: stack.artifactCleanup,
+      ownerId,
+      orphanCleanup: result.value.lastOrphanCleanup,
+    });
     const listed = await stack.artifactCleanup.listRetryableForOwner(ownerId);
     assert.equal(listed.ok, true);
     if (!listed.ok) return;
@@ -495,7 +522,11 @@ async function main() {
     });
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    const cleanupId = result.value.lastOrphanCleanup!.cleanupId!;
+    const cleanupId = resolveScheduledCleanupId({
+      artifactCleanup: stack.artifactCleanup,
+      ownerId,
+      orphanCleanup: result.value.lastOrphanCleanup,
+    });
     const a = await stack.artifactCleanup.claimPending({
       cleanupId,
       ownerId,
@@ -515,13 +546,17 @@ async function main() {
   });
 
   await testAsync("cross-owner cleanup rejected", async () => {
-    const { stack, result } = await cancelAfterFinalize({
+    const { stack, ownerId, result } = await cancelAfterFinalize({
       idempotencyKey: "p331-cross-owner",
       deleteFail: true,
     });
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    const cleanupId = result.value.lastOrphanCleanup!.cleanupId!;
+    const cleanupId = resolveScheduledCleanupId({
+      artifactCleanup: stack.artifactCleanup,
+      ownerId,
+      orphanCleanup: result.value.lastOrphanCleanup,
+    });
     const other = await stack.artifactCleanup.getByCleanupIdAndOwner(
       cleanupId,
       "other-owner",

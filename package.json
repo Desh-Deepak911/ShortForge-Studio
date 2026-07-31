@@ -166,6 +166,7 @@
     "test:headless-fly-staging-image-environment-deployment-pair-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingImageEnvironmentDeploymentPairAuthority.verify.ts",
     "test:headless-rollback-bridge-schema-compatibility-authority": "tsx src/verification/headless-renderer/platform/headlessRollbackBridgeSchemaCompatibilityAuthority.verify.ts",
     "test:headless-fly-staging-bridge-rollout-credential-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingBridgeRolloutCredentialAuthority.verify.ts",
+    "test:headless-fly-staging-cleanup-runtime-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingCleanupRuntimeAuthority.verify.ts",
     "test:headless-fly-staging-deployment-authority-2e2d4": "tsx src/verification/headless-renderer/platform/headlessFlyStagingDeploymentAuthority2E2D4.verify.ts",
     "test:headless-fly-staging-machine-id-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingMachineIdAuthority.verify.ts",
     "test:headless-fly-verify-live-harness-authority": "tsx src/verification/headless-renderer/platform/headlessFlyVerifyLiveHarnessAuthority.verify.ts",
