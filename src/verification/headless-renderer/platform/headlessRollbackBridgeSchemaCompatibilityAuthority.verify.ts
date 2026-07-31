@@ -439,11 +439,14 @@ async function main() {
     assert.notEqual(forwardIdentity.relativePath, bridgeIdentity.relativePath);
   });
 
-  await test("temporary current rollback bridge is rollback-eligible after promotion", () => {
+  await test("rollback bridge is demoted to historical but remains rollback-eligible after cleanup-runtime correction promotion", () => {
     const record = resolveHeadlessFlyStagingTemporaryCurrentRollbackBridgeImageRecord();
-    assert.equal(record.lifecycle, "temporary_current");
+    assert.equal(record.lifecycle, "historical");
     assert.equal(record.eligibleForRollbackSelection, true);
-    assert.equal(record.eligibleForCurrentStagingReadiness, true);
+    assert.equal(record.eligibleForCurrentStagingReadiness, false);
+    assert.equal(record.eligibleForVerifyLiveHarness, false);
+    assert.equal(record.eligibleForRenderLiveHarness, false);
+    assert.equal(record.maintenanceEnabled, false);
     assert.equal(
       classifyHeadlessFlyStagingRollbackBridgeImageRecord(record).ok,
       true,

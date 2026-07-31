@@ -1,0 +1,15 @@
+{
+  "authorityVersion": 1,
+  "candidateDigestSha256": "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde",
+  "lifecycle": "promoted_current",
+  "probeAttemptCount": 1,
+  "forwardAttemptCountForCandidate": 1,
+  "rolloutAcceptanceBoundaryIso": "2026-07-31T22:48:17.000Z",
+  "authorizedUntilIso": "2026-08-01T04:48:17.000Z",
+  "verifyMachineId": "d895d12a240938",
+  "renderMachineId": "d895d16f264918",
+  "verifyLoopAccepted": true,
+  "renderLoopAccepted": true,
+  "protocolRecoveryAuthorizationPresent": true,
+  "maintenanceEnabled": false
+}

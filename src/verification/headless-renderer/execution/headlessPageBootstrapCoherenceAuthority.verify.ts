@@ -50,7 +50,7 @@ import { runOwnedObjectStagingRecordChain } from "../fly-render-live/owned-objec
 import { buildLiveDraft } from "../neon-live/live-fixtures";
 
 const CURRENT_PROBE_EVIDENCE_SHA =
-  "c7f944dba578539ad4f3ebc2431f38fb60640c041cb582bb28e239067adf500a";
+  "1342cc902cd0051effb4a4f3b466d9d6b717401a4776a073678f16a1072eac7b";
 const PRE_8H_PROBE_EVIDENCE_SHA =
   "a863e3cf06cb63085f5490f53ff0c69a97614ca540628b32e88ab56d3a621b33";
 const PRIOR_BOOTSTRAP_FAIL_EVIDENCE_SHA =

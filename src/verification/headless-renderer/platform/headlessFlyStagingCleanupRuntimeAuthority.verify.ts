@@ -22,7 +22,7 @@ import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
-  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PLACEHOLDER_IMAGE_DIGEST,
@@ -39,7 +39,7 @@ import {
 import { HEADLESS_FLY_STAGING_TEMPLATE_RELATIVE_PATH } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-template";
 import {
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD,
-  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS,
   classifyCurrentFlyStagingImageEligibility,
   classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority,
@@ -104,16 +104,20 @@ async function main() {
     );
   });
 
-  await test("finalization correction prospective is coherent and ineligible", () => {
+  await test("finalization correction record is permanently rejected", () => {
     const record =
-      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD;
-    assert.equal(record.lifecycle, "prospective");
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD;
+    assert.equal(record.lifecycle, "rejected");
     assert.equal(record.maintenanceEnabled, false);
     assert.equal(record.eligibleForDeploy, false);
     assert.equal(record.eligibleForProbe, false);
     assert.equal(record.eligibleForRuntimeReady, false);
     assert.equal(record.eligibleForCurrentStagingReadiness, false);
     assert.equal(record.eligibleForRollbackSelection, false);
+    assert.equal(
+      record.rejectionReasonId,
+      "probe_ineligible_historical_lifecycle",
+    );
     assert.equal(
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
@@ -122,7 +126,7 @@ async function main() {
       record.hostedWorkerArtifactSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
     );
-    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord(record).ok, true);
+    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord(record).ok, false);
     assert.notEqual(
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD
@@ -156,13 +160,20 @@ async function main() {
     assert.equal(probe.ok, false);
   });
 
-  await test("bridge temporary current authority remains rollback-eligible", () => {
-    const bridge = resolveCurrentFlyStagingAcceptedImageRecord();
-    assert.equal(bridge.recordId, "post_007_2g24e_bridge008_rollback_bridge");
-    assert.equal(bridge.lifecycle, "current");
+  await test("cleanup-runtime correction is current authority; bridge remains rollback-eligible", () => {
+    const current = resolveCurrentFlyStagingAcceptedImageRecord();
+    assert.equal(
+      current.recordId,
+      "post_008_2g25_cleanup_runtime_finalization_correction_current",
+    );
+    assert.equal(current.lifecycle, "current");
     assert.equal(
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD.eligibleForRollbackSelection,
       true,
+    );
+    assert.equal(
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD.lifecycle,
+      "historical",
     );
     assert.notEqual(
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_IMAGE_DIGEST,
@@ -170,17 +181,17 @@ async function main() {
     );
   });
 
-  await test("rollout selector exposes ineligible finalization-correction prospective", () => {
+  await test("rollout selector exposes rejected finalization-correction; current authority is the promoted correction", () => {
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(
       prospective.recordId,
-      "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
+      "post_008_2g25_cleanup_runtime_finalization_correction_rejected",
     );
     assert.equal(prospective.eligibleForCurrentStagingReadiness, false);
     assert.equal(prospective.eligibleForRenderLiveHarness, false);
     assert.equal(
       resolveCurrentFlyStagingAcceptedImageRecord().recordId,
-      "post_007_2g24e_bridge008_rollback_bridge",
+      "post_008_2g25_cleanup_runtime_finalization_correction_current",
     );
   });
 
@@ -211,7 +222,7 @@ async function main() {
     }
   });
 
-  await test("versioned records include rejected, live-failed, and correction prospective", () => {
+  await test("versioned records include rejected, live-failed, and correction rejected", () => {
     const rejected = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
       (record) => record.recordId === "post_007_2g25_cleanup_runtime_rejected",
     );
@@ -222,7 +233,7 @@ async function main() {
     const correction = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
       (record) =>
         record.recordId ===
-        "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
+        "post_008_2g25_cleanup_runtime_finalization_correction_rejected",
     );
     assert.equal(rejected.length, 1);
     assert.equal(liveFailed.length, 1);
@@ -237,7 +248,7 @@ async function main() {
     );
     assert.equal(
       correction[0]?.imageDigestSha256,
-      HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD
+      HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_REJECTED_IMAGE_RECORD
         .imageDigestSha256,
     );
     assert.equal(

@@ -12,6 +12,7 @@ import {
   buildHeadlessFlyStaging2G25DCleanupRuntimeRolloutIncidentLedger,
 } from "./fly-staging-cleanup-runtime-rollout-incident-authority";
 import {
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
   isHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDigest,
@@ -456,8 +457,10 @@ export function classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget(inp
   }
   if (
     used === 0 &&
-    input.targetDigestSha256 ===
-      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST &&
+    (input.targetDigestSha256 ===
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST ||
+      input.targetDigestSha256 ===
+        HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST) &&
     !isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest(
       input.targetDigestSha256,
     ) &&

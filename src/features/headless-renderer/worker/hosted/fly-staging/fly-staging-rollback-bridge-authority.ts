@@ -20,7 +20,7 @@ import {
   HEADLESS_FLY_STAGING_PUBLIC_ENV,
 } from "./fly-staging-env-ledger";
 
-export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_AUTHORITY_VERSION = 2 as const;
+export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_AUTHORITY_VERSION = 3 as const;
 
 /** Rejected by fail-closed gates until replaced by a real registry manifest digest. */
 export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PLACEHOLDER_IMAGE_DIGEST =
@@ -121,11 +121,16 @@ export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD =
     eligibleForRollbackSelection: false,
   } satisfies HeadlessFlyStagingRollbackBridgeImageRecord);
 
-/** Promoted after controlled rollout acceptance on schema 008. */
-export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD =
+/**
+ * Demoted to historical (Part 2G.25D Part F.2 Part K) after the cleanup-runtime
+ * finalization correction was promoted to `current` on the versioned-image
+ * authority. The bridge digest remains rollback-eligible as the designated
+ * rollback anchor, but is no longer ordinary current staging authority.
+ */
+export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HISTORICAL_IMAGE_RECORD =
   Object.freeze({
     recordId: "post_007_2g24e_bridge008_rollback_bridge",
-    lifecycle: "temporary_current",
+    lifecycle: "historical",
     imageDigestSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
     rendererBuildId: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
     schemaPreflightCompatibilityMode:
@@ -141,14 +146,18 @@ export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PAGE_ARTIFACT_SHA256,
     buildInfoSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_BUILD_INFO_SHA256,
     maintenanceEnabled: false,
-    eligibleForVerifyLiveHarness: true,
-    eligibleForRenderLiveHarness: true,
-    eligibleForCurrentStagingReadiness: true,
+    eligibleForVerifyLiveHarness: false,
+    eligibleForRenderLiveHarness: false,
+    eligibleForCurrentStagingReadiness: false,
     eligibleForRollbackSelection: true,
   } satisfies HeadlessFlyStagingRollbackBridgeImageRecord);
 
+/** @deprecated Prefer HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HISTORICAL_IMAGE_RECORD */
+export const HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD =
+  HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HISTORICAL_IMAGE_RECORD;
+
 export function resolveHeadlessFlyStagingTemporaryCurrentRollbackBridgeImageRecord(): HeadlessFlyStagingRollbackBridgeImageRecord {
-  return HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_TEMPORARY_CURRENT_IMAGE_RECORD;
+  return HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_HISTORICAL_IMAGE_RECORD;
 }
 
 export type HeadlessFlyStagingRollbackBridgeCoherenceReasonId =

@@ -11,10 +11,19 @@ fly_staging_forbid_env_local
 fly_staging_require_app_name
 
 REJECTED_CLEANUP_DIGEST="9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60"
-CLEANUP_DIGEST="$(npx tsx -e "import { HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST } from './src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-authority.ts'; console.log(HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST)")"
+REJECTED_LIVE_FINALIZATION_DIGEST="e0224b93f12113e922d21e99e702bd6d333eb3997076b005700623837d837916"
+REJECTED_FINALIZATION_CORRECTION_DIGEST="41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde"
+CLEANUP_DIGEST="$(npx tsx -e "import { HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST } from './src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-authority.ts'; console.log(HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST)")"
 if [ "${CLEANUP_DIGEST}" = "${REJECTED_CLEANUP_DIGEST}" ]; then
   fly_staging_die "fail_class=rejected_cleanup_digest_forbidden"
 fi
+if [ "${CLEANUP_DIGEST}" = "${REJECTED_LIVE_FINALIZATION_DIGEST}" ]; then
+  fly_staging_die "fail_class=rejected_live_finalization_digest_forbidden"
+fi
+if [ "${CLEANUP_DIGEST}" = "${REJECTED_FINALIZATION_CORRECTION_DIGEST}" ]; then
+  fly_staging_die "fail_class=rejected_finalization_correction_digest_forbidden"
+fi
+fly_staging_die "fail_class=no_authorized_cleanup_forward_digest"
 BRIDGE_DIGEST="7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206"
 FORBIDDEN_2G24_DIGEST="d38e45e24c579f56960611d48c15c92e38968d7290dbf04f926e0e572c56bd68"
 EXPECTED_VERIFY_MACHINE="d895d12a240938"

@@ -12,29 +12,29 @@ import {
   HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
 } from "../../src/features/headless-renderer/control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import {
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR,
   materializeHeadlessFlyStagingTomlForDeploymentPair,
   resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256,
 } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
 import {
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
+  isHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDigest,
 } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-authority";
 import {
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
 } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-rollback-bridge-authority";
-import {
-  HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR,
-  HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
-} from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
 import { classifyHeadlessFlyStagingRejectedCleanupRuntimeDeployEligibility } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
 import { HEADLESS_FLY_STAGING_TEMPLATE_RELATIVE_PATH } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-template";
 import { buildHeadlessFlyStagingMaterializedConfigAttemptIdentity } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-controlled-rollout-attempt-authority";
 
-const [command, outPath, appName, attemptSequenceRaw] = process.argv.slice(2);
+const [command, outPath, appName] = process.argv.slice(2);
 
 function die(reasonId: string, code = 1): never {
   console.error(reasonId);
@@ -82,15 +82,23 @@ function assertNoPublicServices(toml: string): void {
 
 function materializeCleanupForward(app: string): string {
   const deployGate = classifyHeadlessFlyStagingRejectedCleanupRuntimeDeployEligibility({
-    imageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+    imageDigestSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
   });
   if (!deployGate.deployable) {
     die(deployGate.reasonId);
   }
+  if (
+    isHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDigest(
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+    )
+  ) {
+    die("rejected_cleanup_digest_forbidden");
+  }
   const materialized = materializeHeadlessFlyStagingTomlForDeploymentPair({
     templateToml: readTemplate(),
     appName: app,
-    pair: HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
+    pair: HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR,
   });
   if (
     materialized.status !== "ok" ||
@@ -130,7 +138,9 @@ switch (command) {
   case "write-forward": {
     if (typeof outPath !== "string" || typeof appName !== "string") die("hostile_input");
     writeFileSync(outPath, materializeCleanupForward(appName), "utf8");
-    console.log(`forward_digest=${HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST}`);
+    console.log(
+      `forward_digest=${HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST}`,
+    );
     console.log(`forward_renderer_build=${HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID}`);
     console.log("cleanup_forward_materialize=PASS");
     break;
@@ -148,6 +158,10 @@ switch (command) {
       imageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
     });
     if (rejectedGate.deployable) die("rejected_cleanup_digest_not_blocked");
+    const liveFailedGate = classifyHeadlessFlyStagingRejectedCleanupRuntimeDeployEligibility({
+      imageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+    });
+    if (liveFailedGate.deployable) die("live_finalization_failed_digest_not_blocked");
     const rejectedPair = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
     );
@@ -163,12 +177,34 @@ switch (command) {
     ) {
       die("rejected_pair_incoherent");
     }
-    const cleanupPair = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
+    const liveFailedPair = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
     );
     if (
-      !cleanupPair.ok ||
-      cleanupPair.pair.pairId !== "post_007_2g25_cleanup_runtime_live_finalization_failed_pair"
+      liveFailedPair.ok ||
+      liveFailedPair.reasonId !== "rejected_permanent_digest"
+    ) {
+      die("live_finalization_failed_pair_incoherent");
+    }
+    const correctionFailedGate = classifyHeadlessFlyStagingRejectedCleanupRuntimeDeployEligibility({
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+    });
+    if (correctionFailedGate.deployable) {
+      die("finalization_correction_digest_not_blocked");
+    }
+    const cleanupPair = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+    );
+    if (
+      cleanupPair.ok ||
+      cleanupPair.reasonId !== "rejected_permanent_digest"
+    ) {
+      die("cleanup_pair_incoherent");
+    }
+    if (
+      HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR.pairId !==
+      "post_008_2g25_cleanup_runtime_finalization_correction_rejected_pair"
     ) {
       die("cleanup_pair_incoherent");
     }
@@ -186,6 +222,9 @@ switch (command) {
     }
     console.log("deployment_pair_coherence=PASS");
     console.log("forbidden_2g24_rollback_candidate=REJECTED");
+    console.log(
+      `forward_target_digest=${HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST}`,
+    );
     break;
   }
   case "identity": {
@@ -194,7 +233,7 @@ switch (command) {
     if (kind !== "forward" && kind !== "rollback") die("hostile_input");
     const digest =
       kind === "forward"
-        ? HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST
+        ? HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST
         : HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST;
     const identity = buildHeadlessFlyStagingMaterializedConfigAttemptIdentity({
       footiebitzRoot: repoRoot(),

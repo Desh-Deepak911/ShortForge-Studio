@@ -9,6 +9,14 @@ import { promisify } from "node:util";
 import {
   classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
+import {
+  HEADLESS_FLY_RENDER_CANDIDATE_DIGEST_PIN_ENV,
+  HEADLESS_FLY_RENDER_CANDIDATE_VALIDATION_GATE,
+  classifyFlyRenderDeployedValidationCandidateProbeAuthority,
+  isHeadlessFlyRenderCandidateValidationGateOn,
+  readHeadlessFlyRenderCandidateDigestPin,
+  type HeadlessFlyStagingCandidateProbeObservation,
+} from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-deployed-validation-candidate-authority";
 import { parseHeadlessFlyStagingDualMachineInventoryFromListJson } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-render-machine-authority";
 import { validatePageWorkspaceAttributionComplete } from "@/features/headless-renderer/worker/chromium/page-workspace-attribution-invariant";
 
@@ -75,6 +83,13 @@ export type FlyRenderExecutionProbeDeps = {
   readonly renderMachineImageDigestSha256?: string | null;
   readonly readRenderMachineImageDigestSha256?: () => Promise<string | null>;
   readonly runProbeChain?: typeof runClaimedRenderExecutionProbeChain;
+  /**
+   * Set only by the candidate-validation entrypoint after
+   * classifyFlyRenderDeployedValidationCandidateProbeAuthority passes.
+   * Skips ordinary current-image selection without weakening it for
+   * official probes.
+   */
+  readonly candidateValidationAuthorizedDigest?: string;
 };
 
 function mapFailureAttribution(
@@ -226,30 +241,59 @@ export async function runFlyRenderExecutionProbe(
   } else {
     renderImageDigestSha256 = await readRenderMachineImageDigestFromFly(env);
   }
-  const telemetryImage = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority(
-    { renderImageDigestSha256 },
-  );
-  if (!telemetryImage.ok) {
-    writeFlyRenderExecutionProbeEvidence({
-      evidencePath,
-      document: {
-        ...createNotTestedFlyRenderExecutionProbeEvidence([
-          `Render Machine image authority rejected (${telemetryImage.reasonId}).`,
-          "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
-        ]),
-        overall: "FAIL",
-        eligibilityVerdict: EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE,
-        startedAtIso: nowIso(),
-        endedAtIso: nowIso(),
-        failureSubstage: null,
-        failureReasonId: null,
-        cleanupStatus: "not_run",
-      },
-    });
-    console.log(
-      `execution_probe_eligibility_verdict=${EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE}`,
-    );
-    return { exitCode: 1, overall: "FAIL", connectionFactoryCalls: 0 };
+  if (deps.candidateValidationAuthorizedDigest != null) {
+    if (
+      renderImageDigestSha256 == null ||
+      deps.candidateValidationAuthorizedDigest !== renderImageDigestSha256
+    ) {
+      writeFlyRenderExecutionProbeEvidence({
+        evidencePath,
+        document: {
+          ...createNotTestedFlyRenderExecutionProbeEvidence([
+            "Candidate-validation authorized digest does not match render Machine digest.",
+            "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+          ]),
+          overall: "FAIL",
+          eligibilityVerdict: EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE,
+          startedAtIso: nowIso(),
+          endedAtIso: nowIso(),
+          failureSubstage: null,
+          failureReasonId: null,
+          cleanupStatus: "not_run",
+        },
+      });
+      console.log(
+        `execution_probe_eligibility_verdict=${EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE}`,
+      );
+      return { exitCode: 1, overall: "FAIL", connectionFactoryCalls: 0 };
+    }
+  } else {
+    const telemetryImage =
+      classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
+        renderImageDigestSha256,
+      });
+    if (!telemetryImage.ok) {
+      writeFlyRenderExecutionProbeEvidence({
+        evidencePath,
+        document: {
+          ...createNotTestedFlyRenderExecutionProbeEvidence([
+            `Render Machine image authority rejected (${telemetryImage.reasonId}).`,
+            "Does not overwrite docs/evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md.",
+          ]),
+          overall: "FAIL",
+          eligibilityVerdict: EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE,
+          startedAtIso: nowIso(),
+          endedAtIso: nowIso(),
+          failureSubstage: null,
+          failureReasonId: null,
+          cleanupStatus: "not_run",
+        },
+      });
+      console.log(
+        `execution_probe_eligibility_verdict=${EXECUTION_PROBE_ELIGIBILITY.FAIL_TELEMETRY_IMAGE}`,
+      );
+      return { exitCode: 1, overall: "FAIL", connectionFactoryCalls: 0 };
+    }
   }
 
   let connectionFactoryCalls = 0;
@@ -371,4 +415,90 @@ export async function runFlyRenderExecutionProbe(
     }`,
   );
   return { exitCode: 1, overall: "FAIL", connectionFactoryCalls };
+}
+
+export type FlyRenderCandidateValidationProbeDeps = {
+  readonly env?: NodeJS.ProcessEnv | Record<string, unknown>;
+  readonly evidencePath?: string;
+  readonly connectionProbe?: () => void;
+  readonly nowIso?: () => string;
+  readonly candidateObservation?: HeadlessFlyStagingCandidateProbeObservation;
+  readonly runProbeChain?: typeof runClaimedRenderExecutionProbeChain;
+};
+
+/**
+ * Separate entrypoint for deployed-validation-candidate probes.
+ * Defaults off with zero provider contact. Does not weaken ordinary
+ * current-image execution probe selection.
+ */
+export async function runFlyRenderCandidateValidationProbe(
+  deps: FlyRenderCandidateValidationProbeDeps = {},
+): Promise<{
+  readonly exitCode: number;
+  readonly overall: FlyRenderExecutionProbeEvidenceDocument["overall"];
+  readonly connectionFactoryCalls: number;
+  readonly reasonId: string | null;
+}> {
+  const env = deps.env ?? process.env;
+  if (!isHeadlessFlyRenderCandidateValidationGateOn(env)) {
+    return {
+      exitCode: 0,
+      overall: "NOT_TESTED",
+      connectionFactoryCalls: 0,
+      reasonId: "candidate_gate_disabled",
+    };
+  }
+  const pin = readHeadlessFlyRenderCandidateDigestPin(env);
+  if (pin == null) {
+    return {
+      exitCode: 1,
+      overall: "FAIL",
+      connectionFactoryCalls: 0,
+      reasonId: "candidate_digest_pin_missing",
+    };
+  }
+  if (deps.candidateObservation == null) {
+    return {
+      exitCode: 1,
+      overall: "FAIL",
+      connectionFactoryCalls: 0,
+      reasonId: "hostile_input",
+    };
+  }
+  const observation: HeadlessFlyStagingCandidateProbeObservation = {
+    ...deps.candidateObservation,
+    candidateValidationGateEnabled: true,
+    candidateDigestPin: pin,
+    candidateDigestSha256:
+      deps.candidateObservation.candidateDigestSha256 ?? pin,
+  };
+  const authority =
+    classifyFlyRenderDeployedValidationCandidateProbeAuthority(observation);
+  if (!authority.ok) {
+    return {
+      exitCode: 1,
+      overall: "FAIL",
+      connectionFactoryCalls: 0,
+      reasonId: authority.reasonId,
+    };
+  }
+  // Provider contact remains behind the ordinary QA execution-probe gate and
+  // secret contract; candidate authority replaces only current-image selection.
+  return runFlyRenderExecutionProbe({
+    env: {
+      ...env,
+      [HEADLESS_FLY_RENDER_CANDIDATE_VALIDATION_GATE]: "1",
+      [HEADLESS_FLY_RENDER_CANDIDATE_DIGEST_PIN_ENV]: pin,
+    },
+    evidencePath: deps.evidencePath,
+    connectionProbe: deps.connectionProbe,
+    nowIso: deps.nowIso,
+    renderMachineImageDigestSha256: authority.candidateDigestSha256,
+    runProbeChain: deps.runProbeChain,
+    forceGateOn: true,
+    candidateValidationAuthorizedDigest: authority.candidateDigestSha256,
+  }).then((result) => ({
+    ...result,
+    reasonId: null,
+  }));
 }
