@@ -1041,7 +1041,7 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE
     eligibleForCurrentStagingReadiness: true,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
-/** Post-007 2G.25 cleanup-runtime prospective — build-only registered; not deployment-eligible. */
+/** Post-007 2G.25 cleanup-runtime prospective — rollout validation eligible; not current until promotion. */
 export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD =
   Object.freeze({
     recordId: "post_007_2g25_cleanup_runtime_prospective",
@@ -1056,7 +1056,7 @@ export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAG
     pageTelemetryCapabilityVersion:
       HEADLESS_FLY_STAGING_EXPORT_CLEANUP_RUNTIME_CAPABILITY_VERSION,
     eligibleForVerifyLiveHarness: false,
-    eligibleForRenderLiveHarness: false,
+    eligibleForRenderLiveHarness: true,
     eligibleForCurrentStagingReadiness: false,
   } satisfies HeadlessFlyStagingVersionedImageRecord);
 
@@ -1497,9 +1497,17 @@ export function classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority(inp
     record.pageTelemetryCapabilityVersion !==
       HEADLESS_FLY_STAGING_FRAME_PROGRESS_CAPABILITY_VERSION &&
     record.pageTelemetryCapabilityVersion !==
-      HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION
+      HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION &&
+    record.pageTelemetryCapabilityVersion !==
+      HEADLESS_FLY_STAGING_EXPORT_CLEANUP_RUNTIME_CAPABILITY_VERSION
   ) {
     return { ok: false, reasonId: "missing_page_telemetry_capability" };
+  }
+  if (
+    record.recordId === "post_007_2g25_cleanup_runtime_prospective" &&
+    record.eligibleForRenderLiveHarness
+  ) {
+    return { ok: true, record };
   }
   if (record.lifecycle !== "current") {
     return { ok: false, reasonId: "historical_lifecycle_not_current_ready" };

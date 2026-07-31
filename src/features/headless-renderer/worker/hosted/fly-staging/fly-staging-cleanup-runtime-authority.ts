@@ -84,7 +84,7 @@ export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD =
     buildInfoSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
     maintenanceEnabled: false,
     eligibleForVerifyLiveHarness: false,
-    eligibleForRenderLiveHarness: false,
+    eligibleForRenderLiveHarness: true,
     eligibleForCurrentStagingReadiness: false,
     eligibleForRollbackSelection: false,
   } satisfies HeadlessFlyStagingCleanupRuntimeImageRecord);

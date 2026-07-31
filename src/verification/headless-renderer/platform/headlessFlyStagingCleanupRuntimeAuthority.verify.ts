@@ -37,6 +37,7 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS,
   classifyCurrentFlyStagingImageEligibility,
+  classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority,
   resolveCurrentFlyStagingAcceptedImageRecord,
   resolveProspectiveFlyStagingRolloutImageRecord,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
@@ -93,17 +94,22 @@ async function main() {
     );
   });
 
-  await test("versioned prospective record remains non-current and probe-ineligible", () => {
+  await test("versioned prospective record accepts rollout probe but not current readiness", () => {
     const versioned =
       HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_PROSPECTIVE_IMAGE_RECORD;
     assert.equal(versioned.lifecycle, "historical");
-    assert.equal(versioned.pageTelemetryCapabilityVersion, HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_CAPABILITY_VERSION);
+    assert.equal(versioned.eligibleForRenderLiveHarness, true);
+    assert.equal(versioned.eligibleForCurrentStagingReadiness, false);
     const eligibility = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: versioned.imageDigestSha256,
       schemaMigrationIds:
         HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT.migrationIds,
     });
     assert.equal(eligibility.eligible, false);
+    const probe = classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority({
+      renderImageDigestSha256: versioned.imageDigestSha256,
+    });
+    assert.equal(probe.ok, true);
   });
 
   await test("bridge temporary current authority remains rollback-eligible", () => {
