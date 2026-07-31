@@ -39,6 +39,9 @@ import { materializeHostedWorkerAdapters } from "./materialize-hosted-worker-ada
 import { createHostedShutdownLifecycle } from "./hosted-shutdown-lifecycle";
 import { executionAttributionToSafeTelemetryFacts } from "../runtime/claimed-render-execution-attribution";
 
+export const HEADLESS_PACKAGED_STARTUP_PROBE_ENV =
+  "HEADLESS_PACKAGED_STARTUP_PROBE" as const;
+
 export type HostedEntrypointOptions = {
   readonly env?: NodeJS.ProcessEnv | Record<string, unknown>;
   readonly eventSink?: HeadlessHostedWorkerEventSink;
@@ -124,6 +127,60 @@ export async function runHostedWorkerEntrypoint(
       });
       return { exitCode: 1, reasonId: "deployable_image_assert_failed" };
     }
+  }
+
+  const packagedStartupProbe =
+    (env as Record<string, unknown>)[HEADLESS_PACKAGED_STARTUP_PROBE_ENV] ===
+    "1";
+  if (packagedStartupProbe) {
+    const compatibilityMode = resolveHeadlessSchemaPreflightCompatibilityMode(
+      (env as Record<string, unknown>)[
+        HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV
+      ],
+    );
+    const maintenanceEnabledRaw = (env as Record<string, unknown>)[
+      HEADLESS_EXPORT_MAINTENANCE_ENABLE_ENV
+    ];
+    emitHostedWorkerEvent(eventSink, {
+      name: "hosted.packaged_startup.classified",
+      atMs: nowMs(),
+      mode: config.mode,
+      status: composition.canStartConsumerLoop ? "configured" : "invalid",
+      reasonId: composition.reasonId,
+      facts: {
+        compatibilityMode,
+        maintenanceEnabled:
+          maintenanceEnabledRaw === undefined
+            ? "absent"
+            : String(maintenanceEnabledRaw),
+        rendererBuildId: config.rendererBuildId,
+      },
+    });
+    if (!composition.canStartConsumerLoop) {
+      emitHostedWorkerEvent(eventSink, {
+        name: "hosted.process.exit",
+        atMs: nowMs(),
+        mode: config.mode,
+        reasonId: "packaged_startup_loop_not_ready",
+        status: "failed",
+      });
+      return { exitCode: 1, reasonId: "packaged_startup_loop_not_ready" };
+    }
+    emitHostedWorkerEvent(eventSink, {
+      name: "hosted.packaged_startup.loop_readiness",
+      atMs: nowMs(),
+      mode: config.mode,
+      status: "ok",
+      reasonId: "ok",
+    });
+    emitHostedWorkerEvent(eventSink, {
+      name: "hosted.process.exit",
+      atMs: nowMs(),
+      mode: config.mode,
+      reasonId: "packaged_startup_probe_pass",
+      status: "ok",
+    });
+    return { exitCode: 0, reasonId: "packaged_startup_probe_pass" };
   }
 
   // 3. Native binary and codec preflight

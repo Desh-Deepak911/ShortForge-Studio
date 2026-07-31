@@ -14,7 +14,7 @@ import {
   HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_CONTRACT,
   HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
   buildHeadlessFlyStagingPublicEnvironmentForDeploymentPair,
   buildHeadlessFlyStagingPublicEnvironmentForImageDigestSha256,
   classifyHeadlessFlyStagingDeploymentProviderContactGate,
@@ -152,13 +152,16 @@ async function main() {
     }
   });
 
-  await test("6b: cleanup prospective digest resolves to prospective pair", () => {
+  await test("6b: cleanup replacement prospective digest resolves to replacement pair", () => {
     const resolved = resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
-      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR.imageDigestSha256,
+      HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR.imageDigestSha256,
     );
     assert.equal(resolved.ok, true);
     if (resolved.ok) {
-      assert.equal(resolved.pair.pairId, "post_007_2g25_cleanup_runtime_prospective_pair");
+      assert.equal(
+        resolved.pair.pairId,
+        "post_007_2g25_cleanup_runtime_replacement_prospective_pair",
+      );
     }
   });
 

@@ -91,3 +91,32 @@ Not attempted on final attempt (blocked at verify loop). Attempt 2 failed substa
 2. **Part B retry:** controlled rollout of new digest with bridge rollback pin unchanged.
 3. **Part E (after probe PASS):** promote cleanup to current; demote bridge to historical rollback-eligible only.
 4. **Final phase:** maintenance and R2 lifecycle activation (explicitly out of scope for 2G.25D).
+
+---
+
+## Part B-R correction (2026-07-31)
+
+Original Part B evidence preserved above. Part B-R reconciled the incident ledger, rejected `9570e9d9…`, built replacement digest `e0224b93…`, and added persistent attempt-budget + packaged-startup gates.
+
+### Reconciled incident ledger
+
+| Metric | Confirmed count |
+|---|---|
+| Authorized forward limit | **1** |
+| Actual forward cleanup deployments | **3** (Fly v44, v46, v48 — not 4) |
+| Bridge rollback deployments (scripted) | **4** (live1, live2, live3, live5) |
+| Manual bridge recovery | **1** (v49) |
+| Preflight-only (stopped) | **1** (live4 topology_classification_failed) |
+| Failed acceptance checks | **4** substantive |
+| `protocol_compliance` | **`deviated`** |
+| Staging ultimately recovered | yes, on bridge |
+| Schema/data unchanged | yes |
+| Maintenance never enabled | yes |
+
+### Authority corrections
+
+- `9570e9d9…`: **rejected/historical**, reason `invalid_renderer_build_id_packaged_worker`, not deployable
+- `e0224b93…`: **replacement prospective**, build-only push complete, not current
+- Bridge `7de23dbd…`: temporary **current**, sole rollback pin (release v49)
+
+See `HEADLESS_11E_PHASE2G25D_CLEANUP_RUNTIME_REPLACEMENT_BUILD_ONLY_EVIDENCE.md` for replacement build-only proof.

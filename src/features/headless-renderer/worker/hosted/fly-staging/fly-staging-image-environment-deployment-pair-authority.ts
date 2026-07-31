@@ -17,11 +17,15 @@ import {
 } from "./fly-staging-rollback-bridge-authority";
 import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
-  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_HOSTED_WORKER_ARTIFACT_SHA256,
-  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
   buildHeadlessFlyStagingCleanupRuntimePublicEnvironment,
+  isHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDigest,
+  isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest,
 } from "./fly-staging-cleanup-runtime-authority";
 import {
   materializeHeadlessFlyStagingToml,
@@ -59,13 +63,16 @@ export type HeadlessFlyStagingImageEnvironmentDeploymentPairId =
   | "post_007_2g23_frame_progress_rollback_pair"
   | "post_007_2g24_export_correctness_forward_pair"
   | "post_007_2g24e_bridge008_rollback_bridge_pair"
-  | "post_007_2g25_cleanup_runtime_prospective_pair";
+  | "post_007_2g25_cleanup_runtime_prospective_pair"
+  | "post_007_2g25_cleanup_runtime_rejected_pair"
+  | "post_007_2g25_cleanup_runtime_replacement_prospective_pair";
 
 export type HeadlessFlyStagingImageEnvironmentDeploymentPairRole =
   | "rollback_anchor"
   | "forward_target"
   | "temporary_rollback_bridge"
-  | "prospective_cleanup_runtime";
+  | "prospective_cleanup_runtime"
+  | "rejected_cleanup_runtime";
 
 export type HeadlessFlyStagingImageEnvironmentDeploymentPair = {
   readonly pairId: HeadlessFlyStagingImageEnvironmentDeploymentPairId;
@@ -85,6 +92,8 @@ export type HeadlessFlyStagingImageEnvironmentCoherenceReasonId =
   | "image_environment_authority_incoherent"
   | "digest_record_binding_mismatch"
   | "duplicate_digest_authority"
+  | "rejected_permanent_digest"
+  | "replacement_placeholder_digest"
   | "hostile_input";
 
 export const HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR =
@@ -130,25 +139,44 @@ export const HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLO
     buildInfoSha256: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_BUILD_INFO_SHA256,
   } satisfies HeadlessFlyStagingImageEnvironmentDeploymentPair);
 
-export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR =
+export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_DEPLOYMENT_PAIR =
   Object.freeze({
-    pairId: "post_007_2g25_cleanup_runtime_prospective_pair",
-    role: "prospective_cleanup_runtime",
-    imageRecordId: "post_007_2g25_cleanup_runtime_prospective",
-    imageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_IMAGE_DIGEST,
+    pairId: "post_007_2g25_cleanup_runtime_rejected_pair",
+    role: "rejected_cleanup_runtime",
+    imageRecordId: "post_007_2g25_cleanup_runtime_rejected",
+    imageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
     rendererBuildId: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
     hostedWorkerArtifactSha256:
-      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_HOSTED_WORKER_ARTIFACT_SHA256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_HOSTED_WORKER_ARTIFACT_SHA256,
     hostedPageArtifactSha256:
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
     buildInfoSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
   } satisfies HeadlessFlyStagingImageEnvironmentDeploymentPair);
 
+export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR =
+  Object.freeze({
+    pairId: "post_007_2g25_cleanup_runtime_replacement_prospective_pair",
+    role: "prospective_cleanup_runtime",
+    imageRecordId: "post_007_2g25_cleanup_runtime_replacement_prospective",
+    imageDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+    rendererBuildId: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
+    buildInfoSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
+  } satisfies HeadlessFlyStagingImageEnvironmentDeploymentPair);
+
+/** @deprecated Prefer HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR */
+export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR =
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR;
+
 export const HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIRS = Object.freeze([
   HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G24_FORWARD_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR,
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
 ] as const);
 
 const DEPLOYMENT_PAIR_BY_DIGEST = new Map<
@@ -192,6 +220,12 @@ export function resolveHeadlessFlyStagingDeploymentPairByImageDigestSha256(
   if (typeof imageDigestSha256 !== "string" || !DIGEST_RE.test(imageDigestSha256)) {
     return Object.freeze({ ok: false, reasonId: "hostile_input" });
   }
+  if (isHeadlessFlyStagingPermanentlyRejectedCleanupRuntimeDigest(imageDigestSha256)) {
+    return Object.freeze({ ok: false, reasonId: "rejected_permanent_digest" });
+  }
+  if (isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest(imageDigestSha256)) {
+    return Object.freeze({ ok: false, reasonId: "replacement_placeholder_digest" });
+  }
   const pair = DEPLOYMENT_PAIR_BY_DIGEST.get(imageDigestSha256);
   if (pair == null) {
     return Object.freeze({ ok: false, reasonId: "unknown_digest" });
@@ -229,7 +263,10 @@ export function buildHeadlessFlyStagingPublicEnvironmentForDeploymentPair(
   if (pair.pairId === "post_007_2g24e_bridge008_rollback_bridge_pair") {
     return buildHeadlessFlyStagingRollbackBridgePublicEnvironment();
   }
-  if (pair.pairId === "post_007_2g25_cleanup_runtime_prospective_pair") {
+  if (
+    pair.pairId === "post_007_2g25_cleanup_runtime_replacement_prospective_pair" ||
+    pair.pairId === "post_007_2g25_cleanup_runtime_prospective_pair"
+  ) {
     return buildHeadlessFlyStagingCleanupRuntimePublicEnvironment();
   }
   return Object.freeze({

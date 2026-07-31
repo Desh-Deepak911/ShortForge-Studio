@@ -221,9 +221,9 @@ async function main() {
     "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 36 with twenty-five immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 36);
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 25);
+  await test("authority version is frozen at 37 with twenty-six immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 37);
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 26);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
       [
@@ -251,7 +251,8 @@ async function main() {
         "post_007_2g24_export_correctness_prospective",
         "post_007_2g24_export_correctness_current",
         "post_007_2g24e_bridge008_rollback_bridge",
-        "post_007_2g25_cleanup_runtime_prospective",
+        "post_007_2g25_cleanup_runtime_rejected",
+        "post_007_2g25_cleanup_runtime_replacement_prospective",
       ],
     );
   });
@@ -774,7 +775,7 @@ async function main() {
     const current = resolveCurrentFlyStagingAcceptedImageRecord();
     const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
-    assert.equal(prospective.recordId, "post_007_2g25_cleanup_runtime_prospective");
+    assert.equal(prospective.recordId, "post_007_2g25_cleanup_runtime_replacement_prospective");
     assert.equal(
       resolveProspectiveFlyStaging8i3ArtifactBindingCoherenceImageRecord().recordId,
       "post_007_8i3_artifact_binding_coherence_historical",

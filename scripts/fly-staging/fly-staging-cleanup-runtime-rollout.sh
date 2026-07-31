@@ -10,7 +10,11 @@ export HEADLESS_ENV_NAME="${HEADLESS_ENV_NAME:-staging}"
 fly_staging_forbid_env_local
 fly_staging_require_app_name
 
-CLEANUP_DIGEST="9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60"
+REJECTED_CLEANUP_DIGEST="9570e9d9137683c0aed1de990c55747ccfa111ba42acea3c6c3e592ee5cd7c60"
+CLEANUP_DIGEST="$(npx tsx -e "import { HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST } from './src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-authority.ts'; console.log(HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST)")"
+if [ "${CLEANUP_DIGEST}" = "${REJECTED_CLEANUP_DIGEST}" ]; then
+  fly_staging_die "fail_class=rejected_cleanup_digest_forbidden"
+fi
 BRIDGE_DIGEST="7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206"
 FORBIDDEN_2G24_DIGEST="d38e45e24c579f56960611d48c15c92e38968d7290dbf04f926e0e572c56bd68"
 EXPECTED_VERIFY_MACHINE="d895d12a240938"
@@ -50,6 +54,9 @@ fly_staging_apply_public_environment
 
 printf 'phase=local_predeploy_authority\n'
 npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-materialize-cli.ts" validate-pairs
+npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-attempt-budget-cli.ts" \
+  assert-forward-budget "${PUBLIC_APP}" "${CLEANUP_DIGEST}" \
+  || fly_staging_die "fail_class=forward_attempt_budget_blocked"
 FORWARD_IDENTITY="$(npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-materialize-cli.ts" identity forward 1)"
 FORWARD_TOKEN="$(printf '%s\n' "${FORWARD_IDENTITY}" | sed -n 's/materialized_token=//p')"
 FORWARD_MATERIALIZED="${FOOTIEBITZ_ROOT}/${FORWARD_TOKEN}.materialized.toml"
@@ -184,6 +191,9 @@ rollback_to_bridge() {
   fly_staging_provider_fly machine restart "${EXPECTED_RENDER_MACHINE}" -a "${PUBLIC_APP}"
   sleep 20
   fly_staging_apply_public_environment_for_digest "${BRIDGE_DIGEST}"
+  npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-attempt-budget-cli.ts" \
+    record-rollback "${PUBLIC_APP}" "${BRIDGE_DIGEST}" \
+    || fly_staging_die "fail_class=rollback_attempt_record_failed"
   export HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE="rollback_bridge_007_008"
   export HEADLESS_FLY_STAGING_PREFLIGHT_WORKER_MODE=verify
   npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-preflight-cli.ts" \
@@ -215,6 +225,12 @@ else
   FORWARD_RC=$?
   set -e
   cat "${DEPLOY_LOG}"
+fi
+
+if [ "${FORWARD_RC}" -eq 0 ] && [ "${BASELINE_DIGEST}" != "${CLEANUP_DIGEST}" ]; then
+  npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-attempt-budget-cli.ts" \
+    record-forward "${PUBLIC_APP}" "${CLEANUP_DIGEST}" "0" \
+    || fly_staging_die "fail_class=forward_attempt_record_failed"
 fi
 
 if [ "${FORWARD_RC}" -ne 0 ]; then
