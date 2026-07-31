@@ -8,6 +8,7 @@ import {
   classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget,
   loadHeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
   persistHeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
+  summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget,
 } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-rollout-attempt-budget-authority";
 import { classifyHeadlessFlyStagingRejectedCleanupRuntimeDeployEligibility } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
 
@@ -30,6 +31,9 @@ switch (command) {
     const appName = requireArg(0);
     const targetDigest = requireArg(1);
     const newAuth = process.env.HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_ROLLOUT_NEW_TARGET_AUTHORIZATION === "1";
+    const amendedAuth =
+      process.env.HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_ROLLOUT_AMENDED_FORWARD_AUTHORIZATION ===
+      "1";
     const rejected = classifyHeadlessFlyStagingRejectedCleanupRuntimeDeployEligibility({
       imageDigestSha256: targetDigest,
     });
@@ -46,10 +50,18 @@ switch (command) {
       appName,
       targetDigestSha256: targetDigest,
       newTargetAuthorizationPresent: newAuth,
+      amendedForwardAuthorizationPresent: amendedAuth,
     });
     if (!budget.ok) {
       console.log(`forward_budget=BLOCKED reason=${budget.reasonId}`);
       die(budget.reasonId);
+    }
+    if (loaded.ok) {
+      const summary = summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
+        state: loaded.state,
+        targetDigestSha256: targetDigest,
+      });
+      console.log(`forward_budget_remaining=${summary.remaining}`);
     }
     console.log("forward_budget=PASS");
     break;

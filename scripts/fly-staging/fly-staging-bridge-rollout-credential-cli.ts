@@ -12,6 +12,7 @@ import {
   classifyBridgeRolloutCredentialSurfaceCoherence,
   classifyPooledUrlCannotApplyMigrations,
   deriveHostedWorkerBridgeLinesFromQaMaster,
+  deriveQaProbeBridgeLinesFromQaMaster,
   FLY_STAGING_BRIDGE_ROLLOUT_PUBLIC_PINS,
   parseEnvFileAssignments,
   formatEnvAssignment,
@@ -128,6 +129,27 @@ switch (command) {
     writeBridge(outPath, lines);
     console.log("worker_bridge_materialized=PASS");
     console.log("worker_bridge_key_count=9");
+    break;
+  }
+  case "materialize-qa-probe-env": {
+    const outPath = args[0];
+    if (typeof outPath !== "string" || outPath.length === 0) die("hostile_input");
+    if (!existsSync(QA_MASTER)) die("master_not_regular_file");
+    const qaBody = readBody(QA_MASTER);
+    const qa = validateBridgeRolloutQaMasterFile({
+      body: qaBody,
+      modeOctal: readMode(QA_MASTER),
+    });
+    if (!qa.ok) die(qa.failClass);
+    const lines = [
+      ...deriveQaProbeBridgeLinesFromQaMaster(qaBody),
+      `HEADLESS_ENV_NAME=${FLY_STAGING_BRIDGE_ROLLOUT_PUBLIC_PINS.HEADLESS_ENV_NAME}`,
+      `HEADLESS_FLY_STAGING_APP_NAME=${FLY_STAGING_BRIDGE_ROLLOUT_PUBLIC_PINS.HEADLESS_FLY_STAGING_APP_NAME}`,
+    ];
+    writeBridge(outPath, lines);
+    console.log("qa_probe_env_materialized=PASS");
+    console.log("qa_probe_key_count=11");
+    console.log("public_pins_materialized=PASS");
     break;
   }
   case "materialize-neon-read-env": {

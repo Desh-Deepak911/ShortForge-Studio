@@ -53,6 +53,26 @@ export type HeadlessFlyStagingCleanupRuntimeRolloutAttemptState =
     readonly authorizedForwardLimitPerDigest: typeof HEADLESS_FLY_STAGING_2G25D_CLEANUP_RUNTIME_ROLLOUT_AUTHORIZED_FORWARD_LIMIT;
     readonly incidentSealed: boolean;
     readonly entries: readonly HeadlessFlyStagingCleanupRuntimeRolloutAttemptStateEntry[];
+    readonly authorizationAmendments?: readonly HeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment[];
+  }>;
+
+export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_ROLLOUT_PROBE_CREDENTIAL_AMENDMENT_REASON_ID =
+  "operator_probe_credential_surface_correction" as const;
+
+export type HeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment =
+  Readonly<{
+    readonly targetDigestSha256: typeof HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST;
+    readonly originalAuthorizedForwardLimit: 1;
+    readonly originalForwardUsed: 1;
+    readonly originalRuntimeAcceptance: "pass";
+    readonly originalProbeResult: "config_only_failure_before_job_creation";
+    readonly rollbackPerformed: true;
+    readonly amendedTotalForwardLimit: 2;
+    readonly additionalForwardAuthorization: 1;
+    readonly reasonId: typeof HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_ROLLOUT_PROBE_CREDENTIAL_AMENDMENT_REASON_ID;
+    readonly imageRebuildForbidden: true;
+    readonly furtherAmendmentForbidden: true;
+    readonly recordedAtIso: string;
   }>;
 
 const DIGEST_RE = /^[a-f0-9]{64}$/;
@@ -65,7 +85,10 @@ export type HeadlessFlyStagingCleanupRuntimeRolloutAttemptBudgetReasonId =
   | "rejected_target_digest"
   | "forward_budget_exhausted"
   | "forward_after_known_deployment_without_state"
-  | "new_target_digest_requires_new_authorization";
+  | "new_target_digest_requires_new_authorization"
+  | "amended_forward_authorization_required"
+  | "authorization_amendment_missing"
+  | "further_authorization_amendment_forbidden";
 
 export function resolveHeadlessFlyStagingCleanupRuntimeRolloutAttemptStatePath(
   footiebitzRoot: string,
@@ -215,6 +238,11 @@ export function parseHeadlessFlyStagingCleanupRuntimeRolloutAttemptState(
       HEADLESS_FLY_STAGING_2G25D_CLEANUP_RUNTIME_ROLLOUT_AUTHORIZED_FORWARD_LIMIT,
     incidentSealed: value.incidentSealed,
     entries: Object.freeze(entries),
+    authorizationAmendments: Array.isArray(value.authorizationAmendments)
+      ? Object.freeze(
+          value.authorizationAmendments as readonly HeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment[],
+        )
+      : undefined,
   });
 }
 
@@ -274,12 +302,97 @@ export function countForwardAttemptsForDigest(
   ).length;
 }
 
+export function resolveHeadlessFlyStagingCleanupRuntimeForwardAuthorizationAmendmentForDigest(
+  state: HeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
+  targetDigestSha256: string,
+): HeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment | null {
+  const amendments = state.authorizationAmendments ?? [];
+  return (
+    amendments.find((entry) => entry.targetDigestSha256 === targetDigestSha256) ??
+    null
+  );
+}
+
+export function resolveAuthorizedForwardLimitForDigest(
+  state: HeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
+  targetDigestSha256: string,
+): number {
+  const amendment =
+    resolveHeadlessFlyStagingCleanupRuntimeForwardAuthorizationAmendmentForDigest(
+      state,
+      targetDigestSha256,
+    );
+  return amendment?.amendedTotalForwardLimit ?? state.authorizedForwardLimitPerDigest;
+}
+
+export function summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget(input: {
+  readonly state: HeadlessFlyStagingCleanupRuntimeRolloutAttemptState;
+  readonly targetDigestSha256: string;
+}): {
+  readonly used: number;
+  readonly limit: number;
+  readonly remaining: number;
+} {
+  const used = countForwardAttemptsForDigest(input.state, input.targetDigestSha256);
+  const limit = resolveAuthorizedForwardLimitForDigest(
+    input.state,
+    input.targetDigestSha256,
+  );
+  return Object.freeze({
+    used,
+    limit,
+    remaining: Math.max(0, limit - used),
+  });
+}
+
+export function appendHeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment(input: {
+  readonly state: HeadlessFlyStagingCleanupRuntimeRolloutAttemptState;
+  readonly amendment: HeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment;
+}): HeadlessFlyStagingCleanupRuntimeRolloutAttemptState {
+  const existing = input.state.authorizationAmendments ?? [];
+  if (
+    existing.some(
+      (entry) => entry.targetDigestSha256 === input.amendment.targetDigestSha256,
+    )
+  ) {
+    throw new Error("authorization_amendment_already_applied");
+  }
+  if (existing.some((entry) => entry.furtherAmendmentForbidden)) {
+    throw new Error("further_authorization_amendment_forbidden");
+  }
+  return Object.freeze({
+    ...input.state,
+    authorizationAmendments: Object.freeze([...existing, input.amendment]),
+  });
+}
+
+export function buildHeadlessFlyStagingCleanupRuntimeProbeCredentialAuthorizationAmendment(input: {
+  readonly recordedAtIso: string;
+}): HeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment {
+  return Object.freeze({
+    targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+    originalAuthorizedForwardLimit: 1,
+    originalForwardUsed: 1,
+    originalRuntimeAcceptance: "pass",
+    originalProbeResult: "config_only_failure_before_job_creation",
+    rollbackPerformed: true,
+    amendedTotalForwardLimit: 2,
+    additionalForwardAuthorization: 1,
+    reasonId:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_ROLLOUT_PROBE_CREDENTIAL_AMENDMENT_REASON_ID,
+    imageRebuildForbidden: true,
+    furtherAmendmentForbidden: true,
+    recordedAtIso: input.recordedAtIso,
+  });
+}
+
 export function classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget(input: {
   readonly state: HeadlessFlyStagingCleanupRuntimeRolloutAttemptState | null;
   readonly appName: string;
   readonly targetDigestSha256: unknown;
   readonly forwardDeployKnownCompleted?: boolean;
   readonly newTargetAuthorizationPresent?: boolean;
+  readonly amendedForwardAuthorizationPresent?: boolean;
 }):
   | { readonly ok: true }
   | {
@@ -308,8 +421,38 @@ export function classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget(inp
     return Object.freeze({ ok: false, reasonId: "incoherent_attempt_state" });
   }
   const used = countForwardAttemptsForDigest(input.state, input.targetDigestSha256);
-  if (used >= input.state.authorizedForwardLimitPerDigest) {
+  const limit = resolveAuthorizedForwardLimitForDigest(
+    input.state,
+    input.targetDigestSha256,
+  );
+  const amendment =
+    resolveHeadlessFlyStagingCleanupRuntimeForwardAuthorizationAmendmentForDigest(
+      input.state,
+      input.targetDigestSha256,
+    );
+  if (used >= limit) {
     return Object.freeze({ ok: false, reasonId: "forward_budget_exhausted" });
+  }
+  if (
+    used >= 1 &&
+    amendment == null &&
+    input.targetDigestSha256 ===
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST
+  ) {
+    return Object.freeze({
+      ok: false,
+      reasonId: "authorization_amendment_missing",
+    });
+  }
+  if (
+    used >= 1 &&
+    amendment != null &&
+    input.amendedForwardAuthorizationPresent !== true
+  ) {
+    return Object.freeze({
+      ok: false,
+      reasonId: "amended_forward_authorization_required",
+    });
   }
   if (
     used === 0 &&

@@ -23,6 +23,7 @@ PUBLIC_APP="${HEADLESS_FLY_STAGING_APP_NAME}"
 PUBLIC_ENV="${HEADLESS_ENV_NAME}"
 
 WORKER_BRIDGE="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-rollout-worker.XXXXXX")"
+QA_PROBE_BRIDGE="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-rollout-qa-probe.XXXXXX")"
 NEON_READ_BRIDGE="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-rollout-neon-read.XXXXXX")"
 TOPOLOGY_BEFORE="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-topology-before.XXXXXX")"
 MACHINE_JSON_BEFORE="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-machines-before.XXXXXX")"
@@ -30,12 +31,12 @@ RELEASE_BEFORE="$(mktemp "${TMPDIR:-/tmp}/fly-staging-cleanup-release-before.XXX
 
 cleanup() {
   set +e
-  rm -f "${WORKER_BRIDGE}" "${NEON_READ_BRIDGE}" \
+  rm -f "${WORKER_BRIDGE}" "${QA_PROBE_BRIDGE}" "${NEON_READ_BRIDGE}" \
     "${TOPOLOGY_BEFORE}" "${MACHINE_JSON_BEFORE}" "${RELEASE_BEFORE}" \
     "${FORWARD_MATERIALIZED:-}" "${ROLLBACK_MATERIALIZED:-}" \
     "${DEPLOY_LOG:-}" "${RUNTIME_LOG:-}"
   npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-credential-cli.ts" \
-    cleanup "${WORKER_BRIDGE}" "${NEON_READ_BRIDGE}" >/dev/null 2>&1 || true
+    cleanup "${WORKER_BRIDGE}" "${QA_PROBE_BRIDGE}" "${NEON_READ_BRIDGE}" >/dev/null 2>&1 || true
   fly_staging_bridge_cleanup 2>/dev/null || true
   set -e
 }
@@ -45,6 +46,7 @@ printf 'phase=credential_validation\n'
 npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-credential-cli.ts" validate-qa-master
 npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-credential-cli.ts" validate-surfaces
 npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-credential-cli.ts" materialize-worker-bridge "${WORKER_BRIDGE}"
+npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-credential-cli.ts" materialize-qa-probe-env "${QA_PROBE_BRIDGE}"
 npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-bridge-rollout-credential-cli.ts" materialize-neon-read-env "${NEON_READ_BRIDGE}"
 
 export HEADLESS_FLY_STAGING_BRIDGE_FILE="${WORKER_BRIDGE}"
@@ -67,6 +69,9 @@ ROLLBACK_TOKEN="$(printf '%s\n' "${ROLLBACK_IDENTITY}" | sed -n 's/materialized_
 ROLLBACK_MATERIALIZED="${FOOTIEBITZ_ROOT}/${ROLLBACK_TOKEN}.materialized.toml"
 npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-materialize-cli.ts" \
   write-rollback-bridge "${ROLLBACK_MATERIALIZED}" "${PUBLIC_APP}"
+npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-probe-config-cli.ts" \
+  "${FORWARD_MATERIALIZED}" \
+  || fly_staging_die "fail_class=probe_config_gate_failed"
 fly_staging_assert_no_public_services_text "${FORWARD_MATERIALIZED}"
 fly_staging_assert_no_public_services_text "${ROLLBACK_MATERIALIZED}"
 
@@ -229,7 +234,7 @@ fi
 
 if [ "${FORWARD_RC}" -eq 0 ] && [ "${BASELINE_DIGEST}" != "${CLEANUP_DIGEST}" ]; then
   npx tsx "${FLY_STAGING_COMMON_DIR}/fly-staging-cleanup-runtime-rollout-attempt-budget-cli.ts" \
-    record-forward "${PUBLIC_APP}" "${CLEANUP_DIGEST}" "0" \
+    record-forward "${PUBLIC_APP}" "${CLEANUP_DIGEST}" "1" \
     || fly_staging_die "fail_class=forward_attempt_record_failed"
 fi
 
@@ -308,13 +313,16 @@ export HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_ROLLOUT_PROBE_ATTEMPTED=1
 printf 'phase=execution_probe\n'
 set -a
 # shellcheck disable=SC1090
-. "${WORKER_BRIDGE}"
+. "${QA_PROBE_BRIDGE}"
 set +a
 export HEADLESS_FLY_RENDER_QA_EXECUTION_PROBE=1
 PROBE_RC=0
 PROBE_OUT="$(npx tsx "${FOOTIEBITZ_ROOT}/src/verification/headless-renderer/platform/headlessFlyRenderExecutionProbe.verify.ts" 2>&1)" || PROBE_RC=$?
 printf '%s\n' "${PROBE_OUT}"
 if [ "${PROBE_RC}" -ne 0 ]; then
+  if printf '%s\n' "${PROBE_OUT}" | grep -Eq 'FAIL_CONFIG|QA config missing|Gate on but QA secret contract incomplete|execution_probe_eligibility_verdict=FAIL_CONFIG'; then
+    fly_staging_die "fail_class=execution_probe_config_failed rollback=skipped"
+  fi
   rollback_to_bridge
   fly_staging_die "fail_class=execution_probe_failed rollback=confirmed"
 fi

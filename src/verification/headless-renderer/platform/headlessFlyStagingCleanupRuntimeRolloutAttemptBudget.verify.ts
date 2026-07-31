@@ -15,11 +15,14 @@ import {
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-rollout-incident-authority";
 import {
   appendHeadlessFlyStagingCleanupRuntimeRolloutAttemptEntry,
+  appendHeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment,
+  buildHeadlessFlyStagingCleanupRuntimeProbeCredentialAuthorizationAmendment,
   classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget,
   countForwardAttemptsForDigest,
   loadHeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
   persistHeadlessFlyStagingCleanupRuntimeRolloutAttemptState,
   sealHeadlessFlyStagingCleanupRuntimeRolloutIncidentState,
+  summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-rollout-attempt-budget-authority";
 import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
@@ -198,6 +201,66 @@ async function main() {
     if (!gate.ok) {
       assert.equal(gate.reasonId, "forward_after_known_deployment_without_state");
     }
+  });
+
+  await test("authorization amendment allows one additional forward and refuses third", () => {
+    const loaded = loadHeadlessFlyStagingCleanupRuntimeRolloutAttemptState({
+      footiebitzRoot: process.cwd(),
+      appName: APP,
+    });
+    assert.equal(loaded.ok, true);
+    if (!loaded.ok) return;
+    let state = appendHeadlessFlyStagingCleanupRuntimeRolloutForwardAuthorizationAmendment({
+      state: loaded.state,
+      amendment: buildHeadlessFlyStagingCleanupRuntimeProbeCredentialAuthorizationAmendment({
+        recordedAtIso: "2026-07-31T13:50:00.000Z",
+      }),
+    });
+    const blocked = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
+      state,
+      appName: APP,
+      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+      amendedForwardAuthorizationPresent: false,
+    });
+    assert.equal(blocked.ok, false);
+    if (!blocked.ok) {
+      assert.equal(blocked.reasonId, "amended_forward_authorization_required");
+    }
+    const allowed = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
+      state,
+      appName: APP,
+      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+      amendedForwardAuthorizationPresent: true,
+    });
+    assert.equal(allowed.ok, true);
+    const summary = summarizeHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
+      state,
+      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+    });
+    assert.equal(summary.used, 1);
+    assert.equal(summary.limit, 2);
+    assert.equal(summary.remaining, 1);
+    state = appendHeadlessFlyStagingCleanupRuntimeRolloutAttemptEntry({
+      state,
+      entry: {
+        kind: "forward",
+        targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+        sequence: 5,
+        recordedAtIso: new Date().toISOString(),
+        deployPerformed: true,
+        acceptancePassed: true,
+        protocolDeviation: false,
+        sanitizedNote: "fixture_second_forward",
+      },
+    });
+    const exhausted = classifyHeadlessFlyStagingCleanupRuntimeForwardAttemptBudget({
+      state,
+      appName: APP,
+      targetDigestSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_IMAGE_DIGEST,
+      amendedForwardAuthorizationPresent: true,
+    });
+    assert.equal(exhausted.ok, false);
+    if (!exhausted.ok) assert.equal(exhausted.reasonId, "forward_budget_exhausted");
   });
 
   await test("rollback entries do not consume forward budget", () => {
