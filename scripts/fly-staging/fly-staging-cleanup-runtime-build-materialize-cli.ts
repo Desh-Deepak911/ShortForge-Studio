@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import {
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR,
   materializeHeadlessFlyStagingTomlForDeploymentPair,
 } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
 import { HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID } from "../../src/features/headless-renderer/worker/hosted/fly-staging/fly-staging-cleanup-runtime-authority";
@@ -30,7 +30,7 @@ function materializeCleanupRuntimeBuildOnlyToml(targetAppName: string): string {
   const materialized = materializeHeadlessFlyStagingTomlForDeploymentPair({
     templateToml,
     appName: targetAppName,
-    pair: HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
+    pair: HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR,
   });
   if (
     materialized.status !== "ok" ||

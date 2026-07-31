@@ -17,6 +17,8 @@ import {
 } from "./fly-staging-rollback-bridge-authority";
 import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_HOSTED_WORKER_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
@@ -47,7 +49,7 @@ import {
 } from "./fly-staging-versioned-image-authority";
 
 export const HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIR_AUTHORITY_VERSION =
-  3 as const;
+  4 as const;
 
 const DIGEST_RE = /^[a-f0-9]{64}$/;
 
@@ -65,7 +67,8 @@ export type HeadlessFlyStagingImageEnvironmentDeploymentPairId =
   | "post_007_2g24e_bridge008_rollback_bridge_pair"
   | "post_007_2g25_cleanup_runtime_prospective_pair"
   | "post_007_2g25_cleanup_runtime_rejected_pair"
-  | "post_007_2g25_cleanup_runtime_live_finalization_failed_pair";
+  | "post_007_2g25_cleanup_runtime_live_finalization_failed_pair"
+  | "post_008_2g25_cleanup_runtime_finalization_correction_prospective_pair";
 
 export type HeadlessFlyStagingImageEnvironmentDeploymentPairRole =
   | "rollback_anchor"
@@ -167,13 +170,29 @@ export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATIO
     buildInfoSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
   } satisfies HeadlessFlyStagingImageEnvironmentDeploymentPair);
 
+export const HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR =
+  Object.freeze({
+    pairId: "post_008_2g25_cleanup_runtime_finalization_correction_prospective_pair",
+    role: "prospective_cleanup_runtime",
+    imageRecordId:
+      "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
+    imageDigestSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+    rendererBuildId: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
+    hostedWorkerArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
+    hostedPageArtifactSha256:
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
+    buildInfoSha256: HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
+  } satisfies HeadlessFlyStagingImageEnvironmentDeploymentPair);
+
 /** @deprecated Prefer HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_DEPLOYMENT_PAIR */
 export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR =
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_DEPLOYMENT_PAIR;
 
-/** @deprecated Prefer HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR */
+/** @deprecated Prefer HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR */
 export const HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_DEPLOYMENT_PAIR =
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR;
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR;
 
 export const HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIRS = Object.freeze([
   HEADLESS_FLY_STAGING_POST_007_2G23_ROLLBACK_DEPLOYMENT_PAIR,
@@ -181,6 +200,7 @@ export const HEADLESS_FLY_STAGING_IMAGE_ENVIRONMENT_DEPLOYMENT_PAIRS = Object.fr
   HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REJECTED_DEPLOYMENT_PAIR,
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_LIVE_FINALIZATION_FAILED_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR,
 ] as const);
 
 const DEPLOYMENT_PAIR_BY_DIGEST = new Map<
@@ -269,7 +289,9 @@ export function buildHeadlessFlyStagingPublicEnvironmentForDeploymentPair(
   }
   if (
     pair.pairId === "post_007_2g25_cleanup_runtime_live_finalization_failed_pair" ||
-    pair.pairId === "post_007_2g25_cleanup_runtime_prospective_pair"
+    pair.pairId === "post_007_2g25_cleanup_runtime_prospective_pair" ||
+    pair.pairId ===
+      "post_008_2g25_cleanup_runtime_finalization_correction_prospective_pair"
   ) {
     return buildHeadlessFlyStagingCleanupRuntimePublicEnvironment();
   }

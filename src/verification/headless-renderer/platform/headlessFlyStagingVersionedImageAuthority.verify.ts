@@ -221,9 +221,9 @@ async function main() {
     "\nSprint 11E Phase 2G.20 — versioned Fly staging image authority\n",
   );
 
-  await test("authority version is frozen at 37 with twenty-six immutable records", () => {
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 37);
-    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 26);
+  await test("authority version is frozen at 38 with twenty-seven immutable records", () => {
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION, 38);
+    assert.equal(HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.length, 27);
     assert.deepEqual(
       HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.map((r) => r.recordId),
       [
@@ -253,6 +253,7 @@ async function main() {
         "post_007_2g24e_bridge008_rollback_bridge",
         "post_007_2g25_cleanup_runtime_rejected",
         "post_007_2g25_cleanup_runtime_live_finalization_failed",
+        "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
       ],
     );
   });
@@ -777,7 +778,7 @@ async function main() {
     assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
     assert.equal(
       prospective.recordId,
-      "post_007_2g25_cleanup_runtime_live_finalization_failed",
+      "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
     );
     assert.equal(prospective.lifecycle, "historical");
     assert.equal(prospective.eligibleForCurrentStagingReadiness, false);

@@ -11,7 +11,7 @@ import {
   HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
 } from "@/features/headless-renderer/control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import {
-  HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR,
   materializeHeadlessFlyStagingTomlForDeploymentPair,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
 import {
@@ -20,7 +20,9 @@ import {
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-rollback-bridge-authority";
 import {
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_BUILD_INFO_SHA256,
-  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_CAPABILITY_VERSION,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_PLACEHOLDER_IMAGE_DIGEST,
@@ -37,6 +39,7 @@ import {
 import { HEADLESS_FLY_STAGING_TEMPLATE_RELATIVE_PATH } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-template";
 import {
   HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS,
   classifyCurrentFlyStagingImageEligibility,
   classifyFlyRenderTelemetryExecutionProbeRenderImageAuthority,
@@ -90,7 +93,7 @@ async function main() {
     assert.equal(record.eligibleForProbe, false);
     assert.equal(record.rejectionReasonId, "live_owned_object_finalization_failure");
     assert.equal(isHeadlessFlyStagingPlaceholderCleanupRuntimeDigest(record.imageDigestSha256), false);
-    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord().ok, false);
+    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord(record).ok, false);
     assert.notEqual(
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_IMAGE_DIGEST,
@@ -98,6 +101,32 @@ async function main() {
     assert.notEqual(
       record.imageDigestSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REJECTED_IMAGE_DIGEST,
+    );
+  });
+
+  await test("finalization correction prospective is coherent and ineligible", () => {
+    const record =
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD;
+    assert.equal(record.lifecycle, "prospective");
+    assert.equal(record.maintenanceEnabled, false);
+    assert.equal(record.eligibleForDeploy, false);
+    assert.equal(record.eligibleForProbe, false);
+    assert.equal(record.eligibleForRuntimeReady, false);
+    assert.equal(record.eligibleForCurrentStagingReadiness, false);
+    assert.equal(record.eligibleForRollbackSelection, false);
+    assert.equal(
+      record.imageDigestSha256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_IMAGE_DIGEST,
+    );
+    assert.equal(
+      record.hostedWorkerArtifactSha256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
+    );
+    assert.equal(classifyHeadlessFlyStagingCleanupRuntimeImageRecord(record).ok, true);
+    assert.notEqual(
+      record.imageDigestSha256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_PROSPECTIVE_IMAGE_RECORD
+        .imageDigestSha256,
     );
   });
 
@@ -141,11 +170,14 @@ async function main() {
     );
   });
 
-  await test("rollout selector no longer exposes deployable cleanup runtime target", () => {
+  await test("rollout selector exposes ineligible finalization-correction prospective", () => {
+    const prospective = resolveProspectiveFlyStagingRolloutImageRecord();
     assert.equal(
-      resolveProspectiveFlyStagingRolloutImageRecord().recordId,
-      "post_007_2g25_cleanup_runtime_live_finalization_failed",
+      prospective.recordId,
+      "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
     );
+    assert.equal(prospective.eligibleForCurrentStagingReadiness, false);
+    assert.equal(prospective.eligibleForRenderLiveHarness, false);
     assert.equal(
       resolveCurrentFlyStagingAcceptedImageRecord().recordId,
       "post_007_2g24e_bridge008_rollback_bridge",
@@ -167,7 +199,7 @@ async function main() {
     const materialized = materializeHeadlessFlyStagingTomlForDeploymentPair({
       templateToml,
       appName: "shortforge-hw-staging-test",
-      pair: HEADLESS_FLY_STAGING_POST_007_2G25_CLEANUP_RUNTIME_REPLACEMENT_DEPLOYMENT_PAIR,
+      pair: HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_DEPLOYMENT_PAIR,
     });
     assert.equal(materialized.status, "ok");
     if (materialized.status === "ok" && materialized.toml != null) {
@@ -179,7 +211,7 @@ async function main() {
     }
   });
 
-  await test("versioned records include rejected and live-finalization-failed entries", () => {
+  await test("versioned records include rejected, live-failed, and correction prospective", () => {
     const rejected = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
       (record) => record.recordId === "post_007_2g25_cleanup_runtime_rejected",
     );
@@ -187,11 +219,26 @@ async function main() {
       (record) =>
         record.recordId === "post_007_2g25_cleanup_runtime_live_finalization_failed",
     );
+    const correction = HEADLESS_FLY_STAGING_VERSIONED_IMAGE_RECORDS.filter(
+      (record) =>
+        record.recordId ===
+        "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
+    );
     assert.equal(rejected.length, 1);
     assert.equal(liveFailed.length, 1);
+    assert.equal(correction.length, 1);
     assert.equal(
       liveFailed[0]?.hostedWorkerArtifactSha256,
       HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_REPLACEMENT_HOSTED_WORKER_ARTIFACT_SHA256,
+    );
+    assert.equal(
+      correction[0]?.hostedWorkerArtifactSha256,
+      HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_HOSTED_WORKER_ARTIFACT_SHA256,
+    );
+    assert.equal(
+      correction[0]?.imageDigestSha256,
+      HEADLESS_FLY_STAGING_POST_008_2G25_CLEANUP_RUNTIME_FINALIZATION_CORRECTION_PROSPECTIVE_IMAGE_RECORD
+        .imageDigestSha256,
     );
     assert.equal(
       liveFailed[0]?.hostedPageArtifactSha256,
