@@ -372,6 +372,28 @@ export {
 } from "./fly-staging-versioned-image-authority";
 
 export {
+  HEADLESS_FLY_STAGING_DEPLOYED_VALIDATION_CANDIDATE_AUTHORITY_VERSION,
+  HEADLESS_FLY_STAGING_ROLLOUT_CANDIDATE_LIFECYCLE_MISSING_DEFECT_ID,
+  HEADLESS_FLY_RENDER_CANDIDATE_VALIDATION_GATE,
+  HEADLESS_FLY_RENDER_CANDIDATE_DIGEST_PIN_ENV,
+  HEADLESS_FLY_STAGING_DEPLOYED_VALIDATION_CANDIDATE_LIFECYCLE,
+  HEADLESS_FLY_STAGING_FINALIZATION_CORRECTION_RECOVERY_DECISION,
+  HEADLESS_FLY_STAGING_FINALIZATION_CORRECTION_PROTOCOL_RECOVERY_AUTHORIZATION,
+  buildHeadlessFlyStagingCandidateValidationCycleState,
+  buildPassingCandidateProbeObservation,
+  classifyFlyRenderDeployedValidationCandidateProbeAuthority,
+  classifyHeadlessFlyStagingCandidateProbeTransition,
+  classifyHeadlessFlyStagingCandidateRejectionBarrier,
+  classifyHeadlessFlyStagingFinalizationCorrectionIncident,
+  consumeHeadlessFlyStagingCandidateProbeAttempt,
+  isHeadlessFlyRenderCandidateValidationGateOn,
+  readHeadlessFlyRenderCandidateDigestPin,
+  type HeadlessFlyStagingCandidateProbeObservation,
+  type HeadlessFlyStagingCandidateValidationCycleState,
+  type HeadlessFlyStagingDeployedValidationCandidateProbeReasonId,
+} from "./fly-staging-deployed-validation-candidate-authority";
+
+export {
   parseHeadlessFlyStagingDualMachineInventoryFromListJson,
   classifyHeadlessFlyStagingRenderVmSpec,
   classifyHeadlessFlyStagingVerifyVmSpec,

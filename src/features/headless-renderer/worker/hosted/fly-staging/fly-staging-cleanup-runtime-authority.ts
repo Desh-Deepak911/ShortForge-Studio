@@ -99,10 +99,16 @@ export const HEADLESS_FLY_STAGING_CLEANUP_RUNTIME_SCHEMA_FINGERPRINT =
     ),
   });
 
+/**
+ * Cleanup-runtime lifecycle. `deployed_validation_candidate` is reserved for an
+ * explicitly authorized validation cycle and is never treated as ordinary
+ * current readiness. Sealed rejections remain `rejected`.
+ */
 export type HeadlessFlyStagingCleanupRuntimeLifecycle =
   | "prospective"
   | "historical"
-  | "rejected";
+  | "rejected"
+  | "deployed_validation_candidate";
 
 export type HeadlessFlyStagingCleanupRuntimeImageRecord = {
   readonly recordId:

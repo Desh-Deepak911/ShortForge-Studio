@@ -34,9 +34,19 @@ import {
 } from "./fly-staging-rollback-bridge-authority";
 
 /** Frozen authority schema version — bump only when record shape or selection rules change. */
-export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 38 as const;
+export const HEADLESS_FLY_STAGING_VERSIONED_IMAGE_AUTHORITY_VERSION = 39 as const;
 
-export type HeadlessFlyStagingImageLifecycle = "historical" | "current";
+/**
+ * Image lifecycle:
+ * - historical: immutable past; not readiness/probe eligible
+ * - current: ordinary staging authority + official execution probes
+ * - deployed_validation_candidate: attached for one authorized validation probe
+ *   only; never selected by ordinary current/readiness classifiers
+ */
+export type HeadlessFlyStagingImageLifecycle =
+  | "historical"
+  | "current"
+  | "deployed_validation_candidate";
 
 export type HeadlessFlyStagingVersionedImageRecordId =
   | "pre_007_historical"

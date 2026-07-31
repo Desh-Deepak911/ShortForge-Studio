@@ -167,6 +167,7 @@
     "test:headless-rollback-bridge-schema-compatibility-authority": "tsx src/verification/headless-renderer/platform/headlessRollbackBridgeSchemaCompatibilityAuthority.verify.ts",
     "test:headless-fly-staging-bridge-rollout-credential-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingBridgeRolloutCredentialAuthority.verify.ts",
     "test:headless-fly-staging-cleanup-runtime-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingCleanupRuntimeAuthority.verify.ts",
+    "test:headless-fly-staging-deployed-validation-candidate-authority": "tsx src/verification/headless-renderer/platform/headlessFlyStagingDeployedValidationCandidateAuthority.verify.ts",
     "test:headless-fly-staging-cleanup-runtime-rollout-attempt-budget": "tsx src/verification/headless-renderer/platform/headlessFlyStagingCleanupRuntimeRolloutAttemptBudget.verify.ts",
     "test:headless-fly-staging-cleanup-runtime-rollout-probe-config": "tsx src/verification/headless-renderer/platform/headlessFlyStagingCleanupRuntimeRolloutProbeConfig.verify.ts",
     "test:headless-fly-staging-bridge-rollout-worker-preflight": "tsx src/verification/headless-renderer/platform/headlessFlyStagingBridgeRolloutWorkerPreflight.verify.ts",
