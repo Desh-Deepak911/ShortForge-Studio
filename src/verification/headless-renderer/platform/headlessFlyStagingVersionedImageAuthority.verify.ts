@@ -84,6 +84,7 @@ import {
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PROSPECTIVE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_CURRENT_IMAGE_RECORD,
+  HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD,
   HEADLESS_FLY_STAGING_EXPORT_CORRECTNESS_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_MANIFEST_CONTRACT_ALIGNMENT_CAPABILITY_VERSION,
   HEADLESS_FLY_STAGING_ARTIFACT_BINDING_COHERENCE_CAPABILITY_VERSION,
@@ -993,13 +994,22 @@ async function main() {
     assert.equal(result.reasonId, "unknown_digest");
   });
 
-  await test("bridge placeholder digest is registered but not deployment-eligible", () => {
+  await test("bridge real digest is registered but not deployment-eligible", () => {
+    const result = classifyCurrentFlyStagingImageEligibility({
+      imageDigestSha256: HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_IMAGE_RECORD.imageDigestSha256,
+      schemaMigrationIds: SEVEN_MIGRATION_IDS,
+    });
+    assert.equal(result.eligible, false);
+    assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
+  });
+
+  await test("bridge placeholder digest is rejected as unknown", () => {
     const result = classifyCurrentFlyStagingImageEligibility({
       imageDigestSha256: "0".repeat(64),
       schemaMigrationIds: SEVEN_MIGRATION_IDS,
     });
     assert.equal(result.eligible, false);
-    assert.equal(result.reasonId, "historical_lifecycle_not_current_ready");
+    assert.equal(result.reasonId, "unknown_digest");
   });
 
   await test("2G.23 current digest with bound worker artifact accepted for artifact eligibility", () => {

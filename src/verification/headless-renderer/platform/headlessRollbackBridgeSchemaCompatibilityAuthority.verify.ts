@@ -24,10 +24,10 @@ import type {
 import {
   HEADLESS_FLY_STAGING_2G24_FORWARD_RENDERER_BUILD_ID,
   HEADLESS_FLY_STAGING_POST_007_2G24E_BRIDGE008_ROLLBACK_BRIDGE_DEPLOYMENT_PAIR,
-  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
   materializeHeadlessFlyStagingTomlForDeploymentPair,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-image-environment-deployment-pair-authority";
 import {
+  HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_IMAGE_DIGEST,
   HEADLESS_FLY_STAGING_POST_007_2G24_EXPORT_CORRECTNESS_PAGE_ARTIFACT_SHA256,
 } from "@/features/headless-renderer/worker/hosted/fly-staging/fly-staging-versioned-image-authority";
 import {
@@ -89,14 +89,14 @@ function eightMigrationExpectedSources() {
 function permissivePreflightExecutor(
   ledgerById: Map<string, string>,
 ): HeadlessSqlExecutor {
-  const client: HeadlessSqlClient = {
-    query: async <Row extends Record<string, unknown>>(text: string) => {
+  const client = {
+    query: async (text: string, params?: readonly unknown[]) => {
       if (text.includes("set_config")) {
-        return { rows: [{ set_config: "public, pg_temp" }] as Row[], rowCount: 1 };
+        return { rows: [{ set_config: "public, pg_temp" }], rowCount: 1 };
       }
       if (text.includes("FROM pg_class") && text.includes("relkind")) {
         return {
-          rows: [{ relkind: "r", relpersistence: "p" }] as Row[],
+          rows: [{ relkind: "r", relpersistence: "p" }],
           rowCount: 1,
         };
       }
@@ -105,7 +105,7 @@ function permissivePreflightExecutor(
           rows: [...ledgerById.entries()].map(([migration_id, checksum_sha256]) => ({
             migration_id,
             checksum_sha256,
-          })) as Row[],
+          })),
           rowCount: ledgerById.size,
         };
       }
@@ -129,13 +129,13 @@ function permissivePreflightExecutor(
               n: "0",
               character_maximum_length: 1024,
             },
-          ] as Row[],
+          ],
           rowCount: 1,
         };
       }
-      return { rows: [] as Row[], rowCount: 0 };
+      return { rows: [], rowCount: 0 };
     },
-  };
+  } as HeadlessSqlClient;
   return {
     withClient: async <T>(fn: (c: HeadlessSqlClient) => Promise<T>) => fn(client),
     withTransaction: async <T>(fn: (c: HeadlessSqlClient) => Promise<T>) => fn(client),
@@ -235,31 +235,35 @@ async function main() {
   });
 
   await test("bridge rejects duplicate migration ledger rows via preflight", async () => {
-    const duplicateLedger = new Map<string, string>();
-    for (const source of coreSources) {
-      duplicateLedger.set(source.migrationId, source.checksumSha256);
-    }
-    const sql = permissivePreflightExecutor(duplicateLedger);
-    const originalQuery = sql.withClient.bind(sql);
-    sql.withClient = async (fn) =>
-      originalQuery(async (client) => {
-        const wrapped: HeadlessSqlClient = {
-          query: async (text, params) => {
-            if (text.includes("FROM public.headless_schema_migrations")) {
-              const row = coreSources[0]!;
-              return {
-                rows: [
-                  { migration_id: row.migrationId, checksum_sha256: row.checksumSha256 },
-                  { migration_id: row.migrationId, checksum_sha256: row.checksumSha256 },
-                ],
-                rowCount: 2,
-              };
-            }
-            return client.query(text, params);
-          },
-        };
-        return fn(wrapped);
-      });
+    const row = coreSources[0]!;
+    const base = permissivePreflightExecutor(schema007Ledger());
+    const sql: HeadlessSqlExecutor = {
+      withClient: async (fn) =>
+        base.withClient(async (inner) => {
+          const wrapped = {
+            query: async (text: string, params?: readonly unknown[]) => {
+              if (text.includes("FROM public.headless_schema_migrations")) {
+                return {
+                  rows: [
+                    {
+                      migration_id: row.migrationId,
+                      checksum_sha256: row.checksumSha256,
+                    },
+                    {
+                      migration_id: row.migrationId,
+                      checksum_sha256: row.checksumSha256,
+                    },
+                  ],
+                  rowCount: 2,
+                };
+              }
+              return inner.query(text, params);
+            },
+          } as HeadlessSqlClient;
+          return fn(wrapped);
+        }),
+      withTransaction: async (fn) => sql.withClient(fn),
+    };
     const result = await runHeadlessSchemaPreflight({
       sql,
       compatibilityMode: HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
@@ -317,13 +321,33 @@ async function main() {
       false,
     );
     const classified = classifyHeadlessFlyStagingRollbackBridgeImageRecord();
-    assert.equal(classified.ok, false);
-    if (!classified.ok) assert.equal(classified.reasonId, "placeholder_digest");
+    assert.equal(classified.ok, true);
+  });
+
+  await test("real bridge digest resolves and placeholder digest is rejected", () => {
+    assert.equal(
+      isHeadlessFlyStagingPlaceholderBridgeDigest(
+        HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD.imageDigestSha256,
+      ),
+      false,
+    );
+    assert.equal(isHeadlessFlyStagingPlaceholderBridgeDigest("0".repeat(64)), true);
+    const pair = classifyHeadlessFlyStagingRollbackBridgeEnvironmentPair({
+      imageDigestSha256:
+        HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD.imageDigestSha256,
+      rendererBuildId: HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+      compatibilityMode: HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
+    });
+    assert.equal(pair.ok, true);
   });
 
   await test("no maintenance provider env on bridge public environment", () => {
     const bridgeEnv = buildHeadlessFlyStagingRollbackBridgePublicEnvironment();
-    assert.equal(bridgeEnv.HEADLESS_EXPORT_MAINTENANCE_ENABLED, undefined);
+    assert.equal(
+      (bridgeEnv as Record<string, string | undefined>)
+        .HEADLESS_EXPORT_MAINTENANCE_ENABLED,
+      undefined,
+    );
     assert.equal(
       bridgeEnv[HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV],
       HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
@@ -338,6 +362,10 @@ async function main() {
     assert.notEqual(
       HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD.hostedWorkerArtifactSha256,
       "c425cd5d4ffd94279bab75c325bd06a9dadaed6ee3e8fe04dab3e8146b12a9ca",
+    );
+    assert.equal(
+      HEADLESS_FLY_STAGING_ROLLBACK_BRIDGE_PROSPECTIVE_IMAGE_RECORD.hostedWorkerArtifactSha256,
+      "53a1bbf0815a6ca6a032f659efac708aa803447277e488d00d35c1c94c5834e2",
     );
   });
 
