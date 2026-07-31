@@ -134,6 +134,26 @@
       "acceptancePassed": true,
       "protocolDeviation": false,
       "sanitizedNote": "orchestrator_record_rollback"
+    },
+    {
+      "kind": "forward",
+      "targetDigestSha256": "41df9b444a5ac84d6401af8b4a62b58546088397fa740bdf763b69e1b7e0acde",
+      "sequence": 6,
+      "recordedAtIso": "2026-07-31T20:19:34.242Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": true,
+      "sanitizedNote": "orchestrator_record_forward"
+    },
+    {
+      "kind": "rollback",
+      "targetDigestSha256": "7de23dbdbeece30aaa35387609b6cd92829c81e3d567d865e018814382c1a206",
+      "sequence": 7,
+      "recordedAtIso": "2026-07-31T20:22:42.074Z",
+      "deployPerformed": true,
+      "acceptancePassed": true,
+      "protocolDeviation": false,
+      "sanitizedNote": "orchestrator_record_rollback"
     }
   ],
   "authorizationAmendments": [

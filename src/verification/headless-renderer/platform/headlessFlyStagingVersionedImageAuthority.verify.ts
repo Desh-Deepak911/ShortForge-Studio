@@ -253,7 +253,7 @@ async function main() {
         "post_007_2g24e_bridge008_rollback_bridge",
         "post_007_2g25_cleanup_runtime_rejected",
         "post_007_2g25_cleanup_runtime_live_finalization_failed",
-        "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
+        "post_008_2g25_cleanup_runtime_finalization_correction_rejected",
       ],
     );
   });
@@ -778,7 +778,7 @@ async function main() {
     assert.equal(current.recordId, "post_007_2g24e_bridge008_rollback_bridge");
     assert.equal(
       prospective.recordId,
-      "post_008_2g25_cleanup_runtime_finalization_correction_prospective",
+      "post_008_2g25_cleanup_runtime_finalization_correction_rejected",
     );
     assert.equal(prospective.lifecycle, "historical");
     assert.equal(prospective.eligibleForCurrentStagingReadiness, false);
