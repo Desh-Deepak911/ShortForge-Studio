@@ -1,9 +1,9 @@
 /**
- * Sprint 12B local UI certification (no deployment).
+ * Mixed-media scenes local UI certification (no deployment).
  * Exercises the same commands/projections the editor UI calls, plus live
  * capability API checks when NEXT_PUBLIC_BASE / BASE_URL is reachable.
  *
- * Run: npx tsx src/verification/mixed-media-scenes/sprint12BLocalUiCertification.verify.ts
+ * Run: npx tsx src/verification/mixed-media-scenes/mixedMediaScenesLocalUi.verify.ts
  */
 
 import assert from "node:assert/strict";
@@ -76,10 +76,21 @@ async function probeCapabilities(baseUrl: string): Promise<{
 
 function testUiWiringFailClosed(): void {
   const context = readSrc(
-    "src/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext.tsx",
+    "src/features/visual-retention/client/VisualRetentionCapabilitiesContext.tsx",
   );
-  assert.match(context, /mixedMediaScenesEnabled: false/);
-  assert.match(context, /ready: false/);
+  assert.match(context, /VISUAL_RETENTION_CAPABILITIES_DISABLED/);
+  assert.match(
+    readSrc(
+      "src/features/visual-retention/client/parse-visual-retention-capabilities.ts",
+    ),
+    /mixedMediaScenesEnabled: false/,
+  );
+  assert.match(
+    readSrc(
+      "src/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext.tsx",
+    ),
+    /useMixedMediaScenesEnabled/,
+  );
 
   const inspector = readSrc(
     "src/features/editor/components/StudioSceneInspector.tsx",
@@ -212,7 +223,7 @@ function testEnvCapabilityMatrix(): void {
 }
 
 async function main(): Promise<void> {
-  console.log("\nSprint 12B local UI certification\n");
+  console.log("\nMixed-media scenes local UI certification\n");
   testUiWiringFailClosed();
   console.log("  ✓ UI wiring fail-closed + browser export controls present");
   testEnabledUiActionFlow();
@@ -222,7 +233,7 @@ async function main(): Promise<void> {
   testEnvCapabilityMatrix();
   console.log("  ✓ staging/production capability matrix");
 
-  const baseUrl = process.env.SPRINT12B_UI_BASE_URL?.trim();
+  const baseUrl = process.env.MIXED_MEDIA_SCENES_UI_BASE_URL?.trim();
   if (baseUrl) {
     const live = await probeCapabilities(baseUrl);
     console.log(
@@ -230,11 +241,11 @@ async function main(): Promise<void> {
     );
   } else {
     console.log(
-      "  · live API probe skipped (set SPRINT12B_UI_BASE_URL=http://localhost:3000 to include)",
+      "  · live API probe skipped (set MIXED_MEDIA_SCENES_UI_BASE_URL=http://localhost:3000 to include)",
     );
   }
 
-  console.log("\nSprint 12B local UI certification: PASS\n");
+  console.log("\nMixed-media scenes local UI certification: PASS\n");
 }
 
 main().catch((error) => {

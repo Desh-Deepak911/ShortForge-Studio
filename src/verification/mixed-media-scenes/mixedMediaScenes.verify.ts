@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — mixed-media scenes focused verification (capability + architecture).
- * Run: npm run test:mixed-media-scenes-12b
+ * Mixed-media scenes focused verification (capability + architecture).
+ * Run: npm run test:mixed-media-scenes
  */
 
 import assert from "node:assert/strict";
@@ -92,7 +92,7 @@ const CAPABLE_ENV: Partial<ExportEnvironmentSnapshot> = {
 
 function scriptFromScene(scene: FootieScene): FootieScript {
   return syncFootieScript({
-    title: "12B test",
+    title: "mixed-media test",
     narration: "Hello world narration for the scene.",
     totalDuration: 10,
     scenes: [scene],
@@ -193,7 +193,7 @@ function testCapabilityStagingOn(): void {
   );
 }
 
-function testStagingWithout12BTimelineWins(): void {
+function testStagingWithoutMixedMediaTimelineWins(): void {
   const gates = resolveVisualRetentionPhaseGates({
     deploymentTarget: "staging",
     sourceBranch: "staging",
@@ -214,10 +214,9 @@ function testStagingWithout12BTimelineWins(): void {
     mixedMediaScenesEnabled: false,
   });
   assert.equal(manifest.scenes[0]?.mediaTimeline.items.length, 1);
-  assert.match(
-    String(manifest.scenes[0]?.mediaTimeline.items[0]?.media.source ?? ""),
-    /stale/,
-  );
+  const media = manifest.scenes[0]?.mediaTimeline.items[0]?.media;
+  assert.ok(media && media.type !== "placeholder");
+  assert.match(media.source, /stale/);
 }
 
 function testProductionLookingEnvDoesNotActivate(): void {
@@ -238,17 +237,27 @@ function testProductionLookingEnvDoesNotActivate(): void {
 }
 
 function testCapabilityRequestFailureFailClosedSource(): void {
-  const contextSrc = readFileSync(
+  const sharedProvider = readFileSync(
+    path.join(
+      process.cwd(),
+      "src/features/visual-retention/client/VisualRetentionCapabilitiesContext.tsx",
+    ),
+    "utf8",
+  );
+  assert.match(sharedProvider, /VISUAL_RETENTION_CAPABILITIES_DISABLED/);
+  assert.match(sharedProvider, /if \(!response\.ok\)/);
+  assert.match(sharedProvider, /\.catch\(/);
+  assert.match(sharedProvider, /mixedMediaScenesEnabled: false/);
+
+  const compat = readFileSync(
     path.join(
       process.cwd(),
       "src/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext.tsx",
     ),
     "utf8",
   );
-  assert.match(contextSrc, /mixedMediaScenesEnabled: false/);
-  assert.match(contextSrc, /if \(!response\.ok\)/);
-  assert.match(contextSrc, /\.catch\(/);
-  assert.match(contextSrc, /setEnabled\(false\)/);
+  assert.match(compat, /useMixedMediaScenesEnabled/);
+  assert.match(compat, /MixedMediaScenesCapabilityProvider/);
 }
 
 function testValidStagingSequenceWins(): void {
@@ -409,7 +418,7 @@ function testVoiceoverRefitThenVisualReconcile(): void {
   });
 
   const editorStory = syncFootieScript({
-    title: "refit-12b",
+    title: "refit-mixed-media",
     narration: "This narration is intentionally longer than five seconds so voiceover refit expands the scene.",
     totalDuration: 5,
     scenes: [editorScene],
@@ -753,8 +762,8 @@ function testInspectorPreviewParityMatrix(): void {
 async function main(): Promise<void> {
   const tests: Array<[string, () => void]> = [
     ["capability defaults off", testCapabilityDefaultOff],
-    ["capability staging 12A+12B on", testCapabilityStagingOn],
-    ["staging without 12B: timeline/legacy wins", testStagingWithout12BTimelineWins],
+    ["capability staging mixed-media on", testCapabilityStagingOn],
+    ["staging without mixed-media: timeline/legacy wins", testStagingWithoutMixedMediaTimelineWins],
     ["production-looking env does not activate sequence", testProductionLookingEnvDoesNotActivate],
     ["capability request failure fail-closed (source)", testCapabilityRequestFailureFailClosedSource],
     ["valid staging: sequence wins with divergence warning", testValidStagingSequenceWins],
@@ -779,7 +788,7 @@ async function main(): Promise<void> {
     passed += 1;
     console.log(`  ✓ ${name}`);
   }
-  console.log(`\nSprint 12B mixed-media scenes: ${passed}/${tests.length} PASS`);
+  console.log(`\nMixed-media scenes: ${passed}/${tests.length} PASS`);
 }
 
 main().catch((error) => {

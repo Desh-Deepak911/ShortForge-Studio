@@ -68,10 +68,15 @@ export interface FootieExportOptions {
    */
   audioFallback?: "voice-only" | "silent" | "webm";
   /**
-   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Explicit `mixed-media-scenes-v1` decision.
    * Default false (fail-closed) when omitted by prepareExportRequest.
    */
   mixedMediaScenesEnabled?: boolean;
+  /**
+   * Explicit Visual pacing authoring capability.
+   * Guidance only — never a renderer requirement. Default ignored/fail-closed.
+   */
+  visualBeatDensityEnabled?: boolean;
 }
 
 export function getExportQualityPreset(id: ExportQualityId): ExportQualityPreset {

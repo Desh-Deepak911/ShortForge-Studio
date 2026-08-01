@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — mixed-media scenes QA harness verification.
- * Run via: npm run test:mixed-media-scenes-12b
+ * Mixed-media scenes QA harness verification.
+ * Run via: npm run test:mixed-media-scenes
  */
 
 import assert from "node:assert/strict";
@@ -11,7 +11,7 @@ import {
   projectSceneVisualPlan,
   resolveInspectorSceneMediaProjection,
 } from "@/features/mixed-media-scenes";
-import { isLocalDevQaHarnessAllowed } from "@/features/mixed-media-scenes/qa/assert-local-dev-qa-harness-allowed";
+import { isLocalDevQaHarnessAllowed } from "@/features/visual-retention/qa/assert-local-dev-qa-harness-allowed";
 import {
   buildMixedMediaScenesQaStory,
   MIXED_MEDIA_SCENES_QA_DURATION_MS,
@@ -34,7 +34,7 @@ function testProductionGuardFailClosed(): void {
   assert.equal(isLocalDevQaHarnessAllowed("development"), true);
 
   const guard = readSrc(
-    "src/features/mixed-media-scenes/qa/assert-local-dev-qa-harness-allowed.ts",
+    "src/features/visual-retention/qa/assert-local-dev-qa-harness-allowed.ts",
   );
   assert.match(guard, /notFound\(\)/);
   assert.match(guard, /nodeEnv === ["']development["']/);
@@ -71,7 +71,14 @@ function testInitialStoryValidity(): void {
   assert.ok(scene.mediaTimeline);
   assert.equal(scene.mediaTimeline!.items.length, 1);
   assert.equal(story.voiceoverUrl, undefined);
-  assert.equal(story.music, undefined);
+  assert.deepEqual(story.backgroundMusic, {
+    enabled: false,
+    source: "none",
+    volume: 0.18,
+    duckingEnabled: true,
+    fadeIn: true,
+    fadeOut: true,
+  });
   assert.doesNotMatch(scene.media!.url, /^https?:\/\//);
   assert.doesNotMatch(scene.media!.url, /^blob:/);
 
@@ -116,7 +123,20 @@ function testRealComponentComposition(): void {
   assert.doesNotMatch(harness, /boundary_clamped|first_item_start_fixed/);
 
   const workspace = readSrc("src/components/StoryWorkspace.tsx");
-  assert.match(workspace, /MixedMediaScenesCapabilityProvider/);
+  assert.match(workspace, /VisualRetentionCapabilitiesProvider/);
+  // Mixed-media consumers keep compatibility re-exports from the shared provider.
+  assert.match(
+    readSrc(
+      "src/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext.tsx",
+    ),
+    /MixedMediaScenesCapabilityProvider/,
+  );
+  assert.match(
+    readSrc(
+      "src/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext.tsx",
+    ),
+    /useMixedMediaScenesEnabled/,
+  );
   assert.match(workspace, /EditorSelectionProvider/);
   assert.match(workspace, /VideoPreview/);
   assert.match(workspace, /ExportPanel/);
@@ -205,7 +225,7 @@ function testDisabledFailClosedIntegration(): void {
   });
   assert.ok(active.media?.url === MIXED_MEDIA_SCENES_QA_IMAGE_URL);
 
-  // Server resolve remains fail-closed without staging 12B phases.
+  // Server resolve remains fail-closed without mixed-media phases.
   const disabled = resolveMixedMediaScenesEnabledFromEnvironment({
     HEADLESS_ENV_NAME: "staging",
     VERCEL_ENV: "preview",
@@ -260,7 +280,7 @@ async function main(): Promise<void> {
     console.log(`  ✓ ${name}`);
   }
   console.log(
-    `\nSprint 12B mixed-media scenes QA harness: ${passed}/${tests.length} PASS`,
+    `\nMixed-media scenes QA harness: ${passed}/${tests.length} PASS`,
   );
 }
 

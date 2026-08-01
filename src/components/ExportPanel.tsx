@@ -38,6 +38,7 @@ import {
   applyStoryBackgroundMusic,
 } from "@/features/story/utils";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
+import { useVisualBeatDensityEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import {
   buildExportDownloadFileName,
   exportFootieShort,
@@ -255,6 +256,7 @@ export default function ExportPanel({
 }: ExportPanelProps) {
   const storySync = useOptionalStorySync();
   const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
+  const visualBeatDensityEnabled = useVisualBeatDensityEnabled();
   const syncState = storySync?.state ?? createInitialStorySynchronizationState();
   const exportReadiness = useMemo(
     () => resolveExportReadiness(script, syncState),
@@ -503,6 +505,7 @@ export default function ExportPanel({
         voiceoverUrl: script.voiceoverUrl ?? null,
         musicEnabled: script.backgroundMusic?.enabled ?? null,
         mixedMediaScenesEnabled,
+        visualBeatDensityEnabled,
       }),
     [
       script.title,
@@ -513,6 +516,7 @@ export default function ExportPanel({
       exportAudioMode,
       includeBackgroundMusic,
       mixedMediaScenesEnabled,
+      visualBeatDensityEnabled,
     ],
   );
 
@@ -528,6 +532,7 @@ export default function ExportPanel({
       includeBackgroundMusic,
       throwIfBlocked: false,
       mixedMediaScenesEnabled,
+      visualBeatDensityEnabled,
     }).then((prepared) => {
       if (cancelled) return;
       setCapabilityPreflight(prepared.preflight);
@@ -566,6 +571,7 @@ export default function ExportPanel({
     exportAudioMode,
     includeBackgroundMusic,
     mixedMediaScenesEnabled,
+    visualBeatDensityEnabled,
     capabilityRequestKey,
   ]);
 
@@ -818,6 +824,7 @@ export default function ExportPanel({
           audioMode: resolvedExportAudioMode,
           exportSettings: attemptSettings,
           mixedMediaScenesEnabled,
+          visualBeatDensityEnabled,
           ...(audioFallback ? { audioFallback } : {}),
         },
       );

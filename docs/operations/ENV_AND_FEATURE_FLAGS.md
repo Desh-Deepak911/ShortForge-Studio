@@ -7,13 +7,13 @@ Tracking ledger for ShortForge Studio runtime gates.
 |-----------------|----------------------|----------------|-------------------|------------------|------------------------------|------------------|---------------|----------------------------|
 | *(none active for multi-image or intra-scene transitions)* | — | Scene Media Timeline + intra-scene transition editor metadata | — | Always on (no gate) | None for Sprint 9A | No | **Default** — no env flag for Sprint 9 | — |
 
-## Sprint 12 — staging-only visual retention
+## Visual-retention capability gating
 
 | Variable / flag | Public or server-only | Owner / module | Default | Production/main behavior | Activation rule |
 |-----------------|----------------------|----------------|---------|--------------------------|-----------------|
-| `SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES` | server-only | `src/features/visual-retention/` | unset / every Sprint 12 phase off | hard-off even if copied | comma-separated ordered phase IDs, beginning with `12A` |
+| `SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES` | server-only | `src/features/visual-retention/` | unset / every visual-retention phase off | hard-off even if copied | comma-separated ordered phase IDs, beginning with `12A` |
 
-Accepted phase IDs are `12A` through `12G`. Activation is fail-closed:
+Accepted phase IDs are `12A` through `12G` (runtime configuration values). Activation is fail-closed:
 
 - `HEADLESS_ENV_NAME` must be exactly `staging`;
 - `VERCEL_ENV=production` rejects every phase;
@@ -22,28 +22,19 @@ Accepted phase IDs are `12A` through `12G`. Activation is fail-closed:
 - a requested phase whose earlier dependency is off remains off;
 - the variable is never bundled with `NEXT_PUBLIC_*` or read directly by a pure domain/renderer module.
 
-Sprint 12A introduces the classifier and capability contracts only. No provider
-operation is triggered by setting or evaluating the flag. Staging rollout must
-still pass the phase-specific gate-on/gate-off matrix before a later phase is
-offered in creator UI.
+### Capability contracts
 
-Sprint 12B (`mixed-media-scenes-v1`) remains off unless the phase list includes
-both `12A` and `12B` under the same staging fail-closed rules. Creator UI reads
-capability availability through `GET /api/visual-retention/capabilities` (server
-evaluates `SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES`); the pure domain modules
-never read `NEXT_PUBLIC_*`.
+The phase classifier and capability contracts introduce fail-closed staging gates only. No provider operation is triggered by setting or evaluating the flag. Staging rollout must still pass the phase-specific gate-on/gate-off matrix before a later phase is offered in creator UI.
 
-Render/export authority: Preview, browser export, and headless export all pass
-an explicit resolved `mixedMediaScenesEnabled` into the shared reconciliation
-seam (`reconcileVisualSequenceRenderAuthority` / `projectSceneVisualPlan`).
-When the capability is on, a usable `visualSequence` wins and repairs a
-disagreeing `mediaTimeline` (diagnostic warning). When off / fail-closed,
-`visualSequence` is ignored and dual-written `mediaTimeline` or legacy media
-wins. Production entry points never use implicit `"auto"` activation.
-Capability-off keeps authoring UI and commands disabled; legacy scenes without
-`visualSequence` are unchanged. Draft JSON may still persist `blob:` URLs —
-binary rehydration after reload remains an existing limitation (same as
-Sprint 8B scene-media uploads).
+### Mixed-media scenes
+
+`mixed-media-scenes-v1` remains off unless the phase list includes both `12A` and `12B` under the same staging fail-closed rules. Creator UI reads capability availability through `GET /api/visual-retention/capabilities` (server evaluates `SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES`); the pure domain modules never read `NEXT_PUBLIC_*`.
+
+Render/export authority: Preview, browser export, and headless export all pass an explicit resolved `mixedMediaScenesEnabled` into the shared reconciliation seam (`reconcileVisualSequenceRenderAuthority` / `projectSceneVisualPlan`). When the capability is on, a usable `visualSequence` wins and repairs a disagreeing `mediaTimeline` (diagnostic warning). When off / fail-closed, `visualSequence` is ignored and dual-written `mediaTimeline` or legacy media wins. Production entry points never use implicit `"auto"` activation. Capability-off keeps authoring UI and commands disabled; legacy scenes without `visualSequence` are unchanged. Draft JSON may still persist `blob:` URLs — binary rehydration after reload remains an existing limitation (same as scene-media uploads).
+
+### Narration-driven visual pacing
+
+`visual-beat-density-v1` remains off unless the phase list includes `12A,12B,12C` under the same staging fail-closed rules and the commit ref is an allowlisted staging-development branch (`staging`, `sprint12-staging-compat-safety-foundation`, or `sprint12c-staging-visual-beat-density`). Arbitrary feature branches are rejected. Default and unresolved states are disabled; main and production stay hard-off. The capability is narration-driven visual pacing only — music never enters beat calculations or requirements, and Browser export remains available even when Headless is preferred. Creator UI reads `visualBeatDensityEnabled` from the same capabilities API response (one request); no density UI or beat generation is activated by this plumbing alone.
 
 ## Sprint 11A / 11A.1 / 11B / 11B.1 / 11B.1A / 11C / 11C.1 / 11C.1A / 11D — Headless Renderer
 

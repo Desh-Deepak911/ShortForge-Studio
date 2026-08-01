@@ -55,10 +55,18 @@ const CAPABILITY_UI_SURFACES: Readonly<
     "headless-export",
     "warnings-and-errors",
   ),
+  "visual-beat-density-v1": uiSurfaces(
+    "editor",
+    "scene-inspector",
+    "preview",
+    "browser-export",
+    "headless-export",
+    "warnings-and-errors",
+  ),
 });
 
 /**
- * Completion gate for every creator-facing Sprint 12 capability.
+ * Completion gate for every creator-facing visual-retention capability.
  * A renderer-only or editor-only implementation is never phase-complete.
  */
 export function evaluateVisualRetentionUiCoverage(input: {

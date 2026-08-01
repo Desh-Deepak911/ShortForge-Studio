@@ -14,7 +14,7 @@ export function reconcileMediaItemSelectionAuthority(input: {
   selectionFocus: SelectionType;
   scene: FootieScene | null;
   /**
-   * Optional capability-aware selectability (Sprint 12B).
+   * Optional capability-aware selectability for mixed-media scenes.
    * Defaults to Sprint 8 projected mediaTimeline / legacy virtual ids.
    */
   isItemSelectable?: (scene: FootieScene, mediaItemId: string) => boolean;

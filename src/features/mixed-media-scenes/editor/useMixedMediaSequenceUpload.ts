@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Mixed-media sequence upload ownership (Sprint 12B).
+ * Mixed-media sequence upload ownership.
  *
  * Aligns with Sprint 8B scene-media blob policy:
  * - Track object URLs created by this upload session.

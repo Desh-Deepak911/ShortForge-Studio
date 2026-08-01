@@ -69,7 +69,7 @@ export interface PlanPreviewMediaLayersInput {
   readonly sceneElapsedMs: number;
   readonly isPlaying: boolean;
   readonly multiImageScenesEnabled?: boolean;
-  /** Explicit Sprint 12B capability. Default false (fail-closed). */
+  /** Explicit mixed-media scenes capability. Default false (fail-closed). */
   readonly mixedMediaScenesEnabled?: boolean;
 }
 

@@ -24,9 +24,20 @@ import {
 function testStagingOnlyPhaseGates(): void {
   const off = resolveVisualRetentionPhaseGates({
     deploymentTarget: "staging",
+    sourceBranch: "staging",
   });
   assert.equal(off.valid, true);
   assert.equal(off.phases["12A"].enabled, false);
+
+  const missingBranch = resolveVisualRetentionPhaseGates({
+    deploymentTarget: "staging",
+    requestedPhases: "12A",
+  });
+  assert.equal(missingBranch.valid, false);
+  assert.equal(
+    missingBranch.phases["12A"].reason,
+    "staging_development_branch_rejected",
+  );
 
   const active = resolveVisualRetentionPhaseGates({
     deploymentTarget: "staging",
@@ -71,6 +82,7 @@ function testStagingOnlyPhaseGates(): void {
 
   const invalid = resolveVisualRetentionPhaseGates({
     deploymentTarget: "staging",
+    sourceBranch: "staging",
     requestedPhases: "12A,12Z",
   });
   assert.equal(invalid.valid, false);
@@ -246,4 +258,4 @@ testUiCompletenessGate();
 testOptionalExtensionContracts();
 testFrozenManifestContractsRemainUnchanged();
 
-console.log("Sprint 12A visual-retention foundation verification passed.");
+console.log("Visual-retention capabilities verification passed.");

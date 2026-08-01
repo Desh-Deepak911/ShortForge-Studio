@@ -8,8 +8,10 @@ import {
   getExportTotalDurationSec,
   getRenderableScenesFromPayload,
 } from "@/features/export/services";
-import { getPreviewFrameAtTime } from "@/features/preview/utils";
-import { resolveTimelineItems } from "@/features/preview/utils";
+import {
+  getPreviewFrameAtTime,
+  resolveTimelineItems,
+} from "@/features/preview/utils";
 import {
   coerceLegacyStoryFields,
   getSceneDurationMs,
@@ -52,7 +54,11 @@ test("coerceLegacyStoryFields preserves legacy stories without voiceover", () =>
   assert.equal(coerced.totalDuration, 6);
   assert.equal(coerced.voiceoverUrl, undefined);
   assert.equal(coerced.voiceoverDurationMs, undefined);
-  assert.deepEqual(coerced.voiceSettings, { speed: 1 });
+  assert.deepEqual(coerced.voiceSettings, {
+    speed: 1,
+    stylePreset: "neutral",
+    expressiveDelivery: false,
+  });
   assert.equal(hasVoiceoverAudio(coerced), false);
   assert.equal(isAudioFirstStory(coerced), false);
 });
@@ -64,7 +70,11 @@ test("syncFootieScript upgrades legacy stories without forcing voiceover fields"
   assert.equal(synced.scenes.length, 2);
   assert.ok(synced.timelineItems && synced.timelineItems.length >= 2);
   assert.equal(synced.voiceoverUrl, undefined);
-  assert.deepEqual(synced.voiceSettings, { speed: 1 });
+  assert.deepEqual(synced.voiceSettings, {
+    speed: 1,
+    stylePreset: "neutral",
+    expressiveDelivery: false,
+  });
   assert.equal(resolveStoryDurationSec(synced), 6);
 });
 

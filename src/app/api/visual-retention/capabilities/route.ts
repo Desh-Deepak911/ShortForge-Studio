@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
 
-import { resolveMixedMediaScenesEnabledFromEnvironment } from "@/features/mixed-media-scenes/server/resolve-mixed-media-scenes-enabled";
-import { resolveVisualRetentionGatesFromEnvironment } from "@/features/visual-retention";
+import { resolveVisualRetentionCreatorCapabilitiesFromEnvironment } from "@/features/visual-retention/server/resolve-visual-retention-creator-capabilities";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Staging-only visual-retention capability snapshot for creator UI.
  * Fail-closed: defaults every capability off when gates reject.
- * Never returns secrets or raw environment values.
+ * Never returns secrets, raw environment values, or branch-policy internals.
  */
 export async function GET() {
-  const gates = resolveVisualRetentionGatesFromEnvironment(process.env);
-  const mixedMediaScenesEnabled =
-    resolveMixedMediaScenesEnabledFromEnvironment(process.env);
+  const snapshot = resolveVisualRetentionCreatorCapabilitiesFromEnvironment(
+    process.env,
+  );
 
   return NextResponse.json(
     {
-      version: 1 as const,
-      mixedMediaScenesEnabled,
-      phasesValid: gates.valid === true,
+      version: snapshot.version,
+      mixedMediaScenesEnabled: snapshot.mixedMediaScenesEnabled,
+      visualBeatDensityEnabled: snapshot.visualBeatDensityEnabled,
+      phasesValid: snapshot.phasesValid,
     },
     {
       headers: {

@@ -65,7 +65,7 @@ export function SceneBackdrop({
    */
   multiImageScenesEnabled?: boolean;
   /**
-   * Explicit Sprint 12B capability. Default false (fail-closed).
+   * Explicit mixed-media scenes capability. Default false (fail-closed).
    * Resolved once by VideoPreview from the workspace capability context.
    */
   mixedMediaScenesEnabled?: boolean;
@@ -179,7 +179,7 @@ interface PreviewFrameProps {
   isPlaying?: boolean;
   maxWidth?: string | number;
   /**
-   * Explicit Sprint 12B capability. Default false (fail-closed).
+   * Explicit mixed-media scenes capability. Default false (fail-closed).
    * Resolved once by VideoPreview — not fetched per frame.
    */
   mixedMediaScenesEnabled?: boolean;

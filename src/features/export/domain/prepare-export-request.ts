@@ -10,13 +10,23 @@ import { prepareStoryForExport } from "@/features/export/utils/export-preflight.
 import { resolveExportSettings } from "@/features/export/utils/export-settings.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
 import { buildAudioMixFromStory } from "@/features/audio";
+import {
+  resolveVisualPacingExportGuidance,
+  type VisualPacingExportGuidanceCode,
+} from "@/features/visual-beat-density/adapters/resolve-visual-pacing-export-guidance";
 
 import { probeExportMp4Runtime } from "@/features/export/formats/export-runtime-codec-probe";
 
 import { buildExportManifest } from "./build-export-manifest";
-import type { ExportCapabilityResult, PreparedExportRequest } from "./export-capability.types";
+import type {
+  ExportCapabilityResult,
+  ExportWarning,
+  ExportWarningCode,
+  PreparedExportRequest,
+} from "./export-capability.types";
 import { ExportPreflightError } from "./export-capability.types";
 import type { ExportEnvironmentSnapshot } from "./export-manifest.types";
+import { EXPORT_WARNING_MESSAGES } from "./export-preflight.constants";
 import { runExportCapabilityPreflight } from "./run-export-capability-preflight";
 
 export interface PrepareExportRequestInput {
@@ -36,11 +46,16 @@ export interface PrepareExportRequestInput {
    */
   readonly multiImageScenesEnabled?: boolean;
   /**
-   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Explicit `mixed-media-scenes-v1` decision.
    * Default false (fail-closed). Resolved by UI context or server gate —
    * never derived from environment variables inside this module.
    */
   readonly mixedMediaScenesEnabled?: boolean;
+  /**
+   * Explicit Visual pacing authoring capability.
+   * Default ignored/fail-closed. Guidance only — never a renderer requirement.
+   */
+  readonly visualBeatDensityEnabled?: boolean;
 }
 
 export interface PrepareExportRequestResult extends PreparedExportRequest {
@@ -57,7 +72,9 @@ export async function prepareExportRequest(
   input: PrepareExportRequestInput,
 ): Promise<PrepareExportRequestResult> {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
+  const visualBeatDensityEnabled = input.visualBeatDensityEnabled === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
+  // Timing authority only — authoring guidance is appended once below.
   const preparedStory = prepareStoryForExport(voiceoverPrepared, {
     mixedMediaScenesEnabled,
   });
@@ -90,7 +107,23 @@ export async function prepareExportRequest(
     },
   });
 
-  const preflight = runExportCapabilityPreflight(manifest);
+  const basePreflight = runExportCapabilityPreflight(manifest);
+  // Single authority for Visual pacing export guidance: final prepared story
+  // after voiceover refit + visual-sequence reconciliation (not manifest build).
+  const pacingGuidance = resolveVisualPacingExportGuidance(preparedStory.story, {
+    visualBeatDensityEnabled,
+  });
+  const pacingWarnings: ExportWarning[] = pacingGuidance.map((item) => {
+    const code = item.code as ExportWarningCode & VisualPacingExportGuidanceCode;
+    return {
+      code,
+      message: EXPORT_WARNING_MESSAGES[code] ?? item.message,
+    };
+  });
+  const preflight: ExportCapabilityResult = {
+    ...basePreflight,
+    warnings: Object.freeze([...basePreflight.warnings, ...pacingWarnings]),
+  };
   const renderer = preflight.renderer;
 
   logExportPreflightDiagnostics(manifest.fingerprint, preflight, renderer, manifest);

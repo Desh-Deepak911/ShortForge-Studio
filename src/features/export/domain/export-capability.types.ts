@@ -35,7 +35,10 @@ export type ExportWarningCode =
   | "SERVER_RENDERER_RECOMMENDED"
   | "TIMELINE_WARNING"
   | "RESOLUTION_PERFORMANCE_WARNING"
-  | "DEV_1080P_OVERRIDE";
+  | "DEV_1080P_OVERRIDE"
+  | "VISUAL_PACING_DRAFT_NOT_APPLIED"
+  | "VISUAL_PACING_STALE"
+  | "VISUAL_PACING_METADATA_INVALID";
 
 export interface ExportWarning {
   readonly code: ExportWarningCode;

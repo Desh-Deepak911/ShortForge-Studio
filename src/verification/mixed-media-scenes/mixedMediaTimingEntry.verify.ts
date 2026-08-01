@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — typed timing entry (StudioNumberStepper draft/commit + panel wiring).
- * Run via: npm run test:mixed-media-scenes-12b
+ * Mixed-media typed timing entry (StudioNumberStepper draft/commit + panel wiring).
+ * Run via: npm run test:mixed-media-scenes
  */
 
 import assert from "node:assert/strict";
@@ -341,7 +341,7 @@ async function main(): Promise<void> {
     console.log(`  ✓ ${name}`);
   }
   console.log(
-    `\nSprint 12B mixed-media timing entry: ${passed}/${tests.length} PASS`,
+    `\nMixed-media timing entry: ${passed}/${tests.length} PASS`,
   );
 }
 

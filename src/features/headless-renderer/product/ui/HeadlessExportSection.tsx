@@ -7,6 +7,7 @@ import { prepareExportRequest } from "@/features/export/domain";
 import type { ExportAudioMode } from "@/features/export/utils/export-quality.utils";
 import type { ExportSettings } from "@/features/export/utils/export-settings.utils";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
+import { useVisualBeatDensityEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import type { FootieScript } from "@/features/story/types";
 import {
   studioFieldLabel,
@@ -90,6 +91,7 @@ export function HeadlessExportSection({
   onRendererChange,
 }: HeadlessExportSectionProps) {
   const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
+  const visualBeatDensityEnabled = useVisualBeatDensityEnabled();
   const clientRef = useRef(injectedClient ?? createHttpHeadlessRenderClient());
   const uploadPortRef = useRef(
     injectedOwnedUploadPort ?? new HttpOwnedUploadAdapter(),
@@ -379,6 +381,7 @@ export function HeadlessExportSection({
           includeBackgroundMusic: includeBackgroundMusic === true,
           throwIfBlocked: false,
           mixedMediaScenesEnabled,
+          visualBeatDensityEnabled,
         });
         ownedPreparation = await prepareOwnedHeadlessUpload({
           prepared,

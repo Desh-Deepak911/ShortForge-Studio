@@ -1,5 +1,5 @@
 /**
- * Canonical Sprint 12B render authority.
+ * Canonical mixed-media visual-sequence render authority.
  *
  * When `mixed-media-scenes-v1` is enabled and a usable `visualSequence` exists:
  *   1. Normalize the sequence inside narration duration.

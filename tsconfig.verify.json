@@ -9,6 +9,9 @@
     },
     "plugins": []
   },
-  "include": ["src/verification/**/*.verify.ts"],
+  "include": [
+    "src/verification/**/*.verify.ts",
+    "src/verification/**/*.verify.tsx"
+  ],
   "exclude": ["node_modules"]
 }

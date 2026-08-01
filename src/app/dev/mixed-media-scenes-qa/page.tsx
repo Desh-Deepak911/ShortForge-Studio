@@ -1,9 +1,9 @@
 /**
- * Dev-only Sprint 12B mixed-media scenes browser QA harness.
+ * Dev-only mixed-media scenes browser QA harness.
  * Not linked from production navigation. Unavailable outside local development.
  */
 
-import { assertLocalDevQaHarnessAllowed } from "@/features/mixed-media-scenes/qa/assert-local-dev-qa-harness-allowed";
+import { assertLocalDevQaHarnessAllowed } from "@/features/visual-retention/qa/assert-local-dev-qa-harness-allowed";
 
 import { MixedMediaScenesQaHarness } from "./MixedMediaScenesQaHarness";
 

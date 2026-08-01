@@ -1,5 +1,5 @@
 /**
- * Sprint 12B — mixed-media scenes (gated by mixed-media-scenes-v1).
+ * Mixed-media scenes (gated by mixed-media-scenes-v1).
  */
 
 export {
@@ -47,5 +47,6 @@ export {
   updateMixedMediaSequenceBoundary,
   updateMixedMediaSequenceItemDuration,
   updateMixedMediaSequenceItemTiming,
+  writeMixedMediaSequenceItems,
   type MixedMediaSceneCommandResult,
 } from "./editor/mixed-media-scene.commands";

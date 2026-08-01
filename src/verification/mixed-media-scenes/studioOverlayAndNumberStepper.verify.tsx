@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — StudioOverlay hydration + live-value stepper Enter/blur regressions.
- * Run via: npm run test:mixed-media-scenes-12b
+ * StudioOverlay hydration + live-value stepper Enter/blur regressions.
+ * Run via: npm run test:mixed-media-scenes
  *
  * Minimal DOM is installed first so react-dom/client can mount the real stepper.
  */
@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { act, createElement, useState } from "react";
+import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -53,50 +53,42 @@ function testOverlayMountedSnapshots(): void {
 
 function testOverlayServerRenderOmitsPortal(): void {
   const closedDrawer = renderToStaticMarkup(
-    createElement(
-      StudioOverlay,
-      {
-        open: false,
-        onOpenChange: () => {},
-        variant: "drawer-end",
-        title: "Export Video",
-        keepMounted: true,
-      },
-      "panel-body",
-    ),
+    <StudioOverlay
+      open={false}
+      onOpenChange={() => {}}
+      variant="drawer-end"
+      title="Export Video"
+      keepMounted
+    >
+      panel-body
+    </StudioOverlay>,
   );
   const openDrawer = renderToStaticMarkup(
-    createElement(
-      StudioOverlay,
-      {
-        open: true,
-        onOpenChange: () => {},
-        variant: "drawer-end",
-        title: "Export Video",
-        keepMounted: true,
-      },
-      "panel-body",
-    ),
+    <StudioOverlay
+      open
+      onOpenChange={() => {}}
+      variant="drawer-end"
+      title="Export Video"
+      keepMounted
+    >
+      panel-body
+    </StudioOverlay>,
   );
   const openModal = renderToStaticMarkup(
-    createElement(
-      StudioOverlay,
-      {
-        open: true,
-        onOpenChange: () => {},
-        variant: "modal-center",
-        title: "Confirm",
-        keepMounted: false,
-      },
-      "modal-body",
-    ),
+    <StudioOverlay
+      open
+      onOpenChange={() => {}}
+      variant="modal-center"
+      title="Confirm"
+      keepMounted={false}
+    >
+      modal-body
+    </StudioOverlay>,
   );
   const exportDrawer = renderToStaticMarkup(
-    createElement(
-      ExportDrawer,
-      { open: true, onOpenChange: () => {} },
-      "export-body",
-    ),
+    <ExportDrawer open onOpenChange={() => {}}>
+      export-body
+    </ExportDrawer>,
   );
 
   for (const html of [closedDrawer, openDrawer, openModal, exportDrawer]) {
@@ -138,23 +130,25 @@ function readGuidance(root: ParentNode): string {
 async function mountBoundaryStepper(onStepValue: (value: number) => void) {
   function Harness() {
     const [value, setValue] = useState(5);
-    return createElement(StudioNumberStepper, {
-      value,
-      min: 0,
-      step: 0.1,
-      onStepValue: (next) => {
-        onStepValue(next);
-        setValue(next);
-      },
-      "aria-label": "Boundary start",
-    });
+    return (
+      <StudioNumberStepper
+        value={value}
+        min={0}
+        step={0.1}
+        onStepValue={(next) => {
+          onStepValue(next);
+          setValue(next);
+        }}
+        aria-label="Boundary start"
+      />
+    );
   }
 
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(createElement(Harness));
+    root.render(<Harness />);
   });
   const input = host.querySelector("input");
   assert.ok(input, "expected rendered stepper input");
@@ -286,7 +280,7 @@ async function main(): Promise<void> {
     console.log(`  ✓ ${name}`);
   }
   console.log(
-    `\nSprint 12B overlay + live timing hardening: ${passed}/${total} PASS`,
+    `\nStudio overlay + number stepper: ${passed}/${total} PASS`,
   );
 }
 

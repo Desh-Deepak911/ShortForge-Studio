@@ -27,7 +27,7 @@ import {
   focusInspectorSceneWorkspace,
 } from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
-import { MixedMediaScenesCapabilityProvider } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
+import { VisualRetentionCapabilitiesProvider } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import {
   EditorSelectionProvider,
   useEditorSelection,
@@ -105,7 +105,7 @@ interface StoryWorkspaceProps {
 
 export default function StoryWorkspace(props: StoryWorkspaceProps) {
   return (
-    <MixedMediaScenesCapabilityProvider>
+    <VisualRetentionCapabilitiesProvider>
       <EditorSelectionProvider
         script={props.script}
         selectedSceneIndex={props.selectedSceneIndex}
@@ -122,7 +122,7 @@ export default function StoryWorkspace(props: StoryWorkspaceProps) {
           </PreviewMasterTimelineProvider>
         </TimelinePlaybackPortProvider>
       </EditorSelectionProvider>
-    </MixedMediaScenesCapabilityProvider>
+    </VisualRetentionCapabilitiesProvider>
   );
 }
 

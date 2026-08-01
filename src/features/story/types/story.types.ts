@@ -6,6 +6,7 @@ import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.t
 import type { PlatformExportPresetId } from "@/features/export-profiles/export-profile.types";
 import type { SceneMediaVisualAdjustments } from "@/features/media-visual-adjustments/media-visual-adjustments.types";
 import type { SpeechStylePreset } from "@/features/speech-style";
+import type { VisualBeatPlanV1 } from "@/features/visual-beat-density/domain/visual-beat-plan";
 
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
 
@@ -140,7 +141,7 @@ export interface SceneMediaTimeline {
 }
 
 /**
- * One ordered visual item in a Sprint 12B narration-scene visual sequence.
+ * One ordered visual item in a narration-scene visual sequence.
  * Timing is scene-local (ms) and must fit within narration scene duration.
  */
 export interface SceneVisualSequenceItem {
@@ -158,7 +159,7 @@ export interface SceneVisualSequenceItem {
 }
 
 /**
- * Optional Sprint 12B visual sequence: multiple ordered image/video items in one
+ * Optional visual sequence: multiple ordered image/video items in one
  * narration scene. Absence preserves legacy/single-media and Sprint 8 timeline
  * behavior. Never required to open existing projects.
  */
@@ -206,11 +207,17 @@ export interface FootieScene {
    */
   mediaTimeline?: SceneMediaTimeline;
   /**
-   * Optional Sprint 12B visual sequence (mixed image/video) for one narration scene.
+   * Optional visual sequence (mixed image/video) for one narration scene.
    * Absence means legacy/single-media or Sprint 8 weight timeline. Gated by
    * `mixed-media-scenes-v1`. Dual-written to `mediaTimeline` for shared Preview/Export.
    */
   visualSequence?: SceneVisualSequence;
+  /**
+   * Optional narration-driven visual-beat plan (suggestion/provenance only).
+   * Absence preserves legacy projects. Never a Preview/Export render authority —
+   * Apply writes timing into `visualSequence` / `mediaTimeline` only.
+   */
+  visualBeatPlan?: VisualBeatPlanV1;
   /**
    * Optional intra-scene media-to-media transition track (Sprint 9A).
    * Absence means every adjacent pair is Cut. Never stores Cut records.

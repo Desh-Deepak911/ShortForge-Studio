@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Client shell for the Sprint 12B mixed-media QA harness.
+ * Client shell for the mixed-media scenes QA harness.
  * Composes production StoryWorkspace (inspector, preview, capability, export).
  * Story state is in-memory only — no draft persistence or browser story storage.
  */
@@ -42,7 +42,7 @@ export function MixedMediaScenesQaHarness() {
     >
       <header className="shrink-0 border-b border-border bg-background/95 px-4 py-3">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          Local development QA harness · Sprint 12B
+          Local development QA harness · Mixed-media scenes
         </p>
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
@@ -51,8 +51,8 @@ export function MixedMediaScenesQaHarness() {
             </h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
               Deterministic in-memory story for exercising the real editor:
-              Media inspector, Visual sequence (when the server capability enables
-              12B), preview, browser export, and headless export controls. No
+              Media inspector, Visual sequence (when mixed-media-scenes-v1 is
+              enabled), preview, browser export, and headless export controls. No
               online story generation, no draft persistence, no external media
               providers.
             </p>

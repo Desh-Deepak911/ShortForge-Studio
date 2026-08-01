@@ -46,7 +46,7 @@ export interface ResolveActiveSceneMediaRenderViewOptions {
    */
   readonly multiImageScenesEnabled?: boolean;
   /**
-   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Explicit `mixed-media-scenes-v1` decision.
    * Default false (fail-closed). Caller supplies the resolved capability —
    * this module never reads environment variables.
    */

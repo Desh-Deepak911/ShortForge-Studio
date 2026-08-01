@@ -1,5 +1,5 @@
 /**
- * Sprint 12B — normalize optional visual sequences within narration scene duration.
+ * Normalize optional visual sequences within narration scene duration.
  * Recoverable timing problems become warnings; terminal only when no coherent items remain.
  */
 

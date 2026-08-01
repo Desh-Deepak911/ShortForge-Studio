@@ -88,7 +88,7 @@ export interface BuildExportManifestInput {
    */
   readonly multiImageScenesEnabled?: boolean;
   /**
-   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Explicit `mixed-media-scenes-v1` decision.
    * Default false (fail-closed). Caller supplies the resolved capability —
    * this module never reads environment variables.
    */
@@ -97,6 +97,8 @@ export interface BuildExportManifestInput {
 
 export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV4 {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
+  // Fallback preparation freezes timing only. Authoring guidance (Visual pacing)
+  // is owned by prepareExportRequest, not manifest construction.
   const prepared =
     input.prepared ??
     prepareStoryForExport(input.story, { mixedMediaScenesEnabled });

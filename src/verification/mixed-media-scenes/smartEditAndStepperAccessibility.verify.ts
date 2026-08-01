@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — Chrome hardening: Smart Edit hydration + invalid timing guidance.
- * Run via: npm run test:mixed-media-scenes-12b
+ * Smart Edit hydration + StudioNumberStepper accessibility guidance.
+ * Run via: npm run test:mixed-media-scenes
  */
 
 import assert from "node:assert/strict";
@@ -22,7 +22,7 @@ import {
   resolveInitialSmartEditReturnTo,
 } from "@/features/tool/hooks/smart-edit-return-to";
 import { buildSmartEditImageToolUrl } from "@/lib/utils/smart-image-tool.utils";
-import { isLocalDevQaHarnessAllowed } from "@/features/mixed-media-scenes/qa/assert-local-dev-qa-harness-allowed";
+import { isLocalDevQaHarnessAllowed } from "@/features/visual-retention/qa/assert-local-dev-qa-harness-allowed";
 
 function readSrc(rel: string): string {
   return readFileSync(path.join(process.cwd(), rel), "utf8");
@@ -226,7 +226,7 @@ async function main(): Promise<void> {
     console.log(`  ✓ ${name}`);
   }
   console.log(
-    `\nSprint 12B Chrome hardening: ${passed}/${tests.length} PASS`,
+    `\nSmart Edit + stepper accessibility: ${passed}/${tests.length} PASS`,
   );
 }
 

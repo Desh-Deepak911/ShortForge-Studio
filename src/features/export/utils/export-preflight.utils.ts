@@ -19,7 +19,7 @@ import { resolveNarrationVoiceoverMismatchWarning } from "./export-narration-voi
 
 export interface PrepareStoryForExportOptions {
   /**
-   * Explicit Sprint 12B capability decision. Default false (fail-closed).
+   * Explicit mixed-media scenes capability decision. Default false (fail-closed).
    * Must be resolved by the caller from the server gate / client capability
    * snapshot — this module never reads environment variables.
    */
@@ -42,12 +42,15 @@ export interface PrepareStoryForExportResult {
  * Builds an export-normalized story copy without mutating editor state.
  * Scene timing and export duration are derived from MasterTimeline (export authority).
  *
- * Order (Sprint 12B):
+ * Order (mixed-media scenes):
  * 1. sync
  * 2. MasterTimeline + voiceover scene-duration refit
  * 3. visualSequence ↔ mediaTimeline reconcile against **final** scene durations
  * 4. media validation on the repaired export copy
  * 5. final sync
+ *
+ * Visual pacing authoring guidance is not evaluated here — `prepareExportRequest`
+ * derives recoverable warnings once from this final prepared story.
  */
 export function prepareStoryForExport(
   story: FootieScript,

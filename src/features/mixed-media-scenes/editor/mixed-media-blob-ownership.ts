@@ -4,7 +4,7 @@
  * explicit owned-item removal — never on unmount.
  *
  * Draft JSON may still store blob: URLs; binary rehydration after reload is an
- * existing limitation and is intentionally out of scope for Sprint 12B.
+ * existing limitation and is intentionally out of scope for this capability.
  */
 
 import {

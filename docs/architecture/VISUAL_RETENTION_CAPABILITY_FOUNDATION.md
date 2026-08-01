@@ -1,10 +1,10 @@
-# Sprint 12A — Visual Retention Compatibility and Safety Foundation
+# Visual-Retention Capability Foundation
 
 ## Status
 
-Implementation foundation on the staging-derived Sprint 12 branch. Sprint 12
-remains forbidden on main and production. Phase behavior is off unless an exact
-staging phase list is supplied.
+Implementation foundation on the staging-derived visual-retention branch.
+Visual-retention phases remain forbidden on main and production. Phase behavior
+is off unless an exact staging phase list is supplied.
 
 ## Non-negotiable invariants
 
@@ -26,9 +26,9 @@ list. The pure resolver receives deployment facts from a server boundary; it
 does not read environment variables itself.
 
 Every phase defaults off. Main/master, Vercel production, unknown deployment
-targets, invalid IDs, and dependency gaps fail closed. A later phase cannot be
-enabled while an earlier phase is off. Rolling a phase back therefore also
-prevents dependent phases from presenting partial behavior.
+targets, invalid IDs, dependency gaps, and non-allowlisted branches fail closed.
+A later phase cannot be enabled while an earlier phase is off. Rolling a phase
+back therefore also prevents dependent phases from presenting partial behavior.
 
 ## Capability negotiation
 
@@ -64,7 +64,8 @@ its rendering contract has already frozen.
 
 ## Reserved optional extensions
 
-Sprint 12A reserves, but does not yet attach or render, two Phase 12E contracts:
+The foundation reserves, but does not yet attach or render, two later-phase
+contracts:
 
 ### Engagement overlays
 
@@ -78,8 +79,8 @@ The promotional segment is optional. Absence or `enabled=false` adds zero render
 duration. When enabled it is a 2, 2.5, or 3 second animation whose primary title
 is exactly **ShortForge Studio**. It has no narration or captions and uses fixed
 playback timing, independent of voice and project speed changes. Its visual
-design remains preset-driven so Sprint 12E can deliver the strongest animation
-without weakening the frozen behavioral rules.
+design remains preset-driven so the later brand-sting phase can deliver the
+strongest animation without weakening the frozen behavioral rules.
 
 These contracts remain isolated from `FootieScript` and ExportManifest until
 their gated implementation lands. This prevents current projects or v2-v4
@@ -88,12 +89,12 @@ manifests from silently acquiring new render semantics.
 ## Manifest evolution rule
 
 ExportManifest v2, v3, and v4 are frozen. The current builder continues emitting
-v4/9D during Sprint 12A. The first render-affecting Sprint 12 field requires a
-new version-dispatched manifest contract, a new canonical fingerprint payload,
-and explicit consumer capability support. Older consumers must reject that
-version terminally rather than progress partway through a job.
+v4/9D. The first render-affecting visual-retention field that changes frozen
+semantics requires a new version-dispatched manifest contract, a new canonical
+fingerprint payload, and explicit consumer capability support. Older consumers
+must reject that version terminally rather than progress partway through a job.
 
-## Sprint 12A exit criteria
+## Exit criteria
 
 - staging/main/production gate-off assertions pass;
 - ordered activation and rollback assertions pass;
@@ -102,6 +103,6 @@ version terminally rather than progress partway through a job.
 - the Browser/Headless resolution matrix remains frozen;
 - optional engagement and brand-sting contracts validate without legacy defaults;
 - v2/8D, v3/9C, and v4/9D identifiers remain unchanged;
-- typecheck, lint, the focused Sprint 12A verification, and selected legacy
-  export/headless regressions pass;
+- typecheck, lint, focused visual-retention capability verification, and selected
+  legacy export/headless regressions pass;
 - no provider operation or remote staging mutation is required for local closeout.
