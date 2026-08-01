@@ -71,7 +71,14 @@ function testInitialStoryValidity(): void {
   assert.ok(scene.mediaTimeline);
   assert.equal(scene.mediaTimeline!.items.length, 1);
   assert.equal(story.voiceoverUrl, undefined);
-  assert.equal(story.music, undefined);
+  assert.deepEqual(story.backgroundMusic, {
+    enabled: false,
+    source: "none",
+    volume: 0.18,
+    duckingEnabled: true,
+    fadeIn: true,
+    fadeOut: true,
+  });
   assert.doesNotMatch(scene.media!.url, /^https?:\/\//);
   assert.doesNotMatch(scene.media!.url, /^blob:/);
 

@@ -214,10 +214,9 @@ function testStagingWithoutMixedMediaTimelineWins(): void {
     mixedMediaScenesEnabled: false,
   });
   assert.equal(manifest.scenes[0]?.mediaTimeline.items.length, 1);
-  assert.match(
-    String(manifest.scenes[0]?.mediaTimeline.items[0]?.media.source ?? ""),
-    /stale/,
-  );
+  const media = manifest.scenes[0]?.mediaTimeline.items[0]?.media;
+  assert.ok(media && media.type !== "placeholder");
+  assert.match(media.source, /stale/);
 }
 
 function testProductionLookingEnvDoesNotActivate(): void {
