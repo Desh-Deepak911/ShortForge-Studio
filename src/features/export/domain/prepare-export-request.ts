@@ -32,9 +32,15 @@ export interface PrepareExportRequestInput {
   /**
    * When false, first-item-only manifest (regression tests only).
    * Default true — production multi-image ExportManifest v2.
-   * Domain builders never read process.env.
+   * Domain builders never read environment variables for this flag.
    */
   readonly multiImageScenesEnabled?: boolean;
+  /**
+   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Default false (fail-closed). Resolved by UI context or server gate —
+   * never derived from environment variables inside this module.
+   */
+  readonly mixedMediaScenesEnabled?: boolean;
 }
 
 export interface PrepareExportRequestResult extends PreparedExportRequest {
@@ -50,8 +56,11 @@ export interface PrepareExportRequestResult extends PreparedExportRequest {
 export async function prepareExportRequest(
   input: PrepareExportRequestInput,
 ): Promise<PrepareExportRequestResult> {
+  const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
-  const preparedStory = prepareStoryForExport(voiceoverPrepared);
+  const preparedStory = prepareStoryForExport(voiceoverPrepared, {
+    mixedMediaScenesEnabled,
+  });
   const exportSettings = resolveExportSettings(voiceoverPrepared, input.options);
   const audioMix = buildAudioMixFromStory(preparedStory.story);
   const includeBackgroundMusic =
@@ -74,6 +83,7 @@ export async function prepareExportRequest(
     audioMode: input.options?.audioMode ?? "silent",
     includeBackgroundMusic,
     multiImageScenesEnabled,
+    mixedMediaScenesEnabled,
     environment: {
       ...input.environment,
       mp4EncoderAvailable,

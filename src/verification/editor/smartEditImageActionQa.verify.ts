@@ -6,6 +6,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  resolveClientSmartEditReturnTo,
+  resolveInitialSmartEditReturnTo,
+} from "@/features/tool/hooks/smart-edit-return-to";
+import {
   buildSmartEditImageToolUrl,
   resolveSafeStudioReturnPath,
 } from "@/lib/utils/smart-image-tool.utils";
@@ -68,7 +72,10 @@ test("image inspector shows Smart Edit when scene has an image", () => {
 
 test("scene inspector adds Smart Edit next to Replace and Remove", () => {
   const sceneInspector = readSrc("src/features/editor/components/StudioSceneInspector.tsx");
-  assert.match(sceneInspector, /SmartEditImageAction hasImage buttonOnly sceneId=\{scene\.id\}/);
+  assert.match(
+    sceneInspector,
+    /<SmartEditImageAction[\s\S]*?hasImage[\s\S]*?buttonOnly[\s\S]*?sceneId=\{scene\.id\}/,
+  );
   assert.match(sceneInspector, /Replace/);
   assert.match(sceneInspector, /Remove/);
   assert.match(sceneInspector, /SMART_EDIT_HAS_IMAGE_COPY/);
@@ -86,6 +93,49 @@ test("/tool bridge uses returnTo for Back to Studio", () => {
   assert.match(bridge, /resolveSafeStudioReturnPath/);
   assert.match(bridge, /href=\{backHref\}/);
   assert.doesNotMatch(bridge, /href="\/drafts"/);
+});
+
+test("Smart Edit returnTo is deterministic on initial server/client render", () => {
+  const pathname = "/editor/draft-1";
+  assert.equal(
+    resolveInitialSmartEditReturnTo(pathname),
+    resolveInitialSmartEditReturnTo(pathname),
+  );
+  assert.equal(resolveInitialSmartEditReturnTo(pathname), pathname);
+
+  const serverUrl = buildSmartEditImageToolUrl({ returnTo: pathname });
+  const clientInitialUrl = buildSmartEditImageToolUrl({
+    returnTo: resolveInitialSmartEditReturnTo(pathname),
+  });
+  assert.equal(serverUrl, clientInitialUrl);
+
+  const hook = readSrc("src/features/tool/hooks/useSmartEditImageContext.ts");
+  assert.match(hook, /resolveInitialSmartEditReturnTo/);
+  assert.match(hook, /useSyncExternalStore/);
+  assert.doesNotMatch(
+    hook,
+    /typeof window !== ["']undefined["'] \? window\.location\.href/,
+  );
+  assert.doesNotMatch(hook, /suppressHydrationWarning/);
+});
+
+test("Smart Edit returnTo upgrades to full location after hydration", () => {
+  const previousWindow = (globalThis as { window?: unknown }).window;
+  (globalThis as { window?: { location: { href: string } } }).window = {
+    location: { href: "http://localhost:3000/editor/draft-1?scene=2" },
+  };
+  try {
+    assert.equal(
+      resolveClientSmartEditReturnTo("/editor/draft-1"),
+      "http://localhost:3000/editor/draft-1?scene=2",
+    );
+  } finally {
+    if (previousWindow === undefined) {
+      delete (globalThis as { window?: unknown }).window;
+    } else {
+      (globalThis as { window?: unknown }).window = previousWindow;
+    }
+  }
 });
 
 console.log("\nAll smart edit image action checks passed.");

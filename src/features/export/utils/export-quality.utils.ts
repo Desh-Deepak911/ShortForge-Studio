@@ -67,6 +67,11 @@ export interface FootieExportOptions {
    * Without this, capability-reducing fallbacks are not applied automatically.
    */
   audioFallback?: "voice-only" | "silent" | "webm";
+  /**
+   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Default false (fail-closed) when omitted by prepareExportRequest.
+   */
+  mixedMediaScenesEnabled?: boolean;
 }
 
 export function getExportQualityPreset(id: ExportQualityId): ExportQualityPreset {

@@ -13,12 +13,21 @@ export function reconcileMediaItemSelectionAuthority(input: {
   storedMediaItemId: string | null;
   selectionFocus: SelectionType;
   scene: FootieScene | null;
+  /**
+   * Optional capability-aware selectability (Sprint 12B).
+   * Defaults to Sprint 8 projected mediaTimeline / legacy virtual ids.
+   */
+  isItemSelectable?: (scene: FootieScene, mediaItemId: string) => boolean;
 }): {
   storedMediaItemId: string | null;
   selectionFocus: SelectionType;
   didClear: boolean;
 } {
   const { storedMediaItemId, selectionFocus, scene } = input;
+  const isItemSelectable =
+    input.isItemSelectable ??
+    ((candidate: FootieScene, mediaItemId: string) =>
+      isSelectableSceneMediaItemId(candidate, mediaItemId));
   if (!storedMediaItemId) {
     return {
       storedMediaItemId: null,
@@ -26,7 +35,7 @@ export function reconcileMediaItemSelectionAuthority(input: {
       didClear: false,
     };
   }
-  if (scene && isSelectableSceneMediaItemId(scene, storedMediaItemId)) {
+  if (scene && isItemSelectable(scene, storedMediaItemId)) {
     return {
       storedMediaItemId,
       selectionFocus,

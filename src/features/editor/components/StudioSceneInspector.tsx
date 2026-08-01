@@ -13,7 +13,7 @@ import {
   Timer,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import InspectorEmptyState from "@/components/studio-shell/InspectorEmptyState";
 import InspectorSection from "@/components/studio-shell/InspectorSection";
@@ -44,9 +44,12 @@ import {
 import { useEditorSelection } from "@/features/editor/selection";
 import { resolveSafeSceneIndex } from "@/features/editor/selection/selection.utils";
 import {
-  isSelectableSceneMediaItemId,
-  resolveProjectedSceneMediaWindows,
-} from "@/features/scene-media-timeline";
+  isInspectorSelectableMediaItemId,
+  resolveInspectorSceneMediaProjection,
+  resolveNearestInspectorMediaItemId,
+} from "@/features/mixed-media-scenes/adapters/inspector-scene-media-projection";
+import MixedMediaSequencePanel from "@/features/mixed-media-scenes/editor/MixedMediaSequencePanel";
+import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import { isSelectableSceneMediaTransitionPair } from "@/features/scene-media-transitions";
 import { SelectionPhase } from "@/features/editor/selection/selection.types";
 import {
@@ -229,11 +232,29 @@ export default function StudioSceneInspector({
   const safeIndex = resolveSafeSceneIndex(scenes, selectedSceneIndex);
   const scene = safeIndex >= 0 ? scenes[safeIndex] : null;
   const appendApi = useOptionalSceneMediaImageAppendContext();
+  const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
+  const inspectorMediaProjection = useMemo(
+    () =>
+      scene
+        ? resolveInspectorSceneMediaProjection(scene, { mixedMediaScenesEnabled })
+        : null,
+    [mixedMediaScenesEnabled, scene],
+  );
+  const mediaWindows = useMemo(
+    () => inspectorMediaProjection?.windows ?? [],
+    [inspectorMediaProjection],
+  );
+  const inspectorMediaWarnings = useMemo(
+    () => inspectorMediaProjection?.warnings ?? [],
+    [inspectorMediaProjection],
+  );
   const showMediaItemInspector = Boolean(
     scene &&
     isSceneMediaItemSelected &&
     selectedMediaItemId &&
-    isSelectableSceneMediaItemId(scene, selectedMediaItemId),
+    isInspectorSelectableMediaItemId(scene, selectedMediaItemId, {
+      mixedMediaScenesEnabled,
+    }),
   );
   const showMediaTransitionInspector = Boolean(
     scene &&
@@ -266,14 +287,46 @@ export default function StudioSceneInspector({
       : inspectorImageEditing
         ? "adjust"
         : activeWorkspace;
-  const mediaWindows = scene ? resolveProjectedSceneMediaWindows(scene) : [];
   const selectedMediaIndex = selectedMediaItemId
     ? mediaWindows.findIndex((window) => window.itemId === selectedMediaItemId)
     : -1;
+  const lastSelectedMediaIndexRef = useRef(-1);
+  useEffect(() => {
+    if (selectedMediaIndex >= 0) {
+      lastSelectedMediaIndexRef.current = selectedMediaIndex;
+    }
+  }, [selectedMediaIndex]);
   const mediaOrdinalLabel = formatSceneMediaItemOrdinal(
     selectedMediaIndex >= 0 ? selectedMediaIndex : 0,
     mediaWindows.length,
   );
+
+  // Keep selection coherent with capability-aware windows (delete/reconcile survivors).
+  useEffect(() => {
+    if (!scene || !selectedMediaItemId || !isSceneMediaItemSelected) {
+      return;
+    }
+    if (selectedMediaIndex >= 0) {
+      return;
+    }
+    const nearest = resolveNearestInspectorMediaItemId(
+      mediaWindows,
+      selectedMediaItemId,
+      lastSelectedMediaIndexRef.current,
+    );
+    if (nearest) {
+      selection.selectSceneMediaItem(scene.id, nearest);
+      return;
+    }
+    selection.clearSceneMediaItemSelection();
+  }, [
+    isSceneMediaItemSelected,
+    mediaWindows,
+    scene,
+    selectedMediaIndex,
+    selectedMediaItemId,
+    selection,
+  ]);
   const exclusiveInteractionLocked = useTimelineExclusiveInteractionLocked();
   const appendInteractionLocked =
     selection.phase === SelectionPhase.PlaybackLocked ||
@@ -748,6 +801,16 @@ export default function StudioSceneInspector({
               defaultOpen
               open={inspectorImageEditing ? true : undefined}
             >
+              {mixedMediaScenesEnabled ? (
+                <div className="mb-3">
+                  <MixedMediaSequencePanel
+                    script={script}
+                    scene={scene}
+                    onScriptChange={onScriptChange}
+                    mixedMediaScenesEnabled
+                  />
+                </div>
+              ) : null}
               {mediaWindows.length > 0 ? (
                 <div
                   className="mb-2 flex flex-wrap items-center justify-between gap-2"
@@ -759,7 +822,7 @@ export default function StudioSceneInspector({
                   >
                     Scene {safeIndex + 1} · {mediaOrdinalLabel}
                   </p>
-                  {appendApi ? (
+                  {!mixedMediaScenesEnabled && appendApi ? (
                     <SceneMediaAddAnotherImageButton
                       scene={scene}
                       appendApi={appendApi}
@@ -769,6 +832,17 @@ export default function StudioSceneInspector({
                     />
                   ) : null}
                 </div>
+              ) : null}
+              {inspectorMediaWarnings.length > 0 ? (
+                <p
+                  className="mb-2 rounded-lg bg-amber-500/10 px-2.5 py-2 text-xs text-amber-100 ring-1 ring-amber-400/30"
+                  data-scene-media-inspector-warnings
+                >
+                  {inspectorMediaWarnings
+                    .slice(0, 3)
+                    .map((warning) => warning.message)
+                    .join(" ")}
+                </p>
               ) : null}
               {showMediaItemInspector && selectedMediaItemId ? (
                 <SceneMediaItemInspector

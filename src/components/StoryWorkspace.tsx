@@ -27,6 +27,7 @@ import {
   focusInspectorSceneWorkspace,
 } from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
+import { MixedMediaScenesCapabilityProvider } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import {
   EditorSelectionProvider,
   useEditorSelection,
@@ -104,22 +105,24 @@ interface StoryWorkspaceProps {
 
 export default function StoryWorkspace(props: StoryWorkspaceProps) {
   return (
-    <EditorSelectionProvider
-      script={props.script}
-      selectedSceneIndex={props.selectedSceneIndex}
-      onSelectedSceneChange={props.onSelectedSceneChange}
-    >
-      <TimelinePlaybackPortProvider>
-        <PreviewMasterTimelineProvider
-          script={props.script}
-          timelineEpoch={props.timelineEpoch}
-        >
-          <VideoTrimPreviewProvider>
-            <StoryWorkspaceContent {...props} />
-          </VideoTrimPreviewProvider>
-        </PreviewMasterTimelineProvider>
-      </TimelinePlaybackPortProvider>
-    </EditorSelectionProvider>
+    <MixedMediaScenesCapabilityProvider>
+      <EditorSelectionProvider
+        script={props.script}
+        selectedSceneIndex={props.selectedSceneIndex}
+        onSelectedSceneChange={props.onSelectedSceneChange}
+      >
+        <TimelinePlaybackPortProvider>
+          <PreviewMasterTimelineProvider
+            script={props.script}
+            timelineEpoch={props.timelineEpoch}
+          >
+            <VideoTrimPreviewProvider>
+              <StoryWorkspaceContent {...props} />
+            </VideoTrimPreviewProvider>
+          </PreviewMasterTimelineProvider>
+        </TimelinePlaybackPortProvider>
+      </EditorSelectionProvider>
+    </MixedMediaScenesCapabilityProvider>
   );
 }
 

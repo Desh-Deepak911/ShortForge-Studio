@@ -68,5 +68,13 @@ export function resolveSafeStudioReturnPath(
 
 /** Opens the external Smart Image Tool with editor context in a new tab. */
 export function openSmartEditImageTool(input: SmartEditImageToolUrlInput): void {
-  window.open(buildSmartEditImageToolUrl(input), "_blank", "noopener,noreferrer");
+  const returnTo =
+    typeof window !== "undefined" && window.location.href
+      ? window.location.href
+      : input.returnTo;
+  window.open(
+    buildSmartEditImageToolUrl({ ...input, returnTo }),
+    "_blank",
+    "noopener,noreferrer",
+  );
 }

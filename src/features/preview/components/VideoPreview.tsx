@@ -15,6 +15,7 @@ import {
 
 import EditorCanvasEditLayer from "@/features/editor/components/EditorCanvasEditLayer";
 import { useEditorSelection } from "@/features/editor/selection";
+import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import { sceneHasFramableMedia } from "@/features/media-framing";
 import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
 import PreviewFrame, {
@@ -105,6 +106,7 @@ export default function VideoPreview({
   );
 
   const previewRootRef = useRef<HTMLDivElement>(null);
+  const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
   const trimPreview = useVideoTrimPreviewOptional();
   const trimPreviewActive = Boolean(trimPreview?.override?.isActive);
   const playback = usePreviewPlayback({
@@ -483,6 +485,7 @@ export default function VideoPreview({
           sceneElapsedMs={sceneElapsedMs}
           sceneDurationMs={sceneDurationMs}
           isPlaying={playbackActive}
+          mixedMediaScenesEnabled={mixedMediaScenesEnabled}
           overlay={
             <>
               {showSubtitles ? (
