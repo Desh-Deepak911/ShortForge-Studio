@@ -1,4 +1,4 @@
-# Sprint 12A Visual Retention Foundation — Local QA
+# Visual-Retention Capabilities — Local QA
 
 ## Scope
 
@@ -10,9 +10,9 @@ database mutation, deployment, or staging flag activation was performed.
 
 | Check | Result |
 |-------|--------|
-| Sprint 12A focused foundation | PASS |
+| Visual-retention capabilities focused suite | PASS |
 | TypeScript (`tsc --noEmit --incremental false`) | PASS |
-| Targeted ESLint for Sprint 12A sources | PASS |
+| Targeted ESLint for visual-retention sources | PASS |
 | Browser export capability preflight | PASS — 19 tests |
 | ExportManifest regression | PASS — 9 tests |
 | Scene Media export regression | PASS — 54 tests |
@@ -21,8 +21,8 @@ database mutation, deployment, or staging flag activation was performed.
 
 ## Focused authority proven
 
-- Sprint 12 phases default off.
-- Main/master and Vercel production hard-disable every Sprint 12 phase.
+- Visual-retention phases default off.
+- Main/master and Vercel production hard-disable every visual-retention phase.
 - Unknown phase IDs reject the full gate snapshot.
 - Later phases cannot activate across a dependency gap.
 - Narration timing is present in the base capability set; music is absent from
@@ -38,27 +38,14 @@ database mutation, deployment, or staging flag activation was performed.
   speed, non-ShortForge title text, and unsupported 2–3 second durations.
 - ExportManifest v2/8D, v3/9C, and v4/9D identifiers remain unchanged.
 
-## Pre-existing staging baseline failure
+## Commands used
 
-`npm run test:legacy-compat` fails on the untouched staging archive and on the
-Sprint 12A snapshot at the same pre-existing assertion:
+```bash
+npm run test:visual-retention-capabilities
+npm run typecheck
+```
 
-- expected legacy `voiceSettings`: `{ speed: 1 }`
-- current staging materialization: `{ speed: 1, stylePreset: "neutral", expressiveDelivery: false }`
+## Safety
 
-Sprint 12A does not modify voice settings, story synchronization, or that test.
-The failure is therefore recorded but not repaired in this scope. The narrower
-and directly relevant legacy ExportManifest/headless/mixed-media contract suites
-all pass.
-
-## Local rollback
-
-Sprint 12A is additive. Rollback consists of removing
-`src/features/visual-retention/`, its focused verification and documentation,
-and the package script. With the staging flag unset, every phase is already off
-and existing runtime behavior is unchanged.
-
-## Remote status
-
-Not tested. Sprint 12A requires a separately controlled staging gate-on/gate-off
-validation before remote activation. Main and production remain forbidden.
+No commit, push, merge, deploy, provider operation, or main/production change
+was performed for this local QA record.

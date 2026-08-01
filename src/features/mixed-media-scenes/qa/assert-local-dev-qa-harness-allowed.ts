@@ -1,5 +1,5 @@
 /**
- * Server-side production isolation for the Sprint 12B mixed-media QA harness.
+ * Server-side production isolation for the mixed-media scenes QA harness.
  * Fail-closed outside the explicitly permitted local-development context.
  */
 

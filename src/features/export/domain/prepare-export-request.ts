@@ -36,7 +36,7 @@ export interface PrepareExportRequestInput {
    */
   readonly multiImageScenesEnabled?: boolean;
   /**
-   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Explicit `mixed-media-scenes-v1` decision.
    * Default false (fail-closed). Resolved by UI context or server gate —
    * never derived from environment variables inside this module.
    */

@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — mixed-media scenes capability gate (staging-only).
- * Defaults off unless Sprint 12A phase gates explicitly enable 12A+12B.
+ * Mixed-media scenes capability gate (staging-only).
+ * Defaults off unless phase gates explicitly enable 12A+12B.
  */
 
 import {

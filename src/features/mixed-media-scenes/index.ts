@@ -1,5 +1,5 @@
 /**
- * Sprint 12B — mixed-media scenes (gated by mixed-media-scenes-v1).
+ * Mixed-media scenes (gated by mixed-media-scenes-v1).
  */
 
 export {

@@ -29,7 +29,7 @@ Evidence authority is more important than a visually flat tree. Headless rendere
 | Export audit | [architecture/EXPORT_ARCHITECTURE_AUDIT.md](architecture/EXPORT_ARCHITECTURE_AUDIT.md) |
 | Hook contract | [architecture/HOOK_CONTRACT.md](architecture/HOOK_CONTRACT.md), [architecture/HOOK_ARCHITECTURE_AUDIT.md](architecture/HOOK_ARCHITECTURE_AUDIT.md) |
 | Retention Story contract | [architecture/RETENTION_STORY_CONTRACT.md](architecture/RETENTION_STORY_CONTRACT.md), [architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md](architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) |
-| Sprint 12 visual retention | [architecture/SPRINT_12A_VISUAL_RETENTION_FOUNDATION.md](architecture/SPRINT_12A_VISUAL_RETENTION_FOUNDATION.md) |
+| Visual-retention capability gating | [architecture/VISUAL_RETENTION_CAPABILITY_FOUNDATION.md](architecture/VISUAL_RETENTION_CAPABILITY_FOUNDATION.md) |
 | Headless renderer authority | [architecture/headless/](architecture/headless/) |
 
 Root companions: [../MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md), [../ARCHITECTURE.md](../ARCHITECTURE.md), [../ROADMAP.md](../ROADMAP.md).
@@ -46,7 +46,7 @@ Root companions: [../MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md), [../ARC
 
 Local QA notes and sprint freeze ledgers: [qa/](qa/).
 
-Sprint 12A: [qa/sprint12a-visual-retention-foundation.md](qa/sprint12a-visual-retention-foundation.md).
+Visual-retention capabilities: [qa/visual-retention-capabilities.md](qa/visual-retention-capabilities.md).
 
 ## Headless renderer evidence
 

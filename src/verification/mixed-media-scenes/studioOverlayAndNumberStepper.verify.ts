@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — StudioOverlay hydration + live-value stepper Enter/blur regressions.
- * Run via: npm run test:mixed-media-scenes-12b
+ * StudioOverlay hydration + live-value stepper Enter/blur regressions.
+ * Run via: npm run test:mixed-media-scenes
  *
  * Minimal DOM is installed first so react-dom/client can mount the real stepper.
  */
@@ -286,7 +286,7 @@ async function main(): Promise<void> {
     console.log(`  ✓ ${name}`);
   }
   console.log(
-    `\nSprint 12B overlay + live timing hardening: ${passed}/${total} PASS`,
+    `\nStudio overlay + number stepper: ${passed}/${total} PASS`,
   );
 }
 

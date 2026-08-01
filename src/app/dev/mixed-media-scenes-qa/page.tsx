@@ -1,5 +1,5 @@
 /**
- * Dev-only Sprint 12B mixed-media scenes browser QA harness.
+ * Dev-only mixed-media scenes browser QA harness.
  * Not linked from production navigation. Unavailable outside local development.
  */
 

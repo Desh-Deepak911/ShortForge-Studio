@@ -1,5 +1,5 @@
 /**
- * Deterministic in-memory story for the Sprint 12B mixed-media QA harness.
+ * Deterministic in-memory story for the mixed-media scenes QA harness.
  * Uses a repository-local public SVG only — no remote media, voiceover, or music.
  */
 
@@ -89,7 +89,7 @@ function buildQaScene(): FootieScene {
 export function buildMixedMediaScenesQaStory(): FootieScript {
   const scene = buildQaScene();
   return syncFootieScript({
-    title: "Sprint 12B Mixed-Media Scenes QA",
+    title: "Mixed-Media Scenes QA",
     narration: QA_NARRATION,
     totalDuration: MIXED_MEDIA_SCENES_QA_DURATION_MS / 1000,
     scenes: [scene],

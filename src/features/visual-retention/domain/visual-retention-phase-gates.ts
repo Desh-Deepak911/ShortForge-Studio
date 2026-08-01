@@ -1,5 +1,5 @@
 /**
- * Sprint 12 staging-only feature-gate authority.
+ * Visual-retention staging-only feature-gate authority.
  *
  * Pure domain: callers provide deployment facts. This module never reads
  * process.env, contacts providers, or infers staging from NODE_ENV.
@@ -30,7 +30,19 @@ export type VisualRetentionGateRejectionReason =
   | "non_staging_environment"
   | "main_branch_rejected"
   | "production_deployment_rejected"
+  | "staging_development_branch_rejected"
   | "dependency_not_enabled";
+
+/**
+ * Closed staging-development branch allowlist.
+ * Do not broaden to arbitrary feature branches — add explicit
+ * staging-development names only when a visual-retention branch is authorized.
+ */
+export const VISUAL_RETENTION_STAGING_DEVELOPMENT_BRANCHES = Object.freeze([
+  "staging",
+  "sprint12-staging-compat-safety-foundation",
+  "sprint12c-staging-visual-beat-density",
+] as const);
 
 export interface VisualRetentionPhaseGateState {
   readonly enabled: boolean;
@@ -77,6 +89,18 @@ function isMainBranch(branch: string | null): boolean {
   return branch === "main" || branch === "master";
 }
 
+const STAGING_DEVELOPMENT_BRANCH_SET = new Set<string>(
+  VISUAL_RETENTION_STAGING_DEVELOPMENT_BRANCHES,
+);
+
+/** True only for the closed staging / staging-development branch allowlist. */
+export function isAllowedVisualRetentionStagingDevelopmentBranch(
+  branch: string | null | undefined,
+): boolean {
+  const normalized = normalizeBranch(branch ?? null);
+  return normalized !== null && STAGING_DEVELOPMENT_BRANCH_SET.has(normalized);
+}
+
 function parseRequestedPhases(value: string | null | undefined):
   | { readonly ok: true; readonly phases: ReadonlySet<VisualRetentionPhaseId> }
   | { readonly ok: false; readonly issues: readonly string[] } {
@@ -89,7 +113,7 @@ function parseRequestedPhases(value: string | null | undefined):
   if (invalid.length > 0) {
     return {
       ok: false,
-      issues: invalid.map((item) => `Unknown Sprint 12 phase: ${item || "<empty>"}.`),
+      issues: invalid.map((item) => `Unknown visual-retention phase: ${item || "<empty>"}.`),
     };
   }
 
@@ -102,9 +126,10 @@ function parseRequestedPhases(value: string | null | undefined):
 /**
  * Resolves a detached, serializable phase snapshot.
  *
- * Gates are active only on staging. Main/master and production are hard-off
- * even if every phase is requested. Later phases require all earlier phases;
- * missing dependencies fail closed rather than creating partial behavior.
+ * Gates are active only on staging with an allowlisted staging-development
+ * branch. Main/master and production are hard-off even if every phase is
+ * requested. Later phases require all earlier phases; missing dependencies
+ * fail closed rather than creating partial behavior.
  */
 export function resolveVisualRetentionPhaseGates(
   input: ResolveVisualRetentionPhaseGatesInput,
@@ -118,7 +143,7 @@ export function resolveVisualRetentionPhaseGates(
       sourceBranch,
       valid: false,
       phases: Object.freeze(disabledPhaseMap("main_branch_rejected")),
-      issues: Object.freeze(["Sprint 12 visual retention is forbidden on main/master."]),
+      issues: Object.freeze(["Visual retention is forbidden on main/master."]),
     });
   }
 
@@ -131,7 +156,7 @@ export function resolveVisualRetentionPhaseGates(
       phases: Object.freeze(
         disabledPhaseMap("production_deployment_rejected"),
       ),
-      issues: Object.freeze(["Sprint 12 visual retention is forbidden in production."]),
+      issues: Object.freeze(["Visual retention is forbidden in production."]),
     });
   }
 
@@ -142,7 +167,22 @@ export function resolveVisualRetentionPhaseGates(
       sourceBranch,
       valid: false,
       phases: Object.freeze(disabledPhaseMap("non_staging_environment")),
-      issues: Object.freeze(["Sprint 12 visual retention requires explicit staging authority."]),
+      issues: Object.freeze(["Visual retention requires explicit staging authority."]),
+    });
+  }
+
+  if (!isAllowedVisualRetentionStagingDevelopmentBranch(sourceBranch)) {
+    return Object.freeze({
+      version: 1 as const,
+      deploymentTarget: input.deploymentTarget,
+      sourceBranch,
+      valid: false,
+      phases: Object.freeze(
+        disabledPhaseMap("staging_development_branch_rejected"),
+      ),
+      issues: Object.freeze([
+        "Visual retention requires an allowlisted staging-development branch.",
+      ]),
     });
   }
 
@@ -181,7 +221,7 @@ export function resolveVisualRetentionPhaseGates(
         enabled: false,
         reason: "dependency_not_enabled" as const,
       });
-      issues.push(`${phase} requires every earlier Sprint 12 phase to be enabled.`);
+      issues.push(`${phase} requires every earlier visual-retention phase to be enabled.`);
       continue;
     }
 

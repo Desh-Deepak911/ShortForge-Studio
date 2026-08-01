@@ -1,5 +1,5 @@
 /**
- * Sprint 12B editor commands for mixed image/video visual sequences.
+ * Editor commands for mixed image/video visual sequences.
  * Always dual-writes mediaTimeline so Preview/Export share one window plan.
  */
 

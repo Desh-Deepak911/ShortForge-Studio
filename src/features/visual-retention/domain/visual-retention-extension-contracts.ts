@@ -1,5 +1,5 @@
 /**
- * Optional future-facing project contracts reserved by Sprint 12A.
+ * Optional future-facing project contracts reserved by visual-retention foundation.
  * They are not attached to Story/ExportManifest until their gated phase lands.
  */
 

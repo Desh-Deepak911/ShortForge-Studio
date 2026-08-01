@@ -1,6 +1,6 @@
 /**
- * Sprint 12B — Chrome hardening: Smart Edit hydration + invalid timing guidance.
- * Run via: npm run test:mixed-media-scenes-12b
+ * Smart Edit hydration + StudioNumberStepper accessibility guidance.
+ * Run via: npm run test:mixed-media-scenes
  */
 
 import assert from "node:assert/strict";
@@ -226,7 +226,7 @@ async function main(): Promise<void> {
     console.log(`  ✓ ${name}`);
   }
   console.log(
-    `\nSprint 12B Chrome hardening: ${passed}/${tests.length} PASS`,
+    `\nSmart Edit + stepper accessibility: ${passed}/${tests.length} PASS`,
   );
 }
 
