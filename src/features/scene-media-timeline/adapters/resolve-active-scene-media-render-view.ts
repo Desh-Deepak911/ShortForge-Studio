@@ -4,6 +4,7 @@
  * Does not invent a second timing algorithm.
  */
 
+import { projectSceneVisualPlan } from "@/features/mixed-media-scenes/adapters/project-visual-sequence";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
 import { getSceneDurationMs } from "@/features/story/utils/scene.utils";
 
@@ -11,11 +12,7 @@ import type {
   ResolvedMediaWindowProvenance,
   ResolvedSceneMediaWindow,
 } from "../resolution/resolve-media-windows";
-import {
-  resolveActiveSceneMediaAtElapsed,
-  resolveSceneMediaWindows,
-} from "../resolution/resolve-media-windows";
-import { projectSceneMediaTimeline } from "./project-scene-media-timeline";
+import { resolveActiveSceneMediaAtElapsed } from "../resolution/resolve-media-windows";
 import { sceneMediaToCompatibilityImage } from "./scene-media-to-compatibility-image";
 
 export interface ActiveSceneMediaRenderView {
@@ -45,9 +42,15 @@ export interface ResolveActiveSceneMediaRenderViewOptions {
   /**
    * When false, first-item-only windows (deterministic regression / migration tests).
    * Default true — production Preview uses the complete projected timeline.
-   * Never read process.env here.
+   * Never read environment variables here.
    */
   readonly multiImageScenesEnabled?: boolean;
+  /**
+   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Default false (fail-closed). Caller supplies the resolved capability —
+   * this module never reads environment variables.
+   */
+  readonly mixedMediaScenesEnabled?: boolean;
 }
 
 function emptyView(
@@ -127,14 +130,26 @@ export function buildActiveSceneMediaRenderViewFromWindow(
 export function resolveActiveSceneMediaRenderView(
   scene: Pick<
     FootieScene,
-    "id" | "image" | "uploadedImage" | "media" | "mediaTimeline" | "duration" | "durationMs"
+    | "id"
+    | "image"
+    | "uploadedImage"
+    | "media"
+    | "mediaTimeline"
+    | "visualSequence"
+    | "duration"
+    | "durationMs"
   >,
   sceneElapsedMs: number,
   options: ResolveActiveSceneMediaRenderViewOptions = {},
 ): ActiveSceneMediaRenderView {
   const multiImageScenesEnabled = options.multiImageScenesEnabled !== false;
+  const mixedMediaScenesEnabled = options.mixedMediaScenesEnabled === true;
   const sceneDurationMs = getSceneDurationMs(scene as FootieScene);
-  const projected = projectSceneMediaTimeline(scene);
+  // Explicit capability decision — never implicit "auto" activation.
+  const visualPlan = projectSceneVisualPlan(scene, {
+    mixedMediaScenesEnabled,
+  });
+  const projected = visualPlan.timelineProjection;
 
   if (projected.items.length === 0) {
     return emptyView(scene, sceneElapsedMs, sceneDurationMs);
@@ -154,7 +169,7 @@ export function resolveActiveSceneMediaRenderView(
 
   const resolution = resolveActiveSceneMediaAtElapsed({
     items,
-    sceneDurationMs,
+    sceneDurationMs: visualPlan.sceneDurationMs || sceneDurationMs,
     sceneElapsedMs,
     provenance,
   });
@@ -180,7 +195,14 @@ export function resolveActiveSceneMediaRenderView(
 export function resolveSceneMediaItemRenderView(
   scene: Pick<
     FootieScene,
-    "id" | "image" | "uploadedImage" | "media" | "mediaTimeline" | "duration" | "durationMs"
+    | "id"
+    | "image"
+    | "uploadedImage"
+    | "media"
+    | "mediaTimeline"
+    | "visualSequence"
+    | "duration"
+    | "durationMs"
   >,
   mediaItemId: string,
   itemElapsedMs: number,
@@ -223,25 +245,37 @@ export function resolveSceneMediaItemRenderView(
 export function resolvePreviewSceneMediaWindows(
   scene: Pick<
     FootieScene,
-    "id" | "image" | "uploadedImage" | "media" | "mediaTimeline" | "duration" | "durationMs"
+    | "id"
+    | "image"
+    | "uploadedImage"
+    | "media"
+    | "mediaTimeline"
+    | "visualSequence"
+    | "duration"
+    | "durationMs"
   >,
   options: ResolveActiveSceneMediaRenderViewOptions = {},
 ): ResolvedSceneMediaWindow[] {
   const multiImageScenesEnabled = options.multiImageScenesEnabled !== false;
-  const projected = projectSceneMediaTimeline(scene);
-  if (projected.items.length === 0) {
+  const mixedMediaScenesEnabled = options.mixedMediaScenesEnabled === true;
+  const visualPlan = projectSceneVisualPlan(scene, {
+    mixedMediaScenesEnabled,
+  });
+  if (visualPlan.windows.length === 0) {
     return [];
   }
-  const items = multiImageScenesEnabled
-    ? projected.items
-    : [projected.items[0]!];
-  return resolveSceneMediaWindows({
-    items,
-    sceneDurationMs: projected.sceneDurationMs,
-    provenance: multiImageScenesEnabled
-      ? projected.fromStoredTimeline
-        ? "stored_timeline"
-        : "legacy_virtual"
-      : "legacy_virtual",
-  });
+  if (!multiImageScenesEnabled) {
+    const first = visualPlan.windows[0]!;
+    return [
+      {
+        ...first,
+        itemIndex: 0,
+        startMs: 0,
+        endMs: visualPlan.sceneDurationMs,
+        durationMs: visualPlan.sceneDurationMs,
+        provenance: "legacy_virtual",
+      },
+    ];
+  }
+  return visualPlan.windows;
 }

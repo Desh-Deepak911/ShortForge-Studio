@@ -982,6 +982,7 @@ export async function exportFootieShort(
       story: script,
       options,
       throwIfBlocked: true,
+      mixedMediaScenesEnabled: options.mixedMediaScenesEnabled === true,
     });
 
     await exportFootieShortFromManifest(prepared, onProgress, {

@@ -139,6 +139,34 @@ export interface SceneMediaTimeline {
   items: SceneMediaTimelineItem[];
 }
 
+/**
+ * One ordered visual item in a Sprint 12B narration-scene visual sequence.
+ * Timing is scene-local (ms) and must fit within narration scene duration.
+ */
+export interface SceneVisualSequenceItem {
+  /** Stable, persisted, unique within the owning scene. */
+  id: string;
+  media: SceneMedia;
+  /**
+   * Scene-local start offset in ms (narration-relative).
+   * Sequential authority: item 0 is always 0; for item i > 0 this is the
+   * boundary between item i-1 and item i (contiguous playback, no gaps).
+   */
+  startOffsetMs: number;
+  /** On-screen duration in ms; sequence stays contiguous inside narration. */
+  durationMs: number;
+}
+
+/**
+ * Optional Sprint 12B visual sequence: multiple ordered image/video items in one
+ * narration scene. Absence preserves legacy/single-media and Sprint 8 timeline
+ * behavior. Never required to open existing projects.
+ */
+export interface SceneVisualSequence {
+  version: 1;
+  items: SceneVisualSequenceItem[];
+}
+
 /** Pan/zoom transform for a manually uploaded scene image. */
 export interface SceneImage {
   url: string;
@@ -177,6 +205,12 @@ export interface FootieScene {
    * `image` / `uploadedImage` throughout the compatibility period.
    */
   mediaTimeline?: SceneMediaTimeline;
+  /**
+   * Optional Sprint 12B visual sequence (mixed image/video) for one narration scene.
+   * Absence means legacy/single-media or Sprint 8 weight timeline. Gated by
+   * `mixed-media-scenes-v1`. Dual-written to `mediaTimeline` for shared Preview/Export.
+   */
+  visualSequence?: SceneVisualSequence;
   /**
    * Optional intra-scene media-to-media transition track (Sprint 9A).
    * Absence means every adjacent pair is Cut. Never stores Cut records.

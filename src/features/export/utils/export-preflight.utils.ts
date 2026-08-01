@@ -1,3 +1,4 @@
+import { applyVisualSequenceAuthorityToStory } from "@/features/mixed-media-scenes/adapters/reconcile-visual-sequence-authority";
 import { applyMasterTimelineSceneTiming } from "@/features/timeline-intelligence/apply-master-timeline-scenes.utils";
 import { buildOptimizedMasterTimeline } from "@/features/timeline-intelligence/build-optimized-master-timeline.utils";
 import {
@@ -16,6 +17,15 @@ import {
 } from "./export-media-validation.utils";
 import { resolveNarrationVoiceoverMismatchWarning } from "./export-narration-voiceover.utils";
 
+export interface PrepareStoryForExportOptions {
+  /**
+   * Explicit Sprint 12B capability decision. Default false (fail-closed).
+   * Must be resolved by the caller from the server gate / client capability
+   * snapshot — this module never reads environment variables.
+   */
+  readonly mixedMediaScenesEnabled?: boolean;
+}
+
 export interface PrepareStoryForExportResult {
   story: FootieScript;
   /** Canonical render/export span from MasterTimeline.renderDurationMs. */
@@ -31,16 +41,27 @@ export interface PrepareStoryForExportResult {
 /**
  * Builds an export-normalized story copy without mutating editor state.
  * Scene timing and export duration are derived from MasterTimeline (export authority).
+ *
+ * Order (Sprint 12B):
+ * 1. sync
+ * 2. MasterTimeline + voiceover scene-duration refit
+ * 3. visualSequence ↔ mediaTimeline reconcile against **final** scene durations
+ * 4. media validation on the repaired export copy
+ * 5. final sync
  */
-export function prepareStoryForExport(story: FootieScript): PrepareStoryForExportResult {
-  const synced = syncFootieScript(story);
-  const masterTimeline = buildOptimizedMasterTimeline(synced, {
+export function prepareStoryForExport(
+  story: FootieScript,
+  options: PrepareStoryForExportOptions = {},
+): PrepareStoryForExportResult {
+  const mixedMediaScenesEnabled = options.mixedMediaScenesEnabled === true;
+  const syncedBase = syncFootieScript(story);
+  const masterTimeline = buildOptimizedMasterTimeline(syncedBase, {
     mode: "export",
     useVoiceoverRefit: true,
   });
 
   const warnings = [...masterTimeline.warnings];
-  const canonicalVoiceover = getCanonicalVoiceover(synced);
+  const canonicalVoiceover = getCanonicalVoiceover(syncedBase);
   const voiceoverDurationMs =
     canonicalVoiceover?.durationMs != null && canonicalVoiceover.durationMs > 0
       ? Math.round(canonicalVoiceover.durationMs)
@@ -48,30 +69,41 @@ export function prepareStoryForExport(story: FootieScript): PrepareStoryForExpor
 
   if (
     voiceoverDurationMs > 0 &&
-    shouldPreferEditorSceneTimingAuthority(synced.scenes, voiceoverDurationMs) &&
+    shouldPreferEditorSceneTimingAuthority(syncedBase.scenes, voiceoverDurationMs) &&
     !warnings.includes(STORY_DURATION_NARRATION_MISMATCH_WARNING)
   ) {
     warnings.push(STORY_DURATION_NARRATION_MISMATCH_WARNING);
   }
 
-  const narrationMismatchWarning = resolveNarrationVoiceoverMismatchWarning(synced);
+  const narrationMismatchWarning = resolveNarrationVoiceoverMismatchWarning(syncedBase);
   if (narrationMismatchWarning) {
     warnings.push(narrationMismatchWarning);
   }
 
-  const mediaIssues = validateExportStoryMedia(synced);
-  warnings.push(...formatExportMediaValidationWarnings(mediaIssues));
+  const refittedScenes = applyMasterTimelineSceneTiming(
+    syncedBase.scenes,
+    masterTimeline,
+  );
 
-  const refittedScenes = applyMasterTimelineSceneTiming(synced.scenes, masterTimeline);
-
-  const normalizedStory = syncFootieScript({
-    ...synced,
+  const durationNormalized = syncFootieScript({
+    ...syncedBase,
     scenes: refittedScenes,
     ...(canonicalVoiceover?.url ? { voiceoverUrl: canonicalVoiceover.url } : {}),
     ...(canonicalVoiceover?.durationMs != null && canonicalVoiceover.durationMs > 0
       ? { voiceoverDurationMs: Math.round(canonicalVoiceover.durationMs) }
       : {}),
   });
+
+  // Reconcile after refit so visual windows use final narration-authoritative durations.
+  const visualAuthority = applyVisualSequenceAuthorityToStory(durationNormalized, {
+    mixedMediaScenesEnabled,
+  });
+  warnings.push(...visualAuthority.warnings);
+
+  const mediaIssues = validateExportStoryMedia(visualAuthority.story);
+  warnings.push(...formatExportMediaValidationWarnings(mediaIssues));
+
+  const normalizedStory = syncFootieScript(visualAuthority.story);
 
   return {
     story: normalizedStory,

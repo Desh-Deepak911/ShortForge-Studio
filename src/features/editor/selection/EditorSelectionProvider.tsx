@@ -9,9 +9,11 @@ import {
   type ReactNode,
 } from "react";
 
+import { isInspectorSelectableMediaItemId } from "@/features/mixed-media-scenes/adapters/inspector-scene-media-projection";
+import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import { isSelectableSceneMediaItemId } from "@/features/scene-media-timeline/editor";
 import { isSelectableSceneMediaTransitionPair } from "@/features/scene-media-transitions";
-import type { FootieScript } from "@/features/story/types";
+import type { FootieScene, FootieScript } from "@/features/story/types";
 
 import { SelectionContext, type EditorSelectionContextValue } from "./SelectionContext";
 import {
@@ -161,6 +163,16 @@ export default function EditorSelectionProvider({
   onSelectedSceneChange,
   children,
 }: EditorSelectionProviderProps) {
+  const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
+  const isItemSelectable = useCallback(
+    (scene: FootieScene, mediaItemId: string) =>
+      mixedMediaScenesEnabled
+        ? isInspectorSelectableMediaItemId(scene, mediaItemId, {
+            mixedMediaScenesEnabled: true,
+          })
+        : isSelectableSceneMediaItemId(scene, mediaItemId),
+    [mixedMediaScenesEnabled],
+  );
   const safeSceneIndex = resolveSafeSceneIndex(script.scenes, selectedSceneIndex);
   const selectedScene = resolveSelectedScene(script, selectedSceneIndex);
   const selectedSceneId = selectedScene?.id ?? null;
@@ -203,10 +215,10 @@ export default function EditorSelectionProvider({
     if (!selectedMediaItemId || !selectedScene) {
       return null;
     }
-    return isSelectableSceneMediaItemId(selectedScene, selectedMediaItemId)
+    return isItemSelectable(selectedScene, selectedMediaItemId)
       ? selectedMediaItemId
       : null;
-  }, [selectedMediaItemId, selectedScene]);
+  }, [isItemSelectable, selectedMediaItemId, selectedScene]);
 
   const validatedMediaTransition = useMemo(() => {
     if (!selectedMediaTransition || !selectedScene) {
@@ -405,7 +417,7 @@ export default function EditorSelectionProvider({
       }
 
       const scene = script.scenes[index];
-      if (!scene || !isSelectableSceneMediaItemId(scene, trimmedId)) {
+      if (!scene || !isItemSelectable(scene, trimmedId)) {
         return;
       }
 
@@ -419,7 +431,7 @@ export default function EditorSelectionProvider({
       setSelectedMediaItemId(trimmedId);
       setSelectionFocus(SelectionType.SceneMediaItem);
     },
-    [playbackLocked, script, selectedSceneId, syncSceneIndex],
+    [isItemSelectable, playbackLocked, script, selectedSceneId, syncSceneIndex],
   );
 
   const selectSceneMediaTransition = useCallback(
@@ -545,6 +557,7 @@ export default function EditorSelectionProvider({
       storedMediaItemId: selectedMediaItemId,
       selectionFocus,
       scene: selectedScene,
+      isItemSelectable,
     });
     if (!reconciled.didClear || !selectedMediaItemId) {
       return;
@@ -559,7 +572,7 @@ export default function EditorSelectionProvider({
         focus === SelectionType.SceneMediaItem ? SelectionType.Scene : focus,
       );
     });
-  }, [selectedMediaItemId, selectedScene, selectionFocus]);
+  }, [isItemSelectable, selectedMediaItemId, selectedScene, selectionFocus]);
 
   useEffect(() => {
     const reconciled = reconcileMediaTransitionSelectionAuthority({

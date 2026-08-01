@@ -47,6 +47,14 @@ const CAPABILITY_UI_SURFACES: Readonly<
     "headless-export",
     "warnings-and-errors",
   ),
+  "mixed-media-scenes-v1": uiSurfaces(
+    "editor",
+    "scene-inspector",
+    "preview",
+    "browser-export",
+    "headless-export",
+    "warnings-and-errors",
+  ),
 });
 
 /**

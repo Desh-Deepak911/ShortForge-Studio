@@ -43,6 +43,7 @@ export function SceneBackdrop({
   transformOffset,
   isDragging = false,
   multiImageScenesEnabled = true,
+  mixedMediaScenesEnabled = false,
   /** When provided, skip ordinary active-item resolution (exact peer / test injection). */
   activeMediaView: activeMediaViewOverride,
   allowFramingDrag: allowFramingDragOverride,
@@ -63,6 +64,11 @@ export function SceneBackdrop({
    * When false, first-item-only (regression tests). Default true — production multi-image.
    */
   multiImageScenesEnabled?: boolean;
+  /**
+   * Explicit Sprint 12B capability. Default false (fail-closed).
+   * Resolved once by VideoPreview from the workspace capability context.
+   */
+  mixedMediaScenesEnabled?: boolean;
   activeMediaView?: ActiveSceneMediaRenderView;
   allowFramingDrag?: boolean;
 }) {
@@ -77,6 +83,7 @@ export function SceneBackdrop({
     activeMediaViewOverride ??
     resolveActiveSceneMediaRenderView(scene, sceneElapsedMs, {
       multiImageScenesEnabled: multiEnabled,
+      mixedMediaScenesEnabled: mixedMediaScenesEnabled === true,
     });
   const hasDrawableActive = activeViewIsDrawable(activeMediaView);
   const allowFramingDrag =
@@ -171,6 +178,11 @@ interface PreviewFrameProps {
   /** Preview playback active — drives muted video play/pause. */
   isPlaying?: boolean;
   maxWidth?: string | number;
+  /**
+   * Explicit Sprint 12B capability. Default false (fail-closed).
+   * Resolved once by VideoPreview — not fetched per frame.
+   */
+  mixedMediaScenesEnabled?: boolean;
 }
 
 export default function PreviewFrame({
@@ -192,8 +204,10 @@ export default function PreviewFrame({
   sceneDurationMs = 0,
   isPlaying = false,
   maxWidth,
+  mixedMediaScenesEnabled = false,
 }: PreviewFrameProps) {
   void sceneDurationMs;
+  const mixedMediaEnabled = mixedMediaScenesEnabled === true;
 
   const transitionStyles = transitionOverlay
     ? transitionStateToPreviewLayerStyles(
@@ -208,6 +222,7 @@ export default function PreviewFrame({
         scene: previewFrame.scene,
         sceneElapsedMs,
         isPlaying,
+        mixedMediaScenesEnabled: mixedMediaEnabled,
       })
     : null;
 
@@ -225,6 +240,7 @@ export default function PreviewFrame({
             sceneDurationMs={transitionFromSceneDurationMs}
             isPlaying={false}
             isActive={false}
+            mixedMediaScenesEnabled={mixedMediaEnabled}
           />
           <SceneBackdrop
             scene={transitionOverlay.toScene}
@@ -234,6 +250,7 @@ export default function PreviewFrame({
             sceneDurationMs={transitionToSceneDurationMs}
             isPlaying={false}
             isActive={false}
+            mixedMediaScenesEnabled={mixedMediaEnabled}
           />
         </>
       ) : mediaLayerPlan ? (

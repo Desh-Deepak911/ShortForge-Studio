@@ -69,6 +69,8 @@ export interface PlanPreviewMediaLayersInput {
   readonly sceneElapsedMs: number;
   readonly isPlaying: boolean;
   readonly multiImageScenesEnabled?: boolean;
+  /** Explicit Sprint 12B capability. Default false (fail-closed). */
+  readonly mixedMediaScenesEnabled?: boolean;
 }
 
 /**
@@ -82,6 +84,7 @@ export function planPreviewMediaLayers(
 ): PreviewMediaLayerPlan {
   const options: ResolveActiveSceneMediaRenderViewOptions = {
     multiImageScenesEnabled: input.multiImageScenesEnabled !== false,
+    mixedMediaScenesEnabled: input.mixedMediaScenesEnabled === true,
   };
 
   const ordinaryView = resolveActiveSceneMediaRenderView(

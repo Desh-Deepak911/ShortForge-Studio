@@ -17,6 +17,7 @@ import {
   studioShellSectionTitle,
 } from "@/lib/utils/studioUi";
 
+import { useClientMounted } from "./useClientMounted";
 import { useStudioOverlayLock } from "./useStudioOverlayLock";
 
 export type StudioOverlayVariant = "drawer-end" | "modal-center";
@@ -41,6 +42,9 @@ export interface StudioOverlayProps {
 
 /**
  * Unified Studio overlay — drawer-end (export, asset browser) or modal-center (publishing, confirm).
+ *
+ * Portals mount only after hydration (`useClientMounted`) so the server render and
+ * first client hydration snapshot both omit overlay DOM (no `document` branch skew).
  */
 export default function StudioOverlay({
   open,
@@ -60,10 +64,12 @@ export default function StudioOverlay({
 }: StudioOverlayProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const handleClose = () => onOpenChange(false);
+  const mounted = useClientMounted();
 
-  useStudioOverlayLock(open, handleClose, panelRef);
+  // Defer focus/scroll lock until the portal exists after hydration.
+  useStudioOverlayLock(open && mounted, handleClose, panelRef);
 
-  if (typeof document === "undefined") {
+  if (!mounted) {
     return null;
   }
 
@@ -74,6 +80,7 @@ export default function StudioOverlay({
   const backdrop = (
     <div
       aria-hidden={!open}
+      data-studio-overlay-backdrop=""
       className={`${studioExportDrawerBackdrop} ${
         open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
       }`}
@@ -117,6 +124,7 @@ export default function StudioOverlay({
           aria-labelledby={titleId}
           aria-hidden={!open}
           tabIndex={-1}
+          data-studio-overlay-panel="drawer-end"
           className={`${studioExportDrawerPanel} ${panelClassName} ${
             open
               ? "pointer-events-auto translate-y-0 lg:translate-x-0 lg:translate-y-0"
@@ -137,6 +145,7 @@ export default function StudioOverlay({
       {backdrop}
       <div
         aria-hidden={!open}
+        data-studio-overlay-panel="modal-center"
         className={`${studioOverlayModalShell} ${
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         } ${className}`.trim()}

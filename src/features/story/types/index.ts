@@ -26,6 +26,8 @@ export type {
   SceneMediaSource,
   SceneMediaTimeline,
   SceneMediaTimelineItem,
+  SceneVisualSequence,
+  SceneVisualSequenceItem,
   SceneMediaTransitionBoundary,
   SceneMediaTransitionTrack,
   SceneMediaTransform,

@@ -27,6 +27,24 @@ operation is triggered by setting or evaluating the flag. Staging rollout must
 still pass the phase-specific gate-on/gate-off matrix before a later phase is
 offered in creator UI.
 
+Sprint 12B (`mixed-media-scenes-v1`) remains off unless the phase list includes
+both `12A` and `12B` under the same staging fail-closed rules. Creator UI reads
+capability availability through `GET /api/visual-retention/capabilities` (server
+evaluates `SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES`); the pure domain modules
+never read `NEXT_PUBLIC_*`.
+
+Render/export authority: Preview, browser export, and headless export all pass
+an explicit resolved `mixedMediaScenesEnabled` into the shared reconciliation
+seam (`reconcileVisualSequenceRenderAuthority` / `projectSceneVisualPlan`).
+When the capability is on, a usable `visualSequence` wins and repairs a
+disagreeing `mediaTimeline` (diagnostic warning). When off / fail-closed,
+`visualSequence` is ignored and dual-written `mediaTimeline` or legacy media
+wins. Production entry points never use implicit `"auto"` activation.
+Capability-off keeps authoring UI and commands disabled; legacy scenes without
+`visualSequence` are unchanged. Draft JSON may still persist `blob:` URLs —
+binary rehydration after reload remains an existing limitation (same as
+Sprint 8B scene-media uploads).
+
 ## Sprint 11A / 11A.1 / 11B / 11B.1 / 11B.1A / 11C / 11C.1 / 11C.1A / 11D — Headless Renderer
 
 **11A / 11A.1:** Documentation only for architecture + user-triggered Export authority.

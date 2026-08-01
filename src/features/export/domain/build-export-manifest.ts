@@ -43,10 +43,8 @@ import type { ExportAudioMode } from "@/features/export/utils/export-quality.uti
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
-import {
-  projectSceneMediaTimeline,
-  resolveSceneMediaWindows,
-} from "@/features/scene-media-timeline";
+import { projectSceneVisualPlan } from "@/features/mixed-media-scenes/adapters/project-visual-sequence";
+import { resolveSceneMediaWindows } from "@/features/scene-media-timeline";
 
 import { buildExportEnvironmentSnapshot } from "./export-environment.utils";
 import { buildExportManifestFingerprint } from "./export-manifest-fingerprint";
@@ -86,13 +84,22 @@ export interface BuildExportManifestInput {
    * When false, freezes one first-item compatibility timeline per scene
    * (deterministic regression / migration tests only).
    * Default true — production multi-image ExportManifest v2.
-   * Must not be derived from process.env inside this module.
+   * Must not be derived from environment variables inside this module.
    */
   readonly multiImageScenesEnabled?: boolean;
+  /**
+   * Explicit Sprint 12B `mixed-media-scenes-v1` decision.
+   * Default false (fail-closed). Caller supplies the resolved capability —
+   * this module never reads environment variables.
+   */
+  readonly mixedMediaScenesEnabled?: boolean;
 }
 
 export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV4 {
-  const prepared = input.prepared ?? prepareStoryForExport(input.story);
+  const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
+  const prepared =
+    input.prepared ??
+    prepareStoryForExport(input.story, { mixedMediaScenesEnabled });
   const story = prepared.story;
   const timeline = prepared.masterTimeline;
   const settings = normalizeExportSettings(
@@ -111,7 +118,12 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
 
   const project = buildProjectManifest(story, timeline, prepared);
   const output = buildOutputManifest(settings, quality);
-  const scenes = buildSceneManifests(story, timeline, multiImageScenesEnabled);
+  const scenes = buildSceneManifests(
+    story,
+    timeline,
+    multiImageScenesEnabled,
+    mixedMediaScenesEnabled,
+  );
   const captions = buildCaptionManifests(story, timeline);
   const audio = buildAudioManifest(story, audioMix, {
     includeNarration,
@@ -188,6 +200,7 @@ function buildSceneManifests(
   story: FootieScript,
   timeline: MasterTimeline,
   multiImageScenesEnabled: boolean,
+  mixedMediaScenesEnabled: boolean,
 ): readonly ExportSceneManifestV3[] {
   const transitions = collectTransitions(story, timeline);
   return story.scenes.map((scene, index) => {
@@ -201,6 +214,7 @@ function buildSceneManifests(
       scene,
       durationMs,
       multiImageScenesEnabled,
+      mixedMediaScenesEnabled,
     );
     const media =
       mediaTimeline.items[0]?.media ?? ({ type: "placeholder" } as const);
@@ -232,8 +246,13 @@ function buildSceneMediaTimelineManifest(
   scene: FootieScene,
   sceneDurationMs: number,
   multiImageScenesEnabled: boolean,
+  mixedMediaScenesEnabled: boolean,
 ): ExportSceneMediaTimelineManifest {
-  const projected = projectSceneMediaTimeline(scene);
+  // Same explicit capability decision as Preview / headless.
+  const visualPlan = projectSceneVisualPlan(scene, {
+    mixedMediaScenesEnabled,
+  });
+  const projected = visualPlan.timelineProjection;
   const sourceItems =
     multiImageScenesEnabled || projected.items.length === 0
       ? projected.items
@@ -255,11 +274,27 @@ function buildSceneMediaTimelineManifest(
     };
   }
 
-  const windows = resolveSceneMediaWindows({
-    items: sourceItems,
-    sceneDurationMs,
-    provenance: projected.fromStoredTimeline ? "stored_timeline" : "legacy_virtual",
-  });
+  // Prefer absolute windows from visualSequence when that authority won so
+  // proportional weight re-allocation cannot drift from the normalized plan.
+  const windows = visualPlan.fromVisualSequence
+    ? multiImageScenesEnabled
+      ? visualPlan.windows
+      : [
+          {
+            ...visualPlan.windows[0]!,
+            itemIndex: 0,
+            startMs: 0,
+            endMs: sceneDurationMs,
+            durationMs: sceneDurationMs,
+          },
+        ]
+    : resolveSceneMediaWindows({
+        items: sourceItems,
+        sceneDurationMs,
+        provenance: projected.fromStoredTimeline
+          ? "stored_timeline"
+          : "legacy_virtual",
+      });
 
   const items: ExportSceneMediaTimelineItemManifest[] = windows.map((window) => ({
     id: window.itemId,
