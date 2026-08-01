@@ -184,7 +184,7 @@ function main(): void {
     );
   });
 
-  test("no project-level density setting in this slice", () => {
+  test("no project-level density setting in Visual pacing UI", () => {
     const inspector = readSrc(
       "src/features/editor/components/StudioSceneInspector.tsx",
     );

@@ -97,6 +97,8 @@ export interface BuildExportManifestInput {
 
 export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV4 {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
+  // Fallback preparation freezes timing only. Authoring guidance (Visual pacing)
+  // is owned by prepareExportRequest, not manifest construction.
   const prepared =
     input.prepared ??
     prepareStoryForExport(input.story, { mixedMediaScenesEnabled });

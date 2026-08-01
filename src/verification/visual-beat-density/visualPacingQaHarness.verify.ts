@@ -351,7 +351,7 @@ function testSharedCapabilityFetchAndExportWiring(): void {
   assert.match(exportPanel, /HeadlessExportSection|headless/i);
   assert.doesNotMatch(exportPanel, /visual-beat-density-v1/);
 
-  // Manifest builders must not gain plan/provenance fields from this harness slice.
+  // Manifest builders must not gain plan/provenance fields from the QA harness.
   const manifestTypes = readSrc(
     "src/features/export/domain/export-manifest.types.ts",
   );

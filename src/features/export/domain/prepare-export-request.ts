@@ -74,9 +74,9 @@ export async function prepareExportRequest(
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
   const visualBeatDensityEnabled = input.visualBeatDensityEnabled === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
+  // Timing authority only — authoring guidance is appended once below.
   const preparedStory = prepareStoryForExport(voiceoverPrepared, {
     mixedMediaScenesEnabled,
-    visualBeatDensityEnabled,
   });
   const exportSettings = resolveExportSettings(voiceoverPrepared, input.options);
   const audioMix = buildAudioMixFromStory(preparedStory.story);
@@ -108,6 +108,8 @@ export async function prepareExportRequest(
   });
 
   const basePreflight = runExportCapabilityPreflight(manifest);
+  // Single authority for Visual pacing export guidance: final prepared story
+  // after voiceover refit + visual-sequence reconciliation (not manifest build).
   const pacingGuidance = resolveVisualPacingExportGuidance(preparedStory.story, {
     visualBeatDensityEnabled,
   });

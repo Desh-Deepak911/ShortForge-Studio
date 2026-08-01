@@ -1,6 +1,7 @@
 /**
  * visual-beat-density-v1 capability gate (staging-only).
- * Defaults off unless phase gates explicitly enable 12A+12B+12C.
+ * Defaults off unless phase gates explicitly enable narration retention,
+ * mixed-media scenes, and visual-beat density.
  */
 
 import {

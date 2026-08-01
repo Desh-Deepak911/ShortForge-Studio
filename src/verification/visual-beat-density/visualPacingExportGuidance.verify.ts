@@ -120,22 +120,49 @@ function appliedScript(): FootieScript {
   return applied.script;
 }
 
+const CAPABLE_ENV = {
+  browserName: "chrome" as const,
+  supportsCanvasCaptureStream: true,
+  supportsManualCanvasFrameRequest: true,
+  supportsMediaRecorder: true,
+  supportsRequestVideoFrameCallback: true,
+  supportsWebAssembly: true,
+  serverRendererAvailable: false,
+  ffmpegRuntimePoisoned: false,
+  estimatedHeapLimitBytes: 4 * 1024 * 1024 * 1024,
+  mp4EncoderAvailable: true,
+};
+
+function countPreflightCode(
+  warnings: ReadonlyArray<{ code: string }>,
+  code: string,
+): number {
+  return warnings.filter((warning) => warning.code === code).length;
+}
+
+async function prepareGuidedRequest(story: FootieScript, enabled = true) {
+  return prepareExportRequest({
+    story,
+    throwIfBlocked: false,
+    mixedMediaScenesEnabled: true,
+    visualBeatDensityEnabled: enabled,
+    environment: CAPABLE_ENV,
+  });
+}
+
 async function main(): Promise<void> {
   console.log("\nVisual pacing export guidance\n");
 
   test("no plan → no guidance", () => {
     const prepared = prepareStoryForExport(seededScript(), {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     const guidance = resolveVisualPacingExportGuidance(prepared.story, {
       visualBeatDensityEnabled: true,
     });
     assert.equal(guidance.length, 0);
     assert.equal(
-      prepared.warnings.some((warning) =>
-        warning.includes("Visual pacing"),
-      ),
+      prepared.warnings.some((warning) => warning.includes("Visual pacing")),
       false,
     );
   });
@@ -143,7 +170,6 @@ async function main(): Promise<void> {
   test("current draft → draft-not-applied warning", () => {
     const prepared = prepareStoryForExport(draftScript(), {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     const guidance = resolveVisualPacingExportGuidance(prepared.story, {
       visualBeatDensityEnabled: true,
@@ -157,17 +183,15 @@ async function main(): Promise<void> {
       guidance[0]!.message,
       VISUAL_PACING_EXPORT_GUIDANCE_MESSAGES.VISUAL_PACING_DRAFT_NOT_APPLIED,
     );
-    assert.ok(
-      prepared.warnings.includes(
-        VISUAL_PACING_EXPORT_GUIDANCE_MESSAGES.VISUAL_PACING_DRAFT_NOT_APPLIED,
-      ),
+    assert.equal(
+      prepared.warnings.some((warning) => warning.includes("Visual pacing")),
+      false,
     );
   });
 
   test("current applied → no guidance", () => {
     const prepared = prepareStoryForExport(appliedScript(), {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     const guidance = resolveVisualPacingExportGuidance(prepared.story, {
       visualBeatDensityEnabled: true,
@@ -187,7 +211,6 @@ async function main(): Promise<void> {
     };
     const prepared = prepareStoryForExport(script, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     const guidance = resolveVisualPacingExportGuidance(prepared.story, {
       visualBeatDensityEnabled: true,
@@ -212,7 +235,6 @@ async function main(): Promise<void> {
     };
     const prepared = prepareStoryForExport(script, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     assert.ok(
       resolveVisualPacingExportGuidance(prepared.story, {
@@ -233,7 +255,6 @@ async function main(): Promise<void> {
     script = { ...script, scenes: [edited.scene] };
     const prepared = prepareStoryForExport(script, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     assert.equal(
       resolveVisualPacingExportGuidance(prepared.story, {
@@ -259,7 +280,6 @@ async function main(): Promise<void> {
     };
     const prepared = prepareStoryForExport(script, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     assert.equal(
       resolveVisualPacingExportGuidance(prepared.story, {
@@ -278,7 +298,6 @@ async function main(): Promise<void> {
   test("capability off ignores plan metadata", () => {
     const prepared = prepareStoryForExport(draftScript(), {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: false,
     });
     assert.equal(
       resolveVisualPacingExportGuidance(prepared.story, {
@@ -296,7 +315,6 @@ async function main(): Promise<void> {
     const legacy = baseScript(baseScene({ id: "legacy" }));
     const prepared = prepareStoryForExport(legacy, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     assert.equal(
       resolveVisualPacingExportGuidance(prepared.story, {
@@ -322,7 +340,6 @@ async function main(): Promise<void> {
     );
     const prepared = prepareStoryForExport(discarded.script, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     assert.equal(
       resolveVisualPacingExportGuidance(prepared.story, {
@@ -332,33 +349,113 @@ async function main(): Promise<void> {
     );
   });
 
-  await testAsync("prepareExportRequest merges typed recoverable warnings", async () => {
-    const prepared = await prepareExportRequest({
-      story: draftScript(),
-      throwIfBlocked: false,
+  test("prepareStoryForExport never appends Visual pacing string warnings", () => {
+    const draftPrepared = prepareStoryForExport(draftScript(), {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
-      environment: {
-        browserName: "chrome",
-        supportsCanvasCaptureStream: true,
-        supportsManualCanvasFrameRequest: true,
-        supportsMediaRecorder: true,
-        supportsRequestVideoFrameCallback: true,
-        supportsWebAssembly: true,
-        serverRendererAvailable: false,
-        ffmpegRuntimePoisoned: false,
-        estimatedHeapLimitBytes: 4 * 1024 * 1024 * 1024,
-        mp4EncoderAvailable: true,
-      },
     });
-    assert.ok(
-      prepared.preflight.warnings.some(
-        (warning) => warning.code === "VISUAL_PACING_DRAFT_NOT_APPLIED",
+    let staleScript = appliedScript();
+    staleScript = {
+      ...staleScript,
+      scenes: staleScript.scenes.map((scene) =>
+        scene.id === "scene-1"
+          ? { ...scene, narration: "Narration drift for preparation warnings." }
+          : scene,
       ),
+    };
+    const stalePrepared = prepareStoryForExport(staleScript, {
+      mixedMediaScenesEnabled: true,
+    });
+    const invalidPrepared = prepareStoryForExport(
+      {
+        ...appliedScript(),
+        scenes: [
+          {
+            ...appliedScript().scenes[0]!,
+            visualBeatPlan: { version: 1, bogus: true } as never,
+          },
+        ],
+      },
+      { mixedMediaScenesEnabled: true },
     );
-    assert.equal(prepared.preflight.supported, true);
-    assert.notEqual(prepared.preflight.renderer, "blocked");
+    for (const prepared of [draftPrepared, stalePrepared, invalidPrepared]) {
+      assert.equal(
+        prepared.warnings.some((warning) => warning.includes("Visual pacing")),
+        false,
+      );
+    }
+    // Unrelated preparation warnings remain available on the string list.
+    assert.ok(Array.isArray(draftPrepared.warnings));
   });
+
+  await testAsync(
+    "prepareExportRequest emits each draft/stale/invalid code exactly once",
+    async () => {
+      const draft = await prepareGuidedRequest(draftScript());
+      assert.equal(
+        countPreflightCode(
+          draft.preflight.warnings,
+          "VISUAL_PACING_DRAFT_NOT_APPLIED",
+        ),
+        1,
+      );
+      assert.equal(draft.preflight.supported, true);
+      assert.notEqual(draft.preflight.renderer, "blocked");
+
+      let staleScript = appliedScript();
+      staleScript = {
+        ...staleScript,
+        scenes: staleScript.scenes.map((scene) =>
+          scene.id === "scene-1"
+            ? { ...scene, narration: "Completely different narration now." }
+            : scene,
+        ),
+      };
+      const stale = await prepareGuidedRequest(staleScript);
+      assert.equal(
+        countPreflightCode(stale.preflight.warnings, "VISUAL_PACING_STALE"),
+        1,
+      );
+
+      const invalid = await prepareGuidedRequest({
+        ...appliedScript(),
+        scenes: [
+          {
+            ...appliedScript().scenes[0]!,
+            visualBeatPlan: { version: 1, bogus: true } as never,
+          },
+        ],
+      });
+      assert.equal(
+        countPreflightCode(
+          invalid.preflight.warnings,
+          "VISUAL_PACING_METADATA_INVALID",
+        ),
+        1,
+      );
+
+      const applied = await prepareGuidedRequest(appliedScript());
+      assert.equal(
+        applied.preflight.warnings.filter((warning) =>
+          String(warning.code).startsWith("VISUAL_PACING_"),
+        ).length,
+        0,
+      );
+      const capabilityOff = await prepareGuidedRequest(draftScript(), false);
+      assert.equal(
+        capabilityOff.preflight.warnings.filter((warning) =>
+          String(warning.code).startsWith("VISUAL_PACING_"),
+        ).length,
+        0,
+      );
+      const noPlan = await prepareGuidedRequest(seededScript());
+      assert.equal(
+        noPlan.preflight.warnings.filter((warning) =>
+          String(warning.code).startsWith("VISUAL_PACING_"),
+        ).length,
+        0,
+      );
+    },
+  );
 
   test("user-facing copy and wiring contracts", () => {
     assert.match(
@@ -376,8 +473,16 @@ async function main(): Promise<void> {
     const preflightUtils = readSrc(
       "src/features/export/utils/export-preflight.utils.ts",
     );
-    assert.match(preflightUtils, /resolveVisualPacingExportGuidance/);
-    assert.match(preflightUtils, /visualBeatDensityEnabled/);
+    assert.doesNotMatch(preflightUtils, /resolveVisualPacingExportGuidance/);
+    assert.match(
+      preflightUtils,
+      /authoring guidance is not evaluated here|prepareExportRequest/,
+    );
+    const prepareRequest = readSrc(
+      "src/features/export/domain/prepare-export-request.ts",
+    );
+    assert.match(prepareRequest, /resolveVisualPacingExportGuidance/);
+    assert.match(prepareRequest, /visualBeatDensityEnabled/);
     const exportPanel = readSrc("src/components/ExportPanel.tsx");
     assert.match(exportPanel, /useVisualBeatDensityEnabled/);
     assert.match(exportPanel, /visualBeatDensityEnabled/);

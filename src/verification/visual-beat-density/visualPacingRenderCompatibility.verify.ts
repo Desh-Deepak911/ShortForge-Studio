@@ -103,7 +103,6 @@ function appliedPrepared() {
   if (!applied.ok) throw new Error("apply failed");
   return prepareStoryForExport(applied.script, {
     mixedMediaScenesEnabled: true,
-    visualBeatDensityEnabled: true,
   });
 }
 

@@ -16,6 +16,7 @@ import {
 } from "@/features/visual-beat-density";
 import { resolveVisualPacingExportGuidance } from "@/features/visual-beat-density/adapters/resolve-visual-pacing-export-guidance";
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
+import { prepareExportRequest } from "@/features/export/domain/prepare-export-request";
 import { buildExportManifest } from "@/features/export/domain";
 import type { ExportEnvironmentSnapshot } from "@/features/export/domain/export-manifest.types";
 import type { FootieScene, FootieScript, SceneMedia } from "@/features/story/types";
@@ -24,6 +25,12 @@ let passed = 0;
 
 function test(name: string, fn: () => void): void {
   fn();
+  passed += 1;
+  console.log(`  ✓ ${name}`);
+}
+
+async function testAsync(name: string, fn: () => Promise<void>): Promise<void> {
+  await fn();
   passed += 1;
   console.log(`  ✓ ${name}`);
 }
@@ -101,7 +108,7 @@ function seededAppliedScript(): FootieScript {
   return applied.script;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   console.log("\nVisual pacing voiceover refit\n");
 
   test("editor story remains immutable through prepareStoryForExport", () => {
@@ -116,7 +123,6 @@ function main(): void {
     );
     prepareStoryForExport(editor, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     assert.equal(JSON.stringify(editor), beforeJson);
     assert.deepEqual(
@@ -140,7 +146,6 @@ function main(): void {
 
     const prepared = prepareStoryForExport(editor, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     const preparedScene = prepared.story.scenes[0]!;
     assert.notEqual(preparedScene.durationMs, editor.scenes[0]!.durationMs);
@@ -152,18 +157,45 @@ function main(): void {
       guidance.some((item) => item.code === "VISUAL_PACING_STALE"),
       "expected stale guidance after voiceover duration refit",
     );
-    assert.ok(
-      prepared.warnings.some((warning) =>
-        warning.includes("Visual pacing is out of date"),
-      ),
+    // prepareStoryForExport is timing-only — guidance strings belong to prepareExportRequest.
+    assert.equal(
+      prepared.warnings.some((warning) => warning.includes("Visual pacing")),
+      false,
     );
   });
+
+  await testAsync(
+    "prepareExportRequest emits stale exactly once after voiceover refit",
+    async () => {
+      const editor = seededAppliedScript();
+      const prepared = await prepareExportRequest({
+        story: editor,
+        throwIfBlocked: false,
+        mixedMediaScenesEnabled: true,
+        visualBeatDensityEnabled: true,
+        environment: CAPABLE_ENV,
+      });
+      assert.notEqual(
+        prepared.preparedStory.story.scenes[0]!.durationMs,
+        editor.scenes[0]!.durationMs,
+      );
+      const staleWarnings = prepared.preflight.warnings.filter(
+        (warning) => warning.code === "VISUAL_PACING_STALE",
+      );
+      assert.equal(staleWarnings.length, 1);
+      assert.equal(
+        prepared.preparedStory.warnings.some((warning) =>
+          warning.includes("Visual pacing"),
+        ),
+        false,
+      );
+    },
+  );
 
   test("Browser and Headless receive identical final media windows after refit", () => {
     const editor = seededAppliedScript();
     const prepared = prepareStoryForExport(editor, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     const browser = buildExportManifest({
       story: prepared.story,
@@ -209,7 +241,6 @@ function main(): void {
     };
     const prepared = prepareStoryForExport(withMusic, {
       mixedMediaScenesEnabled: true,
-      visualBeatDensityEnabled: true,
     });
     // Music must not clear stale guidance caused by voiceover refit.
     assert.ok(
@@ -222,4 +253,7 @@ function main(): void {
   console.log(`\nVisual pacing voiceover refit: ${passed} PASS`);
 }
 
-main();
+void main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
