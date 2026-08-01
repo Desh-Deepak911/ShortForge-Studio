@@ -1,5 +1,5 @@
 /**
- * Server-side production isolation for the mixed-media scenes QA harness.
+ * Shared server-side production isolation for local development QA harness routes.
  * Fail-closed outside the explicitly permitted local-development context.
  */
 
@@ -16,7 +16,7 @@ export function isLocalDevQaHarnessAllowed(
 }
 
 /**
- * Call from the harness route Server Component before rendering any UI.
+ * Call from a harness route Server Component before rendering any UI.
  * Invokes Next.js `notFound()` when the harness must stay unavailable.
  */
 export function assertLocalDevQaHarnessAllowed(

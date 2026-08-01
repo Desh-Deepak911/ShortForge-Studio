@@ -22,7 +22,7 @@ import {
   resolveInitialSmartEditReturnTo,
 } from "@/features/tool/hooks/smart-edit-return-to";
 import { buildSmartEditImageToolUrl } from "@/lib/utils/smart-image-tool.utils";
-import { isLocalDevQaHarnessAllowed } from "@/features/mixed-media-scenes/qa/assert-local-dev-qa-harness-allowed";
+import { isLocalDevQaHarnessAllowed } from "@/features/visual-retention/qa/assert-local-dev-qa-harness-allowed";
 
 function readSrc(rel: string): string {
   return readFileSync(path.join(process.cwd(), rel), "utf8");

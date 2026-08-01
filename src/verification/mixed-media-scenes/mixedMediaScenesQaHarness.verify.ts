@@ -11,7 +11,7 @@ import {
   projectSceneVisualPlan,
   resolveInspectorSceneMediaProjection,
 } from "@/features/mixed-media-scenes";
-import { isLocalDevQaHarnessAllowed } from "@/features/mixed-media-scenes/qa/assert-local-dev-qa-harness-allowed";
+import { isLocalDevQaHarnessAllowed } from "@/features/visual-retention/qa/assert-local-dev-qa-harness-allowed";
 import {
   buildMixedMediaScenesQaStory,
   MIXED_MEDIA_SCENES_QA_DURATION_MS,
@@ -34,7 +34,7 @@ function testProductionGuardFailClosed(): void {
   assert.equal(isLocalDevQaHarnessAllowed("development"), true);
 
   const guard = readSrc(
-    "src/features/mixed-media-scenes/qa/assert-local-dev-qa-harness-allowed.ts",
+    "src/features/visual-retention/qa/assert-local-dev-qa-harness-allowed.ts",
   );
   assert.match(guard, /notFound\(\)/);
   assert.match(guard, /nodeEnv === ["']development["']/);
