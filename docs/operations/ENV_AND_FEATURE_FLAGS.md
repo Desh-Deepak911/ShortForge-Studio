@@ -7,6 +7,26 @@ Tracking ledger for ShortForge Studio runtime gates.
 |-----------------|----------------------|----------------|-------------------|------------------|------------------------------|------------------|---------------|----------------------------|
 | *(none active for multi-image or intra-scene transitions)* | — | Scene Media Timeline + intra-scene transition editor metadata | — | Always on (no gate) | None for Sprint 9A | No | **Default** — no env flag for Sprint 9 | — |
 
+## Sprint 12 — staging-only visual retention
+
+| Variable / flag | Public or server-only | Owner / module | Default | Production/main behavior | Activation rule |
+|-----------------|----------------------|----------------|---------|--------------------------|-----------------|
+| `SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES` | server-only | `src/features/visual-retention/` | unset / every Sprint 12 phase off | hard-off even if copied | comma-separated ordered phase IDs, beginning with `12A` |
+
+Accepted phase IDs are `12A` through `12G`. Activation is fail-closed:
+
+- `HEADLESS_ENV_NAME` must be exactly `staging`;
+- `VERCEL_ENV=production` rejects every phase;
+- `VERCEL_GIT_COMMIT_REF=main` or `master` rejects every phase;
+- unknown phase IDs reject the whole snapshot;
+- a requested phase whose earlier dependency is off remains off;
+- the variable is never bundled with `NEXT_PUBLIC_*` or read directly by a pure domain/renderer module.
+
+Sprint 12A introduces the classifier and capability contracts only. No provider
+operation is triggered by setting or evaluating the flag. Staging rollout must
+still pass the phase-specific gate-on/gate-off matrix before a later phase is
+offered in creator UI.
+
 ## Sprint 11A / 11A.1 / 11B / 11B.1 / 11B.1A / 11C / 11C.1 / 11C.1A / 11D — Headless Renderer
 
 **11A / 11A.1:** Documentation only for architecture + user-triggered Export authority.
