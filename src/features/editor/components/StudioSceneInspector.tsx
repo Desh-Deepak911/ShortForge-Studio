@@ -50,6 +50,11 @@ import {
 } from "@/features/mixed-media-scenes/adapters/inspector-scene-media-projection";
 import MixedMediaSequencePanel from "@/features/mixed-media-scenes/editor/MixedMediaSequencePanel";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
+import VisualPacingPanel from "@/features/visual-beat-density/editor/VisualPacingPanel";
+import {
+  useVisualBeatDensityEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { isSelectableSceneMediaTransitionPair } from "@/features/scene-media-transitions";
 import { SelectionPhase } from "@/features/editor/selection/selection.types";
 import {
@@ -233,6 +238,13 @@ export default function StudioSceneInspector({
   const scene = safeIndex >= 0 ? scenes[safeIndex] : null;
   const appendApi = useOptionalSceneMediaImageAppendContext();
   const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
+  const visualRetentionCapabilitiesReady =
+    useVisualRetentionCapabilitiesReady();
+  const visualBeatDensityEnabled = useVisualBeatDensityEnabled();
+  const visualPacingPanelEnabled =
+    visualRetentionCapabilitiesReady &&
+    mixedMediaScenesEnabled &&
+    visualBeatDensityEnabled;
   const inspectorMediaProjection = useMemo(
     () =>
       scene
@@ -801,6 +813,17 @@ export default function StudioSceneInspector({
               defaultOpen
               open={inspectorImageEditing ? true : undefined}
             >
+              {visualPacingPanelEnabled ? (
+                <div className="mb-3">
+                  <VisualPacingPanel
+                    script={script}
+                    scene={scene}
+                    onScriptChange={onScriptChange}
+                    visualBeatDensityEnabled
+                    mixedMediaScenesEnabled
+                  />
+                </div>
+              ) : null}
               {mixedMediaScenesEnabled ? (
                 <div className="mb-3">
                   <MixedMediaSequencePanel

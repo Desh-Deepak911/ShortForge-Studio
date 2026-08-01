@@ -276,7 +276,7 @@ function testUiContractAndNoRenderScopeLeak(): void {
   assert.ok(incomplete.missingSurfaces.includes("scene-inspector"));
 
   // Optional scene plan metadata is allowed via leaf type import only.
-  // Visible density UI and ExportManifest consumption remain out of scope.
+  // Scene-inspector pacing UI lives in VisualPacingPanel; ExportManifest must not consume plans.
   const storyTypes = readSrc("src/features/story/types/story.types.ts");
   assert.match(storyTypes, /visualBeatPlan\?: VisualBeatPlanV1/);
   assert.match(
@@ -290,6 +290,10 @@ function testUiContractAndNoRenderScopeLeak(): void {
   assert.doesNotMatch(
     readSrc("src/features/mixed-media-scenes/editor/MixedMediaSequencePanel.tsx"),
     /visualBeatDensity|Suggest pacing|Visual pacing/,
+  );
+  assert.match(
+    readSrc("src/features/editor/components/StudioSceneInspector.tsx"),
+    /VisualPacingPanel/,
   );
   assert.doesNotMatch(
     readSrc("src/features/export/domain/export-manifest.types.ts"),
