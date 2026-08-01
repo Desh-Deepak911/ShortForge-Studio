@@ -275,10 +275,17 @@ function testUiContractAndNoRenderScopeLeak(): void {
   assert.equal(incomplete.complete, false);
   assert.ok(incomplete.missingSurfaces.includes("scene-inspector"));
 
-  // Slice 1 must not land beat-plan fields or density UI controls.
+  // Optional scene plan metadata is allowed via leaf type import only.
+  // Visible density UI and ExportManifest consumption remain out of scope.
+  const storyTypes = readSrc("src/features/story/types/story.types.ts");
+  assert.match(storyTypes, /visualBeatPlan\?: VisualBeatPlanV1/);
+  assert.match(
+    storyTypes,
+    /from\s+["']@\/features\/visual-beat-density\/domain\/visual-beat-plan["']/,
+  );
   assert.doesNotMatch(
-    readSrc("src/features/story/types/story.types.ts"),
-    /visualBeatPlan|VisualBeatDensity/,
+    storyTypes,
+    /from\s+["']@\/features\/visual-beat-density["']/,
   );
   assert.doesNotMatch(
     readSrc("src/features/mixed-media-scenes/editor/MixedMediaSequencePanel.tsx"),
@@ -286,7 +293,7 @@ function testUiContractAndNoRenderScopeLeak(): void {
   );
   assert.doesNotMatch(
     readSrc("src/features/export/domain/export-manifest.types.ts"),
-    /visualBeatDensity|visual-beat-density/,
+    /visualBeatPlan|visualBeatDensity|visual-beat-density/,
   );
   assert.doesNotMatch(
     readSrc("docs/operations/ENV_AND_FEATURE_FLAGS.md"),

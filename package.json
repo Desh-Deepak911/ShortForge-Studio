@@ -18,6 +18,7 @@
     "test:visual-retention-capabilities": "tsx src/verification/visual-retention/visualRetentionCapabilities.verify.ts",
     "test:visual-beat-density": "tsx src/verification/visual-retention/visualBeatDensityCapability.verify.ts",
     "test:visual-beat-planning": "tsx src/verification/visual-beat-density/visualBeatPlanFingerprint.verify.ts && tsx src/verification/visual-beat-density/visualBeatPlanGeneration.verify.ts",
+    "test:visual-beat-plan-commands": "tsx src/verification/visual-beat-density/visualBeatPlanStaleness.verify.ts && tsx src/verification/visual-beat-density/visualBeatPlanCommands.verify.ts && tsx src/verification/visual-beat-density/visualBeatPlanCompatibility.verify.ts",
     "test:mixed-media-scenes": "tsx src/verification/mixed-media-scenes/mixedMediaScenes.verify.ts && tsx src/verification/mixed-media-scenes/mixedMediaScenesQaHarness.verify.ts && tsx src/verification/mixed-media-scenes/mixedMediaTimingEntry.verify.ts && tsx src/verification/mixed-media-scenes/smartEditAndStepperAccessibility.verify.ts && tsx src/verification/mixed-media-scenes/studioOverlayAndNumberStepper.verify.ts",
     "test:scene-image": "tsx src/verification/editor/sceneImage.verify.ts",
     "test:media-framing-image": "tsx src/verification/editor/mediaFramingImage.verify.ts",

@@ -16,7 +16,7 @@ export interface VisualBeatFingerprintInput {
   readonly sceneDurationMs: number;
   readonly usableMedia: readonly VisualBeatUsableMediaIdentity[];
   readonly density: VisualBeatDensity;
-  readonly generatorVersion?: typeof VISUAL_BEAT_GENERATOR_VERSION;
+  readonly generatorVersion?: number;
 }
 
 /** Collapse whitespace and trim; preserve case (case changes are semantic). */
@@ -29,28 +29,36 @@ export function normalizeVisualBeatNarrationText(value: string): string {
   return nfc.replace(/\s+/g, " ").trim();
 }
 
-function stableStringify(value: unknown): string {
+export function stableStringifyVisualBeatValue(value: unknown): string {
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value);
   }
   if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+    return `[${value.map((item) => stableStringifyVisualBeatValue(item)).join(",")}]`;
   }
   const record = value as Record<string, unknown>;
   const keys = Object.keys(record).sort();
   return `{${keys
-    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+    .map(
+      (key) =>
+        `${JSON.stringify(key)}:${stableStringifyVisualBeatValue(record[key])}`,
+    )
     .join(",")}}`;
 }
 
 /** FNV-1a 32-bit → base36 — feature-local; client-safe; no crypto/network. */
-function visualBeatStableHash(input: string): string {
+export function visualBeatStableHash(input: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {
     hash ^= input.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193);
   }
   return (hash >>> 0).toString(36);
+}
+
+/** Deterministic digest for JSON-safe canonical payloads. */
+export function digestVisualBeatCanonicalPayload(value: unknown): string {
+  return visualBeatStableHash(stableStringifyVisualBeatValue(value));
 }
 
 function normalizeMediaIdentity(
@@ -104,7 +112,7 @@ export function fingerprintVisualBeatInput(
     narration: normalizeVisualBeatNarrationText(input.narrationText),
     sceneDurationMs,
   };
-  return `${VISUAL_BEAT_INPUT_FINGERPRINT_PREFIX}${visualBeatStableHash(
-    stableStringify(payload),
+  return `${VISUAL_BEAT_INPUT_FINGERPRINT_PREFIX}${digestVisualBeatCanonicalPayload(
+    payload,
   )}`;
 }

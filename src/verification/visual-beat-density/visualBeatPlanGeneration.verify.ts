@@ -67,13 +67,22 @@ function assertValidOffsets(
   assert.ok(sceneDurationMs - last >= SCENE_MEDIA_MIN_ITEM_DURATION_MS);
 }
 
-function readDomainTree(): string {
-  const root = path.join(process.cwd(), "src/features/visual-beat-density");
-  const files = readdirSync(root, { recursive: true })
+/** Pure generator/policy/fingerprint domain only (excludes adapters/editor/staleness). */
+function readPurePlanningDomain(): string {
+  const root = path.join(process.cwd(), "src/features/visual-beat-density/domain");
+  const allow = new Set([
+    "visual-beat-plan.ts",
+    "visual-beat-density-policy.ts",
+    "fingerprint-visual-beat-input.ts",
+    "visual-beat-source-snapshot.ts",
+    "extract-narration-anchors.ts",
+    "generate-visual-beat-plan.ts",
+  ]);
+  const files = readdirSync(root)
     .map(String)
-    .filter((rel) => rel.endsWith(".ts"));
+    .filter((name) => allow.has(name));
   return files
-    .map((rel) => readFileSync(path.join(root, rel), "utf8"))
+    .map((name) => readFileSync(path.join(root, name), "utf8"))
     .join("\n");
 }
 
@@ -317,16 +326,16 @@ function main(): void {
     assert.equal(JSON.stringify(input), before);
   });
 
-  test("no music dependency/import across feature", () => {
-    const source = readDomainTree();
+  test("no music dependency/import across pure planning domain", () => {
+    const source = readPurePlanningDomain();
     assert.doesNotMatch(source, /from\s+["'][^"']*music[^"']*["']/i);
     assert.doesNotMatch(source, /import\s*\(.*music/i);
     assert.doesNotMatch(source, /features\/audio|audio-mixer|build-export-audio/i);
     assert.doesNotMatch(source, /Date\.now\(|new Date\(|Math\.random\(/);
   });
 
-  test("authority boundary — no visualSequence/mediaTimeline mutation APIs", () => {
-    const source = readDomainTree();
+  test("authority boundary — pure planning domain has no mutation APIs", () => {
+    const source = readPurePlanningDomain();
     // Min-duration constant import from scene-media-timeline is allowed; mutation/adapters are not.
     assert.doesNotMatch(
       source,
@@ -338,7 +347,7 @@ function main(): void {
     );
     assert.doesNotMatch(
       source,
-      /visualSequenceToMediaTimeline|applyVisualSequenceAuthority|updateMixedMediaSequence|reconcileVisualSequence/,
+      /visualSequenceToMediaTimeline|applyVisualSequenceAuthority|updateMixedMediaSequence|reconcileVisualSequence|writeMixedMediaSequenceItems/,
     );
     assert.doesNotMatch(source, /writeFile|fetch\(|axios|openai/i);
   });

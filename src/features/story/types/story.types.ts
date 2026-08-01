@@ -6,6 +6,7 @@ import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.t
 import type { PlatformExportPresetId } from "@/features/export-profiles/export-profile.types";
 import type { SceneMediaVisualAdjustments } from "@/features/media-visual-adjustments/media-visual-adjustments.types";
 import type { SpeechStylePreset } from "@/features/speech-style";
+import type { VisualBeatPlanV1 } from "@/features/visual-beat-density/domain/visual-beat-plan";
 
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
 
@@ -211,6 +212,12 @@ export interface FootieScene {
    * `mixed-media-scenes-v1`. Dual-written to `mediaTimeline` for shared Preview/Export.
    */
   visualSequence?: SceneVisualSequence;
+  /**
+   * Optional narration-driven visual-beat plan (suggestion/provenance only).
+   * Absence preserves legacy projects. Never a Preview/Export render authority —
+   * Apply writes timing into `visualSequence` / `mediaTimeline` only.
+   */
+  visualBeatPlan?: VisualBeatPlanV1;
   /**
    * Optional intra-scene media-to-media transition track (Sprint 9A).
    * Absence means every adjacent pair is Cut. Never stores Cut records.

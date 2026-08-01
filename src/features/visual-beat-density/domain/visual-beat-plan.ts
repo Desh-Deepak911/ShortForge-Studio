@@ -3,6 +3,8 @@
  * Suggestion/provenance only — never a render authority.
  */
 
+import type { VisualBeatSourceSnapshotV1 } from "./visual-beat-source-snapshot";
+
 export const VISUAL_BEAT_PLAN_VERSION = 1 as const;
 export const VISUAL_BEAT_GENERATOR_VERSION = 1 as const;
 
@@ -21,6 +23,16 @@ export type VisualBeatPlanTerminalCode =
   | "BEATS_SCENE_TOO_SHORT"
   | "BEATS_INVALID_DURATION";
 
+/** Command-layer terminals (Suggest / Apply / Discard). */
+export type VisualBeatCommandTerminalCode =
+  | "BEATS_CAPABILITY_OFF"
+  | "BEATS_PLAN_MISSING"
+  | "BEATS_PLAN_INVALID"
+  | "BEATS_PLAN_STALE"
+  | VisualBeatPlanTerminalCode;
+
+export type VisualBeatPlanStatus = "draft" | "applied" | "stale";
+
 export type VisualBeatMediaKind = "image" | "video";
 
 /** Ordered usable-media identity for planning and fingerprinting. */
@@ -38,15 +50,18 @@ export interface VisualBeatAnchor {
 }
 
 /**
- * Draft beat plan. Preview / Browser / Headless must not consume this object.
- * Apply (later slice) is the only path into visualSequence authority.
+ * Scene-local beat plan metadata. Preview / Browser / Headless must not consume it.
+ * Apply is the only path into visualSequence authority.
  */
 export interface VisualBeatPlanV1 {
   readonly version: typeof VISUAL_BEAT_PLAN_VERSION;
   readonly generatorVersion: typeof VISUAL_BEAT_GENERATOR_VERSION;
   readonly density: VisualBeatDensity;
+  /** Aggregate digest for fast equality; excludes generatedAtIso. */
   readonly sourceFingerprint: string;
-  readonly status: "draft";
+  /** Structured provenance for exact stale-reason derivation. Required on v1 plans. */
+  readonly sourceSnapshot: VisualBeatSourceSnapshotV1;
+  readonly status: VisualBeatPlanStatus;
   /** Scene-local starts; index 0 is always 0; length equals achieved media windows. */
   readonly proposedStartOffsetsMs: readonly number[];
   readonly anchors?: readonly VisualBeatAnchor[];
@@ -94,3 +109,14 @@ export const VISUAL_BEAT_PLAN_TERMINAL_CODES = {
   BEATS_SCENE_TOO_SHORT: "BEATS_SCENE_TOO_SHORT",
   BEATS_INVALID_DURATION: "BEATS_INVALID_DURATION",
 } as const satisfies Record<VisualBeatPlanTerminalCode, VisualBeatPlanTerminalCode>;
+
+export const VISUAL_BEAT_COMMAND_TERMINAL_CODES = {
+  BEATS_CAPABILITY_OFF: "BEATS_CAPABILITY_OFF",
+  BEATS_PLAN_MISSING: "BEATS_PLAN_MISSING",
+  BEATS_PLAN_INVALID: "BEATS_PLAN_INVALID",
+  BEATS_PLAN_STALE: "BEATS_PLAN_STALE",
+  ...VISUAL_BEAT_PLAN_TERMINAL_CODES,
+} as const satisfies Record<
+  VisualBeatCommandTerminalCode,
+  VisualBeatCommandTerminalCode
+>;

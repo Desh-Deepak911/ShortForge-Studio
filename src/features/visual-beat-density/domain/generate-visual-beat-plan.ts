@@ -18,6 +18,7 @@ import {
   computePreferredBeatCount,
   resolveVisualBeatDensityPolicy,
 } from "./visual-beat-density-policy";
+import { buildVisualBeatSourceSnapshot } from "./visual-beat-source-snapshot";
 import {
   VISUAL_BEAT_GENERATOR_VERSION,
   VISUAL_BEAT_PLAN_TERMINAL_CODES,
@@ -294,6 +295,13 @@ export function generateVisualBeatPlan(
     density,
     generatorVersion,
   });
+  const sourceSnapshot = buildVisualBeatSourceSnapshot({
+    narrationText: input.narrationText,
+    sceneDurationMs,
+    usableMedia,
+    density,
+    generatorVersion,
+  });
 
   const anchors = extractNarrationAnchors(input.narrationText, sceneDurationMs);
   if (narrationAnchorsAreFallbackOnly(anchors)) {
@@ -340,6 +348,7 @@ export function generateVisualBeatPlan(
     generatorVersion: VISUAL_BEAT_GENERATOR_VERSION,
     density,
     sourceFingerprint,
+    sourceSnapshot,
     status: "draft",
     proposedStartOffsetsMs,
     anchors,

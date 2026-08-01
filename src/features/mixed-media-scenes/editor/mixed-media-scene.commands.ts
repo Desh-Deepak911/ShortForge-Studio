@@ -464,6 +464,25 @@ export function readMixedMediaSequenceItems(
   return sequenceFromScene(scene).items;
 }
 
+/**
+ * Dual-write an ordered visual-sequence item list.
+ * Caller supplies full items (ids/media preserved); this path never invents media.
+ */
+export function writeMixedMediaSequenceItems(
+  scene: FootieScene,
+  items: readonly SceneVisualSequenceItem[],
+  options: { readonly mixedMediaScenesEnabled: boolean },
+): MixedMediaSceneCommandResult {
+  assertMixedMediaEnabled(options.mixedMediaScenesEnabled);
+  const applied = applySequenceToScene(scene, items);
+  return {
+    scene: applied.scene,
+    selectedMediaItemId: items[0]?.id ?? null,
+    warnings: applied.warnings,
+    convertedFromLegacy: false,
+  };
+}
+
 export function readSceneVisualSequence(
   scene: FootieScene,
 ): SceneVisualSequence | undefined {

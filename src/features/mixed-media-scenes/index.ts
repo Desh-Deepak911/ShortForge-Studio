@@ -47,5 +47,6 @@ export {
   updateMixedMediaSequenceBoundary,
   updateMixedMediaSequenceItemDuration,
   updateMixedMediaSequenceItemTiming,
+  writeMixedMediaSequenceItems,
   type MixedMediaSceneCommandResult,
 } from "./editor/mixed-media-scene.commands";
