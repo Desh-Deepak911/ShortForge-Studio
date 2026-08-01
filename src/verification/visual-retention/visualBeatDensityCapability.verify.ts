@@ -243,9 +243,14 @@ function testClientFailClosedAndSingleFetch(): void {
   assert.doesNotMatch(compat, /fetch\(/);
 
   // Mixed-media consumers still import the compatibility hook path.
+  // ExportPanel also reads Visual pacing authoring capability for guidance only.
   assert.match(
     readSrc("src/components/ExportPanel.tsx"),
     /useMixedMediaScenesEnabled/,
+  );
+  assert.match(
+    readSrc("src/components/ExportPanel.tsx"),
+    /useVisualBeatDensityEnabled/,
   );
   assert.match(
     readSrc("src/features/preview/components/VideoPreview.tsx"),

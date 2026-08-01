@@ -86,6 +86,12 @@ export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {
     "1080p export may be slower or use more memory on this project. You can continue, or switch to 720p for a more reliable browser export.",
   DEV_1080P_OVERRIDE:
     "1080p browser export is enabled in experimental developer mode.\n\nThis export may take longer and use significantly more browser memory.",
+  VISUAL_PACING_DRAFT_NOT_APPLIED:
+    "A Visual pacing suggestion has not been applied. Export will use the current sequence timing.",
+  VISUAL_PACING_STALE:
+    "Visual pacing is out of date. Export will use your current sequence timing.",
+  VISUAL_PACING_METADATA_INVALID:
+    "Saved Visual pacing metadata could not be read. Export will use the current sequence timing.",
 };
 
 /** @deprecated Sprint 6F.1 — use approveExportResolution instead of this flag. */

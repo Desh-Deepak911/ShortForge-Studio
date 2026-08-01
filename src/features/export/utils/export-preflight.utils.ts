@@ -9,6 +9,7 @@ import type { MasterTimeline } from "@/features/timeline-intelligence/timeline.t
 import type { FootieScript } from "@/features/story/types";
 import { getCanonicalVoiceover } from "@/features/audio/utils/canonical-voiceover.utils";
 import type { MediaPlaybackValidationIssue } from "@/features/media-playback";
+import { resolveVisualPacingExportGuidance } from "@/features/visual-beat-density/adapters/resolve-visual-pacing-export-guidance";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import {
@@ -24,6 +25,11 @@ export interface PrepareStoryForExportOptions {
    * snapshot — this module never reads environment variables.
    */
   readonly mixedMediaScenesEnabled?: boolean;
+  /**
+   * Explicit Visual pacing authoring capability. Default ignored/fail-closed.
+   * Guidance only — never a render requirement and never read from env here.
+   */
+  readonly visualBeatDensityEnabled?: boolean;
 }
 
 export interface PrepareStoryForExportResult {
@@ -54,6 +60,7 @@ export function prepareStoryForExport(
   options: PrepareStoryForExportOptions = {},
 ): PrepareStoryForExportResult {
   const mixedMediaScenesEnabled = options.mixedMediaScenesEnabled === true;
+  const visualBeatDensityEnabled = options.visualBeatDensityEnabled === true;
   const syncedBase = syncFootieScript(story);
   const masterTimeline = buildOptimizedMasterTimeline(syncedBase, {
     mode: "export",
@@ -104,6 +111,14 @@ export function prepareStoryForExport(
   warnings.push(...formatExportMediaValidationWarnings(mediaIssues));
 
   const normalizedStory = syncFootieScript(visualAuthority.story);
+
+  // Authoring guidance only — evaluated on the final export copy after refit.
+  const pacingGuidance = resolveVisualPacingExportGuidance(normalizedStory, {
+    visualBeatDensityEnabled,
+  });
+  for (const item of pacingGuidance) {
+    warnings.push(item.message);
+  }
 
   return {
     story: normalizedStory,

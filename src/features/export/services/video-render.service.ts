@@ -983,6 +983,7 @@ export async function exportFootieShort(
       options,
       throwIfBlocked: true,
       mixedMediaScenesEnabled: options.mixedMediaScenesEnabled === true,
+      visualBeatDensityEnabled: options.visualBeatDensityEnabled === true,
     });
 
     await exportFootieShortFromManifest(prepared, onProgress, {

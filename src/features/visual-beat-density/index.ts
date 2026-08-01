@@ -60,6 +60,15 @@ export {
 } from "./adapters/project-scene-visual-beat-plan";
 
 export {
+  VISUAL_PACING_EXPORT_GUIDANCE_CODES,
+  VISUAL_PACING_EXPORT_GUIDANCE_MESSAGES,
+  resolveVisualPacingExportGuidance,
+  type ResolveVisualPacingExportGuidanceInput,
+  type VisualPacingExportGuidanceCode,
+  type VisualPacingExportGuidanceItem,
+} from "./adapters/resolve-visual-pacing-export-guidance";
+
+export {
   applyVisualBeatPlan,
   discardVisualBeatPlan,
   projectVisualBeatPlanStalenessForScene,

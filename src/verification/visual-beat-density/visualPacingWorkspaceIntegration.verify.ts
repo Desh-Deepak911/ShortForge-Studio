@@ -121,11 +121,13 @@ function main(): void {
 
   test("ExportPanel and Headless controls unchanged for density UI", () => {
     const exportPanel = readSrc("src/components/ExportPanel.tsx");
+    // Shared capability hook is allowed for recoverable export guidance only.
+    assert.match(exportPanel, /useVisualBeatDensityEnabled/);
+    assert.match(exportPanel, /useMixedMediaScenesEnabled/);
     assert.doesNotMatch(
       exportPanel,
-      /Visual pacing|Suggest pacing|VisualPacingPanel|visualBeatDensity/,
+      /VisualPacingPanel|Suggest pacing|More changes|Fewer, clearer cuts/,
     );
-    assert.match(exportPanel, /useMixedMediaScenesEnabled/);
 
     const headlessUi = readSrc(
       "src/features/headless-renderer/product/ui/HeadlessJobStatusPanel.tsx",
