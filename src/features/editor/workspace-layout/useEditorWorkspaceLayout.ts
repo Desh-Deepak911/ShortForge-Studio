@@ -51,8 +51,8 @@ export interface EditorWorkspaceLayoutController extends EditorWorkspaceLayoutSt
  *
  * Hydration contract: {@link getServerEditorWorkspaceLayoutSnapshot} always
  * returns {@link DEFAULT_EDITOR_WORKSPACE_LAYOUT}. Browser-backed values are
- * adopted on the first client subscribe (after hydration), never during the
- * server/first-client hydration snapshot.
+ * adopted from an effect after hydration, never while React subscribes or
+ * during the server/first-client hydration snapshot.
  */
 let layoutSnapshot: EditorWorkspaceLayoutState = DEFAULT_EDITOR_WORKSPACE_LAYOUT;
 let layoutAdopted = false;
@@ -77,14 +77,24 @@ export function subscribeEditorWorkspaceLayout(
   onStoreChange: () => void,
 ): () => void {
   layoutListeners.add(onStoreChange);
-  if (typeof window !== "undefined") {
-    // Adopt (or refresh) browser-backed layout after hydration / on remount.
-    layoutAdopted = true;
-    layoutSnapshot = readEditorWorkspaceLayout();
-  }
   return () => {
     layoutListeners.delete(onStoreChange);
   };
+}
+
+/**
+ * Adopt browser-backed layout only after React has committed hydration.
+ * `subscribe` must stay passive: changing the snapshot while React attaches a
+ * subscriber can race a partially hydrated Next.js tree.
+ */
+export function adoptEditorWorkspaceLayoutFromStorage(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  layoutAdopted = true;
+  layoutSnapshot = readEditorWorkspaceLayout();
+  emitLayoutChange();
 }
 
 export function getEditorWorkspaceLayoutSnapshot(): EditorWorkspaceLayoutState {
@@ -101,6 +111,10 @@ export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
     getEditorWorkspaceLayoutSnapshot,
     getServerEditorWorkspaceLayoutSnapshot,
   );
+
+  useEffect(() => {
+    adoptEditorWorkspaceLayoutFromStorage();
+  }, []);
 
   const patchLayout = useCallback(
     (patch: Partial<EditorWorkspaceLayoutState>) => {

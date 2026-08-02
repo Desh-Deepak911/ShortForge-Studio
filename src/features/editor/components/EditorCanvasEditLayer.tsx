@@ -14,6 +14,7 @@ import CanvasInteractionOverlay from "@/features/editor/components/CanvasInterac
 import EditorCanvasSelectionLayer from "@/features/editor/components/EditorCanvasSelectionLayer";
 import MediaPicker from "@/features/editor/components/MediaPicker";
 import {
+  adoptCanvasEditHintsFromStorage,
   dismissCanvasEditHints,
   getCanvasEditHintsSnapshot,
   getServerCanvasEditHintsSnapshot,
@@ -85,6 +86,10 @@ export default function EditorCanvasEditLayer({
     getCanvasEditHintsSnapshot,
     getServerCanvasEditHintsSnapshot,
   );
+
+  useEffect(() => {
+    adoptCanvasEditHintsFromStorage();
+  }, []);
 
   const framing = resolveSceneMediaFraming(scene);
   const guideImage = useMemo(() => {

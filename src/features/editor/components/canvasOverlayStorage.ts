@@ -39,12 +39,23 @@ export function dismissCanvasEditHints(): void {
 
 export function subscribeCanvasEditHints(onStoreChange: () => void): () => void {
   hintsListeners.add(onStoreChange);
-  if (typeof window !== "undefined") {
-    hintsSnapshot = areCanvasEditHintsDismissed();
-  }
   return () => {
     hintsListeners.delete(onStoreChange);
   };
+}
+
+/** Adopt the browser preference after hydration; subscription stays passive. */
+export function adoptCanvasEditHintsFromStorage(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const next = areCanvasEditHintsDismissed();
+  if (next === hintsSnapshot) {
+    return;
+  }
+  hintsSnapshot = next;
+  emitHintsChange();
 }
 
 export function getCanvasEditHintsSnapshot(): boolean {
