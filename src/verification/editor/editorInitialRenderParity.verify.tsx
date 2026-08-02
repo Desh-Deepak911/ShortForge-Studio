@@ -22,6 +22,7 @@ import { useEditorStoryDocument } from "@/features/drafts/hooks/useEditorStoryDo
 import {
   clearCurrentDocument,
   getStoryDocumentState,
+  hydrateFromDraft,
 } from "@/features/drafts/store/story-document.store";
 import {
   DRAFT_STORAGE_KEY,
@@ -294,6 +295,12 @@ function testSourceHydrationContracts(): void {
   assert.match(layoutHook, /getServerEditorWorkspaceLayoutSnapshot/);
   assert.match(layoutHook, /useSyncExternalStore/);
   assert.match(layoutHook, /readEditorWorkspaceLayout\(\)/);
+  const layoutSubscribe = layoutHook.slice(
+    layoutHook.indexOf("export function subscribeEditorWorkspaceLayout"),
+    layoutHook.indexOf("export function adoptEditorWorkspaceLayoutFromStorage"),
+  );
+  assert.doesNotMatch(layoutSubscribe, /readEditorWorkspaceLayout/);
+  assert.match(layoutHook, /useEffect\(\(\)\s*=>\s*\{\s*adoptEditorWorkspaceLayoutFromStorage\(\)/);
   assert.doesNotMatch(layoutHook, /useState\(\(\)\s*=>\s*readEditorWorkspaceLayout/);
   assert.doesNotMatch(layoutHook, /suppressHydrationWarning/);
 
@@ -311,6 +318,7 @@ function testSourceHydrationContracts(): void {
   );
   assert.match(canvas, /getServerCanvasEditHintsSnapshot/);
   assert.match(canvas, /useSyncExternalStore/);
+  assert.match(canvas, /adoptCanvasEditHintsFromStorage/);
   assert.doesNotMatch(canvas, /useState\(areCanvasEditHintsDismissed/);
   assert.doesNotMatch(canvas, /useState\(false\);\s*\n\s*useEffect\(\(\)\s*=>\s*\{\s*setHintsDismissed/);
 
@@ -348,6 +356,29 @@ function testSourceHydrationContracts(): void {
   const overlay = readSrc("src/components/studio-overlay/StudioOverlay.tsx");
   assert.match(overlay, /useClientMounted/);
   assert.doesNotMatch(overlay, /suppressHydrationWarning/);
+}
+
+function testBrowserStateSubscriptionsArePassive(): void {
+  const layoutHook = readSrc(
+    "src/features/editor/workspace-layout/useEditorWorkspaceLayout.ts",
+  );
+  const layoutSubscribe = layoutHook.slice(
+    layoutHook.indexOf("export function subscribeEditorWorkspaceLayout"),
+    layoutHook.indexOf("export function adoptEditorWorkspaceLayoutFromStorage"),
+  );
+  assert.doesNotMatch(layoutSubscribe, /readEditorWorkspaceLayout|emitLayoutChange/);
+
+  const canvasStorage = readSrc(
+    "src/features/editor/components/canvasOverlayStorage.ts",
+  );
+  const canvasSubscribe = canvasStorage.slice(
+    canvasStorage.indexOf("export function subscribeCanvasEditHints"),
+    canvasStorage.indexOf("export function adoptCanvasEditHintsFromStorage"),
+  );
+  assert.doesNotMatch(
+    canvasSubscribe,
+    /areCanvasEditHintsDismissed|emitHintsChange|hintsSnapshot\s*=/,
+  );
 }
 
 function testServerRenderOmitsOpenDrawerPortal(): void {
@@ -525,6 +556,47 @@ async function testExistingDraftLoadsWithoutMutation(): Promise<void> {
   memoryStorage.clear();
 }
 
+async function testWarmStoryDocumentStillHydratesFromLoadingShell(): Promise<void> {
+  memoryStorage.clear();
+  clearCurrentDocument();
+
+  const draft = createDraftFromScript(
+    fixtureScript(),
+    {
+      topic: "warm parity fixture",
+      tone: "dramatic",
+      duration: 6,
+      qualityMode: "cheap",
+      sceneCount: 1,
+    },
+    "warm-parity-draft",
+    "editor_ready",
+  );
+  saveDraft(draft);
+  hydrateFromDraft(draft);
+  assert.equal(getStoryDocumentState().draftId, draft.id);
+
+  const element = <EditorLoadHarness draftId={draft.id} />;
+  const serverHtml = renderToStaticMarkup(element);
+  assert.match(serverHtml, /data-loading="true"/);
+  assert.match(serverHtml, /data-has-script="false"/);
+
+  const { host, errors, html, cleanup } = await hydrateAndCollectErrors(element);
+  assert.equal(html, serverHtml);
+  assert.equal(errors.length, 0, `unexpected warm-store hydration error: ${String(errors[0])}`);
+  assert.equal(
+    host.querySelector("[data-editor-load]")?.getAttribute("data-loading"),
+    "false",
+  );
+  assert.equal(
+    host.querySelector("[data-editor-load]")?.getAttribute("data-has-script"),
+    "true",
+  );
+
+  await cleanup();
+  memoryStorage.clear();
+}
+
 async function testCapabilitiesProviderDoesNotDivergeMarkup(): Promise<void> {
   memoryStorage.clear();
   const element = <CapabilitiesHarness />;
@@ -562,6 +634,7 @@ async function main(): Promise<void> {
 
   const syncTests: Array<[string, () => void]> = [
     ["source hydration contracts", testSourceHydrationContracts],
+    ["browser-state subscriptions stay passive", testBrowserStateSubscriptionsArePassive],
     [
       "server render with persisted-open drawer omits portal",
       testServerRenderOmitsOpenDrawerPortal,
@@ -590,6 +663,10 @@ async function main(): Promise<void> {
     [
       "existing draft loads without mutating storage",
       testExistingDraftLoadsWithoutMutation,
+    ],
+    [
+      "warm story document still hydrates from deterministic loading shell",
+      testWarmStoryDocumentStillHydratesFromLoadingShell,
     ],
     [
       "visual retention capabilities provider does not diverge markup",
