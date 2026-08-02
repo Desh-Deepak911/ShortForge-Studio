@@ -141,7 +141,6 @@ function StoryWorkspaceContent({
   scriptMode,
   creationBrief,
 }: StoryWorkspaceProps) {
-  const [exportDrawerOpen, setExportDrawerOpen] = useState(false);
   const [exportActive, setExportActive] = useState(false);
   const [narrationRebuildWarning, setNarrationRebuildWarning] = useState<
     string | null
@@ -149,6 +148,8 @@ function StoryWorkspaceContent({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const workspaceLayout = useEditorWorkspaceLayout();
+  const exportDrawerOpen = workspaceLayout.exportDrawerOpen;
+  const setExportDrawerOpen = workspaceLayout.setExportDrawerOpen;
   const publishTimelinePlayback = useTimelinePlaybackPublisher();
   const creatorAssetStudioVisible = useCreatorAssetStudioVisible();
   const assetPlanning = useCreatorAssetPlanningCache(
@@ -182,7 +183,7 @@ function StoryWorkspaceContent({
 
   const openExportDrawer = useCallback(() => {
     setExportDrawerOpen(true);
-  }, []);
+  }, [setExportDrawerOpen]);
 
   const focusVoiceoverSection = useCallback(() => {
     focusInspectorProjectTab();

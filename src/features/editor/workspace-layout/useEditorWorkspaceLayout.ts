@@ -3,12 +3,12 @@
 import {
   useCallback,
   useEffect,
-  useRef,
-  useState,
+  useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
 import {
+  DEFAULT_EDITOR_WORKSPACE_LAYOUT,
   EDITOR_INSPECTOR_MAX_WIDTH_PX,
   EDITOR_INSPECTOR_MIN_WIDTH_PX,
   EDITOR_TIMELINE_DENSITY_HEIGHTS,
@@ -40,52 +40,89 @@ export interface EditorWorkspaceLayoutController extends EditorWorkspaceLayoutSt
   setTimelineDensity: (density: EditorTimelineDensity) => void;
   setPreviewSize: (size: EditorPreviewSize) => void;
   toggleFocusMode: () => void;
+  setExportDrawerOpen: (open: boolean) => void;
   beginInspectorResize: (event: ReactPointerEvent<HTMLElement>) => void;
   beginTimelineResize: (event: ReactPointerEvent<HTMLElement>) => void;
   resetLayout: () => void;
 }
 
+/**
+ * Workspace chrome store.
+ *
+ * Hydration contract: {@link getServerEditorWorkspaceLayoutSnapshot} always
+ * returns {@link DEFAULT_EDITOR_WORKSPACE_LAYOUT}. Browser-backed values are
+ * adopted on the first client subscribe (after hydration), never during the
+ * server/first-client hydration snapshot.
+ */
+let layoutSnapshot: EditorWorkspaceLayoutState = DEFAULT_EDITOR_WORKSPACE_LAYOUT;
+let layoutAdopted = false;
+const layoutListeners = new Set<() => void>();
+
+function emitLayoutChange(): void {
+  for (const listener of layoutListeners) {
+    listener();
+  }
+}
+
+function commitLayout(next: EditorWorkspaceLayoutState): void {
+  const normalized = normalizeEditorWorkspaceLayout(next);
+  layoutSnapshot = normalized;
+  if (layoutAdopted) {
+    writeEditorWorkspaceLayout(normalized);
+  }
+  emitLayoutChange();
+}
+
+export function subscribeEditorWorkspaceLayout(
+  onStoreChange: () => void,
+): () => void {
+  layoutListeners.add(onStoreChange);
+  if (typeof window !== "undefined") {
+    // Adopt (or refresh) browser-backed layout after hydration / on remount.
+    layoutAdopted = true;
+    layoutSnapshot = readEditorWorkspaceLayout();
+  }
+  return () => {
+    layoutListeners.delete(onStoreChange);
+  };
+}
+
+export function getEditorWorkspaceLayoutSnapshot(): EditorWorkspaceLayoutState {
+  return layoutSnapshot;
+}
+
+export function getServerEditorWorkspaceLayoutSnapshot(): EditorWorkspaceLayoutState {
+  return DEFAULT_EDITOR_WORKSPACE_LAYOUT;
+}
+
 export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
-  const [layout, setLayout] = useState<EditorWorkspaceLayoutState>(() =>
-    readEditorWorkspaceLayout(),
+  const layout = useSyncExternalStore(
+    subscribeEditorWorkspaceLayout,
+    getEditorWorkspaceLayoutSnapshot,
+    getServerEditorWorkspaceLayoutSnapshot,
   );
-  const hydratedRef = useRef(false);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setLayout(readEditorWorkspaceLayout());
-      hydratedRef.current = true;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    if (hydratedRef.current) {
-      writeEditorWorkspaceLayout(layout);
-    }
-  }, [layout]);
 
   const patchLayout = useCallback(
     (patch: Partial<EditorWorkspaceLayoutState>) => {
-      setLayout((current) =>
-        normalizeEditorWorkspaceLayout({ ...current, ...patch }),
-      );
+      commitLayout({ ...getEditorWorkspaceLayoutSnapshot(), ...patch });
     },
     [],
   );
 
   const toggleSidebar = useCallback(() => {
-    setLayout((current) => ({
+    const current = getEditorWorkspaceLayoutSnapshot();
+    commitLayout({
       ...current,
       sidebarCollapsed: !current.sidebarCollapsed,
-    }));
+    });
   }, []);
 
   const toggleInspector = useCallback(() => {
-    setLayout((current) => ({
+    const current = getEditorWorkspaceLayoutSnapshot();
+    commitLayout({
       ...current,
       inspectorCollapsed: !current.inspectorCollapsed,
-    }));
+    });
   }, []);
 
   const setTimelineDensity = useCallback(
@@ -104,7 +141,16 @@ export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
   );
 
   const toggleFocusMode = useCallback(() => {
-    setLayout((current) => ({ ...current, focusMode: !current.focusMode }));
+    const current = getEditorWorkspaceLayoutSnapshot();
+    commitLayout({ ...current, focusMode: !current.focusMode });
+  }, []);
+
+  const setExportDrawerOpen = useCallback((open: boolean) => {
+    const current = getEditorWorkspaceLayoutSnapshot();
+    if (current.exportDrawerOpen === open) {
+      return;
+    }
+    commitLayout({ ...current, exportDrawerOpen: open });
   }, []);
 
   const beginInspectorResize = useCallback(
@@ -176,7 +222,7 @@ export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
   );
 
   const resetLayout = useCallback(() => {
-    setLayout(normalizeEditorWorkspaceLayout(null));
+    commitLayout(normalizeEditorWorkspaceLayout(null));
   }, []);
 
   useEffect(() => {
@@ -197,18 +243,17 @@ export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
         toggleInspector();
       } else if (event.key.toLowerCase() === "t") {
         event.preventDefault();
-        setLayout((current) => {
-          const next: EditorTimelineDensity =
-            current.timelineDensity === "compact"
-              ? "comfortable"
-              : current.timelineDensity === "comfortable"
-                ? "expanded"
-                : "compact";
-          return {
-            ...current,
-            timelineDensity: next,
-            timelineHeightPx: EDITOR_TIMELINE_DENSITY_HEIGHTS[next],
-          };
+        const current = getEditorWorkspaceLayoutSnapshot();
+        const next: EditorTimelineDensity =
+          current.timelineDensity === "compact"
+            ? "comfortable"
+            : current.timelineDensity === "comfortable"
+              ? "expanded"
+              : "compact";
+        commitLayout({
+          ...current,
+          timelineDensity: next,
+          timelineHeightPx: EDITOR_TIMELINE_DENSITY_HEIGHTS[next],
         });
       } else if (event.key.toLowerCase() === "f") {
         event.preventDefault();
@@ -227,6 +272,7 @@ export function useEditorWorkspaceLayout(): EditorWorkspaceLayoutController {
     setTimelineDensity,
     setPreviewSize,
     toggleFocusMode,
+    setExportDrawerOpen,
     beginInspectorResize,
     beginTimelineResize,
     resetLayout,

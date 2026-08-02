@@ -9,6 +9,8 @@ export interface EditorWorkspaceLayoutState {
   timelineHeightPx: number;
   previewSize: EditorPreviewSize;
   focusMode: boolean;
+  /** Persisted Export drawer open flag — adopted only after hydration. */
+  exportDrawerOpen: boolean;
 }
 
 export const EDITOR_INSPECTOR_MIN_WIDTH_PX = 336;
@@ -24,6 +26,7 @@ export const DEFAULT_EDITOR_WORKSPACE_LAYOUT: EditorWorkspaceLayoutState = {
   timelineHeightPx: 280,
   previewSize: "fit",
   focusMode: false,
+  exportDrawerOpen: false,
 };
 
 export const EDITOR_TIMELINE_DENSITY_HEIGHTS: Record<
