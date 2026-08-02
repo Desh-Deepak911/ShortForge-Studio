@@ -38,8 +38,12 @@ const EMPTY_STATE: StoryDocumentState = {
   draftId: null,
 };
 
-/** Module snapshot — survives client route changes without a shared layout provider. */
-let documentState: StoryDocumentState = { ...EMPTY_STATE };
+/**
+ * Module snapshot — survives client route changes without a shared layout provider.
+ * Starts as the same EMPTY_STATE reference the server snapshot returns so the
+ * hydration getSnapshot/getServerSnapshot contract stays Object.is-identical.
+ */
+let documentState: StoryDocumentState = EMPTY_STATE;
 
 const listeners = new Set<() => void>();
 
@@ -58,6 +62,11 @@ function subscribeStoryDocument(listener: () => void): () => void {
 
 function getStoryDocumentSnapshot(): StoryDocumentState {
   return documentState;
+}
+
+/** Always empty on the server / hydration snapshot so SSR markup stays deterministic. */
+function getServerStoryDocumentSnapshot(): StoryDocumentState {
+  return EMPTY_STATE;
 }
 
 function applyState(next: StoryDocumentState): void {
@@ -121,7 +130,7 @@ export function updateCurrentScript(
 
 /** Clear in-memory document state. */
 export function clearCurrentDocument(): void {
-  applyState({ ...EMPTY_STATE });
+  applyState(EMPTY_STATE);
 }
 
 /** Hydrate runtime state from a draft record (storage load, dashboard open, etc.). */
@@ -165,7 +174,7 @@ export function StoryDocumentProvider({ children }: { children: ReactNode }) {
   const state = useSyncExternalStore(
     subscribeStoryDocument,
     getStoryDocumentSnapshot,
-    getStoryDocumentSnapshot,
+    getServerStoryDocumentSnapshot,
   );
 
   const value = useMemo(() => buildStore(state), [state]);
@@ -181,7 +190,7 @@ export function useStoryDocument(): StoryDocumentStore {
   const state = useSyncExternalStore(
     subscribeStoryDocument,
     getStoryDocumentSnapshot,
-    getStoryDocumentSnapshot,
+    getServerStoryDocumentSnapshot,
   );
 
   return useMemo(

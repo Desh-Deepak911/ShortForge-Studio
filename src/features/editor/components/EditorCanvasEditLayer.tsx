@@ -1,14 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import CanvasGuideLayer from "@/features/editor/components/CanvasGuideLayer";
 import CanvasInteractionOverlay from "@/features/editor/components/CanvasInteractionOverlay";
 import EditorCanvasSelectionLayer from "@/features/editor/components/EditorCanvasSelectionLayer";
 import MediaPicker from "@/features/editor/components/MediaPicker";
 import {
-  areCanvasEditHintsDismissed,
   dismissCanvasEditHints,
+  getCanvasEditHintsSnapshot,
+  getServerCanvasEditHintsSnapshot,
+  subscribeCanvasEditHints,
 } from "@/features/editor/components/canvasOverlayStorage";
 import { useEditorSelection } from "@/features/editor/selection";
 import {
@@ -70,7 +79,12 @@ export default function EditorCanvasEditLayer({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [wheelActive, setWheelActive] = useState(false);
-  const [hintsDismissed, setHintsDismissed] = useState(areCanvasEditHintsDismissed);
+  // Hydration-safe: server/first-client snapshot is always undismissed.
+  const hintsDismissed = useSyncExternalStore(
+    subscribeCanvasEditHints,
+    getCanvasEditHintsSnapshot,
+    getServerCanvasEditHintsSnapshot,
+  );
 
   const framing = resolveSceneMediaFraming(scene);
   const guideImage = useMemo(() => {
@@ -100,14 +114,9 @@ export default function EditorCanvasEditLayer({
   }, [scene.id, selectImage]);
 
   const dismissHints = useCallback(() => {
-    setHintsDismissed((current) => {
-      if (current) {
-        return current;
-      }
-
+    if (!getCanvasEditHintsSnapshot()) {
       dismissCanvasEditHints();
-      return true;
-    });
+    }
   }, []);
 
   const pulseWheelFeedback = useCallback(() => {

@@ -64,6 +64,10 @@ export function normalizeEditorWorkspaceLayout(
       typeof value?.focusMode === "boolean"
         ? value.focusMode
         : DEFAULT_EDITOR_WORKSPACE_LAYOUT.focusMode,
+    exportDrawerOpen:
+      typeof value?.exportDrawerOpen === "boolean"
+        ? value.exportDrawerOpen
+        : DEFAULT_EDITOR_WORKSPACE_LAYOUT.exportDrawerOpen,
   };
 }
 
