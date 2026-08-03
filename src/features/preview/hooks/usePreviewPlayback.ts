@@ -36,6 +36,15 @@ import {
   resolveScenePlaybackBounds,
   resolveScenePlaybackBoundary,
 } from "@/features/preview/utils/preview-scene-playback.utils";
+import { resolveAuthoritativeBrandStingDurationMs } from "@/features/brand-sting/domain/normalize-brand-sting";
+import {
+  resolveBrandStingTimelineBounds,
+  resolvePreviewPlaybackDurationMs,
+} from "@/features/brand-sting/domain/resolve-brand-sting-frame";
+import {
+  useShortForgeBrandStingEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { usePreviewMasterTimelineContext } from "@/features/timeline-intelligence/master-timeline";
 import { logPreviewMasterTimelineDiagnostics } from "@/features/timeline-intelligence/preview-timeline-diagnostics.dev.utils";
 import { isTimelineDevDiagnosticsEnabled } from "@/features/timeline-intelligence/timeline-diagnostics.dev.types";
@@ -107,6 +116,15 @@ export function usePreviewPlayback({
   const canPlayNarration = hasPlayableVoiceover && Boolean(voiceoverUrl);
   const voiceoverDiagnostics = playableVoiceover;
   const sharedPreviewTimeline = usePreviewMasterTimelineContext();
+  const visualRetentionCapabilitiesReady =
+    useVisualRetentionCapabilitiesReady();
+  const shortForgeBrandStingCapability = useShortForgeBrandStingEnabled();
+  const shortForgeBrandStingEnabled =
+    visualRetentionCapabilitiesReady && shortForgeBrandStingCapability;
+  const brandStingDurationMs = resolveAuthoritativeBrandStingDurationMs({
+    shortForgeBrandStingEnabled,
+    extensions: script?.visualRetentionExtensions,
+  });
   const fallbackMasterTimeline = useMemo(() => {
     if (sharedPreviewTimeline) {
       return null;
@@ -116,8 +134,31 @@ export function usePreviewPlayback({
   const masterTimeline =
     sharedPreviewTimeline?.previewMasterTimeline ?? fallbackMasterTimeline;
   const sceneCount = scenes.length;
+  const narrationEndMs = masterTimeline?.contentEndMs ?? 0;
+  const exportEndBufferMs = masterTimeline
+    ? Math.max(0, masterTimeline.renderDurationMs - masterTimeline.contentEndMs)
+    : 0;
+  // hydration-safe: brandStingDurationMs is 0 while capabilities load / sting
+  // off / invalid / removed — restore exact legacy resolvePreviewDurationSec.
+  const stingBounds = resolveBrandStingTimelineBounds({
+    narrationEndMs,
+    endBufferMs: exportEndBufferMs,
+    brandStingDurationMs,
+  });
+  const previewDurationMs = masterTimeline
+    ? resolvePreviewPlaybackDurationMs({
+        contentEndMs: masterTimeline.contentEndMs,
+        renderDurationMs: masterTimeline.renderDurationMs,
+        brandStingDurationMs,
+      })
+    : 0;
+  const effectiveRenderDurationMs = previewDurationMs;
+  // Legacy (no authoritative sting): identical to resolvePreviewDurationSec.
+  // Authoritative sting: ends at brandStingEndMs; export end buffer excluded after.
   const totalDuration = masterTimeline
-    ? resolvePreviewDurationSec(masterTimeline)
+    ? brandStingDurationMs > 0
+      ? previewDurationMs / 1000
+      : resolvePreviewDurationSec(masterTimeline)
     : getStoryVoiceoverDurationSec(script);
   const safeIndex = sceneCount > 0 ? Math.min(selectedSceneIndex, sceneCount - 1) : 0;
   const hasNarration = canPlayNarration;
@@ -240,6 +281,15 @@ export function usePreviewPlayback({
       return;
     }
 
+    // Silent trailing brand sting — do not extend music into the outro.
+    if (
+      brandStingDurationMs > 0 &&
+      timelineClockMsRef.current >= narrationEndMs
+    ) {
+      musicAudio.volume = 0;
+      return;
+    }
+
     const narrationAudio = narrationAudioRef.current;
     const mode = playbackModeRef.current;
     let elapsedSec = 0;
@@ -255,17 +305,30 @@ export function usePreviewPlayback({
       voiceoverIsPlaying = isSpeakingRef.current;
     }
 
+    // Fade-out stays anchored to narration end — sting must not push it later.
+    const musicMixEndSec =
+      brandStingDurationMs > 0 ? narrationEndMs / 1000 : totalDuration;
+
     musicAudio.volume = resolvePreviewBackgroundMusicPlaybackVolume({
       script,
       elapsedSec,
-      totalDurationSec: totalDuration,
+      totalDurationSec: musicMixEndSec,
       voiceoverIsPlaying,
     });
-  }, [script, totalDuration]);
+  }, [brandStingDurationMs, narrationEndMs, script, totalDuration]);
 
   const syncVoiceoverVolume = useCallback(() => {
     const narrationAudio = narrationAudioRef.current;
     if (!narrationAudio || !script || playbackModeRef.current !== "narration") {
+      return;
+    }
+
+    // Mute only during the sting; seeking back into narration restores gain.
+    if (
+      brandStingDurationMs > 0 &&
+      timelineClockMsRef.current >= narrationEndMs
+    ) {
+      narrationAudio.volume = 0;
       return;
     }
 
@@ -274,7 +337,7 @@ export function usePreviewPlayback({
       resolvePreviewVoiceStemGain(script),
       resolvePreviewPeakProtectionActive(script),
     );
-  }, [audioEngine, script]);
+  }, [audioEngine, brandStingDurationMs, narrationEndMs, script]);
 
   const resetTimeline = useCallback(() => {
     setCurrentSceneIndex(0);
@@ -337,7 +400,14 @@ export function usePreviewPlayback({
       if (!masterTimeline) return;
 
       const updateSelection = options?.updateSelection ?? true;
-      const clampedMs = Math.min(Math.max(0, timeMs), masterTimeline.renderDurationMs);
+      const clampedMs = Math.min(
+        Math.max(0, timeMs),
+        resolvePreviewPlaybackDurationMs({
+          contentEndMs: masterTimeline.contentEndMs,
+          renderDurationMs: masterTimeline.renderDurationMs,
+          brandStingDurationMs,
+        }),
+      );
       timelineClockMsRef.current = clampedMs;
       const state = resolvePreviewPlaybackState(masterTimeline, scenes, clampedMs);
       if (!state) return;
@@ -349,7 +419,7 @@ export function usePreviewPlayback({
         onSelectedSceneChange(state.sceneIndex);
       }
     },
-    [masterTimeline, onSelectedSceneChange, scenes],
+    [brandStingDurationMs, masterTimeline, onSelectedSceneChange, scenes],
   );
 
   const pauseScenePlaybackAtBoundary = useCallback(() => {
@@ -583,7 +653,7 @@ export function usePreviewPlayback({
                 process.env.NODE_ENV === "development" &&
                 script &&
                 !tailHoldLoggedRef.current &&
-                masterTimeline.renderDurationMs > audioEndMs
+                effectiveRenderDurationMs > audioEndMs
               ) {
                 tailHoldLoggedRef.current = true;
                 logPreviewMasterTimelineDiagnostics(masterTimeline, {
@@ -598,11 +668,11 @@ export function usePreviewPlayback({
               lastTailTickWallMsRef.current = now;
               const deltaMs = now - lastTick;
               const nextMs = Math.min(
-                masterTimeline.renderDurationMs,
+                effectiveRenderDurationMs,
                 timelineClockMsRef.current + deltaMs,
               );
               syncSceneToTimelineTime(nextMs);
-              if (nextMs >= masterTimeline.renderDurationMs) {
+              if (nextMs >= effectiveRenderDurationMs) {
                 stopVoice();
               }
             }
@@ -620,6 +690,7 @@ export function usePreviewPlayback({
     return () => window.cancelAnimationFrame(frameId);
   }, [
     applyScenePlaybackBoundary,
+    effectiveRenderDurationMs,
     isPlaying,
     masterTimeline,
     script,
@@ -972,10 +1043,28 @@ export function usePreviewPlayback({
     seekSceneDuringPlayback(safeIndex);
   }, [isPlaying, safeIndex, seekSceneDuringPlayback]);
 
+  // Sting removed / capability-off may shorten duration — clamp without restart.
+  useEffect(() => {
+    if (!masterTimeline || effectiveRenderDurationMs <= 0) return;
+    if (timelineClockMsRef.current <= effectiveRenderDurationMs) return;
+    syncSceneToTimelineTime(effectiveRenderDurationMs, {
+      updateSelection: false,
+    });
+  }, [effectiveRenderDurationMs, masterTimeline, syncSceneToTimelineTime]);
+
   const activeBrowserSceneStartedAtMs = isPlaying ? browserSceneStartedAtMs : null;
 
   const isSceneScopePlayback = playbackScope === "scene";
   const sceneNavigationWhilePlaying = isPlaying && isSceneScopePlayback;
+  // Half-open [brandStingStartMs, brandStingEndMs) — starts at contentEndMs, no gap.
+  const brandStingActive =
+    !isSceneScopePlayback &&
+    stingBounds.durationMs > 0 &&
+    currentTimeMs >= stingBounds.brandStingStartMs &&
+    currentTimeMs < stingBounds.brandStingEndMs;
+  const brandStingElapsedMs = brandStingActive
+    ? Math.max(0, currentTimeMs - stingBounds.brandStingStartMs)
+    : 0;
 
   const goPrevious = () => {
     if (safeIndex <= 0) return;
@@ -1037,6 +1126,10 @@ export function usePreviewPlayback({
     masterTimeline,
     currentTimeMs,
     narrationEnded,
+    brandStingActive,
+    brandStingElapsedMs,
+    brandStingDurationMs,
+    effectiveRenderDurationMs,
     scene,
     playbackScope,
     loopSceneEnabled,

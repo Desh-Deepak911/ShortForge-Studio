@@ -43,6 +43,8 @@ import type { ExportAudioMode } from "@/features/export/utils/export-quality.uti
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
+import { projectBrandStingToManifest } from "@/features/brand-sting/domain/project-brand-sting-to-manifest";
+import { resolveBrandStingTimelineBounds } from "@/features/brand-sting/domain/resolve-brand-sting-frame";
 import { projectEngagementOverlayToManifest } from "@/features/engagement-overlays/domain/project-engagement-overlay-to-manifest";
 import { getSceneEngagementOverlay } from "@/features/engagement-overlays/domain/normalize-engagement-overlays";
 import { projectMediaVisualEffectToManifest } from "@/features/media-motion/domain/resolve-media-visual-effect";
@@ -59,9 +61,11 @@ import {
   EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES,
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  type ExportBrandStingManifest,
   type ExportSceneManifestV3,
   type ExportAudioManifest,
   type ExportBrandingManifest,
@@ -108,12 +112,15 @@ export interface BuildExportManifestInput {
   readonly keyframedVisualEffectsEnabled?: boolean;
   /** Explicit engagement-overlays capability. Defaults false (fail-closed). */
   readonly engagementOverlaysEnabled?: boolean;
+  /** Explicit ShortForge brand-sting capability. Defaults false (fail-closed). */
+  readonly shortForgeBrandStingEnabled?: boolean;
 }
 
 export function buildExportManifest(input: BuildExportManifestInput): ExportManifest {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
   const keyframedVisualEffectsEnabled = input.keyframedVisualEffectsEnabled === true;
   const engagementOverlaysEnabled = input.engagementOverlaysEnabled === true;
+  const shortForgeBrandStingEnabled = input.shortForgeBrandStingEnabled === true;
   // Fallback preparation freezes timing only. Authoring guidance (Visual pacing)
   // is owned by prepareExportRequest, not manifest construction.
   const prepared =
@@ -135,7 +142,21 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
 
   const multiImageScenesEnabled = input.multiImageScenesEnabled !== false;
 
-  const project = buildProjectManifest(story, timeline, prepared);
+  const narrationEndMs = prepared.contentEndMs;
+  const projectedBrandSting = projectBrandStingToManifest(
+    story.visualRetentionExtensions?.shortForgeBrandSting,
+    narrationEndMs,
+    shortForgeBrandStingEnabled,
+  );
+  const brandSting: ExportBrandStingManifest | undefined =
+    projectedBrandSting.brandSting;
+  const brandStingDurationMs = brandSting?.durationMs ?? 0;
+  const project = buildProjectManifest(
+    story,
+    timeline,
+    prepared,
+    brandStingDurationMs,
+  );
   const output = buildOutputManifest(settings, quality);
   const scenes = buildSceneManifests(
     story,
@@ -166,12 +187,16 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
         Array.isArray(scene.engagementOverlays) &&
         scene.engagementOverlays.length > 0,
     );
+  const hasProjectedBrandSting = brandSting != null;
   const requiredCapabilities: ExportRendererCapabilityId[] = [];
   if (hasProjectedKeyframes || hasProjectedVisualEffect) {
     requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS);
   }
   if (hasProjectedEngagementOverlay) {
     requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS);
+  }
+  if (hasProjectedBrandSting) {
+    requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING);
   }
   const hasAuthoritativeEnhancement = requiredCapabilities.length > 0;
   const capabilities = buildCapabilitySnapshot(environment);
@@ -193,6 +218,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
         version: EXPORT_MANIFEST_V5_VERSION,
         rendererContractVersion: EXPORT_RENDERER_CONTRACT_V5,
         requiredCapabilities,
+        ...(brandSting ? { brandSting } : {}),
       }
     : {
         ...draftBase,
@@ -209,13 +235,20 @@ function buildProjectManifest(
   story: FootieScript,
   timeline: MasterTimeline,
   prepared: ReturnType<typeof prepareStoryForExport>,
+  brandStingDurationMs = 0,
 ): ExportProjectManifest {
+  const endBufferMs = Math.max(0, timeline.renderDurationMs - prepared.contentEndMs);
+  const bounds = resolveBrandStingTimelineBounds({
+    narrationEndMs: prepared.contentEndMs,
+    endBufferMs,
+    brandStingDurationMs,
+  });
   return {
     projectId: slugifyStoryTitle(story.title ?? "") || "story",
     storyTitle: story.title ?? "",
-    contentDurationMs: prepared.contentEndMs,
-    renderDurationMs: timeline.renderDurationMs,
-    endBufferMs: Math.max(0, timeline.renderDurationMs - prepared.contentEndMs),
+    contentDurationMs: bounds.contentDurationMs,
+    renderDurationMs: bounds.renderDurationMs,
+    endBufferMs: bounds.endBufferMs,
     aspectRatio: "9:16",
     sceneCount: story.scenes.length,
   };

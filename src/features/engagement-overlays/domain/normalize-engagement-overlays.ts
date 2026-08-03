@@ -11,6 +11,8 @@ import type {
   VisualRetentionProjectExtensionsV1,
 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
 
+import { normalizeShortForgeBrandSting } from "@/features/brand-sting/domain/normalize-brand-sting";
+
 import {
   ENGAGEMENT_OVERLAY_MAX_DURATION_MS,
   ENGAGEMENT_OVERLAY_MIN_DURATION_MS,
@@ -122,11 +124,10 @@ export function normalizeVisualRetentionProjectExtensions(
     }
   }
 
-  // Preserve brand-sting only when already structurally valid; never invent/enable.
-  const sting = value.shortForgeBrandSting;
-  if (isRecord(sting) && sting.version === 1 && typeof sting.enabled === "boolean") {
-    next.shortForgeBrandSting =
-      sting as unknown as VisualRetentionProjectExtensionsV1["shortForgeBrandSting"];
+  // Preserve brand-sting only when contract-valid; never invent/enable.
+  const sting = normalizeShortForgeBrandSting(value.shortForgeBrandSting);
+  if (sting) {
+    next.shortForgeBrandSting = sting;
   }
 
   if (!next.engagementOverlaysBySceneId && !next.shortForgeBrandSting) {

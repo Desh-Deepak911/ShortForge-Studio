@@ -95,6 +95,12 @@ export interface FootieExportOptions {
    */
   engagementOverlaysEnabled?: boolean;
   /**
+   * Explicit ShortForge brand-sting capability.
+   * When true and a usable sting exists, ExportManifest v5 freezes it.
+   * Default false (fail-closed).
+   */
+  shortForgeBrandStingEnabled?: boolean;
+  /**
    * Actual requested output target for source-quality guidance.
    * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
    */

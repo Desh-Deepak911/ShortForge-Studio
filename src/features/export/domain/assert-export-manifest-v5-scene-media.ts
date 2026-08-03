@@ -19,6 +19,7 @@ import {
   EXPORT_MEDIA_MOTION_KEYFRAME_SCHEMA_VERSION,
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
 } from "./export-manifest.types";
 
@@ -116,18 +117,116 @@ export function validateExportManifestV5SceneMedia(
   const requiresEngagement = required.includes(
     EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   );
-  if (required.length < 1 || (!requiresKeyframed && !requiresEngagement)) {
+  const requiresBrandSting = required.includes(
+    EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
+  );
+  if (
+    required.length < 1 ||
+    (!requiresKeyframed && !requiresEngagement && !requiresBrandSting)
+  ) {
     issues.push({
       code: "MISSING_REQUIRED_CAPABILITY",
       message:
-        "ExportManifest v5 must require keyframed-visual-effects-v1 and/or engagement-overlays-v1.",
+        "ExportManifest v5 must require keyframed-visual-effects-v1, engagement-overlays-v1, and/or shortforge-brand-sting-v1.",
     });
   }
 
   let authoritativeKeyframeItems = 0;
   let authoritativeEffectItems = 0;
   let authoritativeEngagementScenes = 0;
+  let authoritativeBrandSting = 0;
   const sceneIds = new Set<string>();
+
+  if (manifest.brandSting !== undefined) {
+    if (!requiresBrandSting) {
+      issues.push({
+        code: "UNSUPPORTED_BRAND_STING",
+        message: "brandSting requires shortforge-brand-sting-v1.",
+      });
+    } else if (!isObject(manifest.brandSting)) {
+      issues.push({
+        code: "INVALID_BRAND_STING",
+        message: "brandSting must be an object.",
+      });
+    } else {
+      const sting = manifest.brandSting;
+      let stingOk = true;
+      if (sting.version !== 1) {
+        issues.push({
+          code: "INVALID_BRAND_STING",
+          message: "brandSting.version must be 1.",
+        });
+        stingOk = false;
+      }
+      if (sting.title !== "ShortForge Studio") {
+        issues.push({
+          code: "INVALID_BRAND_STING",
+          message: "brandSting.title must be exactly ShortForge Studio.",
+        });
+        stingOk = false;
+      }
+      if (
+        sting.durationMs !== 2000 &&
+        sting.durationMs !== 2500 &&
+        sting.durationMs !== 3000
+      ) {
+        issues.push({
+          code: "INVALID_BRAND_STING",
+          message: "brandSting.durationMs must be 2000, 2500, or 3000.",
+        });
+        stingOk = false;
+      }
+      if (
+        typeof sting.presetId !== "string" ||
+        !sting.presetId.trim() ||
+        sting.narrationPolicy !== "none" ||
+        sting.captionPolicy !== "none" ||
+        sting.playbackSpeedPolicy !== "fixed" ||
+        !isFiniteNumber(sting.startMs) ||
+        sting.startMs < 0
+      ) {
+        issues.push({
+          code: "INVALID_BRAND_STING",
+          message: "brandSting contract fields are invalid.",
+        });
+        stingOk = false;
+      }
+      if (
+        isObject(manifest.project) &&
+        isFiniteNumber(manifest.project.contentDurationMs) &&
+        isFiniteNumber(sting.startMs) &&
+        isFiniteNumber(sting.durationMs) &&
+        Math.round(sting.startMs + sting.durationMs) !==
+          Math.round(manifest.project.contentDurationMs)
+      ) {
+        issues.push({
+          code: "INVALID_BRAND_STING",
+          message:
+            "brandSting.startMs + durationMs must equal project.contentDurationMs.",
+        });
+        stingOk = false;
+      }
+      // Sting must never appear as a narration scene id/title.
+      if (
+        Array.isArray(manifest.scenes) &&
+        manifest.scenes.some(
+          (scene) =>
+            isObject(scene) &&
+            (scene.id === "shortforge-brand-sting" ||
+              scene.id === "brand-sting"),
+        )
+      ) {
+        issues.push({
+          code: "INVALID_BRAND_STING",
+          message: "brandSting must not be represented as a narration scene.",
+        });
+        stingOk = false;
+      }
+      if (stingOk) {
+        authoritativeBrandSting += 1;
+      }
+    }
+  }
 
   for (let sceneIndex = 0; sceneIndex < manifest.scenes.length; sceneIndex += 1) {
     const scene = isObject(manifest.scenes[sceneIndex])
@@ -382,6 +481,14 @@ export function validateExportManifestV5SceneMedia(
       code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
       message:
         "ExportManifest v5 with engagement-overlays-v1 requires at least one usable engagement overlay.",
+    });
+  }
+
+  if (requiresBrandSting && authoritativeBrandSting < 1) {
+    issues.push({
+      code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
+      message:
+        "ExportManifest v5 with shortforge-brand-sting-v1 requires a valid brandSting payload.",
     });
   }
 

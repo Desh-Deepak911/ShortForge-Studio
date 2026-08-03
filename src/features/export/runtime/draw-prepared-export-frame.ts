@@ -12,6 +12,10 @@ import { resolveExportCaptionAnimationFromChunk } from "@/features/caption-anima
 import type { CaptionLayout } from "@/features/caption-layout";
 import type { CaptionStyle } from "@/features/caption-style";
 import {
+  drawBrandSting,
+  resolveBrandStingFrame,
+} from "@/features/brand-sting";
+import {
   drawEngagementOverlay,
   resolveEngagementOverlayFrame,
   shouldSuppressEngagementOverlayForInterSceneTransition,
@@ -206,6 +210,26 @@ export function drawPreparedExportFrame(
 
   resetExportCanvasDrawState(ctx);
   ctx.clearRect(0, 0, width, height);
+
+  if (frame.brandSting) {
+    const plan = resolveBrandStingFrame({
+      sting: {
+        version: 1,
+        enabled: true,
+        title: frame.brandSting.brandSting.title,
+        durationMs: frame.brandSting.brandSting.durationMs,
+        presetId: frame.brandSting.brandSting.presetId,
+        narrationPolicy: frame.brandSting.brandSting.narrationPolicy,
+        captionPolicy: frame.brandSting.brandSting.captionPolicy,
+        playbackSpeedPolicy: frame.brandSting.brandSting.playbackSpeedPolicy,
+      },
+      elapsedMs: frame.brandSting.elapsedMs,
+      frameWidth: width,
+      frameHeight: height,
+    });
+    drawBrandSting(ctx, plan, width, height);
+    return;
+  }
 
   const transition = frame.transition;
   const intra = frame.intraSceneTransition;

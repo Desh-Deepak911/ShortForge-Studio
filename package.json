@@ -62,6 +62,7 @@
     "test:media-motion-keyframe-ui": "tsx src/verification/media-motion/mediaMotionKeyframeCommands.verify.ts && tsx src/verification/media-motion/mediaMotionKeyframeEditor.verify.tsx && tsx src/verification/media-motion/mediaMotionKeyframeAccessibility.verify.tsx",
     "test:media-visual-effects": "tsx src/verification/media-motion/mediaVisualEffectPresets.verify.ts && tsx src/verification/media-motion/mediaVisualEffectRenderParity.verify.ts && tsx src/verification/media-motion/mediaVisualEffectControls.verify.tsx",
     "test:engagement-overlays": "tsx src/verification/engagement-overlays/engagementOverlayWindow.verify.ts && tsx src/verification/engagement-overlays/engagementOverlayCommands.verify.ts && tsx src/verification/engagement-overlays/engagementOverlayRenderParity.verify.tsx && tsx src/verification/engagement-overlays/engagementOverlayAccessibility.verify.tsx",
+    "test:brand-sting-export": "tsx src/verification/brand-sting/brandStingContract.verify.ts && tsx src/verification/brand-sting/brandStingTimeline.verify.ts && tsx src/verification/brand-sting/brandStingRenderParity.verify.tsx && tsx src/verification/brand-sting/brandStingAccessibility.verify.tsx",
     "test:preview-motion": "tsx src/verification/features/editor/preview/motion/previewMotionAdapter.verify.ts",
     "test:export-motion": "tsx src/verification/features/editor/export/motion/exportMotionAdapter.verify.ts",
     "test:motion-sprint-freeze": "tsx src/verification/features/media-motion/motion-sprint-freeze.verify.ts",

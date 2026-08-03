@@ -309,7 +309,7 @@ function main(): void {
     assert.match(route, /subjectAwareReframingEnabled/);
   });
 
-  test("UI-surface coverage registered; keyframes + engagement wired; brand sting / subject-aware remain unavailable", () => {
+  test("UI-surface coverage registered; keyframes + engagement + brand sting wired; subject-aware remains unavailable", () => {
     for (const capability of [
       KEYFRAMED_VISUAL_EFFECTS_CAPABILITY_ID,
       ENGAGEMENT_OVERLAYS_CAPABILITY_ID,
@@ -346,8 +346,9 @@ function main(): void {
 
     const exportPanel = readSrc("src/components/ExportPanel.tsx");
     assert.match(exportPanel, /useEngagementOverlaysEnabled/);
-    assert.doesNotMatch(exportPanel, /useShortForgeBrandStingEnabled/);
-    assert.doesNotMatch(exportPanel, /BrandStingExportControls/);
+    assert.match(exportPanel, /useShortForgeBrandStingEnabled/);
+    assert.match(exportPanel, /BrandStingExportControls/);
+    assert.doesNotMatch(exportPanel, /useSubjectAwareReframingEnabled/);
   });
 
   test("keyframes are render-authoritative only through versioned ExportManifest v5", () => {
@@ -368,8 +369,10 @@ function main(): void {
     assert.match(manifest, /EXPORT_RENDERER_CONTRACT_V5 = "9E"/);
     assert.match(manifest, /keyframed-visual-effects-v1/);
     assert.match(manifest, /engagement-overlays-v1/);
+    assert.match(manifest, /shortforge-brand-sting-v1/);
     assert.match(manifest, /keyframes\?:/);
     assert.match(manifest, /engagementOverlays\?:/);
+    assert.match(manifest, /brandSting\?:/);
     assert.doesNotMatch(manifest, /subjectAware/);
   });
 

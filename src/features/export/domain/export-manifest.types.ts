@@ -25,13 +25,17 @@ export const EXPORT_RENDERER_CONTRACT_V5 = "9E";
 /** Renderer feature IDs frozen into v5 requiredCapabilities. */
 export type ExportRendererCapabilityId =
   | "keyframed-visual-effects-v1"
-  | "engagement-overlays-v1";
+  | "engagement-overlays-v1"
+  | "shortforge-brand-sting-v1";
 
 export const EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS =
   "keyframed-visual-effects-v1" as const satisfies ExportRendererCapabilityId;
 
 export const EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS =
   "engagement-overlays-v1" as const satisfies ExportRendererCapabilityId;
+
+export const EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING =
+  "shortforge-brand-sting-v1" as const satisfies ExportRendererCapabilityId;
 
 /**
  * Browser renderer implementation-owned capability advertisement.
@@ -40,7 +44,24 @@ export const EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS =
 export const EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES = Object.freeze([
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
+  EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
 ] as const satisfies readonly ExportRendererCapabilityId[]);
+
+/**
+ * Frozen project-level ShortForge Studio outro (v5 / 9E only).
+ * Never represented as a narration scene.
+ */
+export interface ExportBrandStingManifest {
+  readonly version: 1;
+  readonly title: "ShortForge Studio";
+  readonly durationMs: 2000 | 2500 | 3000;
+  readonly presetId: string;
+  readonly narrationPolicy: "none";
+  readonly captionPolicy: "none";
+  readonly playbackSpeedPolicy: "fixed";
+  /** Absolute start on the project timeline (= narration story end). */
+  readonly startMs: number;
+}
 
 /** Frozen keyframe payload schema inside ExportManifest v5 motion records. */
 export const EXPORT_MEDIA_MOTION_KEYFRAME_SCHEMA_VERSION = 1 as const;
@@ -445,6 +466,8 @@ export interface ExportManifestV5 extends ExportManifestBase {
   readonly rendererContractVersion: typeof EXPORT_RENDERER_CONTRACT_V5;
   readonly scenes: readonly ExportSceneManifestV3[];
   readonly requiredCapabilities: readonly ExportRendererCapabilityId[];
+  /** Present only when shortforge-brand-sting-v1 is authoritative. */
+  readonly brandSting?: ExportBrandStingManifest;
 }
 
 export type ExportManifest =

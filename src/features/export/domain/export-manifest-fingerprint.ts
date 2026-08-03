@@ -4,6 +4,7 @@
  */
 
 import type {
+  ExportBrandStingManifest,
   ExportManifestDraft,
   ExportSceneManifest,
 } from "./export-manifest.types";
@@ -128,6 +129,23 @@ export function buildExportManifestFingerprint(
     },
     ...("requiredCapabilities" in draft
       ? { requiredCapabilities: draft.requiredCapabilities }
+      : {}),
+    ...("brandSting" in draft && draft.brandSting
+      ? (() => {
+          const brandSting = draft.brandSting as ExportBrandStingManifest;
+          return {
+            brandSting: {
+              version: brandSting.version,
+              title: brandSting.title,
+              durationMs: brandSting.durationMs,
+              presetId: brandSting.presetId,
+              narrationPolicy: brandSting.narrationPolicy,
+              captionPolicy: brandSting.captionPolicy,
+              playbackSpeedPolicy: brandSting.playbackSpeedPolicy,
+              startMs: brandSting.startMs,
+            },
+          };
+        })()
       : {}),
   };
 

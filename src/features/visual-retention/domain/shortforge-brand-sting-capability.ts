@@ -1,8 +1,8 @@
 /**
  * shortforge-brand-sting-v1 capability gate (staging-only).
  * Defaults off unless phase gates explicitly enable the ordered chain through
- * this reserved creator capability. Export-drawer outro UI remains unimplemented
- * until a later gated slice.
+ * this reserved creator capability. Authoring/render authority requires
+ * shortForgeBrandStingEnabled === true; ExportManifest v5 freezes the payload.
  */
 
 import {

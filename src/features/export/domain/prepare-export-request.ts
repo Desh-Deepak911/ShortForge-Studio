@@ -22,6 +22,7 @@ import {
 
 import { probeExportMp4Runtime } from "@/features/export/formats/export-runtime-codec-probe";
 
+import { projectBrandStingToManifest } from "@/features/brand-sting/domain/project-brand-sting-to-manifest";
 import { getSceneEngagementOverlay } from "@/features/engagement-overlays/domain/normalize-engagement-overlays";
 import { projectEngagementOverlayToManifest } from "@/features/engagement-overlays/domain/project-engagement-overlay-to-manifest";
 
@@ -63,6 +64,8 @@ export interface PrepareExportRequestInput {
   readonly keyframedVisualEffectsEnabled?: boolean;
   /** Explicit engagement-overlays capability; defaults false. */
   readonly engagementOverlaysEnabled?: boolean;
+  /** Explicit ShortForge brand-sting capability; defaults false. */
+  readonly shortForgeBrandStingEnabled?: boolean;
   /**
    * Explicit Visual pacing authoring capability.
    * Default ignored/fail-closed. Guidance only — never a renderer requirement.
@@ -118,6 +121,9 @@ export async function prepareExportRequest(
   const engagementOverlaysEnabled =
     input.engagementOverlaysEnabled === true ||
     input.options?.engagementOverlaysEnabled === true;
+  const shortForgeBrandStingEnabled =
+    input.shortForgeBrandStingEnabled === true ||
+    input.options?.shortForgeBrandStingEnabled === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
   // Timing authority only — authoring guidance is appended once below.
   const preparedStory = prepareStoryForExport(voiceoverPrepared, {
@@ -152,6 +158,7 @@ export async function prepareExportRequest(
     mixedMediaScenesEnabled,
     keyframedVisualEffectsEnabled,
     engagementOverlaysEnabled,
+    shortForgeBrandStingEnabled,
     environment: {
       ...input.environment,
       mp4EncoderAvailable,
@@ -214,6 +221,21 @@ export async function prepareExportRequest(
       }
     }
   }
+  const brandStingWarnings: ExportWarning[] = [];
+  if (shortForgeBrandStingEnabled) {
+    const projected = projectBrandStingToManifest(
+      preparedStory.story.visualRetentionExtensions?.shortForgeBrandSting,
+      preparedStory.contentEndMs,
+      true,
+    );
+    if (!projected.brandSting && projected.warnings.length > 0) {
+      brandStingWarnings.push({
+        code: "BRAND_STING_OMITTED",
+        message:
+          projected.warnings[0] ?? EXPORT_WARNING_MESSAGES.BRAND_STING_OMITTED,
+      });
+    }
+  }
   const preflight: ExportCapabilityResult = {
     ...basePreflight,
     warnings: Object.freeze([
@@ -221,6 +243,7 @@ export async function prepareExportRequest(
       ...pacingWarnings,
       ...sourceQualityWarnings,
       ...engagementWarnings,
+      ...brandStingWarnings,
     ]),
   };
   const renderer = preflight.renderer;

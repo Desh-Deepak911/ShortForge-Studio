@@ -18,6 +18,10 @@ import { useEditorSelection } from "@/features/editor/selection";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import { sceneHasFramableMedia } from "@/features/media-framing";
 import {
+  BrandStingPreview,
+  getShortForgeBrandSting,
+} from "@/features/brand-sting";
+import {
   EngagementOverlayPreview,
   getSceneEngagementOverlay,
   shouldSuppressEngagementOverlayForInterSceneTransition,
@@ -158,6 +162,9 @@ export default function VideoPreview({
     browserSceneStartedAtMs,
     masterTimeline,
     currentTimeMs,
+    brandStingActive,
+    brandStingElapsedMs,
+    effectiveRenderDurationMs,
     scene,
     playbackScope,
     loopSceneEnabled,
@@ -292,9 +299,9 @@ export default function VideoPreview({
 
       onClockUpdate({
         currentTimeMs: isPlaying || isSpeaking ? timelineTimeMs : currentTimeMs,
-        renderDurationMs: masterTimeline.renderDurationMs,
+        renderDurationMs: effectiveRenderDurationMs || masterTimeline.renderDurationMs,
         isPlaying: isPlaying || isSpeaking,
-        activeSceneId: activeScene?.id ?? null,
+        activeSceneId: brandStingActive ? null : activeScene?.id ?? null,
       });
     };
 
@@ -314,8 +321,10 @@ export default function VideoPreview({
     return () => window.cancelAnimationFrame(frameId);
   }, [
     activeSceneIndex,
+    brandStingActive,
     browserSceneStartedAtMs,
     currentTimeMs,
+    effectiveRenderDurationMs,
     elapsedSec,
     isPlaying,
     isSpeaking,
@@ -505,58 +514,65 @@ export default function VideoPreview({
           isPlaying={playbackActive}
           mixedMediaScenesEnabled={mixedMediaScenesEnabled}
           overlay={
-            <>
-              {engagementOverlaysEnabled &&
-              script &&
-              !suppressEngagementOverlay ? (
-                <EngagementOverlayPreview
-                  overlay={getSceneEngagementOverlay(script, displayScene.id)}
-                  sceneDurationMs={sceneDurationMs}
-                  sceneElapsedMs={sceneElapsedMs}
-                />
-              ) : null}
-              {showSubtitles ? (
-                <SubtitleOverlay
-                  scene={subtitleScene}
-                  script={script}
-                  sceneIndex={subtitleSceneIndex}
-                  sceneElapsedMs={sceneElapsedMs}
-                  sceneDurationMs={sceneDurationMs}
-                  activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
-                  chunkProgress={previewSceneTiming.chunkProgress}
-                  captionAnimationState={
-                    previewSceneTiming.captionAnimationState
-                  }
-                  subtitleAvailableDurationMs={
-                    previewSceneTiming.subtitleAvailableDurationMs
-                  }
-                  captionTooShortForEffect={
-                    previewSceneTiming.captionTooShortForEffect
-                  }
-                  draggable={previewInteraction.allowCaptionDrag}
-                  allowPointerEvents={
-                    previewInteraction.allowCaptionPointerEvents
-                  }
-                  onOffsetCommit={handleCaptionOffsetCommit}
-                  onResetLayout={handleCaptionLayoutReset}
-                  className={captionOverlayClassName}
-                />
-              ) : null}
-              {showGeneratedCaption ? (
-                <CaptionOverlay
-                  scene={displayScene}
-                  script={script}
-                  sceneIndex={previewFrame.sceneIndex}
-                  draggable={previewInteraction.allowCaptionDrag}
-                  allowPointerEvents={
-                    previewInteraction.allowCaptionPointerEvents
-                  }
-                  onOffsetCommit={handleCaptionOffsetCommit}
-                  onResetLayout={handleCaptionLayoutReset}
-                  className={captionOverlayClassName}
-                />
-              ) : null}
-            </>
+            brandStingActive && script ? (
+              <BrandStingPreview
+                sting={getShortForgeBrandSting(script.visualRetentionExtensions)}
+                elapsedMs={brandStingElapsedMs}
+              />
+            ) : (
+              <>
+                {engagementOverlaysEnabled &&
+                script &&
+                !suppressEngagementOverlay ? (
+                  <EngagementOverlayPreview
+                    overlay={getSceneEngagementOverlay(script, displayScene.id)}
+                    sceneDurationMs={sceneDurationMs}
+                    sceneElapsedMs={sceneElapsedMs}
+                  />
+                ) : null}
+                {showSubtitles ? (
+                  <SubtitleOverlay
+                    scene={subtitleScene}
+                    script={script}
+                    sceneIndex={subtitleSceneIndex}
+                    sceneElapsedMs={sceneElapsedMs}
+                    sceneDurationMs={sceneDurationMs}
+                    activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
+                    chunkProgress={previewSceneTiming.chunkProgress}
+                    captionAnimationState={
+                      previewSceneTiming.captionAnimationState
+                    }
+                    subtitleAvailableDurationMs={
+                      previewSceneTiming.subtitleAvailableDurationMs
+                    }
+                    captionTooShortForEffect={
+                      previewSceneTiming.captionTooShortForEffect
+                    }
+                    draggable={previewInteraction.allowCaptionDrag}
+                    allowPointerEvents={
+                      previewInteraction.allowCaptionPointerEvents
+                    }
+                    onOffsetCommit={handleCaptionOffsetCommit}
+                    onResetLayout={handleCaptionLayoutReset}
+                    className={captionOverlayClassName}
+                  />
+                ) : null}
+                {showGeneratedCaption ? (
+                  <CaptionOverlay
+                    scene={displayScene}
+                    script={script}
+                    sceneIndex={previewFrame.sceneIndex}
+                    draggable={previewInteraction.allowCaptionDrag}
+                    allowPointerEvents={
+                      previewInteraction.allowCaptionPointerEvents
+                    }
+                    onOffsetCommit={handleCaptionOffsetCommit}
+                    onResetLayout={handleCaptionLayoutReset}
+                    className={captionOverlayClassName}
+                  />
+                ) : null}
+              </>
+            )
           }
           footer={
             <>
