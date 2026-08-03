@@ -20,6 +20,7 @@ export type {
   SceneImageMotionPreset,
   SceneImageMotionType,
   MediaMotionEasing,
+  MediaMotionKeyframe,
   SceneMedia,
   SceneMediaFitMode,
   SceneMediaMotion,

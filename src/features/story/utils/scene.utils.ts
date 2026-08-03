@@ -1,4 +1,5 @@
 import { normalizeSceneCaptionSettings } from "./caption.utils";
+import { normalizeMediaMotionKeyframes } from "@/features/media-motion/domain/media-motion-keyframes";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
 import { normalizeSourceQualityAdjustmentProvenance } from "@/features/source-quality/domain/source-quality-adjustment-provenance";
 import type {
@@ -449,6 +450,10 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
     const end = normalizeSceneMediaTransform(motionRecord.endTransform);
     if (end) {
       motion.endTransform = end;
+    }
+    const keyframes = normalizeMediaMotionKeyframes(motionRecord.keyframes);
+    if (keyframes) {
+      motion.keyframes = [...keyframes];
     }
     normalized.motion = motion;
   }

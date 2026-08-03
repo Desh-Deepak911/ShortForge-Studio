@@ -5,6 +5,7 @@
 
 export type {
   MediaMotionEasing,
+  MediaMotionKeyframe,
   MediaMotionPresetDefinition,
   MediaMotionState,
   ResolveMediaMotionInput,
@@ -78,3 +79,30 @@ export {
   MEDIA_MOTION_INTENSITY_STEP,
 } from "./media-motion-inspector.config";
 export type { MediaMotionInspectorCategory } from "./media-motion-inspector.config";
+
+export {
+  MEDIA_MOTION_KEYFRAME_IDENTITY_OPACITY,
+  MEDIA_MOTION_KEYFRAME_IDENTITY_ROTATION,
+  MEDIA_MOTION_KEYFRAME_MAX_ABS_ROTATION_DEG,
+  MEDIA_MOTION_KEYFRAME_MAX_ABS_TRANSLATION_X,
+  MEDIA_MOTION_KEYFRAME_MAX_ABS_TRANSLATION_Y,
+  MEDIA_MOTION_KEYFRAME_MAX_OPACITY,
+  MEDIA_MOTION_KEYFRAME_MAX_SCALE,
+  MEDIA_MOTION_KEYFRAME_MIN_OPACITY,
+  MEDIA_MOTION_KEYFRAME_MIN_SCALE,
+  MEDIA_MOTION_KEYFRAME_REFERENCE_HEIGHT,
+  MEDIA_MOTION_KEYFRAME_REFERENCE_WIDTH,
+  MEDIA_MOTION_KEYFRAME_SERIALIZATION_MAX_OFFSET_MS,
+  MEDIA_MOTION_MAX_KEYFRAMES,
+  normalizeMediaMotionKeyframes,
+  selectEndpointPreservingKeyframes,
+} from "./domain/media-motion-keyframes";
+export type { NormalizeMediaMotionKeyframesOptions } from "./domain/media-motion-keyframes";
+
+export { resolveMediaMotionKeyframes } from "./domain/resolve-media-motion-keyframes";
+export type {
+  ResolveMediaMotionKeyframesInput,
+  ResolveMediaMotionKeyframesResult,
+  ResolveMediaMotionKeyframesUnavailableReason,
+  ResolvedMediaMotionKeyframeSample,
+} from "./domain/resolve-media-motion-keyframes";

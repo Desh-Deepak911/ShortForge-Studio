@@ -78,6 +78,33 @@ export type SceneMediaFitMode = "cover" | "contain";
 export type MediaMotionEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
 
 /**
+ * One item-local media-motion keyframe.
+ * `offsetMs` is relative to the projected media window (full scene-media window
+ * for single-media; visualSequence/mediaTimeline item window for mixed-media).
+ *
+ * Transform units match `SceneMediaTransform` / preset deltas exactly:
+ * - `x`/`y` are reference-frame pixels in the fixed 1080×1920 design space
+ *   (not normalized 0–1, not output-resolution pixels, not percentages).
+ *   Preview/export scale them into the live frame, so values stay stable across
+ *   720p / 1080p / 4K.
+ * - `scale` is a unitless multiplier (identity 1).
+ * - `rotation` is degrees (identity 0).
+ * - `opacity` is unitless 0–1 (identity 1); current adapters ignore it.
+ * - `easing` is the outgoing segment curve to the next keyframe.
+ *
+ * Dormant until Preview/Export/Headless + ExportManifest agree.
+ */
+export interface MediaMotionKeyframe {
+  offsetMs: number;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  easing: MediaMotionEasing;
+}
+
+/**
  * Shared media motion config (4.2C).
  * Additive and optional — legacy `imageMotion` remains valid and is mapped on read.
  */
@@ -90,6 +117,11 @@ export interface SceneMediaMotion {
   intensity?: number;
   startTransform?: SceneMediaTransform;
   endTransform?: SceneMediaTransform;
+  /**
+   * Optional multi-keyframe motion path. Absent/malformed keyframes do not
+   * change preset or startTransform/endTransform authority.
+   */
+  keyframes?: MediaMotionKeyframe[];
 }
 
 export interface SceneMedia {

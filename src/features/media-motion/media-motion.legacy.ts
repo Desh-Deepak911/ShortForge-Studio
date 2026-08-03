@@ -10,6 +10,7 @@ import type {
 import { normalizeSceneImageMotion } from "@/features/story/utils/scene.utils";
 import { SCENE_IMAGE_MOTION_INTENSITY_MAX_SCALE } from "@/features/story/utils/scene-image-motion.utils";
 
+import { normalizeMediaMotionKeyframes } from "./domain/media-motion-keyframes";
 import { getMediaMotionPreset, MEDIA_MOTION_MAX_ZOOM_DELTA } from "./media-motion.presets";
 import {
   MEDIA_MOTION_STATIC,
@@ -135,7 +136,8 @@ export function normalizeSceneMediaMotionRecord(
     (startTransform.rotation ?? 0) === 0 &&
     (endTransform.rotation ?? 0) === 0;
 
-  return {
+  const keyframes = normalizeMediaMotionKeyframes(record.keyframes);
+  const normalized: SceneMediaMotion = {
     version: MEDIA_MOTION_VERSION,
     enabled: isCustomIdentity ? false : enabled,
     presetId,
@@ -144,6 +146,10 @@ export function normalizeSceneMediaMotionRecord(
     startTransform,
     endTransform,
   };
+  if (keyframes) {
+    normalized.keyframes = [...keyframes];
+  }
+  return normalized;
 }
 
 export { MEDIA_MOTION_IDENTITY_TRANSFORM };
