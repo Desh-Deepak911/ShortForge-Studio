@@ -17,6 +17,7 @@ import {
   useActiveVideoTrimPreviewOverride,
 } from "@/features/preview/video-trim-preview";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
+import { useKeyframedVisualEffectsEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { useFrameSize } from "@/hooks/useFrameSize";
 
 interface SceneFrameVideoProps {
@@ -79,6 +80,7 @@ export default function SceneFrameVideo({
 
   const trimPreview = useActiveVideoTrimPreviewOverride(sceneId);
   const trimPreviewActive = Boolean(trimPreview);
+  const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
 
   const url = media.url?.trim();
   const clipTime = resolvePreviewVideoClipTime({
@@ -215,6 +217,7 @@ export default function SceneFrameVideo({
           frameWidth,
           frameHeight,
           transformOffset,
+          keyframedVisualEffectsEnabled,
         }),
         ...(isDragging ? { willChange: "transform" as const } : {}),
       }

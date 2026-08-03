@@ -8,6 +8,7 @@ import {
 } from "@/features/story/utils";
 import { useFrameSize } from "@/hooks/useFrameSize";
 import type { FootieScene } from "@/features/story/types";
+import { useKeyframedVisualEffectsEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 
 interface SceneFrameImageProps {
   scene: Pick<FootieScene, "image" | "uploadedImage" | "media">;
@@ -47,6 +48,7 @@ export default function SceneFrameImage({
   const { ref: containerRef, width: frameWidth, height: frameHeight } =
     useFrameSize<HTMLDivElement>();
   const baseImage = getSceneImage(scene);
+  const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
 
   if (!baseImage) {
     return null;
@@ -66,6 +68,7 @@ export default function SceneFrameImage({
           frameWidth,
           frameHeight,
           transformOffset,
+          keyframedVisualEffectsEnabled,
         }),
         ...(isDragging ? { willChange: "transform" as const } : {}),
       }

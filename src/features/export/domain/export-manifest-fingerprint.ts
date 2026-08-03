@@ -98,6 +98,8 @@ export function buildExportManifestFingerprint(
       supportedFps: draft.capabilities.supportedFps,
       browserRendererAvailable: draft.capabilities.browserRendererAvailable,
       serverRendererAvailable: draft.capabilities.serverRendererAvailable,
+      // supportedCapabilities is renderer negotiation metadata and must not
+      // vary the canonical story/render fingerprint across Browser/Headless.
       envFlags: {
         supportsCanvasCaptureStream:
           draft.capabilities.environment.supportsCanvasCaptureStream,
@@ -111,6 +113,9 @@ export function buildExportManifestFingerprint(
           draft.capabilities.environment.ffmpegRuntimePoisoned,
       },
     },
+    ...("requiredCapabilities" in draft
+      ? { requiredCapabilities: draft.requiredCapabilities }
+      : {}),
   };
 
   return `em:${stableHash(stableStringify(payload))}`;

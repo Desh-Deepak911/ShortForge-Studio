@@ -73,6 +73,7 @@ function drawExactMediaBackground(
   itemElapsedMs: number,
   itemDurationMs: number,
   mediaItemId: string,
+  keyframedVisualEffectsEnabled: boolean,
 ) {
   drawSceneMediaFrame({
     ctx,
@@ -86,6 +87,7 @@ function drawExactMediaBackground(
     mediaItemId,
     itemElapsedMs,
     itemDurationMs,
+    keyframedVisualEffectsEnabled,
   });
 }
 
@@ -98,6 +100,7 @@ function drawSceneBackground(
   sceneElapsedMs: number,
   sceneDurationMs: number,
   prepared: PrepareExportSceneMediaResult | undefined,
+  keyframedVisualEffectsEnabled: boolean,
 ) {
   const active = resolveExportActiveSceneMediaFrame(
     drawScene.manifestScene,
@@ -116,6 +119,7 @@ function drawSceneBackground(
     mediaItemId: prepared?.mediaItemId ?? active?.item.id,
     itemElapsedMs: active?.itemElapsedMs ?? sceneElapsedMs,
     itemDurationMs: active?.itemDurationMs ?? sceneDurationMs,
+    keyframedVisualEffectsEnabled,
   });
 }
 
@@ -186,6 +190,7 @@ export function drawPreparedExportFrame(
   context: ExportRenderContext,
   preparedBySceneId: Map<string, PrepareExportSceneMediaResult>,
   preparedByMediaKey?: Map<string, PrepareExportSceneMediaResult>,
+  keyframedVisualEffectsEnabled = false,
 ): void {
   const ctx = context.canvasContext;
   const width = context.width;
@@ -239,6 +244,7 @@ export function drawPreparedExportFrame(
           fromElapsed,
           transition.fromScene.durationMs,
           fromPrepared,
+          keyframedVisualEffectsEnabled,
         );
       },
       drawToBackground: (layerCtx, layerWidth, layerHeight) => {
@@ -252,6 +258,7 @@ export function drawPreparedExportFrame(
           toElapsed,
           transition.toScene.durationMs,
           toPrepared,
+          keyframedVisualEffectsEnabled,
         );
       },
     });
@@ -287,6 +294,7 @@ export function drawPreparedExportFrame(
           intra.outgoingItemLocalMs,
           intra.fromItem.durationMs,
           intra.fromItem.id,
+          keyframedVisualEffectsEnabled,
         );
       },
       drawToBackground: (layerCtx, layerWidth, layerHeight) => {
@@ -302,6 +310,7 @@ export function drawPreparedExportFrame(
           intra.incomingItemLocalMs,
           intra.toItem.durationMs,
           intra.toItem.id,
+          keyframedVisualEffectsEnabled,
         );
       },
     });
@@ -328,6 +337,7 @@ export function drawPreparedExportFrame(
       frame.media.sceneElapsedMs,
       frame.media.sceneDurationMs,
       preparedBySceneId.get(frame.drawScene.id),
+      keyframedVisualEffectsEnabled,
     );
   }
 

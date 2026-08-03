@@ -110,6 +110,7 @@ function runPostIntegrityPreflight(
   const estimatedCost = estimateExportCost(manifest);
   const env = manifest.capabilities.environment;
 
+  pushRequiredCapabilityChecks(manifest, blockers);
   pushFormatChecks(manifest, blockers);
   pushTimelineChecks(manifest, blockers, warnings);
   pushMediaChecks(manifest, blockers);
@@ -177,6 +178,25 @@ function runPostIntegrityPreflight(
     estimatedCost,
     manifestFingerprint: safeManifestFingerprint(manifest),
   };
+}
+
+function pushRequiredCapabilityChecks(
+  manifest: ExportManifest,
+  blockers: ExportBlocker[],
+): void {
+  if (!("requiredCapabilities" in manifest)) return;
+  const supported = manifest.capabilities.supportedCapabilities ?? [];
+  for (const capability of manifest.requiredCapabilities) {
+    if (!supported.includes(capability)) {
+      blockers.push(
+        blocker(
+          "UNSUPPORTED_RENDERER_CAPABILITY",
+          `Required renderer capability "${capability}" is unavailable.`,
+          capability,
+        ),
+      );
+    }
+  }
 }
 
 function blocker(

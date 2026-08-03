@@ -8,6 +8,7 @@ import type { ExportAudioMode } from "@/features/export/utils/export-quality.uti
 import type { ExportSettings } from "@/features/export/utils/export-settings.utils";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import {
+  useKeyframedVisualEffectsEnabled,
   useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
 } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
@@ -97,6 +98,7 @@ export function HeadlessExportSection({
   const visualBeatDensityEnabled = useVisualBeatDensityEnabled();
   const sourceQualityIntelligenceEnabled =
     useSourceQualityIntelligenceEnabled();
+  const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
   const clientRef = useRef(injectedClient ?? createHttpHeadlessRenderClient());
   const uploadPortRef = useRef(
     injectedOwnedUploadPort ?? new HttpOwnedUploadAdapter(),
@@ -388,6 +390,7 @@ export function HeadlessExportSection({
           mixedMediaScenesEnabled,
           visualBeatDensityEnabled,
           sourceQualityIntelligenceEnabled,
+          keyframedVisualEffectsEnabled,
           sourceQualityExportTarget: resolution,
         });
         ownedPreparation = await prepareOwnedHeadlessUpload({

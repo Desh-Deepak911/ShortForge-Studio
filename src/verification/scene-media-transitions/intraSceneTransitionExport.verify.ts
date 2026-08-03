@@ -156,7 +156,7 @@ function buildV3(scene: FootieScene): ExportManifestV3 {
     createdAt: current.createdAt,
     project: current.project,
     output: current.output,
-    scenes: current.scenes,
+    scenes: current.scenes as ExportManifestV3["scenes"],
     captions: current.captions,
     audio: current.audio,
     branding: current.branding,

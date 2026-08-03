@@ -61,11 +61,18 @@ function validateAdjustments(
 
 export function validateExportManifestV4SceneMedia(
   manifest: unknown,
-): ExportManifestV3IntegrityResult {
-  const base = validateExportManifestTransitionSceneMedia(manifest, {
+  contract: {
+    readonly version: number;
+    readonly rendererContractVersion: string;
+    readonly label: string;
+  } = {
     version: EXPORT_MANIFEST_VERSION,
     rendererContractVersion: EXPORT_RENDERER_CONTRACT_VERSION,
     label: "v4",
+  },
+): ExportManifestV3IntegrityResult {
+  const base = validateExportManifestTransitionSceneMedia(manifest, {
+    ...contract,
   });
   if (!base.ok || !isObject(manifest) || !Array.isArray(manifest.scenes)) {
     return base;
@@ -81,6 +88,17 @@ export function validateExportManifestV4SceneMedia(
           `scenes[${sceneIndex}].media.visualAdjustments`,
         ),
       );
+      if (
+        contract.version === EXPORT_MANIFEST_VERSION &&
+        isObject(scene.media.motion) &&
+        (scene.media.motion.keyframes !== undefined ||
+          scene.media.motion.keyframeSchemaVersion !== undefined)
+      ) {
+        issues.push({
+          code: "UNSUPPORTED_MEDIA_MOTION_KEYFRAMES",
+          message: `scenes[${sceneIndex}].media.motion must not include keyframes on ExportManifest v4.`,
+        });
+      }
     }
     const timeline = isObject(scene.mediaTimeline) ? scene.mediaTimeline : null;
     const items = Array.isArray(timeline?.items) ? timeline.items : [];
@@ -94,6 +112,18 @@ export function validateExportManifestV4SceneMedia(
             `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media.visualAdjustments`,
           ),
         );
+        // v4 must never carry render-authoritative keyframes (v5 / 9E only).
+        if (
+          contract.version === EXPORT_MANIFEST_VERSION &&
+          isObject(media.motion) &&
+          (media.motion.keyframes !== undefined ||
+            media.motion.keyframeSchemaVersion !== undefined)
+        ) {
+          issues.push({
+            code: "UNSUPPORTED_MEDIA_MOTION_KEYFRAMES",
+            message: `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media.motion must not include keyframes on ExportManifest v4.`,
+          });
+        }
       }
     }
   }

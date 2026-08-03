@@ -106,3 +106,12 @@ export type {
   ResolveMediaMotionKeyframesUnavailableReason,
   ResolvedMediaMotionKeyframeSample,
 } from "./domain/resolve-media-motion-keyframes";
+
+export {
+  mediaMotionRecordAllowsKeyframeAuthority,
+  resolveRenderedMediaMotion,
+} from "./adapters/resolve-rendered-media-motion";
+export type {
+  RenderedMediaMotionState,
+  ResolveRenderedMediaMotionInput,
+} from "./adapters/resolve-rendered-media-motion";

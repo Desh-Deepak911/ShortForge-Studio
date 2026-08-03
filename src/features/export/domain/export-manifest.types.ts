@@ -14,9 +14,22 @@ export const EXPORT_RENDERER_CONTRACT_V2 = "8D";
 export const EXPORT_MANIFEST_V3_VERSION = 3;
 export const EXPORT_RENDERER_CONTRACT_V3 = "9C";
 
-/** Current production ExportManifest / renderer contract (Sprint 11E 2G.13). */
+/** Current production ExportManifest / renderer contract without keyframe authority. */
 export const EXPORT_MANIFEST_VERSION = 4;
 export const EXPORT_RENDERER_CONTRACT_VERSION = "9D";
+
+/** ExportManifest / renderer contract when authoritative media-motion keyframes are frozen. */
+export const EXPORT_MANIFEST_V5_VERSION = 5;
+export const EXPORT_RENDERER_CONTRACT_V5 = "9E";
+
+/** Renderer feature IDs frozen into v5 requiredCapabilities. */
+export type ExportRendererCapabilityId = "keyframed-visual-effects-v1";
+
+export const EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS =
+  "keyframed-visual-effects-v1" as const satisfies ExportRendererCapabilityId;
+
+/** Frozen keyframe payload schema inside ExportManifest v5 motion records. */
+export const EXPORT_MEDIA_MOTION_KEYFRAME_SCHEMA_VERSION = 1 as const;
 
 /** @deprecated Prefer EXPORT_MANIFEST_V2_VERSION for frozen-v2 checks. */
 export const EXPORT_MANIFEST_V2 = EXPORT_MANIFEST_V2_VERSION;
@@ -53,11 +66,28 @@ export interface ExportOutputManifest {
   readonly bitrate: number;
 }
 
+export interface ExportMediaMotionKeyframeManifest {
+  readonly offsetMs: number;
+  readonly x: number;
+  readonly y: number;
+  readonly scale: number;
+  readonly rotation: number;
+  readonly opacity: number;
+  readonly easing: string;
+}
+
+/**
+ * Frozen media-motion payload.
+ * v4: enabled/presetId/easing/intensity only (no keyframes).
+ * v5: may include authoritative keyframes + schema version when capability-gated.
+ */
 export interface ExportMediaMotionManifest {
   readonly enabled: boolean;
   readonly presetId: string;
   readonly easing: string;
   readonly intensity: number;
+  readonly keyframes?: readonly ExportMediaMotionKeyframeManifest[];
+  readonly keyframeSchemaVersion?: 1;
 }
 
 export interface ExportMediaVisualAdjustmentsManifest {
@@ -311,6 +341,11 @@ export interface ExportCapabilitySnapshot {
   readonly browserRendererAvailable: boolean;
   readonly serverRendererAvailable: boolean;
   readonly environment: ExportEnvironmentSnapshot;
+  /**
+   * Renderer-advertised feature support. Absent on frozen v2–v4 snapshots.
+   * Browser export advertises keyframed-visual-effects-v1 when the draw path supports it.
+   */
+  readonly supportedCapabilities?: readonly ExportRendererCapabilityId[];
 }
 
 interface ExportManifestBase {
@@ -346,13 +381,26 @@ export interface ExportManifestV4 extends ExportManifestBase {
   readonly scenes: readonly ExportSceneManifestV3[];
 }
 
-export type ExportManifest = ExportManifestV2 | ExportManifestV3 | ExportManifestV4;
+/** ExportManifest v5 / renderer "9E" — authoritative media-motion keyframes. */
+export interface ExportManifestV5 extends ExportManifestBase {
+  readonly version: typeof EXPORT_MANIFEST_V5_VERSION;
+  readonly rendererContractVersion: typeof EXPORT_RENDERER_CONTRACT_V5;
+  readonly scenes: readonly ExportSceneManifestV3[];
+  readonly requiredCapabilities: readonly ExportRendererCapabilityId[];
+}
+
+export type ExportManifest =
+  | ExportManifestV2
+  | ExportManifestV3
+  | ExportManifestV4
+  | ExportManifestV5;
 
 /** Draft before fingerprint assignment. */
 export type ExportManifestDraft = Omit<ExportManifest, "fingerprint">;
 export type ExportManifestV2Draft = Omit<ExportManifestV2, "fingerprint">;
 export type ExportManifestV3Draft = Omit<ExportManifestV3, "fingerprint">;
 export type ExportManifestV4Draft = Omit<ExportManifestV4, "fingerprint">;
+export type ExportManifestV5Draft = Omit<ExportManifestV5, "fingerprint">;
 
 export function isExportManifestV2(
   manifest: ExportManifest,
@@ -378,6 +426,15 @@ export function isExportManifestV4(
   return (
     manifest.version === EXPORT_MANIFEST_VERSION &&
     manifest.rendererContractVersion === EXPORT_RENDERER_CONTRACT_VERSION
+  );
+}
+
+export function isExportManifestV5(
+  manifest: ExportManifest,
+): manifest is ExportManifestV5 {
+  return (
+    manifest.version === EXPORT_MANIFEST_V5_VERSION &&
+    manifest.rendererContractVersion === EXPORT_RENDERER_CONTRACT_V5
   );
 }
 

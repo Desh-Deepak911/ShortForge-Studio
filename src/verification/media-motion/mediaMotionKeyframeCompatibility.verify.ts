@@ -4,7 +4,7 @@
  *
  * Proves dormant keyframes survive story normalize/JSON round-trip, preserve
  * legacy motion authority, leave ExportManifest v4/fingerprint unchanged, and
- * are not imported by preview/export/headless consumers (direct or barrel).
+ * preserve the engine boundary while adapters own rendered keyframe resolution.
  */
 
 import assert from "node:assert/strict";
@@ -257,9 +257,7 @@ function main(): void {
     assert.equal(withState.presetId, without.presetId);
   });
 
-  test("dormant custom-identity enablement remains intentionally unchanged", () => {
-    // Intentional until renderer/manifest integration: custom + identity
-    // start/end still normalizes disabled even when dormant keyframes exist.
+  test("custom-identity stays disabled when keyframes are dormant (no explicit enable)", () => {
     const customWithKeys = normalizeSceneMediaMotion({
       version: 1,
       presetId: "custom",
@@ -299,6 +297,40 @@ function main(): void {
     });
     assert.equal(state.active, false);
     assert.deepEqual(state.transform, { x: 0, y: 0, scale: 1, rotation: 0 });
+  });
+
+  test("explicitly enabled custom identity with valid keyframes stays enabled", () => {
+    const customEnabled = normalizeSceneMediaMotion({
+      version: 1,
+      enabled: true,
+      presetId: "custom",
+      startTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      endTransform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      keyframes: [
+        {
+          offsetMs: 0,
+          x: 0,
+          y: 0,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          easing: "linear",
+        },
+        {
+          offsetMs: 1000,
+          x: 40,
+          y: 0,
+          scale: 1.1,
+          rotation: 0,
+          opacity: 1,
+          easing: "ease-in",
+        },
+      ],
+    });
+    assert.equal(customEnabled.presetId, "custom");
+    assert.equal(customEnabled.enabled, true);
+    assert.ok(customEnabled.keyframes);
+    assert.equal(customEnabled.keyframes!.length, 2);
   });
 
   test("motion fingerprint ignores dormant keyframes", () => {
@@ -376,12 +408,14 @@ function main(): void {
       environment: CAPABLE_ENV,
       includeBackgroundMusic: true,
       audioMode: "with-voice",
+      keyframedVisualEffectsEnabled: false,
     });
     const manifestKeyed = buildExportManifest({
       story: keyedStory,
       environment: CAPABLE_ENV,
       includeBackgroundMusic: true,
       audioMode: "with-voice",
+      keyframedVisualEffectsEnabled: false,
     });
 
     assert.equal(manifestBase.version, 4);
@@ -437,16 +471,11 @@ function main(): void {
     );
   });
 
-  test("preview/export/headless consumers avoid direct and barrel keyframe imports", () => {
+  test("render adapters may resolve keyframes while the engine remains isolated", () => {
     const forbiddenSymbols =
-      /resolveMediaMotionKeyframes|normalizeMediaMotionKeyframes|selectEndpointPreservingKeyframes|media-motion-keyframes|resolve-media-motion-keyframes/;
-    // Barrel import of the whole feature is allowed for existing motion APIs,
-    // but consumers must not reference keyframe symbols from that barrel.
+      /normalizeMediaMotionKeyframes|selectEndpointPreservingKeyframes|media-motion-keyframes|resolve-media-motion-keyframes/;
     const consumerFiles = [
-      "src/features/editor/preview/motion/previewMotionAdapter.ts",
-      "src/features/editor/export/motion/exportMotionAdapter.ts",
       "src/features/media-motion/media-motion.engine.ts",
-      "src/features/export/domain/build-export-manifest.ts",
       "src/features/export/runtime/prepare-export-from-manifest.ts",
       "src/features/export/utils/export-scene-media-renderer.ts",
       "src/features/export/domain/run-export-capability-preflight.ts",
@@ -460,6 +489,13 @@ function main(): void {
         /from ["']@\/features\/media-motion\/domain\//,
         rel,
       );
+    }
+
+    for (const rel of [
+      "src/features/editor/preview/motion/previewMotionAdapter.ts",
+      "src/features/editor/export/motion/exportMotionAdapter.ts",
+    ]) {
+      assert.match(readSrc(rel), /resolveRenderedMediaMotion/, rel);
     }
 
     const headlessRoot = path.join(process.cwd(), "src/features/headless-renderer");

@@ -439,7 +439,7 @@ export function drawCanvasImageSource(
 
   ctx.save();
   if (opacity < 1) {
-    ctx.globalAlpha = opacity;
+    ctx.globalAlpha *= opacity;
   }
 
   applyExportCanvasMediaQuality(ctx);
@@ -477,6 +477,7 @@ function resolveExportFrameMotionState(
   sceneDurationMs: number,
   width: number,
   height: number,
+  keyframedVisualEffectsEnabled = false,
 ) {
   const motion = resolveExportMediaMotionTransform({
     scene,
@@ -484,6 +485,7 @@ function resolveExportFrameMotionState(
     sceneDurationMs,
     frameWidth: width,
     frameHeight: height,
+    keyframedVisualEffectsEnabled,
   });
   return toExportDrawTransformOverride(motion);
 }
@@ -499,6 +501,7 @@ export function drawSceneImageFrame(
   image: HTMLImageElement,
   sceneElapsedMs: number,
   sceneDurationMs: number,
+  keyframedVisualEffectsEnabled = false,
 ): boolean {
   const sceneImage = resolveExportSceneMediaDrawImage(scene);
   if (!sceneImage) {
@@ -513,6 +516,7 @@ export function drawSceneImageFrame(
     sceneDurationMs,
     width,
     height,
+    keyframedVisualEffectsEnabled,
   );
   const { width: sourceWidth, height: sourceHeight } = resolveSourceDimensions(image);
 
@@ -933,6 +937,7 @@ function drawPreparedSceneVideoFrame(
   sceneElapsedMs: number,
   sceneDurationMs: number,
   playback: MediaPlaybackState,
+  keyframedVisualEffectsEnabled = false,
 ): boolean {
   void playback;
   const media = resolveExportSceneMedia(scene);
@@ -959,6 +964,7 @@ function drawPreparedSceneVideoFrame(
     sceneDurationMs,
     width,
     height,
+    keyframedVisualEffectsEnabled,
   );
 
   try {
@@ -996,6 +1002,8 @@ export interface PrepareExportSceneMediaFrameOptions {
   itemElapsedMs?: number;
   /** Item window duration — motion/clip denominator when set. */
   itemDurationMs?: number;
+  /** Explicit keyframed effects capability; defaults false. */
+  keyframedVisualEffectsEnabled?: boolean;
 }
 
 /**
@@ -1148,6 +1156,8 @@ export interface DrawSceneMediaFrameOptions {
   itemElapsedMs?: number;
   /** Item duration override for motion/clip (Sprint 8D). */
   itemDurationMs?: number;
+  /** Explicit keyframed visual-effects capability; defaults false. */
+  keyframedVisualEffectsEnabled?: boolean;
 }
 
 /**
@@ -1168,6 +1178,7 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
     mediaItemId,
     itemElapsedMs,
     itemDurationMs,
+    keyframedVisualEffectsEnabled = false,
   } = options;
 
   const elapsed =
@@ -1215,6 +1226,7 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
       asset.element,
       elapsed,
       duration,
+      keyframedVisualEffectsEnabled,
     );
     return finish("image", drew);
   }
@@ -1229,6 +1241,7 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
     elapsed,
     duration,
     playback,
+    keyframedVisualEffectsEnabled,
   );
 
   if (!drew) {

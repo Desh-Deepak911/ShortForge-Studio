@@ -69,6 +69,8 @@ export const EXPORT_BLOCKER_MESSAGES: Record<ExportBlockerCode, string> = {
     "Background music was requested but no music track is available. Add music or export without it.",
   UNSUPPORTED_AUDIO_MODE:
     "This audio mode isn't supported for the selected export format.",
+  UNSUPPORTED_RENDERER_CAPABILITY:
+    "This export requires a renderer capability that is unavailable.",
 };
 
 export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {

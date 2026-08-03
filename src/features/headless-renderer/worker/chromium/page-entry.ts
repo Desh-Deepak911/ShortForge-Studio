@@ -149,6 +149,7 @@ async function renderFrame(input: {
       context,
       prepared.preparedBySceneId,
       prepared.preparedByMediaKey,
+      plan.keyframedVisualEffectsEnabled,
     );
     return { ok: true };
   } catch (error) {

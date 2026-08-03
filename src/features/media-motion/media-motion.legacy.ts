@@ -125,6 +125,8 @@ export function normalizeSceneMediaMotionRecord(
   );
 
   // Custom with identical identity transforms and no explicit enable → static.
+  // Exception: explicitly enabled custom motion with ≥2 usable keyframes stays
+  // enabled so keyframed authority is not stripped before capability gating.
   const isCustomIdentity =
     presetId === "custom" &&
     startTransform.scale === 1 &&
@@ -137,9 +139,12 @@ export function normalizeSceneMediaMotionRecord(
     (endTransform.rotation ?? 0) === 0;
 
   const keyframes = normalizeMediaMotionKeyframes(record.keyframes);
+  const keepEnabledForAuthoredKeyframes =
+    enabled === true && Boolean(keyframes && keyframes.length >= 2);
   const normalized: SceneMediaMotion = {
     version: MEDIA_MOTION_VERSION,
-    enabled: isCustomIdentity ? false : enabled,
+    enabled:
+      isCustomIdentity && !keepEnabledForAuthoredKeyframes ? false : enabled,
     presetId,
     easing,
     intensity,

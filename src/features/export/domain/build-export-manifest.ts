@@ -50,7 +50,11 @@ import { buildExportEnvironmentSnapshot } from "./export-environment.utils";
 import { buildExportManifestFingerprint } from "./export-manifest-fingerprint";
 import { deepFreezeExportManifest } from "./export-manifest-freeze";
 import { buildExportSceneMediaTransitionTrack } from "./build-export-scene-media-transitions";
+import { projectSceneMediaKeyframesToManifest } from "./project-media-motion-keyframes-to-manifest";
 import {
+  EXPORT_MANIFEST_V5_VERSION,
+  EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
   type ExportSceneManifestV3,
@@ -59,8 +63,9 @@ import {
   type ExportCapabilitySnapshot,
   type ExportCaptionManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV4,
   type ExportManifestV4Draft,
+  type ExportManifest,
+  type ExportManifestV5Draft,
   type ExportManifestFormat,
   type ExportManifestResolutionLabel,
   type ExportMediaManifest,
@@ -93,10 +98,13 @@ export interface BuildExportManifestInput {
    * this module never reads environment variables.
    */
   readonly mixedMediaScenesEnabled?: boolean;
+  /** Explicit keyframed visual-effects capability. Defaults false (fail-closed). */
+  readonly keyframedVisualEffectsEnabled?: boolean;
 }
 
-export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV4 {
+export function buildExportManifest(input: BuildExportManifestInput): ExportManifest {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
+  const keyframedVisualEffectsEnabled = input.keyframedVisualEffectsEnabled === true;
   // Fallback preparation freezes timing only. Authoring guidance (Visual pacing)
   // is owned by prepareExportRequest, not manifest construction.
   const prepared =
@@ -125,6 +133,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     timeline,
     multiImageScenesEnabled,
     mixedMediaScenesEnabled,
+    keyframedVisualEffectsEnabled,
   );
   const captions = buildCaptionManifests(story, timeline);
   const audio = buildAudioManifest(story, audioMix, {
@@ -132,13 +141,15 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     includeMusic,
   });
   const branding = buildBrandingManifest();
-  const capabilities = buildCapabilitySnapshot(environment);
+  const hasProjectedKeyframes = keyframedVisualEffectsEnabled && scenes.some((scene) =>
+    scene.mediaTimeline.items.some((item) => item.media.type !== "placeholder" &&
+      item.media.motion?.keyframes != null),
+  );
+  const capabilities = buildCapabilitySnapshot(environment, hasProjectedKeyframes);
 
-  const draft: ExportManifestV4Draft = {
-    version: EXPORT_MANIFEST_VERSION,
+  const draftBase = {
     manifestId: createManifestId(),
     createdAt: new Date().toISOString(),
-    rendererContractVersion: EXPORT_RENDERER_CONTRACT_VERSION,
     project,
     output,
     scenes,
@@ -147,9 +158,21 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     branding,
     capabilities,
   };
+  const draft: ExportManifestV4Draft | ExportManifestV5Draft = hasProjectedKeyframes
+    ? {
+        ...draftBase,
+        version: EXPORT_MANIFEST_V5_VERSION,
+        rendererContractVersion: EXPORT_RENDERER_CONTRACT_V5,
+        requiredCapabilities: [EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS],
+      }
+    : {
+        ...draftBase,
+        version: EXPORT_MANIFEST_VERSION,
+        rendererContractVersion: EXPORT_RENDERER_CONTRACT_VERSION,
+      };
 
   const fingerprint = buildExportManifestFingerprint(draft);
-  const manifest: ExportManifestV4 = { ...draft, fingerprint };
+  const manifest: ExportManifest = { ...draft, fingerprint } as ExportManifest;
   return deepFreezeExportManifest(manifest);
 }
 
@@ -203,6 +226,7 @@ function buildSceneManifests(
   timeline: MasterTimeline,
   multiImageScenesEnabled: boolean,
   mixedMediaScenesEnabled: boolean,
+  keyframedVisualEffectsEnabled: boolean,
 ): readonly ExportSceneManifestV3[] {
   const transitions = collectTransitions(story, timeline);
   return story.scenes.map((scene, index) => {
@@ -217,6 +241,7 @@ function buildSceneManifests(
       durationMs,
       multiImageScenesEnabled,
       mixedMediaScenesEnabled,
+      keyframedVisualEffectsEnabled,
     );
     const media =
       mediaTimeline.items[0]?.media ?? ({ type: "placeholder" } as const);
@@ -249,6 +274,7 @@ function buildSceneMediaTimelineManifest(
   sceneDurationMs: number,
   multiImageScenesEnabled: boolean,
   mixedMediaScenesEnabled: boolean,
+  keyframedVisualEffectsEnabled: boolean,
 ): ExportSceneMediaTimelineManifest {
   // Same explicit capability decision as Preview / headless.
   const visualPlan = projectSceneVisualPlan(scene, {
@@ -304,7 +330,11 @@ function buildSceneMediaTimelineManifest(
     startOffsetMs: window.startMs,
     endOffsetMs: window.endMs,
     durationMs: window.durationMs,
-    media: buildMediaManifestFromSceneMedia(window.media),
+    media: buildMediaManifestFromSceneMedia(
+      window.media,
+      window.durationMs,
+      keyframedVisualEffectsEnabled,
+    ),
   }));
 
   return { version: 1, items };
@@ -355,7 +385,11 @@ function collectTransitions(
  * Builds ExportMediaManifest from one item's SceneMedia.
  * Never resolves later items through the scene's first compatibility slot.
  */
-function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifest {
+function buildMediaManifestFromSceneMedia(
+  media: SceneMedia,
+  mediaWindowDurationMs: number,
+  keyframedVisualEffectsEnabled: boolean,
+): ExportMediaManifest {
   if (!media || media.type === "placeholder") {
     return { type: "placeholder" };
   }
@@ -363,7 +397,11 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
   const framingScene = { media };
   const framing = resolveSceneMediaFraming(framingScene, { media });
   const fitMode = resolveExportMediaFitMode(framingScene, media);
-  const motion = buildMotionManifestFromMedia(media);
+  const motion = buildMotionManifestFromMedia(
+    media,
+    mediaWindowDurationMs,
+    keyframedVisualEffectsEnabled,
+  );
   const positionX = framing.positionX;
   const positionY = framing.positionY;
   const zoom = framing.zoom;
@@ -406,10 +444,17 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
 
 function buildMotionManifestFromMedia(
   media: SceneMedia,
+  mediaWindowDurationMs: number,
+  keyframedVisualEffectsEnabled: boolean,
 ): ExportMediaMotionManifest | null {
   const motion = resolveSceneMediaMotion({ media });
   if (!motion) return null;
   const enabled = motion.enabled !== false && motion.presetId !== "static";
+  // Project only under the complete authority rule (cap + enabled + ≥2 frames).
+  const projected =
+    keyframedVisualEffectsEnabled === true && motion.enabled === true
+      ? projectSceneMediaKeyframesToManifest(media, mediaWindowDurationMs)
+      : undefined;
   if (!enabled && motion.presetId === "static") {
     return {
       enabled: false,
@@ -423,6 +468,7 @@ function buildMotionManifestFromMedia(
     presetId: motion.presetId ?? "static",
     easing: String(motion.easing ?? "linear"),
     intensity: typeof motion.intensity === "number" ? motion.intensity : 1,
+    ...(projected ?? {}),
   };
 }
 
@@ -666,6 +712,7 @@ function buildBrandingManifest(): ExportBrandingManifest {
 
 function buildCapabilitySnapshot(
   environment: ExportEnvironmentSnapshot,
+  hasProjectedKeyframes: boolean,
 ): ExportCapabilitySnapshot {
   const mp4Ok = environment.mp4EncoderAvailable !== false;
   return {
@@ -680,6 +727,9 @@ function buildCapabilitySnapshot(
       !environment.ffmpegRuntimePoisoned,
     serverRendererAvailable: environment.serverRendererAvailable,
     environment,
+    ...(hasProjectedKeyframes
+      ? { supportedCapabilities: [EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS] }
+      : {}),
   };
 }
 

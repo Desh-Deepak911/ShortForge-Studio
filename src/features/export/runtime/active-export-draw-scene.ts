@@ -99,6 +99,14 @@ function toSceneMediaMotion(
     presetId: motion.presetId,
     easing: normalizeEasing(motion.easing),
     intensity: motion.intensity,
+    ...(motion.keyframes
+      ? {
+          keyframes: motion.keyframes.map((frame) => ({
+            ...frame,
+            easing: normalizeEasing(frame.easing),
+          })),
+        }
+      : {}),
   };
 }
 

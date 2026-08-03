@@ -5,9 +5,9 @@
  */
 import {
   MEDIA_MOTION_IDENTITY_TRANSFORM,
-  resolveMediaMotionStateForSceneTiming,
+  resolveRenderedMediaMotion,
   resolveSceneMediaMotion,
-  type MediaMotionState,
+  type RenderedMediaMotionState,
   type SceneMediaMotion,
   type SceneMediaTransform,
 } from "@/features/media-motion";
@@ -44,6 +44,8 @@ export interface ExportMediaMotionInput {
   media?: SceneMedia | null;
   /** Optional motion override (tests). */
   motion?: SceneMediaMotion | null;
+  /** Explicit capability decision; defaults false. */
+  keyframedVisualEffectsEnabled?: boolean;
 }
 
 /** Clamp scene-local elapsed time into [0, duration]. */
@@ -109,7 +111,7 @@ function normalizeBaseTransform(
  * Scales reference-frame x/y into the output frame size.
  */
 export function toExportMotionTransform(
-  state: MediaMotionState,
+  state: Pick<RenderedMediaMotionState, "transform" | "opacity" | "active" | "progress" | "easedProgress" | "presetId">,
   frameWidth: number,
   frameHeight: number,
 ): ExportMotionTransform {
@@ -129,8 +131,7 @@ export function toExportMotionTransform(
     translateY,
     scale: transform.scale,
     rotationDeg: transform.rotation ?? 0,
-    // Shared engine has no opacity channel yet — neutral full opacity.
-    opacity: 1,
+    opacity: state?.opacity ?? 1,
     transformOrigin: { x: 0.5, y: 0.5 },
     referenceTransform: { ...transform },
     active: Boolean(state?.active),
@@ -156,14 +157,15 @@ export function resolveExportMediaMotionTransform(
     media: input.media,
   });
 
-  const state = resolveMediaMotionStateForSceneTiming({
+  const state = resolveRenderedMediaMotion({
     motion,
     baseTransform,
-    sceneElapsedMs: clampExportSceneLocalTimeMs(
+    itemElapsedMs: clampExportSceneLocalTimeMs(
       input.sceneElapsedMs,
       input.sceneDurationMs,
     ),
-    sceneDurationMs: input.sceneDurationMs,
+    mediaWindowDurationMs: input.sceneDurationMs,
+    keyframedVisualEffectsEnabled: input.keyframedVisualEffectsEnabled === true,
   });
 
   return toExportMotionTransform(state, frameWidth, frameHeight);

@@ -18,10 +18,16 @@ import {
   assertExportManifestV4SceneMedia,
 } from "./assert-export-manifest-v4-scene-media";
 import {
+  validateExportManifestV5SceneMedia,
+  assertExportManifestV5SceneMedia,
+} from "./assert-export-manifest-v5-scene-media";
+import {
   EXPORT_MANIFEST_VERSION,
+  EXPORT_MANIFEST_V5_VERSION,
   EXPORT_MANIFEST_V3_VERSION,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_RENDERER_CONTRACT_V3,
   EXPORT_RENDERER_CONTRACT_V2,
 } from "./export-manifest.types";
@@ -102,6 +108,21 @@ export function validateExportManifest(
       return validateExportManifestV4SceneMedia(manifest);
     }
 
+    if (version === EXPORT_MANIFEST_V5_VERSION) {
+      if (contract !== EXPORT_RENDERER_CONTRACT_V5) {
+        return {
+          ok: false,
+          issues: [
+            issue(
+              "UNSUPPORTED_RENDERER_CONTRACT",
+              `ExportManifest v5 requires renderer contract "${EXPORT_RENDERER_CONTRACT_V5}".`,
+            ),
+          ],
+        };
+      }
+      return validateExportManifestV5SceneMedia(manifest);
+    }
+
     return {
       ok: false,
       issues: [
@@ -141,4 +162,5 @@ export {
   assertExportManifestV2SceneMedia,
   assertExportManifestV3SceneMedia,
   assertExportManifestV4SceneMedia,
+  assertExportManifestV5SceneMedia,
 };

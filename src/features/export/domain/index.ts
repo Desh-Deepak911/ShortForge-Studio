@@ -5,6 +5,9 @@
 export {
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_MANIFEST_V5_VERSION,
+  EXPORT_RENDERER_CONTRACT_V5,
+  EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_MANIFEST_V3_VERSION,
   EXPORT_RENDERER_CONTRACT_V3,
   EXPORT_MANIFEST_V2_VERSION,
@@ -12,6 +15,7 @@ export {
   isExportManifestV2,
   isExportManifestV3,
   isExportManifestV4,
+  isExportManifestV5,
   isExportSceneManifestV3,
 } from "./export-manifest.types";
 export type {
@@ -19,6 +23,9 @@ export type {
   ExportManifestV2,
   ExportManifestV3,
   ExportManifestV4,
+  ExportManifestV5,
+  ExportManifestV5Draft,
+  ExportRendererCapabilityId,
   ExportManifestV4Draft,
   ExportManifestDraft,
   ExportProjectManifest,
@@ -69,6 +76,10 @@ export {
   validateExportManifestV4SceneMedia,
   assertExportManifestV4SceneMedia,
 } from "./assert-export-manifest-v4-scene-media";
+export {
+  validateExportManifestV5SceneMedia,
+  assertExportManifestV5SceneMedia,
+} from "./assert-export-manifest-v5-scene-media";
 export {
   validateExportManifest,
   assertExportManifest,

@@ -83,6 +83,12 @@ export interface FootieExportOptions {
    */
   sourceQualityIntelligenceEnabled?: boolean;
   /**
+   * Explicit keyframed visual-effects capability.
+   * When true and usable keyframes exist, ExportManifest v5 freezes them.
+   * Default false (fail-closed).
+   */
+  keyframedVisualEffectsEnabled?: boolean;
+  /**
    * Actual requested output target for source-quality guidance.
    * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
    */

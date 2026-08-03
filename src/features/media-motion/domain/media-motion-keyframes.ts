@@ -12,7 +12,8 @@
  *   drift between 720p, 1080p, and 4K.
  * - scale is a unitless multiplier (identity 1).
  * - rotation is degrees.
- * - opacity is a unitless 0–1 channel (identity 1); unused by current adapters.
+ * - opacity is a unitless 0–1 channel (identity 1); adapters multiply it with
+ *   layer/transition opacity when keyframes are authoritative.
  */
 
 import type {

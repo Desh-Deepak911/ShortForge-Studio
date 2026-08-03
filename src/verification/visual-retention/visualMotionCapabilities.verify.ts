@@ -340,7 +340,7 @@ function main(): void {
     assert.doesNotMatch(exportPanel, /BrandStingExportControls/);
   });
 
-  test("keyframes are not render-authoritative without a versioned ExportManifest", () => {
+  test("keyframes are render-authoritative only through versioned ExportManifest v5", () => {
     const capability = readSrc(
       "src/features/visual-retention/domain/keyframed-visual-effects-capability.ts",
     );
@@ -354,7 +354,10 @@ function main(): void {
       "src/features/export/domain/export-manifest.types.ts",
     );
     assert.match(manifest, /EXPORT_MANIFEST_VERSION = 4/);
-    assert.doesNotMatch(manifest, /keyframes/);
+    assert.match(manifest, /EXPORT_MANIFEST_V5_VERSION = 5/);
+    assert.match(manifest, /EXPORT_RENDERER_CONTRACT_V5 = "9E"/);
+    assert.match(manifest, /keyframed-visual-effects-v1/);
+    assert.match(manifest, /keyframes\?:/);
     assert.doesNotMatch(manifest, /subjectAware/);
     assert.doesNotMatch(manifest, /engagementOverlay/);
   });

@@ -523,7 +523,7 @@ test("adapter does not duplicate easing or interpolation", () => {
   const adapter = readSrc("src/features/editor/export/motion/exportMotionAdapter.ts");
   assert.doesNotMatch(adapter, /function lerp|ease-in-out|applyMediaMotionEasing/);
   assert.doesNotMatch(adapter, /from ["']react["']/);
-  assert.match(adapter, /resolveMediaMotionStateForSceneTiming/);
+  assert.match(adapter, /resolveRenderedMediaMotion/);
 });
 
 test("export renderer wires shared adapter; no legacy motion resolver", () => {

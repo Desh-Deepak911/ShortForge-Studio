@@ -449,7 +449,7 @@ test("preview and export wire shared media-motion engine", () => {
   assert.match(image, /@\/features\/editor\/preview\/motion|resolvePreviewMediaMotionStyle/);
   assert.match(video, /@\/features\/editor\/preview\/motion|resolvePreviewMediaMotionStyle/);
   assert.match(exportRenderer, /@\/features\/editor\/export\/motion|resolveExportMediaMotionTransform/);
-  assert.match(exportAdapter, /resolveMediaMotionStateForSceneTiming/);
+  assert.match(exportAdapter, /resolveRenderedMediaMotion/);
   assert.doesNotMatch(exportRenderer, /resolveSceneImageMotionTransformState/);
 });
 

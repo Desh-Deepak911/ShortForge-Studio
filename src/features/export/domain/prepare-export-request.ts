@@ -56,6 +56,8 @@ export interface PrepareExportRequestInput {
    * never derived from environment variables inside this module.
    */
   readonly mixedMediaScenesEnabled?: boolean;
+  /** Explicit keyframed visual-effects capability; defaults false. */
+  readonly keyframedVisualEffectsEnabled?: boolean;
   /**
    * Explicit Visual pacing authoring capability.
    * Default ignored/fail-closed. Guidance only — never a renderer requirement.
@@ -105,6 +107,9 @@ export async function prepareExportRequest(
   const sourceQualityIntelligenceEnabled =
     input.sourceQualityIntelligenceEnabled === true ||
     input.options?.sourceQualityIntelligenceEnabled === true;
+  const keyframedVisualEffectsEnabled =
+    input.keyframedVisualEffectsEnabled === true ||
+    input.options?.keyframedVisualEffectsEnabled === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
   // Timing authority only — authoring guidance is appended once below.
   const preparedStory = prepareStoryForExport(voiceoverPrepared, {
@@ -137,6 +142,7 @@ export async function prepareExportRequest(
     includeBackgroundMusic,
     multiImageScenesEnabled,
     mixedMediaScenesEnabled,
+    keyframedVisualEffectsEnabled,
     environment: {
       ...input.environment,
       mp4EncoderAvailable,
