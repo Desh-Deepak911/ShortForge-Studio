@@ -5,6 +5,7 @@ import type { CaptionAnimation } from "@/features/caption-animation";
 import type { CaptionPresetId } from "@/features/caption-engine/caption-engine.types";
 import type { PlatformExportPresetId } from "@/features/export-profiles/export-profile.types";
 import type { SceneMediaVisualAdjustments } from "@/features/media-visual-adjustments/media-visual-adjustments.types";
+import type { SourceQualityAdjustmentProvenance } from "@/features/source-quality/domain/source-quality-adjustment-provenance";
 import type { SpeechStylePreset } from "@/features/speech-style";
 import type { VisualBeatPlanV1 } from "@/features/visual-beat-density/domain/visual-beat-plan";
 
@@ -111,6 +112,11 @@ export interface SceneMedia {
   motion?: SceneMediaMotion;
   /** Appearance-only media adjustments; never affects playback or captions. */
   visualAdjustments?: SceneMediaVisualAdjustments;
+  /**
+   * Authoring-only source-quality adjustment provenance.
+   * Optional; Preview/Export/Headless ignore it. Malformed values normalize as absent.
+   */
+  sourceQualityAdjustmentProvenance?: SourceQualityAdjustmentProvenance;
   /** Optional still / poster frame URL (video). Images use `url` as poster. */
   posterUrl?: string;
   /** Absolute media time for the poster frame (video). Defaults to trim/window start. */

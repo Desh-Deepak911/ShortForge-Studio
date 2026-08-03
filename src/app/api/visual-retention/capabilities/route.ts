@@ -19,6 +19,8 @@ export async function GET() {
       version: snapshot.version,
       mixedMediaScenesEnabled: snapshot.mixedMediaScenesEnabled,
       visualBeatDensityEnabled: snapshot.visualBeatDensityEnabled,
+      sourceQualityIntelligenceEnabled:
+        snapshot.sourceQualityIntelligenceEnabled,
       phasesValid: snapshot.phasesValid,
     },
     {

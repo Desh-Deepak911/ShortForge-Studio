@@ -38,7 +38,10 @@ import {
   applyStoryBackgroundMusic,
 } from "@/features/story/utils";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
-import { useVisualBeatDensityEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
+import {
+  useSourceQualityIntelligenceEnabled,
+  useVisualBeatDensityEnabled,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import {
   buildExportDownloadFileName,
   exportFootieShort,
@@ -257,6 +260,8 @@ export default function ExportPanel({
   const storySync = useOptionalStorySync();
   const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
   const visualBeatDensityEnabled = useVisualBeatDensityEnabled();
+  const sourceQualityIntelligenceEnabled =
+    useSourceQualityIntelligenceEnabled();
   const syncState = storySync?.state ?? createInitialStorySynchronizationState();
   const exportReadiness = useMemo(
     () => resolveExportReadiness(script, syncState),
@@ -506,6 +511,9 @@ export default function ExportPanel({
         musicEnabled: script.backgroundMusic?.enabled ?? null,
         mixedMediaScenesEnabled,
         visualBeatDensityEnabled,
+        sourceQualityIntelligenceEnabled,
+        sourceQualityExportTarget:
+          exportSettings.resolution === "720x1280" ? "720p" : "1080p",
       }),
     [
       script.title,
@@ -517,6 +525,7 @@ export default function ExportPanel({
       includeBackgroundMusic,
       mixedMediaScenesEnabled,
       visualBeatDensityEnabled,
+      sourceQualityIntelligenceEnabled,
     ],
   );
 
@@ -533,6 +542,9 @@ export default function ExportPanel({
       throwIfBlocked: false,
       mixedMediaScenesEnabled,
       visualBeatDensityEnabled,
+      sourceQualityIntelligenceEnabled,
+      sourceQualityExportTarget:
+        exportSettings.resolution === "720x1280" ? "720p" : "1080p",
     }).then((prepared) => {
       if (cancelled) return;
       setCapabilityPreflight(prepared.preflight);
@@ -572,6 +584,7 @@ export default function ExportPanel({
     includeBackgroundMusic,
     mixedMediaScenesEnabled,
     visualBeatDensityEnabled,
+    sourceQualityIntelligenceEnabled,
     capabilityRequestKey,
   ]);
 
@@ -825,6 +838,9 @@ export default function ExportPanel({
           exportSettings: attemptSettings,
           mixedMediaScenesEnabled,
           visualBeatDensityEnabled,
+          sourceQualityIntelligenceEnabled,
+          sourceQualityExportTarget:
+            attemptSettings.resolution === "720x1280" ? "720p" : "1080p",
           ...(audioFallback ? { audioFallback } : {}),
         },
       );

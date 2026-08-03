@@ -14,6 +14,10 @@ import {
 
 import { useEditorSelection } from "@/features/editor/selection";
 import type { FootieScript } from "@/features/story/types";
+import {
+  useSourceQualityIntelligenceEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
 import {
@@ -21,15 +25,15 @@ import {
   useSceneMediaImageAppend,
 } from "./useSceneMediaImageAppend";
 
-export type SceneMediaImageAppendResult = ReturnType<
-  ReturnType<typeof useSceneMediaImageAppend>["appendImageFile"]
+export type SceneMediaImageAppendResult = Awaited<
+  ReturnType<ReturnType<typeof useSceneMediaImageAppend>["appendImageFile"]>
 >;
 
 export interface SceneMediaImageAppendApi {
   readonly appendImageFile: (
     sceneId: string,
     file: File,
-  ) => SceneMediaImageAppendResult;
+  ) => Promise<SceneMediaImageAppendResult>;
   readonly revokeOwnedUrlIfPresent: (url: string | undefined) => void;
   readonly accept: string;
 }
@@ -51,10 +55,15 @@ export function SceneMediaImageAppendProvider({
   children: ReactNode;
 }) {
   const selection = useEditorSelection();
+  const capabilitiesReady = useVisualRetentionCapabilitiesReady();
+  const sourceQualityEnabled = useSourceQualityIntelligenceEnabled();
+  const sourceQualityIntelligenceEnabled =
+    capabilitiesReady && sourceQualityEnabled;
   const api = useSceneMediaImageAppend({
     script,
     onScriptChange,
     onSelectMediaItem: selection.selectSceneMediaItem,
+    sourceQualityIntelligenceEnabled,
   });
 
   const value = useMemo<SceneMediaImageAppendApi>(

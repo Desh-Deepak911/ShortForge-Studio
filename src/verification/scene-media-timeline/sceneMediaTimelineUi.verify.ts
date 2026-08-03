@@ -1324,7 +1324,7 @@ test("8E.2 shared append authority — Inspector + lane use one provider", () =>
   const affordance = readSrc(
     "src/features/timeline-editor/scene-media/scene-media-append-affordance.tsx",
   );
-  assert.match(affordance, /appendApi\.appendImageFile/);
+  assert.match(affordance, /appendApi\s*\.\s*appendImageFile/);
   assert.match(affordance, /data-scene-media-add-another/);
 });
 

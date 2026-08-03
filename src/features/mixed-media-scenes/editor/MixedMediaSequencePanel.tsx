@@ -26,7 +26,12 @@ import {
 } from "@/lib/utils/studioUi";
 import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
-import { useMixedMediaSequenceUpload } from "./useMixedMediaSequenceUpload";
+import { isStaleSceneMediaAppendError } from "@/features/timeline-editor/scene-media/useSceneMediaImageAppend";
+
+import {
+  useMixedMediaSequenceUpload,
+  type MixedMediaImageMetadataProbe,
+} from "./useMixedMediaSequenceUpload";
 
 export interface MixedMediaSequencePanelProps {
   readonly script: FootieScript;
@@ -36,6 +41,13 @@ export interface MixedMediaSequencePanelProps {
     options?: StoryScriptChangeOptions,
   ) => void;
   readonly mixedMediaScenesEnabled: boolean;
+  /** Explicit source-quality image metadata capture gate. */
+  readonly sourceQualityIntelligenceEnabled: boolean;
+  /**
+   * Injected image metadata probe. Keeps mixed-media free of a source-quality
+   * import; the editor composition root supplies the production probe.
+   */
+  readonly probeImageObjectUrlMetadata?: MixedMediaImageMetadataProbe;
 }
 
 function commitScenePatch(
@@ -56,6 +68,8 @@ export default function MixedMediaSequencePanel({
   scene,
   onScriptChange,
   mixedMediaScenesEnabled,
+  sourceQualityIntelligenceEnabled,
+  probeImageObjectUrlMetadata,
 }: MixedMediaSequencePanelProps) {
   const selection = useEditorSelectionOptional();
   const items = useMemo(() => readMixedMediaSequenceItems(scene), [scene]);
@@ -67,6 +81,8 @@ export default function MixedMediaSequencePanel({
     scene,
     onScriptChange,
     mixedMediaScenesEnabled,
+    sourceQualityIntelligenceEnabled,
+    probeImageObjectUrlMetadata,
     onSelectMediaItem: (sceneId, mediaItemId) => {
       if (mediaItemId) {
         selection?.selectSceneMediaItem(sceneId, mediaItemId);
@@ -123,6 +139,9 @@ export default function MixedMediaSequencePanel({
                 .appendMediaFile(file)
                 .then((result) => showWarnings(result.warnings))
                 .catch((error: unknown) => {
+                  if (isStaleSceneMediaAppendError(error)) {
+                    return;
+                  }
                   setWarningText(
                     error instanceof Error
                       ? error.message

@@ -92,6 +92,12 @@ export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {
     "Visual pacing is out of date. Export will use your current sequence timing.",
   VISUAL_PACING_METADATA_INVALID:
     "Saved Visual pacing metadata could not be read. Export will use the current sequence timing.",
+  SOURCE_QUALITY_DIMENSIONS_UNKNOWN:
+    "Some media dimensions are unavailable. Export will continue using the current framing.",
+  SOURCE_QUALITY_MAY_UPSCALE:
+    "Some media may be enlarged for this export and could look soft.",
+  SOURCE_QUALITY_AGGRESSIVE_CROP:
+    "Some media may be heavily cropped by the current vertical framing.",
 };
 
 /** @deprecated Sprint 6F.1 — use approveExportResolution instead of this flag. */

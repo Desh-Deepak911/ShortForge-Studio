@@ -27,7 +27,11 @@ import {
   focusInspectorSceneWorkspace,
 } from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
-import { VisualRetentionCapabilitiesProvider } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
+import {
+  useSourceQualityIntelligenceEnabled,
+  useVisualRetentionCapabilitiesReady,
+  VisualRetentionCapabilitiesProvider,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import {
   EditorSelectionProvider,
   useEditorSelection,
@@ -308,7 +312,14 @@ function StoryWorkspaceContent({
     [onScriptChange, script],
   );
 
-  const { replaceSceneImage } = useSceneImageUpload({ script, onScriptChange });
+  const capabilitiesReady = useVisualRetentionCapabilitiesReady();
+  const sourceQualityEnabled = useSourceQualityIntelligenceEnabled();
+  const { replaceSceneImage } = useSceneImageUpload({
+    script,
+    onScriptChange,
+    sourceQualityIntelligenceEnabled:
+      capabilitiesReady && sourceQualityEnabled,
+  });
 
   const selectedScene =
     selectedSceneId != null

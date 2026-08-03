@@ -78,6 +78,8 @@ export interface AssetBrowserAttachContext {
   searchContext: AssetBrowserSearchContext;
   recommendationQuery: string;
   planningScriptHash?: string;
+  /** Explicit source-quality capture gate for known asset metadata. */
+  sourceQualityIntelligenceEnabled?: boolean;
 }
 
 export interface AssetBrowserProps {

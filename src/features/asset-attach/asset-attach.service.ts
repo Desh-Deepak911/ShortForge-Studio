@@ -1,4 +1,6 @@
+import { sourceMediaMetadataFactsFromAssetResult } from "@/features/source-quality/domain/source-media-metadata";
 import { createSceneImageFromUrl, getSceneImage } from "@/features/story/utils";
+import { buildSceneMediaImageFromUpload } from "@/features/story/utils/scene-media-upload.utils";
 import { applySceneUpdate } from "@/lib/utils/voiceover";
 
 import {
@@ -96,6 +98,17 @@ export async function attachNormalizedAssetToScene(
     },
   });
 
+  const sourceQualityIntelligenceEnabled =
+    input.options?.sourceQualityIntelligenceEnabled === true;
+  const sceneMedia = sourceQualityIntelligenceEnabled
+    ? buildSceneMediaImageFromUpload(
+        sceneImage,
+        undefined,
+        sourceMediaMetadataFactsFromAssetResult(input.asset),
+        { source: "asset" },
+      )
+    : undefined;
+
   const applyUpdate =
     deps.applyUpdate ??
     ((script, sceneId, updates) =>
@@ -103,12 +116,14 @@ export async function attachNormalizedAssetToScene(
         image: updates.image,
         uploadedImage: updates.uploadedImage,
         assetAttachment: updates.assetAttachment,
+        ...(updates.media !== undefined ? { media: updates.media } : {}),
       }));
 
   const nextScript = applyUpdate(input.script, input.sceneId, {
     image: sceneImage,
     uploadedImage: undefined,
     assetAttachment: attachMetadata,
+    ...(sceneMedia !== undefined ? { media: sceneMedia } : {}),
   });
 
   return {
@@ -116,6 +131,7 @@ export async function attachNormalizedAssetToScene(
     script: nextScript,
     sceneId: input.sceneId,
     sceneImage,
+    ...(sceneMedia !== undefined ? { sceneMedia } : {}),
     attachMetadata,
     warnings: materialization.warnings ?? [],
     previousSceneImage,

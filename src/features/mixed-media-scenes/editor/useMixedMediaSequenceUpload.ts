@@ -28,6 +28,8 @@ import {
 } from "@/features/story/utils/scene-media-upload.utils";
 import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
+import { StaleSceneMediaAppendError } from "@/features/timeline-editor/scene-media/useSceneMediaImageAppend";
+
 import {
   revokeFailedAppendObjectUrl,
   revokeRemovedOwnedMediaUrl,
@@ -57,16 +59,37 @@ function commitScenePatch(
   onScriptChange(next, { intent: "media" });
 }
 
+export type MixedMediaImageMetadataProbe = (
+  objectUrl: string,
+  mimeType?: string,
+) => Promise<{
+  readonly width?: number;
+  readonly height?: number;
+  readonly mimeType?: string;
+}>;
+
 export function useMixedMediaSequenceUpload(input: {
   script: FootieScript;
   scene: FootieScene;
   onScriptChange: ScriptChangeHandler;
   mixedMediaScenesEnabled: boolean;
+  /**
+   * Explicit source-quality capture gate. When false, image appends keep
+   * legacy behavior without intrinsic dimension capture. Video probing stays on.
+   */
+  sourceQualityIntelligenceEnabled: boolean;
+  /**
+   * Injected by the editor/composition root so mixed-media never imports
+   * source-quality directly. Required when source-quality capture is enabled.
+   */
+  probeImageObjectUrlMetadata?: MixedMediaImageMetadataProbe;
   onSelectMediaItem?: (sceneId: string, mediaItemId: string) => void;
 }) {
   const ownedBlobUrls = useRef<Set<string>>(new Set());
   const scriptRef = useRef(input.script);
   const sceneRef = useRef(input.scene);
+  const appendGenerationByScene = useRef<Map<string, number>>(new Map());
+  const inputRef = useRef(input);
 
   useEffect(() => {
     scriptRef.current = input.script;
@@ -76,37 +99,61 @@ export function useMixedMediaSequenceUpload(input: {
     sceneRef.current = input.scene;
   }, [input.scene]);
 
+  useEffect(() => {
+    inputRef.current = input;
+  }, [input]);
+
   // Intentionally no unmount revoke — see file header (duplicate-scene safety).
 
   const appendMediaFile = useCallback(
     async (file: File): Promise<MixedMediaSceneCommandResult> => {
-      if (!input.mixedMediaScenesEnabled) {
+      if (!inputRef.current.mixedMediaScenesEnabled) {
         throw new Error(
           "Mixed-media scenes are unavailable while mixed-media-scenes-v1 is disabled.",
         );
       }
 
+      const sceneId = sceneRef.current.id;
+      const requestToken =
+        (appendGenerationByScene.current.get(sceneId) ?? 0) + 1;
+      appendGenerationByScene.current.set(sceneId, requestToken);
+
       let objectUrl: string | null = null;
+      let committed = false;
       try {
         if (isVideoUploadFile(file)) {
           objectUrl = URL.createObjectURL(file);
           trackOwnedObjectUrl(objectUrl, ownedBlobUrls.current);
           const metadata = await probeVideoMetadata(file);
+          if (appendGenerationByScene.current.get(sceneId) !== requestToken) {
+            throw new StaleSceneMediaAppendError();
+          }
+          const currentScene =
+            scriptRef.current.scenes.find((entry) => entry.id === sceneId) ??
+            sceneRef.current;
+          if (!scriptRef.current.scenes.some((entry) => entry.id === sceneId)) {
+            throw new Error("Scene not found.");
+          }
           const media = buildSceneMediaVideoFromUpload(objectUrl, metadata);
-          const result = appendMixedMediaSequenceItem(sceneRef.current, media, {
+          const result = appendMixedMediaSequenceItem(currentScene, media, {
             mixedMediaScenesEnabled: true,
           });
           commitScenePatch(
             scriptRef.current,
-            sceneRef.current.id,
+            sceneId,
             result.scene,
-            input.onScriptChange,
+            inputRef.current.onScriptChange,
           );
+          committed = true;
+          scriptRef.current = {
+            ...scriptRef.current,
+            scenes: scriptRef.current.scenes.map((entry) =>
+              entry.id === sceneId ? result.scene : entry,
+            ),
+          };
+          sceneRef.current = result.scene;
           if (result.selectedMediaItemId) {
-            input.onSelectMediaItem?.(
-              sceneRef.current.id,
-              result.selectedMediaItemId,
-            );
+            inputRef.current.onSelectMediaItem?.(sceneId, result.selectedMediaItemId);
           }
           return result;
         }
@@ -119,32 +166,55 @@ export function useMixedMediaSequenceUpload(input: {
 
         objectUrl = URL.createObjectURL(file);
         trackOwnedObjectUrl(objectUrl, ownedBlobUrls.current);
+        const probe = inputRef.current.probeImageObjectUrlMetadata;
+        const facts =
+          inputRef.current.sourceQualityIntelligenceEnabled && probe
+            ? await probe(objectUrl, file.type || undefined)
+            : undefined;
+        if (appendGenerationByScene.current.get(sceneId) !== requestToken) {
+          throw new StaleSceneMediaAppendError();
+        }
+        const currentScene =
+          scriptRef.current.scenes.find((entry) => entry.id === sceneId) ??
+          sceneRef.current;
+        if (!scriptRef.current.scenes.some((entry) => entry.id === sceneId)) {
+          throw new Error("Scene not found.");
+        }
         const image = createSceneImageFromUrl(objectUrl);
-        const media = buildSceneMediaImageFromUpload(image, file.type || undefined);
-        const result = appendMixedMediaSequenceItem(sceneRef.current, media, {
+        const media = buildSceneMediaImageFromUpload(
+          image,
+          file.type || undefined,
+          facts,
+        );
+        const result = appendMixedMediaSequenceItem(currentScene, media, {
           mixedMediaScenesEnabled: true,
         });
         commitScenePatch(
           scriptRef.current,
-          sceneRef.current.id,
+          sceneId,
           result.scene,
-          input.onScriptChange,
+          inputRef.current.onScriptChange,
         );
+        committed = true;
+        scriptRef.current = {
+          ...scriptRef.current,
+          scenes: scriptRef.current.scenes.map((entry) =>
+            entry.id === sceneId ? result.scene : entry,
+          ),
+        };
+        sceneRef.current = result.scene;
         if (result.selectedMediaItemId) {
-          input.onSelectMediaItem?.(
-            sceneRef.current.id,
-            result.selectedMediaItemId,
-          );
+          inputRef.current.onSelectMediaItem?.(sceneId, result.selectedMediaItemId);
         }
         return result;
       } catch (error) {
-        if (objectUrl) {
+        if (!committed && objectUrl) {
           revokeFailedAppendObjectUrl(objectUrl, ownedBlobUrls.current);
         }
         throw error;
       }
     },
-    [input],
+    [],
   );
 
   const removeOwnedMediaItem = useCallback(

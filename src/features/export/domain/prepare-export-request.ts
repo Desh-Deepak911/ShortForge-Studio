@@ -14,6 +14,11 @@ import {
   resolveVisualPacingExportGuidance,
   type VisualPacingExportGuidanceCode,
 } from "@/features/visual-beat-density/adapters/resolve-visual-pacing-export-guidance";
+import {
+  resolveSourceQualityExportGuidance,
+  type SourceQualityExportGuidanceCode,
+  type SourceQualityExportTarget,
+} from "@/features/source-quality/adapters/resolve-source-quality-export-guidance";
 
 import { probeExportMp4Runtime } from "@/features/export/formats/export-runtime-codec-probe";
 
@@ -56,6 +61,30 @@ export interface PrepareExportRequestInput {
    * Default ignored/fail-closed. Guidance only — never a renderer requirement.
    */
   readonly visualBeatDensityEnabled?: boolean;
+  /**
+   * Explicit source-quality authoring capability.
+   * Default ignored/fail-closed. Guidance only — never a renderer requirement.
+   */
+  readonly sourceQualityIntelligenceEnabled?: boolean;
+  /**
+   * Actual requested output target for source-quality guidance.
+   * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
+   * When omitted, derived from export settings (720p/1080p only).
+   */
+  readonly sourceQualityExportTarget?: SourceQualityExportTarget;
+}
+
+function resolveSourceQualityExportTargetFromSettings(
+  input: PrepareExportRequestInput,
+  exportSettingsResolution: string | undefined,
+): SourceQualityExportTarget {
+  const explicit =
+    input.sourceQualityExportTarget ??
+    input.options?.sourceQualityExportTarget;
+  if (explicit === "720p" || explicit === "1080p" || explicit === "4k") {
+    return explicit;
+  }
+  return exportSettingsResolution === "720x1280" ? "720p" : "1080p";
 }
 
 export interface PrepareExportRequestResult extends PreparedExportRequest {
@@ -73,12 +102,19 @@ export async function prepareExportRequest(
 ): Promise<PrepareExportRequestResult> {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
   const visualBeatDensityEnabled = input.visualBeatDensityEnabled === true;
+  const sourceQualityIntelligenceEnabled =
+    input.sourceQualityIntelligenceEnabled === true ||
+    input.options?.sourceQualityIntelligenceEnabled === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
   // Timing authority only — authoring guidance is appended once below.
   const preparedStory = prepareStoryForExport(voiceoverPrepared, {
     mixedMediaScenesEnabled,
   });
   const exportSettings = resolveExportSettings(voiceoverPrepared, input.options);
+  const sourceQualityExportTarget = resolveSourceQualityExportTargetFromSettings(
+    input,
+    exportSettings.resolution,
+  );
   const audioMix = buildAudioMixFromStory(preparedStory.story);
   const includeBackgroundMusic =
     input.includeBackgroundMusic ?? isExportBackgroundMusicActiveFromMix(audioMix);
@@ -108,8 +144,9 @@ export async function prepareExportRequest(
   });
 
   const basePreflight = runExportCapabilityPreflight(manifest);
-  // Single authority for Visual pacing export guidance: final prepared story
-  // after voiceover refit + visual-sequence reconciliation (not manifest build).
+  // Single authority for Visual pacing + source-quality export guidance: final
+  // prepared story after voiceover refit + visual-sequence reconciliation
+  // (not prepareStoryForExport string warnings, not manifest build).
   const pacingGuidance = resolveVisualPacingExportGuidance(preparedStory.story, {
     visualBeatDensityEnabled,
   });
@@ -120,9 +157,31 @@ export async function prepareExportRequest(
       message: EXPORT_WARNING_MESSAGES[code] ?? item.message,
     };
   });
+  const sourceQualityGuidance = resolveSourceQualityExportGuidance(
+    preparedStory.story,
+    {
+      sourceQualityIntelligenceEnabled,
+      mixedMediaScenesEnabled,
+      exportTarget: sourceQualityExportTarget,
+    },
+  );
+  const sourceQualityWarnings: ExportWarning[] = sourceQualityGuidance.map(
+    (item) => {
+      const code = item.code as ExportWarningCode & SourceQualityExportGuidanceCode;
+      return {
+        code,
+        // Prefer adapter copy so MAY_UPSCALE keeps the requested target label.
+        message: item.message || EXPORT_WARNING_MESSAGES[code],
+      };
+    },
+  );
   const preflight: ExportCapabilityResult = {
     ...basePreflight,
-    warnings: Object.freeze([...basePreflight.warnings, ...pacingWarnings]),
+    warnings: Object.freeze([
+      ...basePreflight.warnings,
+      ...pacingWarnings,
+      ...sourceQualityWarnings,
+    ]),
   };
   const renderer = preflight.renderer;
 

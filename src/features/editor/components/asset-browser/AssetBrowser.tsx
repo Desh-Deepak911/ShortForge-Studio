@@ -264,6 +264,8 @@ export default function AssetBrowser({
       searchContext: attachContext.searchContext,
       recommendationQuery: attachContext.recommendationQuery,
       planningScriptHash: attachContext.planningScriptHash,
+      sourceQualityIntelligenceEnabled:
+        attachContext.sourceQualityIntelligenceEnabled === true,
     });
 
     if (result.success && result.script) {

@@ -5,6 +5,7 @@
 
 import { isMixedMediaScenesCapabilityEnabled } from "@/features/mixed-media-scenes/domain/mixed-media-scenes-capability";
 
+import { isSourceQualityIntelligenceCapabilityEnabled } from "../domain/source-quality-intelligence-capability";
 import { isVisualBeatDensityCapabilityEnabled } from "../domain/visual-beat-density-capability";
 import { resolveVisualRetentionGatesFromEnvironment } from "../domain/visual-retention-environment";
 
@@ -12,6 +13,7 @@ export interface VisualRetentionCreatorCapabilitiesV1 {
   readonly version: 1;
   readonly mixedMediaScenesEnabled: boolean;
   readonly visualBeatDensityEnabled: boolean;
+  readonly sourceQualityIntelligenceEnabled: boolean;
   readonly phasesValid: boolean;
 }
 
@@ -23,6 +25,8 @@ export function resolveVisualRetentionCreatorCapabilitiesFromEnvironment(
     version: 1 as const,
     mixedMediaScenesEnabled: isMixedMediaScenesCapabilityEnabled(gates),
     visualBeatDensityEnabled: isVisualBeatDensityCapabilityEnabled(gates),
+    sourceQualityIntelligenceEnabled:
+      isSourceQualityIntelligenceCapabilityEnabled(gates),
     phasesValid: gates.valid === true,
   });
 }

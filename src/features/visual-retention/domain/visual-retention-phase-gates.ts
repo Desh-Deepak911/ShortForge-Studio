@@ -42,6 +42,7 @@ export const VISUAL_RETENTION_STAGING_DEVELOPMENT_BRANCHES = Object.freeze([
   "staging",
   "sprint12-staging-compat-safety-foundation",
   "sprint12c-staging-visual-beat-density",
+  "staging-source-quality-intelligence",
 ] as const);
 
 export interface VisualRetentionPhaseGateState {
