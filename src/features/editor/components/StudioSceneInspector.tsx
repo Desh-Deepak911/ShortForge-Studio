@@ -887,6 +887,9 @@ export default function StudioSceneInspector({
                 scene={scene}
                 media={sourceQualityWinningMedia}
                 framing={sourceQualityFraming}
+                mediaItemId={
+                  isSceneMediaItemSelected ? selectedMediaItemId : null
+                }
               />
               {visualPacingPanelEnabled ? (
                 <div className="mb-3">

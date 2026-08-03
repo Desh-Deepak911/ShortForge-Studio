@@ -34,5 +34,46 @@ export {
   normalizeSourceMediaMimeType,
   sourceMediaMetadataFactsFromAssetResult,
 } from "./domain/source-media-metadata";
+export type {
+  SourceQualityAdjustmentProvenance,
+  SourceQualityAdjustmentProvenanceV1,
+  SourceQualityAdjustmentRecommendationCode,
+  SourceQualityNormalizedFramingSnapshot,
+} from "./domain/source-quality-adjustment-provenance";
+export {
+  SOURCE_QUALITY_ADJUSTMENT_PROVENANCE_VERSION,
+  framingSnapshotsEqual,
+  normalizeSourceQualityAdjustmentProvenance,
+  toFramingSnapshot,
+} from "./domain/source-quality-adjustment-provenance";
+export type {
+  SourceQualityFramingPatchProposal,
+  SourceQualityRecommendationReason,
+  SourceQualitySafeAdjustmentRecommendation,
+} from "./domain/safe-visual-adjustment-recommendation";
+export {
+  SOURCE_QUALITY_RECOMMENDATION_VERSION,
+  fingerprintSourceQualityMedia,
+  recommendSafeVisualAdjustment,
+  sourceQualityRecommendationsSemanticallyEqual,
+  sourceQualityStableHash,
+} from "./domain/safe-visual-adjustment-recommendation";
+export type {
+  SourceQualityAdjustmentPresenceStatus,
+  SourceQualityAdjustmentStaleReason,
+  SourceQualityAdjustmentStalenessProjection,
+} from "./domain/evaluate-source-quality-adjustment-staleness";
+export { evaluateSourceQualityAdjustmentStaleness } from "./domain/evaluate-source-quality-adjustment-staleness";
+export type {
+  SourceQualityAdjustmentCommandFailure,
+  SourceQualityAdjustmentCommandResult,
+  SourceQualityAdjustmentCommandSuccess,
+  SourceQualityAdjustmentTerminalCode,
+} from "./editor/source-quality-adjustment.commands";
+export {
+  applySourceQualityAdjustmentRecommendation,
+  dismissSourceQualityAdjustmentProvenance,
+  undoSourceQualityAdjustmentRecommendation,
+} from "./editor/source-quality-adjustment.commands";
 export { default as SourceQualitySummary } from "./editor/SourceQualitySummary";
 export type { SourceQualitySummaryProps } from "./editor/SourceQualitySummary";

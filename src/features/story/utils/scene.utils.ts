@@ -1,5 +1,6 @@
 import { normalizeSceneCaptionSettings } from "./caption.utils";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
+import { normalizeSourceQualityAdjustmentProvenance } from "@/features/source-quality/domain/source-quality-adjustment-provenance";
 import type {
   FootieScene,
   SceneImage,
@@ -455,6 +456,15 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
   const visualAdjustments = freezeMediaVisualAdjustments(record.visualAdjustments);
   if (visualAdjustments) {
     normalized.visualAdjustments = visualAdjustments;
+  }
+
+  const sourceQualityAdjustmentProvenance =
+    normalizeSourceQualityAdjustmentProvenance(
+      record.sourceQualityAdjustmentProvenance,
+    );
+  if (sourceQualityAdjustmentProvenance) {
+    normalized.sourceQualityAdjustmentProvenance =
+      sourceQualityAdjustmentProvenance;
   }
 
   const posterUrl = normalizeSceneMediaUrl(record.posterUrl);

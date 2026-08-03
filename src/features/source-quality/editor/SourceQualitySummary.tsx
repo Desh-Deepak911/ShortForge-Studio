@@ -19,6 +19,10 @@ import type {
   SourceQualityAssessment,
   SourceQualityWarningCode,
 } from "../domain/source-quality-assessment";
+import {
+  recommendSafeVisualAdjustment,
+  type SourceQualitySafeAdjustmentRecommendation,
+} from "../domain/safe-visual-adjustment-recommendation";
 
 export interface SourceQualitySummaryProps {
   readonly scene: Pick<FootieScene, "image" | "uploadedImage" | "media">;
@@ -27,7 +31,12 @@ export interface SourceQualitySummaryProps {
    * When omitted, falls back via assessment-only resolveSourceQualityMedia.
    */
   readonly media?: SceneMedia | null;
-  readonly framing?: Pick<SceneMediaFraming, "fitMode" | "zoom" | "rotationDeg">;
+  readonly framing?: Pick<
+    SceneMediaFraming,
+    "fitMode" | "positionX" | "positionY" | "zoom" | "rotationDeg"
+  >;
+  /** Stable selected media-item id when mixed/timeline media is selected. */
+  readonly mediaItemId?: string | null;
   /**
    * Optional readiness override for verification harnesses.
    * Production mounts omit this and read the shared capability snapshot.
@@ -88,10 +97,59 @@ function supportingCopy(assessment: SourceQualityAssessment): string | null {
  * Compact source-quality summary for the Scene Inspector Media section.
  * Capability-gated and fail-closed; never mutates media or framing.
  */
+function recommendationPreviewCopy(
+  recommendation: SourceQualitySafeAdjustmentRecommendation,
+): {
+  readonly lines: readonly string[];
+  readonly improvement: string | null;
+} {
+  const lines: string[] = [];
+  if (recommendation.recommendationCodes.includes("USE_FIT_FRAMING")) {
+    lines.push("Fit the full source inside the vertical frame.");
+  }
+  if (recommendation.recommendationCodes.includes("RESET_EXCESSIVE_ZOOM")) {
+    lines.push("Return zoom to 1×.");
+  }
+  if (
+    recommendation.recommendationCodes.includes("USE_HIGHER_RESOLUTION_SOURCE") &&
+    !recommendation.applicable
+  ) {
+    lines.push(
+      "Use a higher-resolution source. No safe framing adjustment applies.",
+    );
+  }
+  for (const reason of recommendation.reasons) {
+    if (
+      reason.code === "USE_FIT_FRAMING" ||
+      reason.code === "RESET_EXCESSIVE_ZOOM" ||
+      reason.code === "USE_HIGHER_RESOLUTION_SOURCE"
+    ) {
+      continue;
+    }
+    if (reason.message && !lines.includes(reason.message)) {
+      lines.push(reason.message);
+    }
+  }
+
+  const removed = recommendation.currentWarningCodes.filter(
+    (code) => !recommendation.projectedWarningCodes.includes(code),
+  );
+  let improvement: string | null = null;
+  if (recommendation.applicable && removed.length > 0) {
+    improvement =
+      removed.length === 1
+        ? "Projected improvement: one quality warning may clear under this framing."
+        : `Projected improvement: ${removed.length} quality warnings may clear under this framing.`;
+  }
+
+  return { lines, improvement };
+}
+
 export default function SourceQualitySummary({
   scene,
   media,
   framing,
+  mediaItemId,
   readiness,
 }: SourceQualitySummaryProps) {
   const hookReady = useVisualRetentionCapabilitiesReady();
@@ -101,18 +159,27 @@ export default function SourceQualitySummary({
   const detailsId = useId();
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const assessment = useMemo(() => {
+  const { assessment, recommendation } = useMemo(() => {
     const resolvedMedia = resolveSourceQualityMedia({ scene, media });
     const resolvedFraming =
       framing ??
       resolveSceneMediaFraming(scene, {
         media: resolvedMedia,
       });
-    return assessSourceQuality({
+    const nextAssessment = assessSourceQuality({
       media: resolvedMedia,
       framing: resolvedFraming,
     });
-  }, [framing, media, scene]);
+    const nextRecommendation = recommendSafeVisualAdjustment({
+      media: resolvedMedia,
+      framing: resolvedFraming,
+      mediaItemId,
+    });
+    return {
+      assessment: nextAssessment,
+      recommendation: nextRecommendation,
+    };
+  }, [framing, media, mediaItemId, scene]);
 
   if (!ready || !enabled) {
     return null;
@@ -124,6 +191,10 @@ export default function SourceQualitySummary({
     (code) =>
       code !== "SOURCE_MAY_UPSCALE_AT_4K" || assessment.status === "warning",
   );
+  const suggestion =
+    recommendation.recommendationCodes.length > 0
+      ? recommendationPreviewCopy(recommendation)
+      : null;
 
   return (
     <section
@@ -254,6 +325,43 @@ export default function SourceQualitySummary({
                 </li>
               ))}
             </ul>
+          ) : null}
+          {suggestion && suggestion.lines.length > 0 ? (
+            <div
+              className="space-y-1.5"
+              data-source-quality-suggestion=""
+              data-source-quality-suggestion-applicable={
+                recommendation.applicable ? "true" : "false"
+              }
+              data-source-quality-recommendation-fingerprint={
+                recommendation.recommendationFingerprint
+              }
+            >
+              <p className="text-[11px] font-medium text-foreground/85">
+                Suggested adjustment
+              </p>
+              <ul className="space-y-1">
+                {suggestion.lines.map((line) => (
+                  <li
+                    key={line}
+                    className="text-[11px] leading-snug text-foreground/85"
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+              {suggestion.improvement ? (
+                <p
+                  className="text-[11px] leading-snug text-muted"
+                  data-source-quality-suggestion-improvement=""
+                >
+                  {suggestion.improvement}
+                </p>
+              ) : null}
+              <p className={`${studioSubtleText} text-[11px] leading-snug`}>
+                No changes are applied automatically.
+              </p>
+            </div>
           ) : null}
         </div>
       ) : null}
