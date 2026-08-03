@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { StudioConfirmDialog } from "@/components/studio-overlay";
 import { deleteDraft, getDraft, listDrafts, resolveDraftHref, toDraftSummary } from "@/features/drafts";
@@ -21,6 +21,58 @@ import {
   studioSubtleText,
 } from "@/lib/utils/studioUi";
 import { formatDisplayDurationSec } from "@/lib/utils/formatDisplayDuration.utils";
+
+/**
+ * Drafts list store — hydration contract mirrors editor workspace layout:
+ * server/first-client snapshot is always the empty pending shell; browser
+ * localStorage is adopted from an effect after hydration.
+ */
+const EMPTY_DRAFT_SUMMARIES: StoryDraftSummary[] = [];
+let draftListSnapshot: StoryDraftSummary[] = EMPTY_DRAFT_SUMMARIES;
+let draftListAdopted = false;
+const draftListListeners = new Set<() => void>();
+
+function emitDraftListChange(): void {
+  for (const listener of draftListListeners) {
+    listener();
+  }
+}
+
+function subscribeDraftList(onStoreChange: () => void): () => void {
+  draftListListeners.add(onStoreChange);
+  return () => {
+    draftListListeners.delete(onStoreChange);
+  };
+}
+
+function getDraftListSnapshot(): StoryDraftSummary[] {
+  return draftListSnapshot;
+}
+
+function getServerDraftListSnapshot(): StoryDraftSummary[] {
+  return EMPTY_DRAFT_SUMMARIES;
+}
+
+function getDraftListAdoptedSnapshot(): boolean {
+  return draftListAdopted;
+}
+
+function getServerDraftListAdoptedSnapshot(): boolean {
+  return false;
+}
+
+function refreshDraftListFromStorage(): void {
+  draftListSnapshot = listDrafts().map(toDraftSummary);
+  draftListAdopted = true;
+  emitDraftListChange();
+}
+
+function adoptDraftListFromStorage(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  refreshDraftListFromStorage();
+}
 
 function formatDraftTimestamp(iso: string): string {
   const date = new Date(iso);
@@ -63,13 +115,20 @@ function promptPreview(prompt: string | undefined, title: string): string {
 
 export default function DraftsDashboard() {
   const router = useRouter();
-  const [drafts, setDrafts] = useState<StoryDraftSummary[]>(() =>
-    listDrafts().map(toDraftSummary),
+  const drafts = useSyncExternalStore(
+    subscribeDraftList,
+    getDraftListSnapshot,
+    getServerDraftListSnapshot,
+  );
+  const storageAdopted = useSyncExternalStore(
+    subscribeDraftList,
+    getDraftListAdoptedSnapshot,
+    getServerDraftListAdoptedSnapshot,
   );
   const [pendingDelete, setPendingDelete] = useState<StoryDraftSummary | null>(null);
 
-  const refreshDrafts = useCallback(() => {
-    setDrafts(listDrafts().map(toDraftSummary));
+  useEffect(() => {
+    adoptDraftListFromStorage();
   }, []);
 
   const confirmDelete = () => {
@@ -80,7 +139,7 @@ export default function DraftsDashboard() {
     deleteDraft(pendingDelete.id);
     clearDraftSession(pendingDelete.id);
     setPendingDelete(null);
-    refreshDrafts();
+    refreshDraftListFromStorage();
   };
 
   return (
@@ -99,8 +158,25 @@ export default function DraftsDashboard() {
         </Link>
       </div>
 
-      {drafts.length === 0 ? (
-        <div className={`${studioPanel} space-y-3 px-5 py-10 text-center sm:px-8 sm:py-12`}>
+      {!storageAdopted ? (
+        <div
+          className={`${studioPanel} space-y-3 px-5 py-10 text-center sm:px-8 sm:py-12`}
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          aria-label="Loading saved stories"
+          data-drafts-storage-pending=""
+        >
+          <p className="text-sm font-medium text-foreground/90">Loading stories…</p>
+          <p className={`${studioSubtleText} mx-auto max-w-sm`}>
+            Opening drafts saved in this browser.
+          </p>
+        </div>
+      ) : drafts.length === 0 ? (
+        <div
+          className={`${studioPanel} space-y-3 px-5 py-10 text-center sm:px-8 sm:py-12`}
+          data-drafts-empty=""
+        >
           <p className="text-sm font-medium text-foreground/90">No stories yet</p>
           <p className={`${studioSubtleText} mx-auto max-w-sm`}>
             Stories you create save here on this device — no sign-in needed.
@@ -110,7 +186,7 @@ export default function DraftsDashboard() {
           </Link>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3" data-drafts-storage-ready="">
           {drafts.map((draft) => (
             <li key={draft.id}>
               <article className={`${studioPanel} min-w-0 px-4 py-4 sm:px-5 sm:py-5`}>
