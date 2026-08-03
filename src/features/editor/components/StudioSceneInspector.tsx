@@ -51,7 +51,8 @@ import {
 import MixedMediaSequencePanel from "@/features/mixed-media-scenes/editor/MixedMediaSequencePanel";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import { resolveSceneMediaFraming } from "@/features/media-framing";
-import { resolveSourceQualityMedia } from "@/features/source-quality/adapters/resolve-source-quality-media";
+import { probeImageObjectUrlMetadata } from "@/features/source-quality/client/probe-source-media-metadata";
+import { resolveSourceQualityWinningAdjustmentTarget } from "@/features/source-quality/adapters/resolve-source-quality-adjustment-target";
 import SourceQualitySummary from "@/features/source-quality/editor/SourceQualitySummary";
 import VisualPacingPanel from "@/features/visual-beat-density/editor/VisualPacingPanel";
 import {
@@ -321,49 +322,43 @@ export default function StudioSceneInspector({
   }, [selectedMediaIndex]);
 
   /**
-   * Winning media for source-quality: selected projected window when present;
-   * stale selection uses the same nearest-survivor contract as inspector
-   * selection repair; mixed-media windows beat ignored scene.media.
+   * One coherent Source-quality adjustment target: displayed media and the
+   * command mediaItemId always name the same projected item. Explicit item
+   * selection uses the live or nearest-survivor id; mixed-media with no
+   * selection uses the first projected item; legacy uses canonical + null.
+   * Does not mutate editor selection.
+   *
+   * previousIndexHint reads lastSelectedMediaIndexRef only when the selection
+   * is already stale. The effect records live indexes; SSR/first hydration keep
+   * the ref at -1 (first projected item) without client-only hint state.
    */
-  const sourceQualityWinningMedia = useMemo(() => {
+  const sourceQualityWinningTarget = useMemo(() => {
     if (!scene) {
-      return null;
+      return { media: null, mediaItemId: null as string | null };
     }
-    if (mediaWindows.length > 0) {
-      if (selectedMediaItemId) {
-        const selectedWindow = mediaWindows.find(
-          (window) => window.itemId === selectedMediaItemId,
-        );
-        if (selectedWindow?.media) {
-          return selectedWindow.media;
-        }
-        const nearestId = resolveNearestInspectorMediaItemId(
-          mediaWindows,
-          selectedMediaItemId,
-          selectedMediaIndex >= 0 ? selectedMediaIndex : -1,
-        );
-        const nearestWindow = nearestId
-          ? mediaWindows.find((window) => window.itemId === nearestId)
-          : mediaWindows[0];
-        if (nearestWindow?.media) {
-          return nearestWindow.media;
-        }
-      } else if (mixedMediaScenesEnabled) {
-        return (
-          mediaWindows[0]?.media ??
-          resolveSourceQualityMedia({ scene }) ??
-          null
-        );
-      }
-    }
-    return resolveSourceQualityMedia({ scene });
+    const explicitSelectedId = isSceneMediaItemSelected
+      ? selectedMediaItemId
+      : null;
+    const previousIndexHint =
+      selectedMediaIndex >= 0
+        ? selectedMediaIndex
+        : // eslint-disable-next-line react-hooks/refs -- stale-only previous-index hint; live path never reads the ref
+          lastSelectedMediaIndexRef.current;
+    return resolveSourceQualityWinningAdjustmentTarget(scene, {
+      mixedMediaScenesEnabled,
+      selectedMediaItemId: explicitSelectedId,
+      previousIndexHint,
+    });
   }, [
-    mediaWindows,
+    isSceneMediaItemSelected,
     mixedMediaScenesEnabled,
     scene,
     selectedMediaIndex,
     selectedMediaItemId,
   ]);
+  const sourceQualityWinningMedia = sourceQualityWinningTarget.media;
+  const sourceQualityWinningMediaItemId =
+    sourceQualityWinningTarget.mediaItemId;
   const sourceQualityFraming = useMemo(() => {
     if (!scene) {
       return undefined;
@@ -884,12 +879,13 @@ export default function StudioSceneInspector({
               open={inspectorImageEditing ? true : undefined}
             >
               <SourceQualitySummary
+                script={script}
                 scene={scene}
+                onScriptChange={onScriptChange}
                 media={sourceQualityWinningMedia}
                 framing={sourceQualityFraming}
-                mediaItemId={
-                  isSceneMediaItemSelected ? selectedMediaItemId : null
-                }
+                mediaItemId={sourceQualityWinningMediaItemId}
+                mixedMediaScenesEnabled={mixedMediaScenesEnabled}
               />
               {visualPacingPanelEnabled ? (
                 <div className="mb-3">
@@ -912,6 +908,7 @@ export default function StudioSceneInspector({
                     sourceQualityIntelligenceEnabled={
                       sourceQualityIntelligenceEnabled
                     }
+                    probeImageObjectUrlMetadata={probeImageObjectUrlMetadata}
                   />
                 </div>
               ) : null}

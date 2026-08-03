@@ -16,7 +16,6 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-import { probeImageObjectUrlMetadata } from "@/features/source-quality/client/probe-source-media-metadata";
 import type { FootieScene, FootieScript, SceneMedia } from "@/features/story/types";
 import { createSceneImageFromUrl } from "@/features/story/utils/scene.utils";
 import { probeVideoMetadata } from "@/features/story/utils/probe-video-metadata.utils";
@@ -60,6 +59,15 @@ function commitScenePatch(
   onScriptChange(next, { intent: "media" });
 }
 
+export type MixedMediaImageMetadataProbe = (
+  objectUrl: string,
+  mimeType?: string,
+) => Promise<{
+  readonly width?: number;
+  readonly height?: number;
+  readonly mimeType?: string;
+}>;
+
 export function useMixedMediaSequenceUpload(input: {
   script: FootieScript;
   scene: FootieScene;
@@ -70,6 +78,11 @@ export function useMixedMediaSequenceUpload(input: {
    * legacy behavior without intrinsic dimension capture. Video probing stays on.
    */
   sourceQualityIntelligenceEnabled: boolean;
+  /**
+   * Injected by the editor/composition root so mixed-media never imports
+   * source-quality directly. Required when source-quality capture is enabled.
+   */
+  probeImageObjectUrlMetadata?: MixedMediaImageMetadataProbe;
   onSelectMediaItem?: (sceneId: string, mediaItemId: string) => void;
 }) {
   const ownedBlobUrls = useRef<Set<string>>(new Set());
@@ -153,9 +166,11 @@ export function useMixedMediaSequenceUpload(input: {
 
         objectUrl = URL.createObjectURL(file);
         trackOwnedObjectUrl(objectUrl, ownedBlobUrls.current);
-        const facts = inputRef.current.sourceQualityIntelligenceEnabled
-          ? await probeImageObjectUrlMetadata(objectUrl, file.type || undefined)
-          : undefined;
+        const probe = inputRef.current.probeImageObjectUrlMetadata;
+        const facts =
+          inputRef.current.sourceQualityIntelligenceEnabled && probe
+            ? await probe(objectUrl, file.type || undefined)
+            : undefined;
         if (appendGenerationByScene.current.get(sceneId) !== requestToken) {
           throw new StaleSceneMediaAppendError();
         }

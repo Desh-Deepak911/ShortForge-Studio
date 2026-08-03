@@ -259,12 +259,19 @@ async function main(): Promise<void> {
       );
       assert.match(inspector, /SourceQualitySummary/);
       assert.match(inspector, /sourceQualityWinningMedia/);
+      assert.match(inspector, /sourceQualityWinningMediaItemId/);
+      assert.match(inspector, /resolveSourceQualityWinningAdjustmentTarget/);
+      assert.match(
+        inspector,
+        /source-quality\/adapters\/resolve-source-quality-adjustment-target/,
+      );
       assert.match(inspector, /resolveNearestInspectorMediaItemId/);
       assert.match(inspector, /resolveInspectorSceneMediaProjection/);
-      assert.match(inspector, /resolveSourceQualityMedia/);
+      assert.match(inspector, /lastSelectedMediaIndexRef/);
+      assert.doesNotMatch(inspector, /lastSelectedMediaIndexHint/);
       assert.doesNotMatch(
         inspector.slice(
-          inspector.indexOf("sourceQualityWinningMedia"),
+          inspector.indexOf("sourceQualityWinningTarget"),
           inspector.indexOf("sourceQualityFraming"),
         ),
         /getSceneMedia\(scene\)/,
@@ -324,14 +331,20 @@ async function main(): Promise<void> {
       assert.notEqual(nearest!.media.url, ignoredUrl);
     });
 
-    test("no Apply/Reset or automatic mutation controls", () => {
+    test("adjustment actions only via Details controls component", () => {
       const ui = readSrc(
         "src/features/source-quality/editor/SourceQualitySummary.tsx",
       );
       assert.match(ui, /resolveSourceQualityMedia/);
+      assert.match(ui, /SourceQualityAdjustmentControls/);
       assert.doesNotMatch(ui, /scene\.media\s*\?\?/);
-      assert.doesNotMatch(ui, /\bApply\b|\bReset\b|coming soon/i);
-      assert.doesNotMatch(ui, /onScriptChange|applySceneUpdate|updateSceneMedia/);
+      assert.doesNotMatch(ui, /coming soon/i);
+      assert.doesNotMatch(ui, /applySceneUpdate|updateSceneMedia|buildMediaFramingPatch/);
+      const controls = readSrc(
+        "src/features/source-quality/editor/SourceQualityAdjustmentControls.tsx",
+      );
+      assert.match(controls, /applySourceQualityAdjustmentRecommendation/);
+      assert.doesNotMatch(controls, /buildMediaFramingPatch/);
     });
 
     test("one shared capability fetch; no extra provider", () => {

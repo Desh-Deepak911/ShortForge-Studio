@@ -9,6 +9,10 @@ export type {
 } from "./domain/source-quality-assessment";
 export { resolveSourceQualityMedia } from "./adapters/resolve-source-quality-media";
 export {
+  resolveSourceQualityWinningAdjustmentTarget,
+  type SourceQualityWinningAdjustmentTarget,
+} from "./adapters/resolve-source-quality-adjustment-target";
+export {
   assessSourceQuality,
   type SourceQualityFramingInput,
 } from "./domain/assess-source-quality";
@@ -77,3 +81,5 @@ export {
 } from "./editor/source-quality-adjustment.commands";
 export { default as SourceQualitySummary } from "./editor/SourceQualitySummary";
 export type { SourceQualitySummaryProps } from "./editor/SourceQualitySummary";
+export { default as SourceQualityAdjustmentControls } from "./editor/SourceQualityAdjustmentControls";
+export type { SourceQualityAdjustmentControlsProps } from "./editor/SourceQualityAdjustmentControls";

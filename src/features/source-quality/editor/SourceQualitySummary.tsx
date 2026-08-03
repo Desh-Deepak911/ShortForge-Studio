@@ -1,12 +1,13 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import {
   resolveSceneMediaFraming,
   type SceneMediaFraming,
 } from "@/features/media-framing";
-import type { FootieScene, SceneMedia } from "@/features/story/types";
+import type { FootieScene, FootieScript, SceneMedia } from "@/features/story/types";
+import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 import {
   useSourceQualityIntelligenceEnabled,
   useVisualRetentionCapabilitiesReady,
@@ -23,9 +24,15 @@ import {
   recommendSafeVisualAdjustment,
   type SourceQualitySafeAdjustmentRecommendation,
 } from "../domain/safe-visual-adjustment-recommendation";
+import SourceQualityAdjustmentControls from "./SourceQualityAdjustmentControls";
 
 export interface SourceQualitySummaryProps {
-  readonly scene: Pick<FootieScene, "image" | "uploadedImage" | "media">;
+  readonly scene: FootieScene;
+  readonly script?: FootieScript;
+  readonly onScriptChange?: (
+    script: FootieScript,
+    options?: StoryScriptChangeOptions,
+  ) => void;
   /**
    * Winning projected media for the current inspector selection.
    * When omitted, falls back via assessment-only resolveSourceQualityMedia.
@@ -35,8 +42,13 @@ export interface SourceQualitySummaryProps {
     SceneMediaFraming,
     "fitMode" | "positionX" | "positionY" | "zoom" | "rotationDeg"
   >;
-  /** Stable selected media-item id when mixed/timeline media is selected. */
+  /**
+   * Winning command media-item id paired with `media`. Must be the resolved
+   * target id (live, nearest survivor, or first projected) — never a stale
+   * selection id that does not match `media`.
+   */
   readonly mediaItemId?: string | null;
+  readonly mixedMediaScenesEnabled?: boolean;
   /**
    * Optional readiness override for verification harnesses.
    * Production mounts omit this and read the shared capability snapshot.
@@ -93,10 +105,6 @@ function supportingCopy(assessment: SourceQualityAssessment): string | null {
   return "Review target readiness below. Editing and export stay available.";
 }
 
-/**
- * Compact source-quality summary for the Scene Inspector Media section.
- * Capability-gated and fail-closed; never mutates media or framing.
- */
 function recommendationPreviewCopy(
   recommendation: SourceQualitySafeAdjustmentRecommendation,
 ): {
@@ -145,11 +153,18 @@ function recommendationPreviewCopy(
   return { lines, improvement };
 }
 
+/**
+ * Compact source-quality summary for the Scene Inspector Media section.
+ * Capability-gated and fail-closed. Adjustment actions live only in expanded Details.
+ */
 export default function SourceQualitySummary({
   scene,
+  script,
+  onScriptChange,
   media,
   framing,
   mediaItemId,
+  mixedMediaScenesEnabled = false,
   readiness,
 }: SourceQualitySummaryProps) {
   const hookReady = useVisualRetentionCapabilitiesReady();
@@ -157,29 +172,33 @@ export default function SourceQualitySummary({
   const ready = readiness?.ready ?? hookReady;
   const enabled = readiness?.enabled ?? hookEnabled;
   const detailsId = useId();
+  const detailsToggleRef = useRef<HTMLButtonElement>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const { assessment, recommendation } = useMemo(() => {
-    const resolvedMedia = resolveSourceQualityMedia({ scene, media });
-    const resolvedFraming =
-      framing ??
-      resolveSceneMediaFraming(scene, {
-        media: resolvedMedia,
+  const { assessment, recommendation, resolvedMedia, resolvedFraming } =
+    useMemo(() => {
+      const nextMedia = resolveSourceQualityMedia({ scene, media });
+      const nextFraming =
+        framing ??
+        resolveSceneMediaFraming(scene, {
+          media: nextMedia,
+        });
+      const nextAssessment = assessSourceQuality({
+        media: nextMedia,
+        framing: nextFraming,
       });
-    const nextAssessment = assessSourceQuality({
-      media: resolvedMedia,
-      framing: resolvedFraming,
-    });
-    const nextRecommendation = recommendSafeVisualAdjustment({
-      media: resolvedMedia,
-      framing: resolvedFraming,
-      mediaItemId,
-    });
-    return {
-      assessment: nextAssessment,
-      recommendation: nextRecommendation,
-    };
-  }, [framing, media, mediaItemId, scene]);
+      const nextRecommendation = recommendSafeVisualAdjustment({
+        media: nextMedia,
+        framing: nextFraming,
+        mediaItemId,
+      });
+      return {
+        assessment: nextAssessment,
+        recommendation: nextRecommendation,
+        resolvedMedia: nextMedia,
+        resolvedFraming: nextFraming,
+      };
+    }, [framing, media, mediaItemId, scene]);
 
   if (!ready || !enabled) {
     return null;
@@ -195,6 +214,10 @@ export default function SourceQualitySummary({
     recommendation.recommendationCodes.length > 0
       ? recommendationPreviewCopy(recommendation)
       : null;
+  const canMountControls =
+    Boolean(script) &&
+    typeof onScriptChange === "function" &&
+    assessment.hasMedia;
 
   return (
     <section
@@ -226,6 +249,7 @@ export default function SourceQualitySummary({
         </div>
         {assessment.hasMedia ? (
           <button
+            ref={detailsToggleRef}
             type="button"
             className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-muted underline-offset-2 transition hover:text-foreground/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             aria-expanded={detailsOpen}
@@ -294,7 +318,10 @@ export default function SourceQualitySummary({
                   className="flex gap-2 text-[11px] leading-snug text-foreground/85"
                   data-source-quality-warning={code}
                 >
-                  <span aria-hidden="true" className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-foreground/55" />
+                  <span
+                    aria-hidden="true"
+                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-foreground/55"
+                  />
                   <span>{WARNING_COPY[code]}</span>
                 </li>
               ))}
@@ -362,6 +389,19 @@ export default function SourceQualitySummary({
                 No changes are applied automatically.
               </p>
             </div>
+          ) : null}
+          {canMountControls && script && onScriptChange ? (
+            <SourceQualityAdjustmentControls
+              script={script}
+              scene={scene}
+              media={resolvedMedia}
+              framing={resolvedFraming}
+              mediaItemId={mediaItemId}
+              onScriptChange={onScriptChange}
+              sourceQualityIntelligenceEnabled={enabled}
+              mixedMediaScenesEnabled={mixedMediaScenesEnabled}
+              detailsToggleRef={detailsToggleRef}
+            />
           ) : null}
         </div>
       ) : null}

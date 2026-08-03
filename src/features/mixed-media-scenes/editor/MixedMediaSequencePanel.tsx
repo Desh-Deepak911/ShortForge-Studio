@@ -28,7 +28,10 @@ import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
 import { isStaleSceneMediaAppendError } from "@/features/timeline-editor/scene-media/useSceneMediaImageAppend";
 
-import { useMixedMediaSequenceUpload } from "./useMixedMediaSequenceUpload";
+import {
+  useMixedMediaSequenceUpload,
+  type MixedMediaImageMetadataProbe,
+} from "./useMixedMediaSequenceUpload";
 
 export interface MixedMediaSequencePanelProps {
   readonly script: FootieScript;
@@ -40,6 +43,11 @@ export interface MixedMediaSequencePanelProps {
   readonly mixedMediaScenesEnabled: boolean;
   /** Explicit source-quality image metadata capture gate. */
   readonly sourceQualityIntelligenceEnabled: boolean;
+  /**
+   * Injected image metadata probe. Keeps mixed-media free of a source-quality
+   * import; the editor composition root supplies the production probe.
+   */
+  readonly probeImageObjectUrlMetadata?: MixedMediaImageMetadataProbe;
 }
 
 function commitScenePatch(
@@ -61,6 +69,7 @@ export default function MixedMediaSequencePanel({
   onScriptChange,
   mixedMediaScenesEnabled,
   sourceQualityIntelligenceEnabled,
+  probeImageObjectUrlMetadata,
 }: MixedMediaSequencePanelProps) {
   const selection = useEditorSelectionOptional();
   const items = useMemo(() => readMixedMediaSequenceItems(scene), [scene]);
@@ -73,6 +82,7 @@ export default function MixedMediaSequencePanel({
     onScriptChange,
     mixedMediaScenesEnabled,
     sourceQualityIntelligenceEnabled,
+    probeImageObjectUrlMetadata,
     onSelectMediaItem: (sceneId, mediaItemId) => {
       if (mediaItemId) {
         selection?.selectSceneMediaItem(sceneId, mediaItemId);

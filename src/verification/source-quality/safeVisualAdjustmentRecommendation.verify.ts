@@ -259,10 +259,11 @@ function main(): void {
     assert.match(summarySrc, /recommendSafeVisualAdjustment/);
     assert.match(summarySrc, /Suggested adjustment/);
     assert.match(summarySrc, /No changes are applied automatically/);
-    assert.doesNotMatch(summarySrc, /\bApply\b|\bUndo\b|\bReset\b/);
+    assert.match(summarySrc, /SourceQualityAdjustmentControls/);
     assert.match(summarySrc, /data-source-quality-suggestion/);
     assert.equal(recommendation.applicable, true);
-    assert.ok(!html.includes("Apply"));
+    // Without script/onScriptChange the summary does not mount action controls.
+    assert.ok(!html.includes("Apply suggested adjustment"));
   });
 
   test("responsibility-based filenames", () => {

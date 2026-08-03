@@ -1030,7 +1030,8 @@ async function main(): Promise<void> {
     );
     assert.match(summarySrc, /data-source-quality-facts/);
     assert.match(summarySrc, /data-source-quality-fact="dimensions"/);
-    assert.doesNotMatch(summarySrc, /\bApply\b|\bReset\b/);
+    assert.match(summarySrc, /No changes are applied automatically/);
+    assert.doesNotMatch(summarySrc, /buildMediaFramingPatch/);
 
     const uploadHook = readSrc("src/features/editor/hooks/useSceneImageUpload.ts");
     assert.match(uploadHook, /performSceneMediaReplace/);
