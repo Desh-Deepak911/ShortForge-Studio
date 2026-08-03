@@ -39,6 +39,7 @@ import {
 } from "@/features/story/utils";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import {
+  useEngagementOverlaysEnabled,
   useKeyframedVisualEffectsEnabled,
   useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
@@ -264,6 +265,7 @@ export default function ExportPanel({
   const sourceQualityIntelligenceEnabled =
     useSourceQualityIntelligenceEnabled();
   const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
+  const engagementOverlaysEnabled = useEngagementOverlaysEnabled();
   const syncState = storySync?.state ?? createInitialStorySynchronizationState();
   const exportReadiness = useMemo(
     () => resolveExportReadiness(script, syncState),
@@ -515,6 +517,7 @@ export default function ExportPanel({
         visualBeatDensityEnabled,
         sourceQualityIntelligenceEnabled,
         keyframedVisualEffectsEnabled,
+        engagementOverlaysEnabled,
         sourceQualityExportTarget:
           exportSettings.resolution === "720x1280" ? "720p" : "1080p",
       }),
@@ -530,6 +533,7 @@ export default function ExportPanel({
       visualBeatDensityEnabled,
       sourceQualityIntelligenceEnabled,
       keyframedVisualEffectsEnabled,
+      engagementOverlaysEnabled,
     ],
   );
 
@@ -548,6 +552,7 @@ export default function ExportPanel({
       visualBeatDensityEnabled,
       sourceQualityIntelligenceEnabled,
       keyframedVisualEffectsEnabled,
+      engagementOverlaysEnabled,
       sourceQualityExportTarget:
         exportSettings.resolution === "720x1280" ? "720p" : "1080p",
     }).then((prepared) => {
@@ -591,6 +596,7 @@ export default function ExportPanel({
     visualBeatDensityEnabled,
     sourceQualityIntelligenceEnabled,
     keyframedVisualEffectsEnabled,
+    engagementOverlaysEnabled,
     capabilityRequestKey,
   ]);
 
@@ -846,6 +852,7 @@ export default function ExportPanel({
           visualBeatDensityEnabled,
           sourceQualityIntelligenceEnabled,
           keyframedVisualEffectsEnabled,
+          engagementOverlaysEnabled,
           sourceQualityExportTarget:
             attemptSettings.resolution === "720x1280" ? "720p" : "1080p",
           ...(audioFallback ? { audioFallback } : {}),

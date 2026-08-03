@@ -42,7 +42,8 @@ export type ExportWarningCode =
   | "VISUAL_PACING_METADATA_INVALID"
   | "SOURCE_QUALITY_DIMENSIONS_UNKNOWN"
   | "SOURCE_QUALITY_MAY_UPSCALE"
-  | "SOURCE_QUALITY_AGGRESSIVE_CROP";
+  | "SOURCE_QUALITY_AGGRESSIVE_CROP"
+  | "ENGAGEMENT_OVERLAY_OMITTED";
 
 export interface ExportWarning {
   readonly code: ExportWarningCode;

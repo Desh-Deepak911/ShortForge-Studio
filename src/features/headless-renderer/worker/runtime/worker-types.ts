@@ -39,8 +39,11 @@ export const HEADLESS_WORKER_PHASE3_SUPPORTED = deepFreezeInPlace({
   ] as const),
   videoCodecs: Object.freeze(["vp9", "h264"] as const),
   audioCodecs: Object.freeze(["opus", "aac"] as const),
+  // Implementation-owned Headless advertisement — independent of Browser and
+  // never derived from a caller's manifest.requiredCapabilities.
   rendererCapabilities: Object.freeze([
     "keyframed-visual-effects-v1",
+    "engagement-overlays-v1",
   ] as const),
   containers: Object.freeze([
     "webm",

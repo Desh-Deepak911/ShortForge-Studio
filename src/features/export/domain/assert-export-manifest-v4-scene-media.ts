@@ -108,6 +108,15 @@ export function validateExportManifestV4SceneMedia(
           message: `scenes[${sceneIndex}].media must not include visualEffect on ExportManifest v4.`,
         });
       }
+      if (
+        contract.version === EXPORT_MANIFEST_VERSION &&
+        scene.engagementOverlays !== undefined
+      ) {
+        issues.push({
+          code: "UNSUPPORTED_ENGAGEMENT_OVERLAY",
+          message: `scenes[${sceneIndex}] must not include engagementOverlays on ExportManifest v4.`,
+        });
+      }
     }
     const timeline = isObject(scene.mediaTimeline) ? scene.mediaTimeline : null;
     const items = Array.isArray(timeline?.items) ? timeline.items : [];

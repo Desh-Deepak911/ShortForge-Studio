@@ -23,10 +23,24 @@ export const EXPORT_MANIFEST_V5_VERSION = 5;
 export const EXPORT_RENDERER_CONTRACT_V5 = "9E";
 
 /** Renderer feature IDs frozen into v5 requiredCapabilities. */
-export type ExportRendererCapabilityId = "keyframed-visual-effects-v1";
+export type ExportRendererCapabilityId =
+  | "keyframed-visual-effects-v1"
+  | "engagement-overlays-v1";
 
 export const EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS =
   "keyframed-visual-effects-v1" as const satisfies ExportRendererCapabilityId;
+
+export const EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS =
+  "engagement-overlays-v1" as const satisfies ExportRendererCapabilityId;
+
+/**
+ * Browser renderer implementation-owned capability advertisement.
+ * Independent of any manifest.requiredCapabilities — never mirror requirements.
+ */
+export const EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES = Object.freeze([
+  EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
+] as const satisfies readonly ExportRendererCapabilityId[]);
 
 /** Frozen keyframe payload schema inside ExportManifest v5 motion records. */
 export const EXPORT_MEDIA_MOTION_KEYFRAME_SCHEMA_VERSION = 1 as const;
@@ -238,9 +252,32 @@ interface ExportSceneManifestBase {
 /** Frozen v2 / 8D scene — no intra-scene transition track. */
 export type ExportSceneManifestV2 = ExportSceneManifestBase;
 
+/**
+ * Frozen engagement overlay on a scene (v5 / 9E only).
+ * Timing is already clamped to the prepared scene duration.
+ */
+export interface ExportEngagementOverlayManifest {
+  readonly version: 1;
+  readonly id: string;
+  readonly kind: "like" | "share" | "subscribe" | "combined";
+  readonly startOffsetMs: number;
+  readonly durationMs: number;
+  readonly position:
+    | "top-left"
+    | "top-center"
+    | "top-right"
+    | "center"
+    | "bottom-left"
+    | "bottom-center"
+    | "bottom-right";
+  readonly presetId: string;
+}
+
 /** Production v3 / 9C scene — always carries mediaTransitions (may be empty). */
 export interface ExportSceneManifestV3 extends ExportSceneManifestBase {
   readonly mediaTransitions: ExportSceneMediaTransitionTrackManifest;
+  /** Present only on v5 when engagement overlays are authoritative. */
+  readonly engagementOverlays?: readonly ExportEngagementOverlayManifest[];
 }
 
 export type ExportSceneManifest = ExportSceneManifestV2 | ExportSceneManifestV3;
@@ -362,8 +399,9 @@ export interface ExportCapabilitySnapshot {
   readonly serverRendererAvailable: boolean;
   readonly environment: ExportEnvironmentSnapshot;
   /**
-   * Renderer-advertised feature support. Absent on frozen v2–v4 snapshots.
-   * Browser export advertises keyframed-visual-effects-v1 when the draw path supports it.
+   * Renderer-advertised feature support (negotiation metadata).
+   * Browser builds advertise EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES —
+   * never a copy of requiredCapabilities. Excluded from fingerprint.
    */
   readonly supportedCapabilities?: readonly ExportRendererCapabilityId[];
 }

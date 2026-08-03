@@ -27,6 +27,10 @@ import SceneMediaItemInspector from "@/features/editor/components/media/SceneMed
 import SceneMediaTransitionInspector from "@/features/editor/components/media/SceneMediaTransitionInspector";
 import SceneVideoInspector from "@/features/editor/components/media/SceneVideoInspector";
 import TransitionCard from "@/features/editor/components/TransitionCard";
+import {
+  EngagementOverlayControls,
+  type EngagementOverlayCommandResult,
+} from "@/features/engagement-overlays";
 import SmartEditImageAction, {
   SMART_EDIT_HAS_IMAGE_COPY,
 } from "@/features/tool/components/SmartEditImageAction";
@@ -56,6 +60,7 @@ import { resolveSourceQualityWinningAdjustmentTarget } from "@/features/source-q
 import SourceQualitySummary from "@/features/source-quality/editor/SourceQualitySummary";
 import VisualPacingPanel from "@/features/visual-beat-density/editor/VisualPacingPanel";
 import {
+  useEngagementOverlaysEnabled,
   useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
   useVisualRetentionCapabilitiesReady,
@@ -241,6 +246,9 @@ export default function StudioSceneInspector({
   const sourceQualityEnabled = useSourceQualityIntelligenceEnabled();
   const sourceQualityIntelligenceEnabled =
     visualRetentionCapabilitiesReady && sourceQualityEnabled;
+  const engagementOverlaysCapability = useEngagementOverlaysEnabled();
+  const engagementOverlaysEnabled =
+    visualRetentionCapabilitiesReady && engagementOverlaysCapability;
   const { replaceSceneMedia, removeSceneMedia, uploadError, clearUploadError } =
     useSceneMediaUpload({
       script,
@@ -659,6 +667,13 @@ export default function StudioSceneInspector({
       });
     },
     [onScriptChange, sceneId, script],
+  );
+
+  const handleEngagementOverlayCommit = useCallback(
+    (result: EngagementOverlayCommandResult) => {
+      onScriptChange(result.script, { intent: "media" });
+    },
+    [onScriptChange],
   );
 
   const handleCaptionModeChange = useCallback(
@@ -1170,6 +1185,19 @@ export default function StudioSceneInspector({
                   ) : null}
                 </>
               )}
+              {/* Scene-scoped CTA — independent of mixed-media item selection. */}
+              <EngagementOverlayControls
+                controlId={`inspector-scene-engagement-${scene.id}`}
+                script={script}
+                sceneId={scene.id}
+                sceneDurationMs={
+                  scene.durationMs ??
+                  Math.round((scene.duration ?? 0) * 1000)
+                }
+                engagementOverlaysEnabled={engagementOverlaysEnabled}
+                capabilitiesReady={visualRetentionCapabilitiesReady}
+                onScriptCommit={handleEngagementOverlayCommit}
+              />
             </InspectorSection>
           ) : null}
         </>

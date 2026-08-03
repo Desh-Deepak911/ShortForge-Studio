@@ -22,6 +22,9 @@ import {
 
 import { probeExportMp4Runtime } from "@/features/export/formats/export-runtime-codec-probe";
 
+import { getSceneEngagementOverlay } from "@/features/engagement-overlays/domain/normalize-engagement-overlays";
+import { projectEngagementOverlayToManifest } from "@/features/engagement-overlays/domain/project-engagement-overlay-to-manifest";
+
 import { buildExportManifest } from "./build-export-manifest";
 import type {
   ExportCapabilityResult,
@@ -58,6 +61,8 @@ export interface PrepareExportRequestInput {
   readonly mixedMediaScenesEnabled?: boolean;
   /** Explicit keyframed visual-effects capability; defaults false. */
   readonly keyframedVisualEffectsEnabled?: boolean;
+  /** Explicit engagement-overlays capability; defaults false. */
+  readonly engagementOverlaysEnabled?: boolean;
   /**
    * Explicit Visual pacing authoring capability.
    * Default ignored/fail-closed. Guidance only — never a renderer requirement.
@@ -110,6 +115,9 @@ export async function prepareExportRequest(
   const keyframedVisualEffectsEnabled =
     input.keyframedVisualEffectsEnabled === true ||
     input.options?.keyframedVisualEffectsEnabled === true;
+  const engagementOverlaysEnabled =
+    input.engagementOverlaysEnabled === true ||
+    input.options?.engagementOverlaysEnabled === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
   // Timing authority only — authoring guidance is appended once below.
   const preparedStory = prepareStoryForExport(voiceoverPrepared, {
@@ -143,6 +151,7 @@ export async function prepareExportRequest(
     multiImageScenesEnabled,
     mixedMediaScenesEnabled,
     keyframedVisualEffectsEnabled,
+    engagementOverlaysEnabled,
     environment: {
       ...input.environment,
       mp4EncoderAvailable,
@@ -181,12 +190,37 @@ export async function prepareExportRequest(
       };
     },
   );
+  const engagementWarnings: ExportWarning[] = [];
+  if (engagementOverlaysEnabled) {
+    for (const scene of preparedStory.story.scenes) {
+      const authored = getSceneEngagementOverlay(preparedStory.story, scene.id);
+      if (!authored) continue;
+      const durationMs = Math.max(
+        1,
+        Math.round(scene.durationMs ?? (scene.duration ?? 0) * 1000),
+      );
+      const projected = projectEngagementOverlayToManifest(
+        authored,
+        durationMs,
+        true,
+      );
+      if (!projected.overlay && projected.warnings.length > 0) {
+        engagementWarnings.push({
+          code: "ENGAGEMENT_OVERLAY_OMITTED",
+          message:
+            projected.warnings[0] ??
+            EXPORT_WARNING_MESSAGES.ENGAGEMENT_OVERLAY_OMITTED,
+        });
+      }
+    }
+  }
   const preflight: ExportCapabilityResult = {
     ...basePreflight,
     warnings: Object.freeze([
       ...basePreflight.warnings,
       ...pacingWarnings,
       ...sourceQualityWarnings,
+      ...engagementWarnings,
     ]),
   };
   const renderer = preflight.renderer;

@@ -8,6 +8,7 @@ import type { SceneMediaVisualAdjustments } from "@/features/media-visual-adjust
 import type { SourceQualityAdjustmentProvenance } from "@/features/source-quality/domain/source-quality-adjustment-provenance";
 import type { SpeechStylePreset } from "@/features/speech-style";
 import type { VisualBeatPlanV1 } from "@/features/visual-beat-density/domain/visual-beat-plan";
+import type { VisualRetentionProjectExtensionsV1 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
 
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
 
@@ -464,4 +465,9 @@ export interface FootieScript {
   defaultCaptionStyle?: CaptionStyle;
   /** Project-wide default caption animation preset. */
   defaultCaptionAnimation?: CaptionAnimation;
+  /**
+   * Optional visual-retention project extensions (engagement overlays, etc.).
+   * Absent by default; malformed values normalize as absent. No migration required.
+   */
+  visualRetentionExtensions?: VisualRetentionProjectExtensionsV1;
 }

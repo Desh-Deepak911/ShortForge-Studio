@@ -1,3 +1,4 @@
+import { pruneEngagementOverlaysToScenes } from "@/features/engagement-overlays";
 import { createEmptyScene, duplicateScene, getSceneImageUrl } from "@/features/story/utils";
 import { applyScenesUpdate } from "@/lib/utils/voiceover";
 import type { FootieScene, FootieScript } from "@/features/story/types";
@@ -16,7 +17,7 @@ function resolveSceneIndex(script: FootieScript, sceneId: string): number {
 }
 
 function commitScenes(script: FootieScript, scenes: FootieScene[]): FootieScript {
-  return applyScenesUpdate(script, scenes);
+  return pruneEngagementOverlaysToScenes(applyScenesUpdate(script, scenes));
 }
 
 function revokeUnsharedSceneBlob(scenes: FootieScene[], removedIndex: number) {

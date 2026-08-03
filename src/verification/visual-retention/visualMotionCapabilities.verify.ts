@@ -309,7 +309,7 @@ function main(): void {
     assert.match(route, /subjectAwareReframingEnabled/);
   });
 
-  test("UI-surface coverage registered; no motion/CTA/outro controls rendered yet", () => {
+  test("UI-surface coverage registered; keyframes + engagement wired; brand sting / subject-aware remain unavailable", () => {
     for (const capability of [
       KEYFRAMED_VISUAL_EFFECTS_CAPABILITY_ID,
       ENGAGEMENT_OVERLAYS_CAPABILITY_ID,
@@ -331,10 +331,10 @@ function main(): void {
       "src/features/editor/components/StudioSceneInspector.tsx",
     );
     // Keyframe authoring is nested inside MediaMotionInspectorPanel (Adjust).
-    // Engagement overlays / brand sting / subject-aware framing remain unavailable.
-    assert.doesNotMatch(inspector, /useEngagementOverlaysEnabled/);
+    // Engagement overlays mount scene-scoped in Adjust after motion/look.
+    assert.match(inspector, /useEngagementOverlaysEnabled/);
+    assert.match(inspector, /EngagementOverlayControls/);
     assert.doesNotMatch(inspector, /useSubjectAwareReframingEnabled/);
-    assert.doesNotMatch(inspector, /EngagementOverlayControls/);
     assert.match(
       readSrc("src/features/editor/components/media/MediaMotionInspectorPanel.tsx"),
       /useKeyframedVisualEffectsEnabled/,
@@ -345,6 +345,7 @@ function main(): void {
     );
 
     const exportPanel = readSrc("src/components/ExportPanel.tsx");
+    assert.match(exportPanel, /useEngagementOverlaysEnabled/);
     assert.doesNotMatch(exportPanel, /useShortForgeBrandStingEnabled/);
     assert.doesNotMatch(exportPanel, /BrandStingExportControls/);
   });
@@ -366,9 +367,10 @@ function main(): void {
     assert.match(manifest, /EXPORT_MANIFEST_V5_VERSION = 5/);
     assert.match(manifest, /EXPORT_RENDERER_CONTRACT_V5 = "9E"/);
     assert.match(manifest, /keyframed-visual-effects-v1/);
+    assert.match(manifest, /engagement-overlays-v1/);
     assert.match(manifest, /keyframes\?:/);
+    assert.match(manifest, /engagementOverlays\?:/);
     assert.doesNotMatch(manifest, /subjectAware/);
-    assert.doesNotMatch(manifest, /engagementOverlay/);
   });
 
   test("subject-aware reframing is independent of source-quality alone", () => {

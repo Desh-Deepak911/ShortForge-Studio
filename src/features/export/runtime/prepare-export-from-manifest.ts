@@ -10,6 +10,7 @@ import {
   type ExportMediaMotionManifest,
   type ExportSceneManifest,
   isExportManifestV5,
+  EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
 } from "@/features/export/domain/export-manifest.types";
 import { assertExportManifest as assertExportManifestAuthority } from "@/features/export/domain/validate-export-manifest";
@@ -45,6 +46,7 @@ export interface ExportRenderPlan {
   readonly sceneById: ReadonlyMap<string, ExportDrawScene>;
   readonly captions: readonly ExportCaptionManifest[];
   readonly keyframedVisualEffectsEnabled: boolean;
+  readonly engagementOverlaysEnabled: boolean;
 }
 
 /**
@@ -71,6 +73,11 @@ export function prepareExportFromManifest(
       isExportManifestV5(manifest) &&
       manifest.requiredCapabilities.includes(
         EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+      ),
+    engagementOverlaysEnabled:
+      isExportManifestV5(manifest) &&
+      manifest.requiredCapabilities.includes(
+        EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
       ),
   };
 }

@@ -49,6 +49,19 @@ function sceneFingerprintPayload(scene: ExportSceneManifest) {
           overlayEndOffsetMs: boundary.overlayEndOffsetMs,
         })),
       },
+      ...(scene.engagementOverlays && scene.engagementOverlays.length > 0
+        ? {
+            engagementOverlays: scene.engagementOverlays.map((overlay) => ({
+              version: overlay.version,
+              id: overlay.id,
+              kind: overlay.kind,
+              startOffsetMs: overlay.startOffsetMs,
+              durationMs: overlay.durationMs,
+              position: overlay.position,
+              presetId: overlay.presetId,
+            })),
+          }
+        : {}),
     };
   }
 

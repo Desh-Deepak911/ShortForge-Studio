@@ -17,6 +17,7 @@ import { validateExportManifestV4SceneMedia } from "./assert-export-manifest-v4-
 import {
   EXPORT_MANIFEST_V5_VERSION,
   EXPORT_MEDIA_MOTION_KEYFRAME_SCHEMA_VERSION,
+  EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CONTRACT_V5,
 } from "./export-manifest.types";
@@ -106,26 +107,129 @@ export function validateExportManifestV5SceneMedia(
   if (!isObject(manifest) || !Array.isArray(manifest.scenes)) return base;
 
   const issues = [...base.issues];
-  if (
-    !Array.isArray(manifest.requiredCapabilities) ||
-    !manifest.requiredCapabilities.includes(
-      EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
-    )
-  ) {
+  const required = Array.isArray(manifest.requiredCapabilities)
+    ? manifest.requiredCapabilities
+    : [];
+  const requiresKeyframed = required.includes(
+    EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  );
+  const requiresEngagement = required.includes(
+    EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
+  );
+  if (required.length < 1 || (!requiresKeyframed && !requiresEngagement)) {
     issues.push({
       code: "MISSING_REQUIRED_CAPABILITY",
-      message: "ExportManifest v5 must require keyframed-visual-effects-v1.",
+      message:
+        "ExportManifest v5 must require keyframed-visual-effects-v1 and/or engagement-overlays-v1.",
     });
   }
 
   let authoritativeKeyframeItems = 0;
   let authoritativeEffectItems = 0;
+  let authoritativeEngagementScenes = 0;
+  const sceneIds = new Set<string>();
 
   for (let sceneIndex = 0; sceneIndex < manifest.scenes.length; sceneIndex += 1) {
-    const timeline = isObject(manifest.scenes[sceneIndex]) &&
-      isObject(manifest.scenes[sceneIndex].mediaTimeline)
-      ? manifest.scenes[sceneIndex].mediaTimeline
+    const scene = isObject(manifest.scenes[sceneIndex])
+      ? manifest.scenes[sceneIndex]
       : null;
+    if (scene && typeof scene.id === "string" && scene.id.trim()) {
+      sceneIds.add(scene.id.trim());
+    }
+
+    if (scene && scene.engagementOverlays !== undefined) {
+      if (!requiresEngagement) {
+        issues.push({
+          code: "UNSUPPORTED_ENGAGEMENT_OVERLAY",
+          message: `scenes[${sceneIndex}].engagementOverlays requires engagement-overlays-v1.`,
+        });
+      } else if (!Array.isArray(scene.engagementOverlays)) {
+        issues.push({
+          code: "INVALID_ENGAGEMENT_OVERLAY",
+          message: `scenes[${sceneIndex}].engagementOverlays must be an array.`,
+        });
+      } else {
+        for (let overlayIndex = 0; overlayIndex < scene.engagementOverlays.length; overlayIndex += 1) {
+          const overlay = scene.engagementOverlays[overlayIndex];
+          const location = `scenes[${sceneIndex}].engagementOverlays[${overlayIndex}]`;
+          if (!isObject(overlay) || overlay.version !== 1) {
+            issues.push({
+              code: "INVALID_ENGAGEMENT_OVERLAY",
+              message: `${location} must be a version 1 object.`,
+            });
+            continue;
+          }
+          let overlayOk = true;
+          if (
+            typeof overlay.id !== "string" ||
+            !overlay.id.trim() ||
+            typeof overlay.presetId !== "string" ||
+            !overlay.presetId.trim()
+          ) {
+            issues.push({
+              code: "INVALID_ENGAGEMENT_OVERLAY",
+              message: `${location} id/presetId are required.`,
+            });
+            overlayOk = false;
+          }
+          if (
+            overlay.kind !== "like" &&
+            overlay.kind !== "share" &&
+            overlay.kind !== "subscribe" &&
+            overlay.kind !== "combined"
+          ) {
+            issues.push({
+              code: "INVALID_ENGAGEMENT_OVERLAY",
+              message: `${location}.kind is unknown.`,
+            });
+            overlayOk = false;
+          }
+          const positions = new Set([
+            "top-left",
+            "top-center",
+            "top-right",
+            "center",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
+          ]);
+          if (!positions.has(overlay.position as string)) {
+            issues.push({
+              code: "INVALID_ENGAGEMENT_OVERLAY",
+              message: `${location}.position is unknown.`,
+            });
+            overlayOk = false;
+          }
+          if (
+            !isFiniteNumber(overlay.startOffsetMs) ||
+            overlay.startOffsetMs < 0 ||
+            !isFiniteNumber(overlay.durationMs) ||
+            overlay.durationMs < 250 ||
+            overlay.durationMs > 10_000
+          ) {
+            issues.push({
+              code: "INVALID_ENGAGEMENT_OVERLAY",
+              message: `${location} timing is invalid.`,
+            });
+            overlayOk = false;
+          } else if (
+            isFiniteNumber(scene?.durationMs) &&
+            overlay.startOffsetMs + overlay.durationMs > scene.durationMs + 1e-6
+          ) {
+            issues.push({
+              code: "INVALID_ENGAGEMENT_OVERLAY",
+              message: `${location} exceeds scene duration.`,
+            });
+            overlayOk = false;
+          }
+          if (overlayOk) {
+            authoritativeEngagementScenes += 1;
+          }
+        }
+      }
+    }
+
+    const timeline = scene && isObject(scene.mediaTimeline) ? scene.mediaTimeline : null;
     const items = Array.isArray(timeline?.items) ? timeline.items : [];
     for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
       const media = isObject(items[itemIndex]) && isObject(items[itemIndex].media)
@@ -263,18 +367,25 @@ export function validateExportManifestV5SceneMedia(
   }
 
   if (
-    Array.isArray(manifest.requiredCapabilities) &&
-    manifest.requiredCapabilities.includes(
-      EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
-    ) &&
+    requiresKeyframed &&
     authoritativeKeyframeItems + authoritativeEffectItems < 1
   ) {
     issues.push({
       code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
       message:
-        "ExportManifest v5 requires at least one media item with authoritative keyframes or an active visual effect.",
+        "ExportManifest v5 with keyframed-visual-effects-v1 requires authoritative keyframes or an active visual effect.",
     });
   }
+
+  if (requiresEngagement && authoritativeEngagementScenes < 1) {
+    issues.push({
+      code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
+      message:
+        "ExportManifest v5 with engagement-overlays-v1 requires at least one usable engagement overlay.",
+    });
+  }
+
+  void sceneIds;
 
   return { ok: issues.length === 0, issues };
 }

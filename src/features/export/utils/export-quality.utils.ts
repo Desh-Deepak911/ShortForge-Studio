@@ -89,6 +89,12 @@ export interface FootieExportOptions {
    */
   keyframedVisualEffectsEnabled?: boolean;
   /**
+   * Explicit engagement-overlays capability.
+   * When true and a usable overlay exists, ExportManifest v5 freezes it.
+   * Default false (fail-closed).
+   */
+  engagementOverlaysEnabled?: boolean;
+  /**
    * Actual requested output target for source-quality guidance.
    * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
    */

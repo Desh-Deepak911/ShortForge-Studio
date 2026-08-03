@@ -17,12 +17,21 @@ import EditorCanvasEditLayer from "@/features/editor/components/EditorCanvasEdit
 import { useEditorSelection } from "@/features/editor/selection";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import { sceneHasFramableMedia } from "@/features/media-framing";
+import {
+  EngagementOverlayPreview,
+  getSceneEngagementOverlay,
+  shouldSuppressEngagementOverlayForInterSceneTransition,
+} from "@/features/engagement-overlays";
 import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
 import PreviewFrame, {
   DynamicIsland,
   PreviewDeviceFrame,
 } from "@/features/preview/components/PreviewFrame";
 import SubtitleOverlay from "@/features/preview/components/SubtitleOverlay";
+import {
+  useEngagementOverlaysEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { usePreviewPlayback } from "@/features/preview/hooks/usePreviewPlayback";
 import {
   getPreviewSceneTiming,
@@ -107,6 +116,11 @@ export default function VideoPreview({
 
   const previewRootRef = useRef<HTMLDivElement>(null);
   const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
+  const visualRetentionCapabilitiesReady =
+    useVisualRetentionCapabilitiesReady();
+  const engagementOverlaysCapability = useEngagementOverlaysEnabled();
+  const engagementOverlaysEnabled =
+    visualRetentionCapabilitiesReady && engagementOverlaysCapability;
   const trimPreview = useVideoTrimPreviewOptional();
   const trimPreviewActive = Boolean(trimPreview?.override?.isActive);
   const playback = usePreviewPlayback({
@@ -419,6 +433,10 @@ export default function VideoPreview({
     : 0;
   // Scene-to-scene only — intra-scene transitions keep subtitles/captions continuous.
   const hideCaptionsDuringTransition = transitionOverlay != null;
+  const suppressEngagementOverlay =
+    shouldSuppressEngagementOverlayForInterSceneTransition(
+      transitionOverlay != null,
+    );
   const subtitleSceneIndex =
     playbackMode === "narration" && previewSceneTiming.activeSceneIndex != null
       ? previewSceneTiming.activeSceneIndex
@@ -488,6 +506,15 @@ export default function VideoPreview({
           mixedMediaScenesEnabled={mixedMediaScenesEnabled}
           overlay={
             <>
+              {engagementOverlaysEnabled &&
+              script &&
+              !suppressEngagementOverlay ? (
+                <EngagementOverlayPreview
+                  overlay={getSceneEngagementOverlay(script, displayScene.id)}
+                  sceneDurationMs={sceneDurationMs}
+                  sceneElapsedMs={sceneElapsedMs}
+                />
+              ) : null}
               {showSubtitles ? (
                 <SubtitleOverlay
                   scene={subtitleScene}

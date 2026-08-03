@@ -100,6 +100,8 @@ export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {
     "Some media may be enlarged for this export and could look soft.",
   SOURCE_QUALITY_AGGRESSIVE_CROP:
     "Some media may be heavily cropped by the current vertical framing.",
+  ENGAGEMENT_OVERLAY_OMITTED:
+    "An engagement prompt could not fit this scene and was left out of export.",
 };
 
 /** @deprecated Sprint 6F.1 — use approveExportResolution instead of this flag. */

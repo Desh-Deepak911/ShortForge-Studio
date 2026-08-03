@@ -43,6 +43,8 @@ import type { ExportAudioMode } from "@/features/export/utils/export-quality.uti
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
+import { projectEngagementOverlayToManifest } from "@/features/engagement-overlays/domain/project-engagement-overlay-to-manifest";
+import { getSceneEngagementOverlay } from "@/features/engagement-overlays/domain/normalize-engagement-overlays";
 import { projectMediaVisualEffectToManifest } from "@/features/media-motion/domain/resolve-media-visual-effect";
 import { projectSceneVisualPlan } from "@/features/mixed-media-scenes/adapters/project-visual-sequence";
 import { resolveSceneMediaWindows } from "@/features/scene-media-timeline";
@@ -54,6 +56,8 @@ import { buildExportSceneMediaTransitionTrack } from "./build-export-scene-media
 import { projectSceneMediaKeyframesToManifest } from "./project-media-motion-keyframes-to-manifest";
 import {
   EXPORT_MANIFEST_V5_VERSION,
+  EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES,
+  EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_MANIFEST_VERSION,
@@ -68,6 +72,7 @@ import {
   type ExportManifest,
   type ExportManifestV5Draft,
   type ExportManifestFormat,
+  type ExportRendererCapabilityId,
   type ExportManifestResolutionLabel,
   type ExportMediaManifest,
   type ExportMediaMotionManifest,
@@ -101,11 +106,14 @@ export interface BuildExportManifestInput {
   readonly mixedMediaScenesEnabled?: boolean;
   /** Explicit keyframed visual-effects capability. Defaults false (fail-closed). */
   readonly keyframedVisualEffectsEnabled?: boolean;
+  /** Explicit engagement-overlays capability. Defaults false (fail-closed). */
+  readonly engagementOverlaysEnabled?: boolean;
 }
 
 export function buildExportManifest(input: BuildExportManifestInput): ExportManifest {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
   const keyframedVisualEffectsEnabled = input.keyframedVisualEffectsEnabled === true;
+  const engagementOverlaysEnabled = input.engagementOverlaysEnabled === true;
   // Fallback preparation freezes timing only. Authoring guidance (Visual pacing)
   // is owned by prepareExportRequest, not manifest construction.
   const prepared =
@@ -135,6 +143,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     multiImageScenesEnabled,
     mixedMediaScenesEnabled,
     keyframedVisualEffectsEnabled,
+    engagementOverlaysEnabled,
   );
   const captions = buildCaptionManifests(story, timeline);
   const audio = buildAudioManifest(story, audioMix, {
@@ -150,8 +159,22 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     scene.mediaTimeline.items.some((item) => item.media.type !== "placeholder" &&
       item.media.visualEffect != null),
   );
-  const hasAuthoritativeEnhancement = hasProjectedKeyframes || hasProjectedVisualEffect;
-  const capabilities = buildCapabilitySnapshot(environment, hasAuthoritativeEnhancement);
+  const hasProjectedEngagementOverlay =
+    engagementOverlaysEnabled &&
+    scenes.some(
+      (scene) =>
+        Array.isArray(scene.engagementOverlays) &&
+        scene.engagementOverlays.length > 0,
+    );
+  const requiredCapabilities: ExportRendererCapabilityId[] = [];
+  if (hasProjectedKeyframes || hasProjectedVisualEffect) {
+    requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS);
+  }
+  if (hasProjectedEngagementOverlay) {
+    requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS);
+  }
+  const hasAuthoritativeEnhancement = requiredCapabilities.length > 0;
+  const capabilities = buildCapabilitySnapshot(environment);
 
   const draftBase = {
     manifestId: createManifestId(),
@@ -169,7 +192,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
         ...draftBase,
         version: EXPORT_MANIFEST_V5_VERSION,
         rendererContractVersion: EXPORT_RENDERER_CONTRACT_V5,
-        requiredCapabilities: [EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS],
+        requiredCapabilities,
       }
     : {
         ...draftBase,
@@ -233,6 +256,7 @@ function buildSceneManifests(
   multiImageScenesEnabled: boolean,
   mixedMediaScenesEnabled: boolean,
   keyframedVisualEffectsEnabled: boolean,
+  engagementOverlaysEnabled: boolean,
 ): readonly ExportSceneManifestV3[] {
   const transitions = collectTransitions(story, timeline);
   return story.scenes.map((scene, index) => {
@@ -258,6 +282,11 @@ function buildSceneManifests(
       scene,
       mediaTimeline,
     );
+    const projectedOverlay = projectEngagementOverlayToManifest(
+      getSceneEngagementOverlay(story, scene.id),
+      durationMs,
+      engagementOverlaysEnabled,
+    );
 
     return {
       id: scene.id,
@@ -271,6 +300,9 @@ function buildSceneManifests(
       transitionOut: transitions.get(scene.id) ?? null,
       captionMode: scene.captionMode ?? "generated",
       hasDrawableMedia,
+      ...(projectedOverlay.overlay
+        ? { engagementOverlays: [projectedOverlay.overlay] }
+        : {}),
     };
   });
 }
@@ -724,7 +756,6 @@ function buildBrandingManifest(): ExportBrandingManifest {
 
 function buildCapabilitySnapshot(
   environment: ExportEnvironmentSnapshot,
-  hasProjectedKeyframes: boolean,
 ): ExportCapabilitySnapshot {
   const mp4Ok = environment.mp4EncoderAvailable !== false;
   return {
@@ -739,9 +770,8 @@ function buildCapabilitySnapshot(
       !environment.ffmpegRuntimePoisoned,
     serverRendererAvailable: environment.serverRendererAvailable,
     environment,
-    ...(hasProjectedKeyframes
-      ? { supportedCapabilities: [EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS] }
-      : {}),
+    // Implementation-owned Browser advertisement — never mirrors requiredCapabilities.
+    supportedCapabilities: [...EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES],
   };
 }
 
