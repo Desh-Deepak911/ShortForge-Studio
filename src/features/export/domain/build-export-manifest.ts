@@ -43,6 +43,7 @@ import type { ExportAudioMode } from "@/features/export/utils/export-quality.uti
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
+import { projectMediaVisualEffectToManifest } from "@/features/media-motion/domain/resolve-media-visual-effect";
 import { projectSceneVisualPlan } from "@/features/mixed-media-scenes/adapters/project-visual-sequence";
 import { resolveSceneMediaWindows } from "@/features/scene-media-timeline";
 
@@ -145,7 +146,12 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     scene.mediaTimeline.items.some((item) => item.media.type !== "placeholder" &&
       item.media.motion?.keyframes != null),
   );
-  const capabilities = buildCapabilitySnapshot(environment, hasProjectedKeyframes);
+  const hasProjectedVisualEffect = keyframedVisualEffectsEnabled && scenes.some((scene) =>
+    scene.mediaTimeline.items.some((item) => item.media.type !== "placeholder" &&
+      item.media.visualEffect != null),
+  );
+  const hasAuthoritativeEnhancement = hasProjectedKeyframes || hasProjectedVisualEffect;
+  const capabilities = buildCapabilitySnapshot(environment, hasAuthoritativeEnhancement);
 
   const draftBase = {
     manifestId: createManifestId(),
@@ -158,7 +164,7 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     branding,
     capabilities,
   };
-  const draft: ExportManifestV4Draft | ExportManifestV5Draft = hasProjectedKeyframes
+  const draft: ExportManifestV4Draft | ExportManifestV5Draft = hasAuthoritativeEnhancement
     ? {
         ...draftBase,
         version: EXPORT_MANIFEST_V5_VERSION,
@@ -408,6 +414,10 @@ function buildMediaManifestFromSceneMedia(
   const rotationDeg = framing.rotationDeg;
   const source = typeof media.url === "string" ? media.url.trim() : "";
   const visualAdjustments = freezeMediaVisualAdjustments(media.visualAdjustments);
+  const visualEffect = projectMediaVisualEffectToManifest(
+    media.visualEffect,
+    keyframedVisualEffectsEnabled,
+  );
 
   if (media.type === "image") {
     return {
@@ -420,6 +430,7 @@ function buildMediaManifestFromSceneMedia(
       rotationDeg,
       motion,
       ...(visualAdjustments ? { visualAdjustments } : {}),
+      ...(visualEffect ? { visualEffect } : {}),
     };
   }
 
@@ -439,6 +450,7 @@ function buildMediaManifestFromSceneMedia(
     rotationDeg,
     motion,
     ...(visualAdjustments ? { visualAdjustments } : {}),
+    ...(visualEffect ? { visualEffect } : {}),
   };
 }
 

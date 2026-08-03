@@ -399,6 +399,7 @@ export default function SceneMediaItemInspector({
           <MediaMotionInspectorPanel
             controlId={`inspector-media-item-motion-${scene.id}-${mediaItemId}`}
             motion={motion}
+            media={media}
             disabled={controlsDisabled}
             mediaWindowDurationMs={itemDurationMs}
             mediaItemId={mediaItemId}
@@ -408,6 +409,9 @@ export default function SceneMediaItemInspector({
                 const result = buildMediaMotionPatch(temp, patch);
                 return result?.media ? { media: result.media } : null;
               });
+            }}
+            onVisualEffectMediaChange={(nextMedia) => {
+              commitItemMedia(nextMedia);
             }}
             onReset={() => {
               runWithTempScene((temp) => {

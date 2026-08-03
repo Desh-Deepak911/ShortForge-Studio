@@ -7,6 +7,10 @@ import {
   MEDIA_MOTION_KEYFRAME_MIN_OPACITY,
   MEDIA_MOTION_KEYFRAME_MIN_SCALE,
 } from "@/features/media-motion/domain/media-motion-keyframes";
+import {
+  MEDIA_VISUAL_ADJUSTMENT_MAX_PERCENT,
+  MEDIA_VISUAL_ADJUSTMENT_MIN_PERCENT,
+} from "@/features/media-visual-adjustments/media-visual-adjustments.defaults";
 
 import type { ExportManifestV3IntegrityResult } from "./assert-export-manifest-v3-scene-media";
 import { validateExportManifestV4SceneMedia } from "./assert-export-manifest-v4-scene-media";
@@ -24,6 +28,8 @@ const SUPPORTED_EASINGS = new Set([
   "ease-in-out",
 ]);
 
+const SUPPORTED_EFFECT_PRESETS = new Set(["vivid", "cinematic", "monochrome"]);
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -34,6 +40,59 @@ function isFiniteNumber(value: unknown): value is number {
 
 function isInRange(value: number, min: number, max: number): boolean {
   return value >= min && value <= max;
+}
+
+function validateVisualEffect(
+  value: unknown,
+  location: string,
+): { ok: boolean; issues: ExportManifestV3IntegrityResult["issues"][number][] } {
+  if (value === undefined) {
+    return { ok: false, issues: [] };
+  }
+  if (!isObject(value)) {
+    return {
+      ok: false,
+      issues: [{
+        code: "INVALID_MEDIA_VISUAL_EFFECT",
+        message: `${location} must be an object.`,
+      }],
+    };
+  }
+  const issues: ExportManifestV3IntegrityResult["issues"][number][] = [];
+  if (value.version !== 1) {
+    issues.push({
+      code: "INVALID_MEDIA_VISUAL_EFFECT",
+      message: `${location}.version must be 1.`,
+    });
+  }
+  if (typeof value.presetId !== "string" || !SUPPORTED_EFFECT_PRESETS.has(value.presetId)) {
+    issues.push({
+      code: "INVALID_MEDIA_VISUAL_EFFECT",
+      message: `${location}.presetId is unknown.`,
+    });
+  }
+  if (!isFiniteNumber(value.intensity) || !(value.intensity > 0) || value.intensity > 1) {
+    issues.push({
+      code: "INVALID_MEDIA_VISUAL_EFFECT",
+      message: `${location}.intensity must be in (0, 1].`,
+    });
+  }
+  for (const key of ["brightness", "contrast", "saturation"] as const) {
+    if (
+      !isFiniteNumber(value[key]) ||
+      !isInRange(
+        value[key],
+        MEDIA_VISUAL_ADJUSTMENT_MIN_PERCENT,
+        MEDIA_VISUAL_ADJUSTMENT_MAX_PERCENT,
+      )
+    ) {
+      issues.push({
+        code: "INVALID_MEDIA_VISUAL_EFFECT",
+        message: `${location}.${key} is out of range.`,
+      });
+    }
+  }
+  return { ok: issues.length === 0, issues };
 }
 
 export function validateExportManifestV5SceneMedia(
@@ -60,6 +119,7 @@ export function validateExportManifestV5SceneMedia(
   }
 
   let authoritativeKeyframeItems = 0;
+  let authoritativeEffectItems = 0;
 
   for (let sceneIndex = 0; sceneIndex < manifest.scenes.length; sceneIndex += 1) {
     const timeline = isObject(manifest.scenes[sceneIndex]) &&
@@ -68,10 +128,22 @@ export function validateExportManifestV5SceneMedia(
       : null;
     const items = Array.isArray(timeline?.items) ? timeline.items : [];
     for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
-      const motion = isObject(items[itemIndex]) && isObject(items[itemIndex].media) &&
-        isObject(items[itemIndex].media.motion)
-        ? items[itemIndex].media.motion
+      const media = isObject(items[itemIndex]) && isObject(items[itemIndex].media)
+        ? items[itemIndex].media
         : null;
+      if (!media) continue;
+
+      const effectLocation =
+        `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media.visualEffect`;
+      if (media.visualEffect !== undefined) {
+        const effectResult = validateVisualEffect(media.visualEffect, effectLocation);
+        issues.push(...effectResult.issues);
+        if (effectResult.ok) {
+          authoritativeEffectItems += 1;
+        }
+      }
+
+      const motion = isObject(media.motion) ? media.motion : null;
       if (!motion) continue;
 
       const location = `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media.motion`;
@@ -195,12 +267,12 @@ export function validateExportManifestV5SceneMedia(
     manifest.requiredCapabilities.includes(
       EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
     ) &&
-    authoritativeKeyframeItems < 1
+    authoritativeKeyframeItems + authoritativeEffectItems < 1
   ) {
     issues.push({
-      code: "MISSING_AUTHORITATIVE_KEYFRAMES",
+      code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
       message:
-        "ExportManifest v5 requires at least one media item with authoritative keyframes.",
+        "ExportManifest v5 requires at least one media item with authoritative keyframes or an active visual effect.",
     });
   }
 

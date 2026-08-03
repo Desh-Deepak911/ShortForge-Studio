@@ -134,6 +134,7 @@ import type {
   CaptionMode,
   FootieScript,
   SceneImage,
+  SceneMedia,
   SceneType,
   TransitionTimelineItem,
 } from "@/features/story/types";
@@ -650,6 +651,16 @@ export default function StudioSceneInspector({
     });
   }, [onScriptChange, sceneId, script]);
 
+  const handleVisualEffectMediaChange = useCallback(
+    (nextMedia: SceneMedia) => {
+      if (!sceneId) return;
+      onScriptChange(applySceneUpdate(script, sceneId, { media: nextMedia }), {
+        intent: "media",
+      });
+    },
+    [onScriptChange, sceneId, script],
+  );
+
   const handleCaptionModeChange = useCallback(
     (mode: CaptionMode) => {
       if (!sceneId) {
@@ -1137,6 +1148,7 @@ export default function StudioSceneInspector({
                   <MediaMotionInspectorPanel
                     controlId={`inspector-scene-media-motion-${scene.id}`}
                     motion={resolveSceneMediaMotion(scene)}
+                    media={sceneMedia}
                     mediaWindowDurationMs={
                       scene.durationMs ??
                       Math.round((scene.duration ?? 0) * 1000)
@@ -1146,6 +1158,7 @@ export default function StudioSceneInspector({
                       mixedMediaScenesEnabled && mediaWindows.length > 1
                     }
                     onMotionChange={handleMediaMotionChange}
+                    onVisualEffectMediaChange={handleVisualEffectMediaChange}
                     onReset={handleResetMediaMotion}
                   />
                   {sceneMedia && sceneMedia.type !== "placeholder" ? (

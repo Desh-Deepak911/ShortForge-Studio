@@ -124,6 +124,32 @@ export interface SceneMediaMotion {
   keyframes?: MediaMotionKeyframe[];
 }
 
+/** Closed visual-effect preset identity (authoring + persistence). */
+export type SceneMediaVisualEffectPresetId =
+  | "none"
+  | "vivid"
+  | "cinematic"
+  | "monochrome";
+
+export const SCENE_MEDIA_VISUAL_EFFECT_VERSION = 1 as const;
+
+/**
+ * Optional media-level visual-effect contract.
+ * Authoring persists `{ version, presetId, intensity }` only.
+ * Optional brightness/contrast/saturation are export-hydrate carriers for
+ * frozen renderer parameters and are stripped by story normalize.
+ */
+export interface SceneMediaVisualEffect {
+  version: typeof SCENE_MEDIA_VISUAL_EFFECT_VERSION;
+  presetId: Exclude<SceneMediaVisualEffectPresetId, "none">;
+  /** Normalized intensity in (0, 1]. Zero/absent is identity. */
+  intensity: number;
+  /** Frozen export-only BCS; ignored by preview catalog resolve. */
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+}
+
 export interface SceneMedia {
   type: SceneMediaType;
   url?: string;
@@ -144,6 +170,12 @@ export interface SceneMedia {
   motion?: SceneMediaMotion;
   /** Appearance-only media adjustments; never affects playback or captions. */
   visualAdjustments?: SceneMediaVisualAdjustments;
+  /**
+   * Optional closed visual-effect preset (capability-gated at render/export).
+   * Independent from motion.enabled and freeform visualAdjustments.
+   * Malformed values normalize as absent; no migration required.
+   */
+  visualEffect?: SceneMediaVisualEffect;
   /**
    * Authoring-only source-quality adjustment provenance.
    * Optional; Preview/Export/Headless ignore it. Malformed values normalize as absent.

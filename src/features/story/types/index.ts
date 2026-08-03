@@ -24,6 +24,8 @@ export type {
   SceneMedia,
   SceneMediaFitMode,
   SceneMediaMotion,
+  SceneMediaVisualEffect,
+  SceneMediaVisualEffectPresetId,
   SceneMediaSource,
   SceneMediaTimeline,
   SceneMediaTimelineItem,
@@ -42,6 +44,7 @@ export type {
   TransitionEffect,
   TransitionTimelineItem,
 } from "./story.types";
+export { SCENE_MEDIA_VISUAL_EFFECT_VERSION } from "./story.types";
 export type {
   AudioFirstGenerationResult,
   StoryScript,

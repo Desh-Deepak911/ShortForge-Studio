@@ -14,6 +14,8 @@ import {
   type SceneMediaMotion,
 } from "@/features/media-motion";
 import MediaMotionKeyframeEditor from "@/features/media-motion/editor/MediaMotionKeyframeEditor";
+import MediaVisualEffectControls from "@/features/media-motion/editor/MediaVisualEffectControls";
+import type { SceneMedia } from "@/features/story/types";
 import {
   useKeyframedVisualEffectsEnabled,
   useVisualRetentionCapabilitiesReady,
@@ -29,6 +31,8 @@ import {
 export interface MediaMotionInspectorPanelProps {
   controlId: string;
   motion: SceneMediaMotion;
+  /** Winning media target for look presets (same target as motion/keyframes). */
+  media?: SceneMedia | null;
   disabled?: boolean;
   /** Item-local media window duration for keyframe timing. */
   mediaWindowDurationMs?: number;
@@ -41,6 +45,8 @@ export interface MediaMotionInspectorPanelProps {
    */
   requiresMediaItemSelection?: boolean;
   onMotionChange: (patch: Partial<SceneMediaMotion>) => void;
+  /** Commit look-preset media writes without altering motion/keyframes. */
+  onVisualEffectMediaChange?: (media: SceneMedia) => void;
   onReset: () => void;
 }
 
@@ -60,11 +66,13 @@ function easingLabel(easing: MediaMotionEasing | undefined): string {
 export default function MediaMotionInspectorPanel({
   controlId,
   motion,
+  media,
   disabled = false,
   mediaWindowDurationMs = 0,
   mediaItemId = null,
   requiresMediaItemSelection = false,
   onMotionChange,
+  onVisualEffectMediaChange,
   onReset,
 }: MediaMotionInspectorPanelProps) {
   const capabilitiesReady = useVisualRetentionCapabilitiesReady();
@@ -80,6 +88,12 @@ export default function MediaMotionInspectorPanel({
   const blockForSelection =
     keyframesCapable && authoringTarget.status === "needs_selection";
   const showKeyframeEditor = keyframesCapable && !blockForSelection;
+  const showVisualEffectControls =
+    keyframesCapable &&
+    !blockForSelection &&
+    !!media &&
+    media.type !== "placeholder" &&
+    typeof onVisualEffectMediaChange === "function";
   const enabled = motion.enabled !== false && motion.presetId !== "static";
   const presetId = motion.presetId ?? "static";
   const preset = getMediaMotionPreset(presetId);
@@ -158,13 +172,15 @@ export default function MediaMotionInspectorPanel({
   };
 
   if (blockForSelection) {
+    // Keyframes and look controls share the same selection gate.
     return (
       <div
-        className="space-y-2"
+        className="min-w-0 space-y-2"
         data-media-motion-panel="blocked"
         data-media-motion-target-status="needs_selection"
         data-media-motion-target-item=""
         data-media-motion-target-duration={String(authoringTarget.mediaWindowDurationMs)}
+        data-media-visual-effect-controls="blocked"
       >
         <p className={studioSubtleText} role="status">
           {MEDIA_MOTION_KEYFRAME_SELECTION_REQUIRED_MESSAGE}
@@ -314,6 +330,21 @@ export default function MediaMotionInspectorPanel({
           ) : null}
         </>
       )}
+
+      {showVisualEffectControls && media && onVisualEffectMediaChange ? (
+        <MediaVisualEffectControls
+          controlId={`${controlId}-look`}
+          media={media}
+          disabled={disabled}
+          keyframedVisualEffectsEnabled
+          requiresMediaItemSelection={false}
+          mediaItemId={authoringTarget.mediaItemId}
+          mediaWindowDurationMs={authoringTarget.mediaWindowDurationMs}
+          onMediaCommit={(result) => {
+            onVisualEffectMediaChange(result.media);
+          }}
+        />
+      ) : null}
 
       <div className="flex flex-wrap gap-2 pt-1">
         <button

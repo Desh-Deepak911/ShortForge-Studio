@@ -14,7 +14,7 @@ import {
   resolveSceneMediaFraming,
   resolveSceneMediaFramingAsImage,
 } from "@/features/media-framing/resolve-scene-media-framing";
-import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
+import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import { resolveSceneMediaPlayback } from "@/features/media-playback/media-playback.engine";
 import type { MediaPlaybackState } from "@/features/media-playback/media-playback.types";
 import type { FootieScene, SceneImage, SceneMedia, SceneType } from "@/features/story/types";
@@ -430,6 +430,8 @@ export function drawCanvasImageSource(
     opacity?: number;
   } | null,
   visualAdjustments?: SceneMedia["visualAdjustments"],
+  visualEffect?: SceneMedia["visualEffect"],
+  keyframedVisualEffectsEnabled = false,
 ): void {
   const resolvedTransform = resolveSceneImageTransformForFrame(sceneImage, width, height);
   const opacity =
@@ -443,7 +445,12 @@ export function drawCanvasImageSource(
   }
 
   applyExportCanvasMediaQuality(ctx);
-  ctx.filter = buildMediaVisualFilter(visualAdjustments, width);
+  // Frozen manifest BCS only — never re-lookup the authoring preset catalog.
+  ctx.filter = buildComposedMediaVisualFilter(visualAdjustments, visualEffect, {
+    keyframedVisualEffectsEnabled,
+    targetWidth: width,
+    effectSource: "frozen",
+  });
 
   drawSceneImageInFrame(
     ctx,
@@ -536,6 +543,8 @@ export function drawSceneImageFrame(
     sourceHeight,
     motionState,
     scene.media?.visualAdjustments,
+    scene.media?.visualEffect,
+    keyframedVisualEffectsEnabled,
   );
   return true;
 }
@@ -978,6 +987,8 @@ function drawPreparedSceneVideoFrame(
       sourceHeight,
       motionState,
       scene.media?.visualAdjustments,
+      scene.media?.visualEffect,
+      keyframedVisualEffectsEnabled,
     );
     return true;
   } catch {

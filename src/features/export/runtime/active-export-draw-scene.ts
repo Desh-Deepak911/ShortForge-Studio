@@ -53,6 +53,7 @@ function toSceneMedia(media: ExportMediaManifest): SceneMedia {
       ...(media.visualAdjustments
         ? { visualAdjustments: media.visualAdjustments }
         : {}),
+      ...(media.visualEffect ? { visualEffect: media.visualEffect } : {}),
     };
   }
 
@@ -70,6 +71,7 @@ function toSceneMedia(media: ExportMediaManifest): SceneMedia {
     ...(media.visualAdjustments
       ? { visualAdjustments: media.visualAdjustments }
       : {}),
+    ...(media.visualEffect ? { visualEffect: media.visualEffect } : {}),
   };
 }
 

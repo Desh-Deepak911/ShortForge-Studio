@@ -141,3 +141,48 @@ export type {
   MediaMotionKeyframeCommandResult,
   MediaMotionKeyframeCommandStatus,
 } from "./editor/media-motion-keyframe.commands";
+
+export {
+  getMediaVisualEffectPreset,
+  isMediaVisualEffectPresetId,
+  listMediaVisualEffectPresets,
+  MEDIA_VISUAL_EFFECT_IDENTITY_PARAMS,
+  MEDIA_VISUAL_EFFECT_PRESETS,
+  MEDIA_VISUAL_EFFECT_VERSION,
+} from "./domain/media-visual-effect-presets";
+export type {
+  MediaVisualEffectFilterParams,
+  MediaVisualEffectPresetDefinition,
+  MediaVisualEffectPresetId,
+  SceneMediaVisualEffect,
+} from "./domain/media-visual-effect-presets";
+
+export {
+  buildComposedMediaVisualFilter,
+  composeMediaVisualAdjustmentsWithEffect,
+  isActiveMediaVisualEffect,
+  multiplyVisualAdjustmentChannel,
+  normalizeSceneMediaVisualEffect,
+  projectMediaVisualEffectToManifest,
+  readFrozenMediaVisualEffectParams,
+  resolveMediaVisualEffect,
+} from "./domain/resolve-media-visual-effect";
+export type {
+  MediaVisualEffectSource,
+  ResolveMediaVisualEffectInput,
+  ResolvedMediaVisualEffect,
+} from "./domain/resolve-media-visual-effect";
+
+export {
+  applyMediaVisualEffectPreset,
+  MEDIA_VISUAL_EFFECT_CAPABILITY_OFF_MESSAGE,
+  MEDIA_VISUAL_EFFECT_SELECTION_REQUIRED_MESSAGE,
+  resetMediaVisualEffect,
+  resolveMediaVisualEffectCommandPresetId,
+  setMediaVisualEffectIntensity,
+} from "./editor/media-visual-effect.commands";
+export type {
+  MediaVisualEffectCommandOptions,
+  MediaVisualEffectCommandResult,
+  MediaVisualEffectCommandStatus,
+} from "./editor/media-visual-effect.commands";

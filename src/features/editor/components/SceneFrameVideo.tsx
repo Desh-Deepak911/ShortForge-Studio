@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
 import { resolveSceneMediaFraming } from "@/features/media-framing";
-import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
+import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import {
   resolvePreviewVideoClipTime,
   shouldPlayPreviewVideoClip,
@@ -227,9 +227,13 @@ export default function SceneFrameVideo({
         transformOrigin: "center center" as const,
         ...(isDragging ? { willChange: "transform" as const } : {}),
       };
-  const visualFilter = buildMediaVisualFilter(
+  const visualFilter = buildComposedMediaVisualFilter(
     media.visualAdjustments,
-    frameWidth || 1080,
+    media.visualEffect,
+    {
+      keyframedVisualEffectsEnabled,
+      targetWidth: frameWidth || 1080,
+    },
   );
 
   return (

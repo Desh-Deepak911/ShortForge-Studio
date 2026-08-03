@@ -1,6 +1,7 @@
 import { normalizeSceneCaptionSettings } from "./caption.utils";
 import { normalizeMediaMotionKeyframes } from "@/features/media-motion/domain/media-motion-keyframes";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
+import { normalizeSceneMediaVisualEffect } from "@/features/media-motion/domain/resolve-media-visual-effect";
 import { normalizeSourceQualityAdjustmentProvenance } from "@/features/source-quality/domain/source-quality-adjustment-provenance";
 import type {
   FootieScene,
@@ -461,6 +462,11 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
   const visualAdjustments = freezeMediaVisualAdjustments(record.visualAdjustments);
   if (visualAdjustments) {
     normalized.visualAdjustments = visualAdjustments;
+  }
+
+  const visualEffect = normalizeSceneMediaVisualEffect(record.visualEffect);
+  if (visualEffect) {
+    normalized.visualEffect = visualEffect;
   }
 
   const sourceQualityAdjustmentProvenance =

@@ -99,6 +99,15 @@ export function validateExportManifestV4SceneMedia(
           message: `scenes[${sceneIndex}].media.motion must not include keyframes on ExportManifest v4.`,
         });
       }
+      if (
+        contract.version === EXPORT_MANIFEST_VERSION &&
+        scene.media.visualEffect !== undefined
+      ) {
+        issues.push({
+          code: "UNSUPPORTED_MEDIA_VISUAL_EFFECT",
+          message: `scenes[${sceneIndex}].media must not include visualEffect on ExportManifest v4.`,
+        });
+      }
     }
     const timeline = isObject(scene.mediaTimeline) ? scene.mediaTimeline : null;
     const items = Array.isArray(timeline?.items) ? timeline.items : [];
@@ -122,6 +131,15 @@ export function validateExportManifestV4SceneMedia(
           issues.push({
             code: "UNSUPPORTED_MEDIA_MOTION_KEYFRAMES",
             message: `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media.motion must not include keyframes on ExportManifest v4.`,
+          });
+        }
+        if (
+          contract.version === EXPORT_MANIFEST_VERSION &&
+          media.visualEffect !== undefined
+        ) {
+          issues.push({
+            code: "UNSUPPORTED_MEDIA_VISUAL_EFFECT",
+            message: `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media must not include visualEffect on ExportManifest v4.`,
           });
         }
       }

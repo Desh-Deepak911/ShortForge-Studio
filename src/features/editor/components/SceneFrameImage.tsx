@@ -1,7 +1,7 @@
 "use client";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
-import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
+import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import {
   getSceneImage,
   getSceneImageObjectFit,
@@ -77,9 +77,13 @@ export default function SceneFrameImage({
         transformOrigin: "center center" as const,
         ...(isDragging ? { willChange: "transform" as const } : {}),
       };
-  const visualFilter = buildMediaVisualFilter(
+  const visualFilter = buildComposedMediaVisualFilter(
     scene.media?.visualAdjustments,
-    frameWidth || 1080,
+    scene.media?.visualEffect,
+    {
+      keyframedVisualEffectsEnabled,
+      targetWidth: frameWidth || 1080,
+    },
   );
 
   return (

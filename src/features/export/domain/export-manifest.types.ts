@@ -104,6 +104,24 @@ export interface ExportMediaVisualAdjustmentsManifest {
   readonly shadowOffsetY: number;
 }
 
+/**
+ * Capability-gated closed visual-effect payload (v5 / 9E only).
+ * Identity/absent effects are omitted — never present on v4.
+ * brightness/contrast/saturation are frozen resolved renderer parameters;
+ * Browser/Headless must consume them directly and never re-lookup the
+ * authoring preset catalog. No CSS/canvas filter strings are stored.
+ */
+export interface ExportMediaVisualEffectManifest {
+  readonly version: 1;
+  readonly presetId: "vivid" | "cinematic" | "monochrome";
+  /** Normalized intensity in (0, 1] — provenance for the freeze. */
+  readonly intensity: number;
+  /** Frozen BCS parameters in the visualAdjustments percent space. */
+  readonly brightness: number;
+  readonly contrast: number;
+  readonly saturation: number;
+}
+
 export interface ExportImageMediaManifest {
   readonly type: "image";
   readonly source: string;
@@ -114,6 +132,7 @@ export interface ExportImageMediaManifest {
   readonly rotationDeg: number;
   readonly motion: ExportMediaMotionManifest | null;
   readonly visualAdjustments?: ExportMediaVisualAdjustmentsManifest;
+  readonly visualEffect?: ExportMediaVisualEffectManifest;
 }
 
 export interface ExportVideoMediaManifest {
@@ -131,6 +150,7 @@ export interface ExportVideoMediaManifest {
   readonly rotationDeg: number;
   readonly motion: ExportMediaMotionManifest | null;
   readonly visualAdjustments?: ExportMediaVisualAdjustmentsManifest;
+  readonly visualEffect?: ExportMediaVisualEffectManifest;
 }
 
 export interface ExportPlaceholderMediaManifest {
