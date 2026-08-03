@@ -582,7 +582,9 @@ export function clearMediaMotionKeyframes(
   if (refused) return refused;
 
   const next = cloneMotion(motion);
-  delete next.keyframes;
+  // Keep an own `keyframes: []` so buildMediaMotionPatch can distinguish Clear
+  // from partial motion patches that omit the field and must retain frames.
+  next.keyframes = [];
   return {
     status: "ok",
     motion: next,

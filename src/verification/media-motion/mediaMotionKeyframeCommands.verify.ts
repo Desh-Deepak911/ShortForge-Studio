@@ -262,9 +262,25 @@ function main(): void {
   test("clear removes only keyframes and keeps legacy motion", () => {
     const motion = initializeMediaMotionKeyframes(baseMotion(), 4000, CAPABLE).motion;
     const result = clearMediaMotionKeyframes(motion, CAPABLE);
-    assert.equal(result.motion.keyframes, undefined);
+    // Empty-array sentinel survives patch merge; normalize strips it on read.
+    assert.ok(
+      result.motion.keyframes == null || result.motion.keyframes.length === 0,
+    );
     assert.equal(result.motion.presetId, motion.presetId);
     assert.deepEqual(result.motion.endTransform, motion.endTransform);
+  });
+
+  test("clear through buildMediaMotionPatch does not rehydrate keyframes", () => {
+    const keyed = initializeMediaMotionKeyframes(baseMotion(), 4000, CAPABLE).motion;
+    const scene = {
+      media: imageMedia("https://example.com/a.jpg", keyed),
+    };
+    const cleared = clearMediaMotionKeyframes(keyed, CAPABLE).motion;
+    const patched = buildMediaMotionPatch(scene, cleared);
+    assert.ok(patched);
+    assert.equal(patched!.motion.keyframes, undefined);
+    assert.equal(patched!.motion.presetId, keyed.presetId);
+    assert.deepEqual(patched!.motion.endTransform, keyed.endTransform);
   });
 
   test("zero duration refuses creation without mutation", () => {

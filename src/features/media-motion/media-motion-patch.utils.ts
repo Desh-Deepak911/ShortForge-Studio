@@ -52,11 +52,23 @@ export function buildMediaMotionPatch(
   }
 
   const current = resolveSceneMediaMotion(scene);
-  const merged = normalizeSceneMediaMotionRecord({
+  // Partial intensity/preset patches omit `keyframes` and must keep authored
+  // frames. Keyframe Clear commits an explicit empty/absent field — do not
+  // rehydrate current.keyframes over that intentional removal.
+  const nextRecord = nextMotion as Partial<SceneMediaMotion>;
+  const clearsKeyframes =
+    Object.prototype.hasOwnProperty.call(nextRecord, "keyframes") &&
+    (nextRecord.keyframes == null ||
+      (Array.isArray(nextRecord.keyframes) && nextRecord.keyframes.length === 0));
+  const mergedInput: Partial<SceneMediaMotion> & { version: typeof MEDIA_MOTION_VERSION } = {
     ...current,
     ...nextMotion,
     version: MEDIA_MOTION_VERSION,
-  });
+  };
+  if (clearsKeyframes) {
+    delete mergedInput.keyframes;
+  }
+  const merged = normalizeSceneMediaMotionRecord(mergedInput);
 
   // Selecting static / disabling clears to a disabled static record for clarity,
   // but retains authored keyframes so capability-off / disabled motion can keep
