@@ -6,6 +6,7 @@
 export interface VisualRetentionCapabilitiesSnapshot {
   readonly mixedMediaScenesEnabled: boolean;
   readonly visualBeatDensityEnabled: boolean;
+  readonly sourceQualityIntelligenceEnabled: boolean;
   readonly ready: boolean;
 }
 
@@ -13,6 +14,7 @@ export const VISUAL_RETENTION_CAPABILITIES_DISABLED: VisualRetentionCapabilities
   Object.freeze({
     mixedMediaScenesEnabled: false,
     visualBeatDensityEnabled: false,
+    sourceQualityIntelligenceEnabled: false,
     ready: false,
   });
 
@@ -23,11 +25,14 @@ export function parseVisualRetentionCapabilitiesResponse(
     return {
       mixedMediaScenesEnabled: false,
       visualBeatDensityEnabled: false,
+      sourceQualityIntelligenceEnabled: false,
     };
   }
   const record = body as Record<string, unknown>;
   return {
     mixedMediaScenesEnabled: record.mixedMediaScenesEnabled === true,
     visualBeatDensityEnabled: record.visualBeatDensityEnabled === true,
+    sourceQualityIntelligenceEnabled:
+      record.sourceQualityIntelligenceEnabled === true,
   };
 }

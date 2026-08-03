@@ -50,6 +50,9 @@ import {
 } from "@/features/mixed-media-scenes/adapters/inspector-scene-media-projection";
 import MixedMediaSequencePanel from "@/features/mixed-media-scenes/editor/MixedMediaSequencePanel";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
+import { resolveSceneMediaFraming } from "@/features/media-framing";
+import { resolveSourceQualityMedia } from "@/features/source-quality/adapters/resolve-source-quality-media";
+import SourceQualitySummary from "@/features/source-quality/editor/SourceQualitySummary";
 import VisualPacingPanel from "@/features/visual-beat-density/editor/VisualPacingPanel";
 import {
   useVisualBeatDensityEnabled,
@@ -308,6 +311,65 @@ export default function StudioSceneInspector({
       lastSelectedMediaIndexRef.current = selectedMediaIndex;
     }
   }, [selectedMediaIndex]);
+
+  /**
+   * Winning media for source-quality: selected projected window when present;
+   * stale selection uses the same nearest-survivor contract as inspector
+   * selection repair; mixed-media windows beat ignored scene.media.
+   */
+  const sourceQualityWinningMedia = useMemo(() => {
+    if (!scene) {
+      return null;
+    }
+    if (mediaWindows.length > 0) {
+      if (selectedMediaItemId) {
+        const selectedWindow = mediaWindows.find(
+          (window) => window.itemId === selectedMediaItemId,
+        );
+        if (selectedWindow?.media) {
+          return selectedWindow.media;
+        }
+        const nearestId = resolveNearestInspectorMediaItemId(
+          mediaWindows,
+          selectedMediaItemId,
+          selectedMediaIndex >= 0 ? selectedMediaIndex : -1,
+        );
+        const nearestWindow = nearestId
+          ? mediaWindows.find((window) => window.itemId === nearestId)
+          : mediaWindows[0];
+        if (nearestWindow?.media) {
+          return nearestWindow.media;
+        }
+      } else if (mixedMediaScenesEnabled) {
+        return (
+          mediaWindows[0]?.media ??
+          resolveSourceQualityMedia({ scene }) ??
+          null
+        );
+      }
+    }
+    return resolveSourceQualityMedia({ scene });
+  }, [
+    mediaWindows,
+    mixedMediaScenesEnabled,
+    scene,
+    selectedMediaIndex,
+    selectedMediaItemId,
+  ]);
+  const sourceQualityFraming = useMemo(() => {
+    if (!scene) {
+      return undefined;
+    }
+    if (sourceQualityWinningMedia) {
+      return resolveSceneMediaFraming(
+        { media: sourceQualityWinningMedia },
+        { media: sourceQualityWinningMedia },
+      );
+    }
+    return resolveSceneMediaFraming(scene, {
+      media: sourceQualityWinningMedia,
+    });
+  }, [scene, sourceQualityWinningMedia]);
   const mediaOrdinalLabel = formatSceneMediaItemOrdinal(
     selectedMediaIndex >= 0 ? selectedMediaIndex : 0,
     mediaWindows.length,
@@ -813,6 +875,11 @@ export default function StudioSceneInspector({
               defaultOpen
               open={inspectorImageEditing ? true : undefined}
             >
+              <SourceQualitySummary
+                scene={scene}
+                media={sourceQualityWinningMedia}
+                framing={sourceQualityFraming}
+              />
               {visualPacingPanelEnabled ? (
                 <div className="mb-3">
                   <VisualPacingPanel

@@ -146,6 +146,7 @@ function testServerResolversAndApiShape(): void {
     version: 1,
     mixedMediaScenesEnabled: true,
     visualBeatDensityEnabled: true,
+    sourceQualityIntelligenceEnabled: false,
     phasesValid: true,
   });
 
@@ -154,6 +155,7 @@ function testServerResolversAndApiShape(): void {
   );
   assert.equal(twelveB.mixedMediaScenesEnabled, true);
   assert.equal(twelveB.visualBeatDensityEnabled, false);
+  assert.equal(twelveB.sourceQualityIntelligenceEnabled, false);
 
   assert.equal(
     resolveVisualBeatDensityEnabledFromEnvironment(
@@ -184,23 +186,28 @@ function testClientFailClosedAndSingleFetch(): void {
   assert.deepEqual(parseVisualRetentionCapabilitiesResponse(null), {
     mixedMediaScenesEnabled: false,
     visualBeatDensityEnabled: false,
+    sourceQualityIntelligenceEnabled: false,
   });
   assert.deepEqual(parseVisualRetentionCapabilitiesResponse(undefined), {
     mixedMediaScenesEnabled: false,
     visualBeatDensityEnabled: false,
+    sourceQualityIntelligenceEnabled: false,
   });
   assert.deepEqual(parseVisualRetentionCapabilitiesResponse("nope"), {
     mixedMediaScenesEnabled: false,
     visualBeatDensityEnabled: false,
+    sourceQualityIntelligenceEnabled: false,
   });
   assert.deepEqual(
     parseVisualRetentionCapabilitiesResponse({
       mixedMediaScenesEnabled: "true",
       visualBeatDensityEnabled: 1,
+      sourceQualityIntelligenceEnabled: "yes",
     }),
     {
       mixedMediaScenesEnabled: false,
       visualBeatDensityEnabled: false,
+      sourceQualityIntelligenceEnabled: false,
     },
   );
   assert.deepEqual(
@@ -211,6 +218,19 @@ function testClientFailClosedAndSingleFetch(): void {
     {
       mixedMediaScenesEnabled: true,
       visualBeatDensityEnabled: true,
+      sourceQualityIntelligenceEnabled: false,
+    },
+  );
+  assert.deepEqual(
+    parseVisualRetentionCapabilitiesResponse({
+      mixedMediaScenesEnabled: true,
+      visualBeatDensityEnabled: true,
+      sourceQualityIntelligenceEnabled: true,
+    }),
+    {
+      mixedMediaScenesEnabled: true,
+      visualBeatDensityEnabled: true,
+      sourceQualityIntelligenceEnabled: true,
     },
   );
 

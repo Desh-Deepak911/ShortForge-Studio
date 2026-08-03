@@ -47,6 +47,8 @@ export function VisualRetentionCapabilitiesProvider({
         setSnapshot({
           mixedMediaScenesEnabled: parsed.mixedMediaScenesEnabled,
           visualBeatDensityEnabled: parsed.visualBeatDensityEnabled,
+          sourceQualityIntelligenceEnabled:
+            parsed.sourceQualityIntelligenceEnabled,
           ready: true,
         });
       })
@@ -55,6 +57,7 @@ export function VisualRetentionCapabilitiesProvider({
         setSnapshot({
           mixedMediaScenesEnabled: false,
           visualBeatDensityEnabled: false,
+          sourceQualityIntelligenceEnabled: false,
           ready: true,
         });
       });
@@ -83,6 +86,10 @@ export function useMixedMediaScenesEnabled(): boolean {
 
 export function useVisualBeatDensityEnabled(): boolean {
   return useVisualRetentionCapabilities().visualBeatDensityEnabled;
+}
+
+export function useSourceQualityIntelligenceEnabled(): boolean {
+  return useVisualRetentionCapabilities().sourceQualityIntelligenceEnabled;
 }
 
 export function useVisualRetentionCapabilitiesReady(): boolean {
