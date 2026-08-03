@@ -49,6 +49,10 @@ export function VisualRetentionCapabilitiesProvider({
           visualBeatDensityEnabled: parsed.visualBeatDensityEnabled,
           sourceQualityIntelligenceEnabled:
             parsed.sourceQualityIntelligenceEnabled,
+          keyframedVisualEffectsEnabled: parsed.keyframedVisualEffectsEnabled,
+          engagementOverlaysEnabled: parsed.engagementOverlaysEnabled,
+          shortForgeBrandStingEnabled: parsed.shortForgeBrandStingEnabled,
+          subjectAwareReframingEnabled: parsed.subjectAwareReframingEnabled,
           ready: true,
         });
       })
@@ -58,6 +62,10 @@ export function VisualRetentionCapabilitiesProvider({
           mixedMediaScenesEnabled: false,
           visualBeatDensityEnabled: false,
           sourceQualityIntelligenceEnabled: false,
+          keyframedVisualEffectsEnabled: false,
+          engagementOverlaysEnabled: false,
+          shortForgeBrandStingEnabled: false,
+          subjectAwareReframingEnabled: false,
           ready: true,
         });
       });
@@ -90,6 +98,22 @@ export function useVisualBeatDensityEnabled(): boolean {
 
 export function useSourceQualityIntelligenceEnabled(): boolean {
   return useVisualRetentionCapabilities().sourceQualityIntelligenceEnabled;
+}
+
+export function useKeyframedVisualEffectsEnabled(): boolean {
+  return useVisualRetentionCapabilities().keyframedVisualEffectsEnabled;
+}
+
+export function useEngagementOverlaysEnabled(): boolean {
+  return useVisualRetentionCapabilities().engagementOverlaysEnabled;
+}
+
+export function useShortForgeBrandStingEnabled(): boolean {
+  return useVisualRetentionCapabilities().shortForgeBrandStingEnabled;
+}
+
+export function useSubjectAwareReframingEnabled(): boolean {
+  return useVisualRetentionCapabilities().subjectAwareReframingEnabled;
 }
 
 export function useVisualRetentionCapabilitiesReady(): boolean {

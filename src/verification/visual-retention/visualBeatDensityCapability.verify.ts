@@ -147,6 +147,10 @@ function testServerResolversAndApiShape(): void {
     mixedMediaScenesEnabled: true,
     visualBeatDensityEnabled: true,
     sourceQualityIntelligenceEnabled: false,
+    keyframedVisualEffectsEnabled: false,
+    engagementOverlaysEnabled: false,
+    shortForgeBrandStingEnabled: false,
+    subjectAwareReframingEnabled: false,
     phasesValid: true,
   });
 
@@ -183,20 +187,29 @@ function testServerResolversAndApiShape(): void {
 }
 
 function testClientFailClosedAndSingleFetch(): void {
+  const motionOff = {
+    keyframedVisualEffectsEnabled: false,
+    engagementOverlaysEnabled: false,
+    shortForgeBrandStingEnabled: false,
+    subjectAwareReframingEnabled: false,
+  };
   assert.deepEqual(parseVisualRetentionCapabilitiesResponse(null), {
     mixedMediaScenesEnabled: false,
     visualBeatDensityEnabled: false,
     sourceQualityIntelligenceEnabled: false,
+    ...motionOff,
   });
   assert.deepEqual(parseVisualRetentionCapabilitiesResponse(undefined), {
     mixedMediaScenesEnabled: false,
     visualBeatDensityEnabled: false,
     sourceQualityIntelligenceEnabled: false,
+    ...motionOff,
   });
   assert.deepEqual(parseVisualRetentionCapabilitiesResponse("nope"), {
     mixedMediaScenesEnabled: false,
     visualBeatDensityEnabled: false,
     sourceQualityIntelligenceEnabled: false,
+    ...motionOff,
   });
   assert.deepEqual(
     parseVisualRetentionCapabilitiesResponse({
@@ -208,6 +221,7 @@ function testClientFailClosedAndSingleFetch(): void {
       mixedMediaScenesEnabled: false,
       visualBeatDensityEnabled: false,
       sourceQualityIntelligenceEnabled: false,
+      ...motionOff,
     },
   );
   assert.deepEqual(
@@ -219,6 +233,7 @@ function testClientFailClosedAndSingleFetch(): void {
       mixedMediaScenesEnabled: true,
       visualBeatDensityEnabled: true,
       sourceQualityIntelligenceEnabled: false,
+      ...motionOff,
     },
   );
   assert.deepEqual(
@@ -231,6 +246,7 @@ function testClientFailClosedAndSingleFetch(): void {
       mixedMediaScenesEnabled: true,
       visualBeatDensityEnabled: true,
       sourceQualityIntelligenceEnabled: true,
+      ...motionOff,
     },
   );
 
