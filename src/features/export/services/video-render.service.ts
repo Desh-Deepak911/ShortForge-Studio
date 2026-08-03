@@ -984,6 +984,9 @@ export async function exportFootieShort(
       throwIfBlocked: true,
       mixedMediaScenesEnabled: options.mixedMediaScenesEnabled === true,
       visualBeatDensityEnabled: options.visualBeatDensityEnabled === true,
+      sourceQualityIntelligenceEnabled:
+        options.sourceQualityIntelligenceEnabled === true,
+      sourceQualityExportTarget: options.sourceQualityExportTarget,
     });
 
     await exportFootieShortFromManifest(prepared, onProgress, {

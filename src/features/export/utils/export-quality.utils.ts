@@ -77,6 +77,16 @@ export interface FootieExportOptions {
    * Guidance only — never a renderer requirement. Default ignored/fail-closed.
    */
   visualBeatDensityEnabled?: boolean;
+  /**
+   * Explicit source-quality authoring capability.
+   * Guidance only — never a renderer requirement. Default ignored/fail-closed.
+   */
+  sourceQualityIntelligenceEnabled?: boolean;
+  /**
+   * Actual requested output target for source-quality guidance.
+   * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
+   */
+  sourceQualityExportTarget?: "720p" | "1080p" | "4k";
 }
 
 export function getExportQualityPreset(id: ExportQualityId): ExportQualityPreset {

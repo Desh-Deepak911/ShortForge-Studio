@@ -13,6 +13,14 @@ export {
   type SourceQualityWinningAdjustmentTarget,
 } from "./adapters/resolve-source-quality-adjustment-target";
 export {
+  SOURCE_QUALITY_EXPORT_GUIDANCE_CODES,
+  resolveSourceQualityExportGuidance,
+  type ResolveSourceQualityExportGuidanceInput,
+  type SourceQualityExportGuidanceCode,
+  type SourceQualityExportGuidanceItem,
+  type SourceQualityExportTarget,
+} from "./adapters/resolve-source-quality-export-guidance";
+export {
   assessSourceQuality,
   type SourceQualityFramingInput,
 } from "./domain/assess-source-quality";
