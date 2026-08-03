@@ -115,3 +115,29 @@ export type {
   RenderedMediaMotionState,
   ResolveRenderedMediaMotionInput,
 } from "./adapters/resolve-rendered-media-motion";
+
+export {
+  addMediaMotionKeyframe,
+  clearMediaMotionKeyframes,
+  deleteMediaMotionKeyframe,
+  findNearestMediaMotionKeyframeIndex,
+  initializeMediaMotionKeyframes,
+  MEDIA_MOTION_KEYFRAME_BELOW_TWO_WARNING,
+  MEDIA_MOTION_KEYFRAME_CAPABILITY_OFF_MESSAGE,
+  MEDIA_MOTION_KEYFRAME_CLAMP_WARNING,
+  MEDIA_MOTION_KEYFRAME_DUPLICATE_TIME_WARNING,
+  MEDIA_MOTION_KEYFRAME_INVALID_DURATION_MESSAGE,
+  MEDIA_MOTION_KEYFRAME_SELECTION_REQUIRED_MESSAGE,
+  resolveLocalMediaMotionKeyframeSelection,
+  resolveMediaMotionAuthoringTarget,
+  sampleMediaMotionKeyframeDefaults,
+  setMediaMotionEnabledPreservingKeyframes,
+  updateMediaMotionKeyframe,
+} from "./editor/media-motion-keyframe.commands";
+export type {
+  MediaMotionAuthoringTarget,
+  MediaMotionAuthoringTargetStatus,
+  MediaMotionKeyframeCommandOptions,
+  MediaMotionKeyframeCommandResult,
+  MediaMotionKeyframeCommandStatus,
+} from "./editor/media-motion-keyframe.commands";

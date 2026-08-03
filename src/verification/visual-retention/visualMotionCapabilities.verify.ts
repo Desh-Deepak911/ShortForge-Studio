@@ -330,10 +330,19 @@ function main(): void {
     const inspector = readSrc(
       "src/features/editor/components/StudioSceneInspector.tsx",
     );
-    assert.doesNotMatch(inspector, /useKeyframedVisualEffectsEnabled/);
+    // Keyframe authoring is nested inside MediaMotionInspectorPanel (Adjust).
+    // Engagement overlays / brand sting / subject-aware framing remain unavailable.
     assert.doesNotMatch(inspector, /useEngagementOverlaysEnabled/);
     assert.doesNotMatch(inspector, /useSubjectAwareReframingEnabled/);
     assert.doesNotMatch(inspector, /EngagementOverlayControls/);
+    assert.match(
+      readSrc("src/features/editor/components/media/MediaMotionInspectorPanel.tsx"),
+      /useKeyframedVisualEffectsEnabled/,
+    );
+    assert.match(
+      readSrc("src/features/editor/components/media/MediaMotionInspectorPanel.tsx"),
+      /MediaMotionKeyframeEditor/,
+    );
 
     const exportPanel = readSrc("src/components/ExportPanel.tsx");
     assert.doesNotMatch(exportPanel, /useShortForgeBrandStingEnabled/);

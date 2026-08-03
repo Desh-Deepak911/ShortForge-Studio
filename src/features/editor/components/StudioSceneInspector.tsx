@@ -1137,6 +1137,14 @@ export default function StudioSceneInspector({
                   <MediaMotionInspectorPanel
                     controlId={`inspector-scene-media-motion-${scene.id}`}
                     motion={resolveSceneMediaMotion(scene)}
+                    mediaWindowDurationMs={
+                      scene.durationMs ??
+                      Math.round((scene.duration ?? 0) * 1000)
+                    }
+                    mediaItemId={null}
+                    requiresMediaItemSelection={
+                      mixedMediaScenesEnabled && mediaWindows.length > 1
+                    }
                     onMotionChange={handleMediaMotionChange}
                     onReset={handleResetMediaMotion}
                   />

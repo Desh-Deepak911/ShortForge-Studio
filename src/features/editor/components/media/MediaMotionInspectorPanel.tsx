@@ -8,9 +8,16 @@ import {
   MEDIA_MOTION_INTENSITY_MAX,
   MEDIA_MOTION_INTENSITY_MIN,
   MEDIA_MOTION_INTENSITY_STEP,
+  MEDIA_MOTION_KEYFRAME_SELECTION_REQUIRED_MESSAGE,
+  resolveMediaMotionAuthoringTarget,
   type MediaMotionEasing,
   type SceneMediaMotion,
 } from "@/features/media-motion";
+import MediaMotionKeyframeEditor from "@/features/media-motion/editor/MediaMotionKeyframeEditor";
+import {
+  useKeyframedVisualEffectsEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { StudioSwitch } from "@/components/ui";
 import {
   studioFieldLabel,
@@ -23,6 +30,16 @@ export interface MediaMotionInspectorPanelProps {
   controlId: string;
   motion: SceneMediaMotion;
   disabled?: boolean;
+  /** Item-local media window duration for keyframe timing. */
+  mediaWindowDurationMs?: number;
+  /** Stable media-item id when editing a projected item; null for scene media. */
+  mediaItemId?: string | null;
+  /**
+   * Mixed-media scenes with no selected visual. When keyframed capability is
+   * ready/true, the entire motion authoring area requires a visual selection.
+   * Capability off preserves legacy scene.media preset writing.
+   */
+  requiresMediaItemSelection?: boolean;
   onMotionChange: (patch: Partial<SceneMediaMotion>) => void;
   onReset: () => void;
 }
@@ -44,9 +61,25 @@ export default function MediaMotionInspectorPanel({
   controlId,
   motion,
   disabled = false,
+  mediaWindowDurationMs = 0,
+  mediaItemId = null,
+  requiresMediaItemSelection = false,
   onMotionChange,
   onReset,
 }: MediaMotionInspectorPanelProps) {
+  const capabilitiesReady = useVisualRetentionCapabilitiesReady();
+  const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
+  const keyframesCapable =
+    capabilitiesReady && keyframedVisualEffectsEnabled === true;
+  const authoringTarget = resolveMediaMotionAuthoringTarget({
+    keyframedVisualEffectsEnabled: keyframesCapable ? true : false,
+    requiresMediaItemSelection,
+    mediaItemId,
+    mediaWindowDurationMs,
+  });
+  const blockForSelection =
+    keyframesCapable && authoringTarget.status === "needs_selection";
+  const showKeyframeEditor = keyframesCapable && !blockForSelection;
   const enabled = motion.enabled !== false && motion.presetId !== "static";
   const presetId = motion.presetId ?? "static";
   const preset = getMediaMotionPreset(presetId);
@@ -70,6 +103,25 @@ export default function MediaMotionInspectorPanel({
         presetId: "static",
         intensity: 0,
         easing: "linear",
+        // Keep authored keyframes on the disabled record (dormant until re-enabled).
+        ...(motion.keyframes ? { keyframes: motion.keyframes } : {}),
+        startTransform: motion.startTransform,
+        endTransform: motion.endTransform,
+      });
+      return;
+    }
+
+    // Re-enable with existing keyframes without replacing them with a preset.
+    if (motion.keyframes && motion.keyframes.length >= 2) {
+      onMotionChange({
+        version: 1,
+        enabled: true,
+        presetId: presetId === "static" ? "custom" : presetId,
+        intensity: intensity > 0 ? intensity : 1,
+        easing,
+        startTransform: motion.startTransform,
+        endTransform: motion.endTransform,
+        keyframes: motion.keyframes,
       });
       return;
     }
@@ -84,6 +136,7 @@ export default function MediaMotionInspectorPanel({
       easing: nextPreset.defaultEasing,
       startTransform: nextPreset.startDelta,
       endTransform: nextPreset.endDelta,
+      ...(motion.keyframes ? { keyframes: motion.keyframes } : {}),
     });
   };
 
@@ -104,8 +157,35 @@ export default function MediaMotionInspectorPanel({
     });
   };
 
+  if (blockForSelection) {
+    return (
+      <div
+        className="space-y-2"
+        data-media-motion-panel="blocked"
+        data-media-motion-target-status="needs_selection"
+        data-media-motion-target-item=""
+        data-media-motion-target-duration={String(authoringTarget.mediaWindowDurationMs)}
+      >
+        <p className={studioSubtleText} role="status">
+          {MEDIA_MOTION_KEYFRAME_SELECTION_REQUIRED_MESSAGE}
+        </p>
+      </div>
+    );
+  }
+
+  const targetItemAttr =
+    authoringTarget.mediaItemId && authoringTarget.mediaItemId.length > 0
+      ? authoringTarget.mediaItemId
+      : "scene";
+
   return (
-    <div className="space-y-3" data-media-motion-panel="true">
+    <div
+      className="space-y-3"
+      data-media-motion-panel="true"
+      data-media-motion-target-status={authoringTarget.status}
+      data-media-motion-target-item={targetItemAttr}
+      data-media-motion-target-duration={String(authoringTarget.mediaWindowDurationMs)}
+    >
       <StudioSwitch
         id={`${controlId}-enable`}
         checked={enabled}
@@ -199,9 +279,40 @@ export default function MediaMotionInspectorPanel({
               ))}
             </select>
           </div>
+
+          {showKeyframeEditor ? (
+            <MediaMotionKeyframeEditor
+              controlId={`${controlId}-keyframes`}
+              motion={motion}
+              mediaWindowDurationMs={authoringTarget.mediaWindowDurationMs}
+              mediaItemId={authoringTarget.mediaItemId}
+              keyframedVisualEffectsEnabled
+              disabled={disabled}
+              requiresMediaItemSelection={false}
+              onMotionCommit={(result) => {
+                onMotionChange(result.motion);
+              }}
+            />
+          ) : null}
         </>
       ) : (
-        <p className={studioSubtleText}>Static media — enable motion to choose a preset.</p>
+        <>
+          <p className={studioSubtleText}>Static media — enable motion to choose a preset.</p>
+          {showKeyframeEditor ? (
+            <MediaMotionKeyframeEditor
+              controlId={`${controlId}-keyframes`}
+              motion={motion}
+              mediaWindowDurationMs={authoringTarget.mediaWindowDurationMs}
+              mediaItemId={authoringTarget.mediaItemId}
+              keyframedVisualEffectsEnabled
+              disabled={disabled}
+              requiresMediaItemSelection={false}
+              onMotionCommit={(result) => {
+                onMotionChange(result.motion);
+              }}
+            />
+          ) : null}
+        </>
       )}
 
       <div className="flex flex-wrap gap-2 pt-1">

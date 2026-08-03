@@ -59,6 +59,7 @@
     "test:media-motion": "tsx src/verification/features/media-motion/media-motion.verify.ts",
     "test:media-motion-keyframes": "tsx src/verification/media-motion/mediaMotionKeyframes.verify.ts && tsx src/verification/media-motion/mediaMotionKeyframeCompatibility.verify.ts",
     "test:media-motion-keyframe-rendering": "tsx src/verification/media-motion/mediaMotionKeyframesManifest.verify.ts && tsx src/verification/media-motion/mediaMotionKeyframesRenderParity.verify.ts && tsx src/verification/media-motion/mediaMotionKeyframesVoiceoverRefit.verify.ts",
+    "test:media-motion-keyframe-ui": "tsx src/verification/media-motion/mediaMotionKeyframeCommands.verify.ts && tsx src/verification/media-motion/mediaMotionKeyframeEditor.verify.tsx && tsx src/verification/media-motion/mediaMotionKeyframeAccessibility.verify.tsx",
     "test:preview-motion": "tsx src/verification/features/editor/preview/motion/previewMotionAdapter.verify.ts",
     "test:export-motion": "tsx src/verification/features/editor/export/motion/exportMotionAdapter.verify.ts",
     "test:motion-sprint-freeze": "tsx src/verification/features/media-motion/motion-sprint-freeze.verify.ts",
