@@ -467,6 +467,7 @@
     "test:editor-workflow-status-popover": "tsx src/verification/editor/editorWorkflowStatusPopover.verify.ts",
     "test:studio-control-polish": "tsx src/verification/editor/studioControlPolish.verify.ts",
     "test:editor-initial-render-parity": "tsx src/verification/editor/editorInitialRenderParity.verify.tsx",
+    "test:editor-persisted-draft-hydration": "tsx src/verification/editor/editorPersistedDraftHydration.verify.tsx",
     "test:editor-information-architecture": "tsx src/verification/editor/editorInformationArchitecture.verify.ts",
     "test:three-route-ui-stabilization": "tsx src/verification/editor/threeRouteUiStabilization.verify.ts",
     "test:audio-engine": "tsx src/verification/audio/audioEngine.verify.ts",
