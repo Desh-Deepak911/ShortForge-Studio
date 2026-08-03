@@ -4,7 +4,12 @@ import type {
   AssetSearchProviderId,
   NormalizedAssetResult,
 } from "@/features/asset-search/orchestrator";
-import type { FootieScript, SceneImage, SceneImageFitMode } from "@/features/story/types";
+import type {
+  FootieScript,
+  SceneImage,
+  SceneImageFitMode,
+  SceneMedia,
+} from "@/features/story/types";
 
 /** Where a scene image attachment originated. */
 export type AssetAttachSource = "manual_upload" | "asset_search" | "smart_edit" | "data_url";
@@ -85,6 +90,11 @@ export interface AssetAttachInput {
   options?: {
     fitMode?: SceneImageFitMode;
     preferFullResolution?: boolean;
+    /**
+     * Explicit source-quality capture gate. When true, known asset dimensions
+     * are copied onto attached SceneMedia. When false, legacy image-only attach.
+     */
+    sourceQualityIntelligenceEnabled?: boolean;
   };
 }
 
@@ -94,13 +104,13 @@ export interface AssetAttachResult {
   script?: FootieScript;
   sceneId: string;
   sceneImage?: SceneImage;
+  sceneMedia?: SceneMedia;
   attachMetadata?: AssetAttachMetadata;
   warnings: string[];
   error?: string;
   previousSceneImage?: SceneImage;
   previousAttachMetadata?: AssetAttachMetadata;
 }
-
 export interface AssetAttachDependencies {
   materializeAssetUrl: MaterializeAssetUrlFn;
   applyUpdate?: (
@@ -110,6 +120,7 @@ export interface AssetAttachDependencies {
       image?: SceneImage;
       uploadedImage?: string;
       assetAttachment?: AssetAttachMetadata;
+      media?: SceneMedia;
     },
   ) => FootieScript;
 }

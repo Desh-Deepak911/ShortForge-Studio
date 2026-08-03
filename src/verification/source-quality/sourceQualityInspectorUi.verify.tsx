@@ -464,6 +464,17 @@ async function main(): Promise<void> {
         });
         assert.equal(toggle.getAttribute("aria-expanded"), "true");
         assert.ok(host.querySelector("[data-source-quality-details]"));
+        assert.ok(host.querySelector("[data-source-quality-facts]"));
+        assert.match(
+          host.querySelector('[data-source-quality-fact="dimensions"]')
+            ?.textContent ?? "",
+          /1080\s*×\s*1920/,
+        );
+        assert.match(
+          host.querySelector('[data-source-quality-fact="media-type"]')
+            ?.textContent ?? "",
+          /image/i,
+        );
         assert.ok(host.querySelector('[data-source-quality-target="720p"]'));
         assert.ok(host.querySelector('[data-source-quality-target="1080p"]'));
         assert.ok(host.querySelector('[data-source-quality-target="4k"]'));

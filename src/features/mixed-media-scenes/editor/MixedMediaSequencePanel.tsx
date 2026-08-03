@@ -26,6 +26,8 @@ import {
 } from "@/lib/utils/studioUi";
 import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
+import { isStaleSceneMediaAppendError } from "@/features/timeline-editor/scene-media/useSceneMediaImageAppend";
+
 import { useMixedMediaSequenceUpload } from "./useMixedMediaSequenceUpload";
 
 export interface MixedMediaSequencePanelProps {
@@ -36,6 +38,8 @@ export interface MixedMediaSequencePanelProps {
     options?: StoryScriptChangeOptions,
   ) => void;
   readonly mixedMediaScenesEnabled: boolean;
+  /** Explicit source-quality image metadata capture gate. */
+  readonly sourceQualityIntelligenceEnabled: boolean;
 }
 
 function commitScenePatch(
@@ -56,6 +60,7 @@ export default function MixedMediaSequencePanel({
   scene,
   onScriptChange,
   mixedMediaScenesEnabled,
+  sourceQualityIntelligenceEnabled,
 }: MixedMediaSequencePanelProps) {
   const selection = useEditorSelectionOptional();
   const items = useMemo(() => readMixedMediaSequenceItems(scene), [scene]);
@@ -67,6 +72,7 @@ export default function MixedMediaSequencePanel({
     scene,
     onScriptChange,
     mixedMediaScenesEnabled,
+    sourceQualityIntelligenceEnabled,
     onSelectMediaItem: (sceneId, mediaItemId) => {
       if (mediaItemId) {
         selection?.selectSceneMediaItem(sceneId, mediaItemId);
@@ -123,6 +129,9 @@ export default function MixedMediaSequencePanel({
                 .appendMediaFile(file)
                 .then((result) => showWarnings(result.warnings))
                 .catch((error: unknown) => {
+                  if (isStaleSceneMediaAppendError(error)) {
+                    return;
+                  }
                   setWarningText(
                     error instanceof Error
                       ? error.message

@@ -2,6 +2,30 @@ import type { FootieScene, SceneImage, SceneMedia } from "@/features/story/types
 
 import type { ProbedVideoMetadata } from "./probe-video-metadata.utils";
 
+function normalizeUploadDimension(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+  const rounded = Math.round(value);
+  return rounded > 0 ? rounded : undefined;
+}
+
+function normalizeUploadMimeType(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeUploadDurationMs(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+  const rounded = Math.round(value);
+  return rounded > 0 ? rounded : undefined;
+}
+
 export const SCENE_MEDIA_FILE_ACCEPT =
   "image/*,video/mp4,video/webm,video/quicktime";
 
@@ -39,15 +63,28 @@ export function isImageUploadFile(file: Pick<File, "type" | "name">): boolean {
 export function buildSceneMediaImageFromUpload(
   image: SceneImage,
   mimeType?: string,
+  facts?: {
+    readonly width?: number;
+    readonly height?: number;
+    readonly mimeType?: string;
+  },
+  options?: {
+    readonly source?: Exclude<SceneMedia["source"], undefined>;
+  },
 ): SceneMedia {
   const fitMode =
     image.fitMode === "fill" ? "cover" : image.fitMode === "fit" ? "contain" : undefined;
+  const normalizedMime = normalizeUploadMimeType(facts?.mimeType ?? mimeType);
+  const width = normalizeUploadDimension(facts?.width);
+  const height = normalizeUploadDimension(facts?.height);
 
   return {
     type: "image",
     url: image.url,
-    source: "upload",
-    mimeType: mimeType?.trim() || undefined,
+    source: options?.source ?? "upload",
+    ...(normalizedMime != null ? { mimeType: normalizedMime } : {}),
+    ...(width != null ? { width } : {}),
+    ...(height != null ? { height } : {}),
     fitMode,
     transform: {
       x: image.x,
@@ -63,17 +100,22 @@ export function buildSceneMediaVideoFromUpload(
   url: string,
   metadata: ProbedVideoMetadata,
 ): SceneMedia {
+  const durationMs = normalizeUploadDurationMs(metadata.durationMs);
+  const width = normalizeUploadDimension(metadata.width);
+  const height = normalizeUploadDimension(metadata.height);
+  const mimeType = normalizeUploadMimeType(metadata.mimeType);
+
   return {
     type: "video",
     url,
     source: "upload",
-    mimeType: metadata.mimeType,
-    durationMs: metadata.durationMs,
-    width: metadata.width > 0 ? metadata.width : undefined,
-    height: metadata.height > 0 ? metadata.height : undefined,
+    ...(mimeType != null ? { mimeType } : {}),
+    ...(durationMs != null ? { durationMs } : {}),
+    ...(width != null ? { width } : {}),
+    ...(height != null ? { height } : {}),
     muted: true,
     trimStartMs: 0,
-    trimEndMs: metadata.durationMs,
+    trimEndMs: durationMs,
     fitMode: "cover",
     transform: { x: 0, y: 0, scale: 1, rotation: 0 },
   };

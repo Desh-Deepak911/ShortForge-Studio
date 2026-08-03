@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  useSourceQualityIntelligenceEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
+
 import CreatorAssetPlanningStaleBadge from "@/features/editor/components/creator-asset-studio/CreatorAssetPlanningStaleBadge";
 import CreatorAssetAlternativeList from "@/features/editor/components/creator-asset-studio/CreatorAssetAlternativeList";
 import CreatorAssetCreatorTips from "@/features/editor/components/creator-asset-studio/CreatorAssetCreatorTips";
@@ -87,6 +92,10 @@ export default function CreatorAssetStudio({
   compact = false,
 }: CreatorAssetStudioProps) {
   const { script, onScriptChange, storyId } = useInspectorContext();
+  const capabilitiesReady = useVisualRetentionCapabilitiesReady();
+  const sourceQualityEnabled = useSourceQualityIntelligenceEnabled();
+  const sourceQualityIntelligenceEnabled =
+    capabilitiesReady && sourceQualityEnabled;
   const scene = script.scenes[sceneIndex];
   const [browserSceneIndex, setBrowserSceneIndex] = useState<number | null>(null);
   const assetSearchEnabled = isAssetBrowserVisible();
@@ -163,6 +172,7 @@ export default function CreatorAssetStudio({
           searchContext: assetBrowserSearchContext,
           recommendationQuery: initialSearchContext.query,
           planningScriptHash: buildScriptHash(script),
+          sourceQualityIntelligenceEnabled,
         }
       : undefined;
 

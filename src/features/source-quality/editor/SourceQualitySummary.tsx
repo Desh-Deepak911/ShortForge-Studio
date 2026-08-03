@@ -173,6 +173,48 @@ export default function SourceQualitySummary({
           className="mt-2 space-y-2 border-t border-border/25 pt-2"
           data-source-quality-details=""
         >
+          <dl
+            className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[11px] leading-snug"
+            data-source-quality-facts=""
+          >
+            <dt className="text-muted">Dimensions</dt>
+            <dd
+              className="min-w-0 truncate text-foreground/85"
+              data-source-quality-fact="dimensions"
+            >
+              {assessment.metrics.width != null &&
+              assessment.metrics.height != null
+                ? `${assessment.metrics.width} × ${assessment.metrics.height}`
+                : "Unavailable"}
+            </dd>
+            <dt className="text-muted">Media type</dt>
+            <dd
+              className="min-w-0 truncate text-foreground/85 capitalize"
+              data-source-quality-fact="media-type"
+            >
+              {assessment.metrics.mediaType ?? "Unavailable"}
+            </dd>
+            {assessment.metrics.mimeType ? (
+              <>
+                <dt className="text-muted">MIME</dt>
+                <dd
+                  className="min-w-0 truncate text-foreground/85"
+                  data-source-quality-fact="mime-type"
+                >
+                  {assessment.metrics.mimeType}
+                </dd>
+              </>
+            ) : null}
+            <dt className="text-muted">Framing</dt>
+            <dd
+              className="min-w-0 truncate text-foreground/85"
+              data-source-quality-fact="framing"
+            >
+              {assessment.framingFitMode === "fill"
+                ? "Fill frame"
+                : "Fit inside frame"}
+            </dd>
+          </dl>
           {demotingWarnings.length > 0 ? (
             <ul className="space-y-1" data-source-quality-warnings="">
               {demotingWarnings.map((code) => (

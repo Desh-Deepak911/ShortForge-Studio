@@ -26,5 +26,13 @@ export {
   SOURCE_QUALITY_TARGET_ASPECT_RATIO,
   SOURCE_QUALITY_VERTICAL_TARGETS,
 } from "./domain/source-quality-thresholds";
+export type { SourceMediaMetadataFacts } from "./domain/source-media-metadata";
+export {
+  normalizeSourceMediaDimension,
+  normalizeSourceMediaDurationMs,
+  normalizeSourceMediaMetadataFacts,
+  normalizeSourceMediaMimeType,
+  sourceMediaMetadataFactsFromAssetResult,
+} from "./domain/source-media-metadata";
 export { default as SourceQualitySummary } from "./editor/SourceQualitySummary";
 export type { SourceQualitySummaryProps } from "./editor/SourceQualitySummary";

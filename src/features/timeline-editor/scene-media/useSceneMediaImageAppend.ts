@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
+import { probeImageObjectUrlMetadata } from "@/features/source-quality/client/probe-source-media-metadata";
 import {
   appendSceneMediaImageItem,
   canAddSceneMediaItem,
@@ -35,6 +36,26 @@ import { revokeOwnedBlobUrlIfPresent } from "./blob-url-ownership";
 
 export const SCENE_MEDIA_IMAGE_ACCEPT = "image/*";
 
+/** Thrown when a newer append for the same scene supersedes an in-flight probe. */
+export class StaleSceneMediaAppendError extends Error {
+  readonly code = "STALE_APPEND" as const;
+
+  constructor() {
+    super("A newer media append replaced this request.");
+    this.name = "StaleSceneMediaAppendError";
+  }
+}
+
+export function isStaleSceneMediaAppendError(error: unknown): boolean {
+  return (
+    error instanceof StaleSceneMediaAppendError ||
+    (typeof error === "object" &&
+      error != null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "STALE_APPEND")
+  );
+}
+
 type ScriptChangeHandler = (
   next: FootieScript,
   options?: { intent?: "media" | "story" | "presentation" | "narration_rebuild" },
@@ -46,19 +67,30 @@ export function useSceneMediaImageAppend(input: {
   onSelectMediaItem?: (sceneId: string, mediaItemId: string) => void;
   /** When false, this instance is a no-op fallback (shared provider owns append). */
   enabled?: boolean;
+  /**
+   * Explicit source-quality capture gate. When false, appends keep legacy
+   * behavior without intrinsic dimension capture.
+   */
+  sourceQualityIntelligenceEnabled: boolean;
 }) {
   const enabled = input.enabled !== false;
   const ownedBlobUrls = useRef<Set<string>>(new Set());
   const scriptRef = useRef(input.script);
+  const appendGenerationByScene = useRef<Map<string, number>>(new Map());
+  const inputRef = useRef(input);
 
   useEffect(() => {
     scriptRef.current = input.script;
   }, [input.script]);
 
+  useEffect(() => {
+    inputRef.current = input;
+  }, [input]);
+
   // Intentionally no unmount revoke — see file header (duplicate-scene safety).
 
   const appendImageFile = useCallback(
-    (sceneId: string, file: File) => {
+    async (sceneId: string, file: File) => {
       if (!enabled) {
         throw new Error("Scene media append is owned by the shared provider.");
       }
@@ -66,11 +98,15 @@ export function useSceneMediaImageAppend(input: {
         throw new Error("Only image files can be added to the scene media timeline.");
       }
 
-      const scene = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
-      if (!scene) {
+      const requestToken =
+        (appendGenerationByScene.current.get(sceneId) ?? 0) + 1;
+      appendGenerationByScene.current.set(sceneId, requestToken);
+
+      const sceneAtStart = scriptRef.current.scenes.find((entry) => entry.id === sceneId);
+      if (!sceneAtStart) {
         throw new Error("Scene not found.");
       }
-      if (!canAddSceneMediaItem(scene)) {
+      if (!canAddSceneMediaItem(sceneAtStart)) {
         throw new Error(
           "Cannot add media item: scene is shorter than the minimum duration per item.",
         );
@@ -78,26 +114,54 @@ export function useSceneMediaImageAppend(input: {
 
       const objectUrl = URL.createObjectURL(file);
       ownedBlobUrls.current.add(objectUrl);
+      let committed = false;
 
       try {
+        const facts = inputRef.current.sourceQualityIntelligenceEnabled
+          ? await probeImageObjectUrlMetadata(objectUrl, file.type || undefined)
+          : undefined;
+
+        if (appendGenerationByScene.current.get(sceneId) !== requestToken) {
+          throw new StaleSceneMediaAppendError();
+        }
+
+        const currentScript = scriptRef.current;
+        const scene = currentScript.scenes.find((entry) => entry.id === sceneId);
+        if (!scene) {
+          throw new Error("Scene not found.");
+        }
+        if (!canAddSceneMediaItem(scene)) {
+          throw new Error(
+            "Cannot add media item: scene is shorter than the minimum duration per item.",
+          );
+        }
+
         const image = createSceneImageFromUrl(objectUrl);
-        const media = buildSceneMediaImageFromUpload(image, file.type || undefined);
+        const media = buildSceneMediaImageFromUpload(
+          image,
+          file.type || undefined,
+          facts,
+        );
         const result = appendSceneMediaImageItem(scene, media);
-        const next = applySceneUpdate(scriptRef.current, sceneId, {
+        const next = applySceneUpdate(currentScript, sceneId, {
           media: result.scene.media,
           mediaTimeline: result.scene.mediaTimeline,
         });
-        input.onScriptChange(next, { intent: "media" });
+        scriptRef.current = next;
+        inputRef.current.onScriptChange(next, { intent: "media" });
+        committed = true;
         if (result.selectedMediaItemId) {
-          input.onSelectMediaItem?.(sceneId, result.selectedMediaItemId);
+          inputRef.current.onSelectMediaItem?.(sceneId, result.selectedMediaItemId);
         }
         return result;
       } catch (error) {
-        revokeOwnedBlobUrlIfPresent(objectUrl, ownedBlobUrls.current);
+        if (!committed) {
+          revokeOwnedBlobUrlIfPresent(objectUrl, ownedBlobUrls.current);
+        }
         throw error;
       }
     },
-    [enabled, input],
+    [enabled],
   );
 
   const revokeOwnedUrlIfPresent = useCallback((url: string | undefined) => {

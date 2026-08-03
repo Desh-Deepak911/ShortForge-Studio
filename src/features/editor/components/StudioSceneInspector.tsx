@@ -55,6 +55,7 @@ import { resolveSourceQualityMedia } from "@/features/source-quality/adapters/re
 import SourceQualitySummary from "@/features/source-quality/editor/SourceQualitySummary";
 import VisualPacingPanel from "@/features/visual-beat-density/editor/VisualPacingPanel";
 import {
+  useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
   useVisualRetentionCapabilitiesReady,
 } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
@@ -233,16 +234,23 @@ export default function StudioSceneInspector({
     useState<SceneInspectorWorkspaceId>(() =>
       readActiveSceneInspectorWorkspace(),
     );
+  const visualRetentionCapabilitiesReady =
+    useVisualRetentionCapabilitiesReady();
+  const sourceQualityEnabled = useSourceQualityIntelligenceEnabled();
+  const sourceQualityIntelligenceEnabled =
+    visualRetentionCapabilitiesReady && sourceQualityEnabled;
   const { replaceSceneMedia, removeSceneMedia, uploadError, clearUploadError } =
-    useSceneMediaUpload({ script, onScriptChange });
+    useSceneMediaUpload({
+      script,
+      onScriptChange,
+      sourceQualityIntelligenceEnabled,
+    });
   const scenes = script.scenes;
   const timelineItems = ensureTimelineItems(scenes, script.timelineItems);
   const safeIndex = resolveSafeSceneIndex(scenes, selectedSceneIndex);
   const scene = safeIndex >= 0 ? scenes[safeIndex] : null;
   const appendApi = useOptionalSceneMediaImageAppendContext();
   const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
-  const visualRetentionCapabilitiesReady =
-    useVisualRetentionCapabilitiesReady();
   const visualBeatDensityEnabled = useVisualBeatDensityEnabled();
   const visualPacingPanelEnabled =
     visualRetentionCapabilitiesReady &&
@@ -898,6 +906,9 @@ export default function StudioSceneInspector({
                     scene={scene}
                     onScriptChange={onScriptChange}
                     mixedMediaScenesEnabled
+                    sourceQualityIntelligenceEnabled={
+                      sourceQualityIntelligenceEnabled
+                    }
                   />
                 </div>
               ) : null}

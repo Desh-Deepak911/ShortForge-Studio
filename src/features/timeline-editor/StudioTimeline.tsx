@@ -32,6 +32,11 @@ import {
   setTimelineExclusiveInteraction,
 } from "./scene-media/timeline-exclusive-interaction.lock";
 import {
+  useSourceQualityIntelligenceEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
+
+import {
   SCENE_MEDIA_IMAGE_ACCEPT,
   useSceneMediaImageAppend,
 } from "./scene-media/useSceneMediaImageAppend";
@@ -163,11 +168,16 @@ export default function StudioTimeline({
   const [boundaryCancelEpoch, setBoundaryCancelEpoch] = useState(0);
   const [isFinePointer, setIsFinePointer] = useState(true);
   const sharedAppend = useOptionalSceneMediaImageAppendContext();
+  const capabilitiesReady = useVisualRetentionCapabilitiesReady();
+  const sourceQualityEnabled = useSourceQualityIntelligenceEnabled();
+  const sourceQualityIntelligenceEnabled =
+    capabilitiesReady && sourceQualityEnabled;
   const localAppend = useSceneMediaImageAppend({
     script,
     onScriptChange,
     onSelectMediaItem: selection.selectSceneMediaItem,
     enabled: sharedAppend == null,
+    sourceQualityIntelligenceEnabled,
   });
   const appendApi = sharedAppend ?? {
     appendImageFile: localAppend.appendImageFile,

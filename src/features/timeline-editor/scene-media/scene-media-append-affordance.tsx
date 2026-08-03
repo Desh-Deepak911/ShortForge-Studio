@@ -16,6 +16,7 @@ import {
 } from "./scene-media-lane-errors";
 import { sceneMediaAddButton } from "./scene-media-timeline.ui";
 import type { SceneMediaImageAppendApi } from "./SceneMediaImageAppendContext";
+import { isStaleSceneMediaAppendError } from "./useSceneMediaImageAppend";
 
 export function formatSceneMediaItemOrdinal(
   itemIndex: number,
@@ -52,15 +53,22 @@ export function SceneMediaAddAnotherImageButton({
     if (!file) {
       return;
     }
-    try {
-      const result = appendApi.appendImageFile(scene.id, file);
-      setError(null);
-      if (result.selectedMediaItemId) {
-        onAppended?.(result.selectedMediaItemId);
-      }
-    } catch (caught) {
-      setError(SCENE_MEDIA_LANE_ERROR_MESSAGES[resolveSceneMediaLaneErrorCode(caught)]);
-    }
+    void appendApi
+      .appendImageFile(scene.id, file)
+      .then((result) => {
+        setError(null);
+        if (result.selectedMediaItemId) {
+          onAppended?.(result.selectedMediaItemId);
+        }
+      })
+      .catch((caught: unknown) => {
+        if (isStaleSceneMediaAppendError(caught)) {
+          return;
+        }
+        setError(
+          SCENE_MEDIA_LANE_ERROR_MESSAGES[resolveSceneMediaLaneErrorCode(caught)],
+        );
+      });
   };
 
   return (

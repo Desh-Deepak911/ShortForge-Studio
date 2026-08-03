@@ -38,6 +38,8 @@ export interface AttachBrowserAssetToSceneInput {
   recommendationQuery: string;
   planningScriptHash?: string;
   materializeAssetUrl?: MaterializeAssetUrlFn;
+  /** Explicit source-quality capture gate for known asset metadata. */
+  sourceQualityIntelligenceEnabled?: boolean;
 }
 
 /** Attaches a browser-selected asset through materialization + attach service. */
@@ -71,6 +73,10 @@ export async function attachBrowserAssetToScene(
       asset: input.asset,
       source: "asset_search",
       handoff,
+      options: {
+        sourceQualityIntelligenceEnabled:
+          input.sourceQualityIntelligenceEnabled === true,
+      },
     },
     {
       materializeAssetUrl:

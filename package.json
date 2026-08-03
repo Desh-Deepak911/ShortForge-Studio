@@ -19,6 +19,7 @@
     "test:visual-beat-density": "tsx src/verification/visual-retention/visualBeatDensityCapability.verify.ts",
     "test:source-quality": "tsx src/verification/source-quality/sourceQualityAssessment.verify.ts && tsx src/verification/source-quality/sourceQualityCapability.verify.ts",
     "test:source-quality-ui": "tsx src/verification/source-quality/sourceQualityInspectorUi.verify.tsx",
+    "test:source-quality-metadata": "tsx src/verification/source-quality/sourceMediaMetadataCapture.verify.ts",
     "test:visual-beat-planning": "tsx src/verification/visual-beat-density/visualBeatPlanFingerprint.verify.ts && tsx src/verification/visual-beat-density/visualBeatPlanGeneration.verify.ts",
     "test:visual-beat-plan-commands": "tsx src/verification/visual-beat-density/visualBeatPlanStaleness.verify.ts && tsx src/verification/visual-beat-density/visualBeatPlanCommands.verify.ts && tsx src/verification/visual-beat-density/visualBeatPlanCompatibility.verify.ts",
     "test:visual-pacing-ui": "tsx src/verification/visual-beat-density/visualPacingPanel.verify.ts && tsx src/verification/visual-beat-density/visualPacingWorkspaceIntegration.verify.ts && tsx src/verification/visual-beat-density/visualPacingAccessibility.verify.ts",
