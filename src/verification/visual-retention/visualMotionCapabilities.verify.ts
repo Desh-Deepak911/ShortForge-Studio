@@ -309,7 +309,7 @@ function main(): void {
     assert.match(route, /subjectAwareReframingEnabled/);
   });
 
-  test("UI-surface coverage registered; keyframes + engagement + brand sting wired; subject-aware remains unavailable", () => {
+  test("UI-surface coverage registered; keyframes + engagement + brand sting + subject-aware wired", () => {
     for (const capability of [
       KEYFRAMED_VISUAL_EFFECTS_CAPABILITY_ID,
       ENGAGEMENT_OVERLAYS_CAPABILITY_ID,
@@ -334,6 +334,7 @@ function main(): void {
     // Engagement overlays mount scene-scoped in Adjust after motion/look.
     assert.match(inspector, /useEngagementOverlaysEnabled/);
     assert.match(inspector, /EngagementOverlayControls/);
+    // Subject-aware mounts inside Source quality Details (not a top-level inspector hook).
     assert.doesNotMatch(inspector, /useSubjectAwareReframingEnabled/);
     assert.match(
       readSrc("src/features/editor/components/media/MediaMotionInspectorPanel.tsx"),
@@ -343,6 +344,12 @@ function main(): void {
       readSrc("src/features/editor/components/media/MediaMotionInspectorPanel.tsx"),
       /MediaMotionKeyframeEditor/,
     );
+
+    const sourceQualitySummary = readSrc(
+      "src/features/source-quality/editor/SourceQualitySummary.tsx",
+    );
+    assert.match(sourceQualitySummary, /useSubjectAwareReframingEnabled/);
+    assert.match(sourceQualitySummary, /SubjectAwareFramingControls/);
 
     const exportPanel = readSrc("src/components/ExportPanel.tsx");
     assert.match(exportPanel, /useEngagementOverlaysEnabled/);

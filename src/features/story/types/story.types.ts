@@ -10,6 +10,11 @@ import type { SpeechStylePreset } from "@/features/speech-style";
 import type { VisualBeatPlanV1 } from "@/features/visual-beat-density/domain/visual-beat-plan";
 import type { VisualRetentionProjectExtensionsV1 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
 
+import type {
+  SceneMediaSubjectAwareFramingProvenance,
+  SceneMediaSubjectFocus,
+} from "./subject-focus.types";
+
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
 
 /** How on-screen captions are sourced for a scene. */
@@ -182,6 +187,17 @@ export interface SceneMedia {
    * Optional; Preview/Export/Headless ignore it. Malformed values normalize as absent.
    */
   sourceQualityAdjustmentProvenance?: SourceQualityAdjustmentProvenance;
+  /**
+   * Authoring-only subject focus (manual 3×3 / future metadata).
+   * Optional; Preview/Export/Headless ignore until Apply writes ordinary framing.
+   * Malformed values normalize as absent.
+   */
+  subjectFocus?: SceneMediaSubjectFocus;
+  /**
+   * Authoring-only subject-aware framing Apply provenance.
+   * Optional; Preview/Export/Headless ignore it. Malformed values normalize as absent.
+   */
+  subjectAwareFramingProvenance?: SceneMediaSubjectAwareFramingProvenance;
   /** Optional still / poster frame URL (video). Images use `url` as poster. */
   posterUrl?: string;
   /** Absolute media time for the poster frame (video). Defaults to trim/window start. */

@@ -16,6 +16,10 @@ import type {
   SceneMediaMotion,
   SceneMediaType,
 } from "@/features/story/types";
+import {
+  normalizeSceneMediaSubjectAwareFramingProvenance,
+  normalizeSceneMediaSubjectFocus,
+} from "@/features/story/types/subject-focus.types";
 
 export const DEFAULT_IMAGE_SCALE = 1;
 export const MIN_SCENE_IMAGE_SCALE = 0.5;
@@ -476,6 +480,19 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
   if (sourceQualityAdjustmentProvenance) {
     normalized.sourceQualityAdjustmentProvenance =
       sourceQualityAdjustmentProvenance;
+  }
+
+  const subjectFocus = normalizeSceneMediaSubjectFocus(record.subjectFocus);
+  if (subjectFocus) {
+    normalized.subjectFocus = subjectFocus;
+  }
+
+  const subjectAwareFramingProvenance =
+    normalizeSceneMediaSubjectAwareFramingProvenance(
+      record.subjectAwareFramingProvenance,
+    );
+  if (subjectAwareFramingProvenance) {
+    normalized.subjectAwareFramingProvenance = subjectAwareFramingProvenance;
   }
 
   const posterUrl = normalizeSceneMediaUrl(record.posterUrl);

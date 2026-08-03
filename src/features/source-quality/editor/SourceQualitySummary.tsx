@@ -10,6 +10,7 @@ import type { FootieScene, FootieScript, SceneMedia } from "@/features/story/typ
 import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 import {
   useSourceQualityIntelligenceEnabled,
+  useSubjectAwareReframingEnabled,
   useVisualRetentionCapabilitiesReady,
 } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { studioSubtleText } from "@/lib/utils/studioUi";
@@ -25,6 +26,7 @@ import {
   type SourceQualitySafeAdjustmentRecommendation,
 } from "../domain/safe-visual-adjustment-recommendation";
 import SourceQualityAdjustmentControls from "./SourceQualityAdjustmentControls";
+import SubjectAwareFramingControls from "./SubjectAwareFramingControls";
 
 export interface SourceQualitySummaryProps {
   readonly scene: FootieScene;
@@ -56,6 +58,8 @@ export interface SourceQualitySummaryProps {
   readonly readiness?: {
     readonly ready: boolean;
     readonly enabled: boolean;
+    /** Optional subject-aware override for verification harnesses. */
+    readonly subjectAwareEnabled?: boolean;
   };
 }
 
@@ -169,8 +173,11 @@ export default function SourceQualitySummary({
 }: SourceQualitySummaryProps) {
   const hookReady = useVisualRetentionCapabilitiesReady();
   const hookEnabled = useSourceQualityIntelligenceEnabled();
+  const hookSubjectAware = useSubjectAwareReframingEnabled();
   const ready = readiness?.ready ?? hookReady;
   const enabled = readiness?.enabled ?? hookEnabled;
+  const subjectAwareEnabled =
+    readiness?.subjectAwareEnabled ?? hookSubjectAware;
   const detailsId = useId();
   const detailsToggleRef = useRef<HTMLButtonElement>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -218,6 +225,8 @@ export default function SourceQualitySummary({
     Boolean(script) &&
     typeof onScriptChange === "function" &&
     assessment.hasMedia;
+  const canMountSubjectAware =
+    canMountControls && ready && enabled && subjectAwareEnabled;
 
   return (
     <section
@@ -399,6 +408,19 @@ export default function SourceQualitySummary({
               mediaItemId={mediaItemId}
               onScriptChange={onScriptChange}
               sourceQualityIntelligenceEnabled={enabled}
+              mixedMediaScenesEnabled={mixedMediaScenesEnabled}
+              detailsToggleRef={detailsToggleRef}
+            />
+          ) : null}
+          {canMountSubjectAware && script && onScriptChange ? (
+            <SubjectAwareFramingControls
+              script={script}
+              scene={scene}
+              media={resolvedMedia}
+              framing={resolvedFraming}
+              mediaItemId={mediaItemId}
+              onScriptChange={onScriptChange}
+              subjectAwareReframingEnabled={subjectAwareEnabled}
               mixedMediaScenesEnabled={mixedMediaScenesEnabled}
               detailsToggleRef={detailsToggleRef}
             />
