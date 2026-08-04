@@ -988,6 +988,13 @@ export async function exportFootieShort(
         options.sourceQualityIntelligenceEnabled === true,
       keyframedVisualEffectsEnabled:
         options.keyframedVisualEffectsEnabled === true,
+      engagementOverlaysEnabled: options.engagementOverlaysEnabled === true,
+      shortForgeBrandStingEnabled:
+        options.shortForgeBrandStingEnabled === true,
+      visualRetentionPresetsEnabled:
+        options.visualRetentionPresetsEnabled === true,
+      visualRetentionCapabilitiesReady:
+        options.visualRetentionCapabilitiesReady === true,
       sourceQualityExportTarget: options.sourceQualityExportTarget,
     });
 

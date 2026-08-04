@@ -338,6 +338,10 @@ async function main(): Promise<void> {
       "src/features/engagement-overlays",
       "src/features/brand-sting",
     ];
+    // Sole allowed export import: structured guidance ownership in
+    // prepare-export-request (adapter path only — never the React barrel).
+    const allowedExportImportRel =
+      "src/features/export/domain/prepare-export-request.ts";
     for (const root of blockedRoots) {
       const abs = path.join(process.cwd(), root);
       let files: string[] = [];
@@ -347,6 +351,19 @@ async function main(): Promise<void> {
         continue;
       }
       for (const file of files) {
+        const rel = path.relative(process.cwd(), file).replace(/\\/g, "/");
+        if (rel === allowedExportImportRel) {
+          const src = readFileSync(file, "utf8");
+          assert.match(
+            src,
+            /from ["']@\/features\/visual-retention-presets\/adapters\/resolve-visual-retention-preset-export-guidance["']/,
+          );
+          assert.doesNotMatch(
+            src,
+            /from ["']@\/features\/visual-retention-presets["']/,
+          );
+          continue;
+        }
         const src = readFileSync(file, "utf8");
         assert.doesNotMatch(
           src,

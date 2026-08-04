@@ -1,5 +1,6 @@
 /**
- * Visual Retention Presets — catalog, planning, fingerprint, Apply/Undo, Project Inspector UI.
+ * Visual Retention Presets — catalog, planning, fingerprint, Apply/Undo,
+ * Project Inspector UI, and non-blocking export guidance.
  */
 
 export {
@@ -66,6 +67,15 @@ export {
   serializeVisualRetentionPresetFactsForCompare,
   type ProjectStoryVisualRetentionPresetInputOptions,
 } from "./adapters/project-story-visual-retention-preset-input";
+
+export {
+  resolveVisualRetentionPresetExportGuidance,
+  VISUAL_RETENTION_PRESET_EXPORT_GUIDANCE_CODES,
+  VISUAL_RETENTION_PRESET_EXPORT_GUIDANCE_MESSAGES,
+  type ResolveVisualRetentionPresetExportGuidanceInput,
+  type VisualRetentionPresetExportGuidanceCode,
+  type VisualRetentionPresetExportGuidanceItem,
+} from "./adapters/resolve-visual-retention-preset-export-guidance";
 
 export {
   evaluateVisualRetentionPresetStaleness,

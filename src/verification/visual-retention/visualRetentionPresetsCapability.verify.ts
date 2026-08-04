@@ -482,14 +482,38 @@ function main(): void {
       "src/components/ExportPanel.tsx",
       "src/features/export/runtime/prepare-export-from-manifest.ts",
       "src/features/headless-renderer/worker/runtime/worker-types.ts",
+      "src/features/headless-renderer/product/ui/HeadlessExportSection.tsx",
     ] as const) {
       const src = readSrc(file);
       assert.doesNotMatch(
         src,
         /fetch\(\s*["']\/api\/visual-retention\/capabilities/,
       );
-      assert.doesNotMatch(src, /useVisualRetentionPresetsEnabled/);
     }
+    // Slice 6: Browser/Headless export consume the shared provider hook for
+    // non-blocking guidance only — never a second capabilities fetch.
+    assert.match(
+      readSrc("src/components/ExportPanel.tsx"),
+      /useVisualRetentionPresetsEnabled/,
+    );
+    assert.match(
+      readSrc(
+        "src/features/headless-renderer/product/ui/HeadlessExportSection.tsx",
+      ),
+      /useVisualRetentionPresetsEnabled/,
+    );
+    assert.doesNotMatch(
+      readSrc("src/components/StoryWorkspace.tsx"),
+      /useVisualRetentionPresetsEnabled/,
+    );
+    assert.doesNotMatch(
+      readSrc("src/features/export/runtime/prepare-export-from-manifest.ts"),
+      /useVisualRetentionPresetsEnabled/,
+    );
+    assert.doesNotMatch(
+      readSrc("src/features/headless-renderer/worker/runtime/worker-types.ts"),
+      /useVisualRetentionPresetsEnabled/,
+    );
   });
 
   test("project-level UI coverage exactly five surfaces; no inspector/timeline inherit", () => {

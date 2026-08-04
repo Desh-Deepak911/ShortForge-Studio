@@ -157,6 +157,8 @@ function main(): void {
   });
 
   test("no preview/export/manifest import of presets UI", () => {
+    const allowedExportGuidanceRel =
+      "src/features/export/domain/prepare-export-request.ts";
     for (const root of [
       "src/features/preview",
       "src/features/export",
@@ -164,11 +166,23 @@ function main(): void {
     ] as const) {
       const abs = path.join(process.cwd(), root);
       for (const file of walkTsFiles(abs)) {
+        const rel = path.relative(process.cwd(), file).replace(/\\/g, "/");
         const src = readFileSync(file, "utf8");
         assert.doesNotMatch(
           src,
           /VisualRetentionPresetsPanel|useVisualRetentionPresetSelection/,
         );
+        if (rel === allowedExportGuidanceRel) {
+          assert.match(
+            src,
+            /from ["']@\/features\/visual-retention-presets\/adapters\/resolve-visual-retention-preset-export-guidance["']/,
+          );
+          assert.doesNotMatch(
+            src,
+            /from ["']@\/features\/visual-retention-presets["']/,
+          );
+          continue;
+        }
         assert.doesNotMatch(
           src,
           /from ["']@\/features\/visual-retention-presets/,

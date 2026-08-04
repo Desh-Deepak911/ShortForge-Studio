@@ -47,6 +47,7 @@ import {
   useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
   useVisualRetentionCapabilitiesReady,
+  useVisualRetentionPresetsEnabled,
 } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import {
   buildExportDownloadFileName,
@@ -272,6 +273,7 @@ export default function ExportPanel({
   const engagementOverlaysEnabled = useEngagementOverlaysEnabled();
   const visualRetentionCapabilitiesReady =
     useVisualRetentionCapabilitiesReady();
+  const visualRetentionPresetsEnabled = useVisualRetentionPresetsEnabled();
   const shortForgeBrandStingCapability = useShortForgeBrandStingEnabled();
   const shortForgeBrandStingEnabled =
     visualRetentionCapabilitiesReady && shortForgeBrandStingCapability;
@@ -532,6 +534,8 @@ export default function ExportPanel({
         keyframedVisualEffectsEnabled,
         engagementOverlaysEnabled,
         shortForgeBrandStingEnabled,
+        visualRetentionPresetsEnabled,
+        visualRetentionCapabilitiesReady,
         brandStingDurationMs,
         sourceQualityExportTarget:
           exportSettings.resolution === "720x1280" ? "720p" : "1080p",
@@ -550,6 +554,8 @@ export default function ExportPanel({
       keyframedVisualEffectsEnabled,
       engagementOverlaysEnabled,
       shortForgeBrandStingEnabled,
+      visualRetentionPresetsEnabled,
+      visualRetentionCapabilitiesReady,
       brandStingDurationMs,
     ],
   );
@@ -571,6 +577,8 @@ export default function ExportPanel({
       keyframedVisualEffectsEnabled,
       engagementOverlaysEnabled,
       shortForgeBrandStingEnabled,
+      visualRetentionPresetsEnabled,
+      visualRetentionCapabilitiesReady,
       sourceQualityExportTarget:
         exportSettings.resolution === "720x1280" ? "720p" : "1080p",
     }).then((prepared) => {
@@ -616,6 +624,8 @@ export default function ExportPanel({
     keyframedVisualEffectsEnabled,
     engagementOverlaysEnabled,
     shortForgeBrandStingEnabled,
+    visualRetentionPresetsEnabled,
+    visualRetentionCapabilitiesReady,
     capabilityRequestKey,
   ]);
 
@@ -873,6 +883,8 @@ export default function ExportPanel({
           keyframedVisualEffectsEnabled,
           engagementOverlaysEnabled,
           shortForgeBrandStingEnabled,
+          visualRetentionPresetsEnabled,
+          visualRetentionCapabilitiesReady,
           sourceQualityExportTarget:
             attemptSettings.resolution === "720x1280" ? "720p" : "1080p",
           ...(audioFallback ? { audioFallback } : {}),
@@ -1559,6 +1571,17 @@ export default function ExportPanel({
           title="Download"
           className={compact ? studioStickyMobileFooterAboveBar : undefined}
         >
+          {/* Shared structured preflight guidance for Browser and Headless. */}
+          {capabilityPreflightStatus === "ready-with-warnings"
+            ? capabilityWarningMessages.map((message) => (
+                <StudioStatus
+                  key={message}
+                  variant="warning"
+                  layout="inline"
+                  description={message}
+                />
+              ))
+            : null}
           {exportRenderer === "browser" ? (
             <>
               {capabilityPreflightStatus === "checking" ? (
@@ -1571,16 +1594,6 @@ export default function ExportPanel({
               {capabilityPreflightStatus === "ready" ? (
                 <StudioStatus variant="success" layout="inline" description="Ready to export." />
               ) : null}
-              {capabilityPreflightStatus === "ready-with-warnings"
-                ? capabilityWarningMessages.map((message) => (
-                    <StudioStatus
-                      key={message}
-                      variant="warning"
-                      layout="inline"
-                      description={message}
-                    />
-                  ))
-                : null}
               {capabilityPreflightStatus === "blocked" ||
               capabilityPreflightStatus === "server-required"
                 ? capabilityBlockerMessages.map((message) => (
