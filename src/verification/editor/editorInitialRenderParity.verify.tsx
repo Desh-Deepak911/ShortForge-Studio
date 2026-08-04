@@ -36,7 +36,11 @@ import {
   writeEditorWorkspaceLayout,
   type EditorWorkspaceLayoutState,
 } from "@/features/editor/workspace-layout";
-import { VisualRetentionCapabilitiesProvider } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
+import {
+  useVisualRetentionCapabilities,
+  VisualRetentionCapabilitiesProvider,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
+import { VISUAL_RETENTION_CAPABILITIES_DISABLED } from "@/features/visual-retention/client/parse-visual-retention-capabilities";
 import type { FootieScript } from "@/features/story/types";
 
 function readSrc(rel: string): string {
@@ -141,10 +145,20 @@ function EditorLoadHarness({ draftId }: { draftId: string }): ReactElement {
   );
 }
 
+function CapabilitiesProbe(): ReactElement {
+  const caps = useVisualRetentionCapabilities();
+  return (
+    <span
+      data-capabilities-probe={caps.ready ? "ready" : "pending"}
+      data-presets-enabled={String(caps.visualRetentionPresetsEnabled)}
+    />
+  );
+}
+
 function CapabilitiesHarness(): ReactElement {
   return (
     <VisualRetentionCapabilitiesProvider>
-      <span data-capabilities-probe="pending" />
+      <CapabilitiesProbe />
     </VisualRetentionCapabilitiesProvider>
   );
 }
@@ -348,6 +362,18 @@ function testSourceHydrationContracts(): void {
   );
   assert.match(capabilities, /VISUAL_RETENTION_CAPABILITIES_DISABLED/);
   assert.match(capabilities, /useState<VisualRetentionCapabilitiesSnapshot>\(\s*VISUAL_RETENTION_CAPABILITIES_DISABLED/);
+  assert.match(capabilities, /visualRetentionPresetsEnabled/);
+  assert.match(capabilities, /useVisualRetentionPresetsEnabled/);
+  assert.equal(
+    (capabilities.match(/fetch\(\s*["']\/api\/visual-retention\/capabilities/g) ??
+      []).length,
+    1,
+  );
+  assert.equal(VISUAL_RETENTION_CAPABILITIES_DISABLED.ready, false);
+  assert.equal(
+    VISUAL_RETENTION_CAPABILITIES_DISABLED.visualRetentionPresetsEnabled,
+    false,
+  );
 
   const exportPanel = readSrc("src/components/ExportPanel.tsx");
   assert.match(exportPanel, /HeadlessExportSection/);
@@ -599,21 +625,43 @@ async function testWarmStoryDocumentStillHydratesFromLoadingShell(): Promise<voi
 
 async function testCapabilitiesProviderDoesNotDivergeMarkup(): Promise<void> {
   memoryStorage.clear();
-  const element = <CapabilitiesHarness />;
-  const serverHtml = renderToStaticMarkup(element);
-  assert.match(serverHtml, /data-capabilities-probe="pending"/);
+  const originalFetch = globalThis.fetch;
+  // Keep the shared capability fetch pending so adoption cannot change markup,
+  // steal focus, or mutate story state during hydration.
+  globalThis.fetch = () => new Promise(() => {}) as Promise<Response>;
+  try {
+    const element = <CapabilitiesHarness />;
+    const serverHtml = renderToStaticMarkup(element);
+    assert.match(serverHtml, /data-capabilities-probe="pending"/);
+    assert.match(serverHtml, /data-presets-enabled="false"/);
 
-  const { host, errors, html, cleanup } = await hydrateAndCollectErrors(element);
-  assert.equal(html, serverHtml);
-  assert.equal(errors.length, 0);
-  assert.equal(
-    host
-      .querySelector("[data-capabilities-probe]")
-      ?.getAttribute("data-capabilities-probe"),
-    "pending",
-    "capabilities provider must keep fail-closed markup through hydration",
-  );
-  await cleanup();
+    const { host, errors, html, cleanup } =
+      await hydrateAndCollectErrors(element);
+    assert.equal(html, serverHtml);
+    assert.equal(errors.length, 0);
+    assert.equal(
+      host
+        .querySelector("[data-capabilities-probe]")
+        ?.getAttribute("data-capabilities-probe"),
+      "pending",
+      "capabilities provider must keep fail-closed markup through hydration",
+    );
+    assert.equal(
+      host
+        .querySelector("[data-presets-enabled]")
+        ?.getAttribute("data-presets-enabled"),
+      "false",
+      "presets stay false before capability adoption",
+    );
+    assert.deepEqual(
+      getStoryDocumentState(),
+      { currentDraft: null, currentScript: null, draftId: null },
+      "capability adoption must not mutate the story document",
+    );
+    await cleanup();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 }
 
 function testLayoutStorageKeyUnchanged(): void {

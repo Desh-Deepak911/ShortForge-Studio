@@ -44,6 +44,7 @@ export const VISUAL_RETENTION_STAGING_DEVELOPMENT_BRANCHES = Object.freeze([
   "sprint12c-staging-visual-beat-density",
   "staging-source-quality-intelligence",
   "staging-keyframed-motion-overlays",
+  "staging-visual-retention-presets",
 ] as const);
 
 export interface VisualRetentionPhaseGateState {

@@ -19,6 +19,10 @@ import {
   type SourceQualityExportGuidanceCode,
   type SourceQualityExportTarget,
 } from "@/features/source-quality/adapters/resolve-source-quality-export-guidance";
+import {
+  resolveVisualRetentionPresetExportGuidance,
+  type VisualRetentionPresetExportGuidanceCode,
+} from "@/features/visual-retention-presets/adapters/resolve-visual-retention-preset-export-guidance";
 
 import { probeExportMp4Runtime } from "@/features/export/formats/export-runtime-codec-probe";
 
@@ -77,6 +81,16 @@ export interface PrepareExportRequestInput {
    */
   readonly sourceQualityIntelligenceEnabled?: boolean;
   /**
+   * Explicit Visual Retention Presets authoring capability.
+   * Default ignored/fail-closed. Guidance only — never a renderer requirement.
+   */
+  readonly visualRetentionPresetsEnabled?: boolean;
+  /**
+   * Shared visual-retention capabilities readiness.
+   * Fail-closed while loading — preset guidance stays quiet until ready.
+   */
+  readonly visualRetentionCapabilitiesReady?: boolean;
+  /**
    * Actual requested output target for source-quality guidance.
    * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
    * When omitted, derived from export settings (720p/1080p only).
@@ -124,8 +138,16 @@ export async function prepareExportRequest(
   const shortForgeBrandStingEnabled =
     input.shortForgeBrandStingEnabled === true ||
     input.options?.shortForgeBrandStingEnabled === true;
+  const visualRetentionPresetsEnabled =
+    input.visualRetentionPresetsEnabled === true ||
+    input.options?.visualRetentionPresetsEnabled === true;
+  const visualRetentionCapabilitiesReady =
+    input.visualRetentionCapabilitiesReady === true ||
+    input.options?.visualRetentionCapabilitiesReady === true;
   const voiceoverPrepared = prepareStoryVoiceoverForExport(input.story);
-  // Timing authority only — authoring guidance is appended once below.
+  // Timing authority only — authoring guidance is appended once below after
+  // prepareStoryForExport completes: sync → voiceover/master-timeline refit →
+  // mixed-media reconcile → media validation → final sync.
   const preparedStory = prepareStoryForExport(voiceoverPrepared, {
     mixedMediaScenesEnabled,
   });
@@ -236,6 +258,33 @@ export async function prepareExportRequest(
       });
     }
   }
+  // Single production authority for Visual Retention Preset export guidance:
+  // evaluate the final prepared story exactly once; emit at most one structured
+  // non-blocking VISUAL_RETENTION_PRESET_STALE warning (deduped by code).
+  const presetGuidance = resolveVisualRetentionPresetExportGuidance(
+    preparedStory.story,
+    {
+      visualRetentionCapabilitiesReady,
+      visualRetentionPresetsEnabled,
+      visualBeatDensityEnabled,
+      keyframedVisualEffectsEnabled,
+      engagementOverlaysEnabled,
+      shortForgeBrandStingEnabled,
+      mixedMediaScenesEnabled,
+    },
+  );
+  const seenPresetCodes = new Set<ExportWarningCode>();
+  const presetWarnings: ExportWarning[] = [];
+  for (const item of presetGuidance) {
+    const code = item.code as ExportWarningCode &
+      VisualRetentionPresetExportGuidanceCode;
+    if (seenPresetCodes.has(code)) continue;
+    seenPresetCodes.add(code);
+    presetWarnings.push({
+      code,
+      message: EXPORT_WARNING_MESSAGES[code] ?? item.message,
+    });
+  }
   const preflight: ExportCapabilityResult = {
     ...basePreflight,
     warnings: Object.freeze([
@@ -244,6 +293,7 @@ export async function prepareExportRequest(
       ...sourceQualityWarnings,
       ...engagementWarnings,
       ...brandStingWarnings,
+      ...presetWarnings,
     ]),
   };
   const renderer = preflight.renderer;

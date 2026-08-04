@@ -44,7 +44,8 @@ export type ExportWarningCode =
   | "SOURCE_QUALITY_MAY_UPSCALE"
   | "SOURCE_QUALITY_AGGRESSIVE_CROP"
   | "ENGAGEMENT_OVERLAY_OMITTED"
-  | "BRAND_STING_OMITTED";
+  | "BRAND_STING_OMITTED"
+  | "VISUAL_RETENTION_PRESET_STALE";
 
 export interface ExportWarning {
   readonly code: ExportWarningCode;

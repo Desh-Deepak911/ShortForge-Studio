@@ -147,6 +147,7 @@ function main(): void {
       engagementOverlaysEnabled: false,
       shortForgeBrandStingEnabled: false,
       subjectAwareReframingEnabled: false,
+      visualRetentionPresetsEnabled: false,
       phasesValid: true,
     });
     assert.equal(
@@ -177,6 +178,7 @@ function main(): void {
       engagementOverlaysEnabled: false,
       shortForgeBrandStingEnabled: false,
       subjectAwareReframingEnabled: false,
+      visualRetentionPresetsEnabled: false,
     };
     assert.deepEqual(parseVisualRetentionCapabilitiesResponse(null), {
       mixedMediaScenesEnabled: false,

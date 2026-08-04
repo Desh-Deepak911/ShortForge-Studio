@@ -61,6 +61,22 @@ export {
   sceneMediaFramingSnapshotsEqual,
 } from "./subject-focus.types";
 export type {
+  VisualRetentionPresetProvenanceActionKind,
+  VisualRetentionPresetProvenanceChangeV1,
+  VisualRetentionPresetProvenanceField,
+  VisualRetentionPresetProvenancePresetId,
+  VisualRetentionPresetProvenanceTargetV1,
+  VisualRetentionPresetProvenanceV1,
+} from "./visual-retention-preset-provenance.types";
+export {
+  VISUAL_RETENTION_PRESET_PROVENANCE_CATALOG_VERSION,
+  VISUAL_RETENTION_PRESET_PROVENANCE_FINGERPRINT_PREFIX,
+  VISUAL_RETENTION_PRESET_PROVENANCE_PRESET_IDS,
+  VISUAL_RETENTION_PRESET_PROVENANCE_VERSION,
+  normalizeVisualRetentionPresetProvenance,
+  visualRetentionPresetProvenanceChangeIdentity,
+} from "./visual-retention-preset-provenance.types";
+export type {
   AudioFirstGenerationResult,
   StoryScript,
   VoiceoverDurationSource,

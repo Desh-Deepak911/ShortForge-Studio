@@ -28,6 +28,7 @@ export async function GET() {
       engagementOverlaysEnabled: snapshot.engagementOverlaysEnabled,
       shortForgeBrandStingEnabled: snapshot.shortForgeBrandStingEnabled,
       subjectAwareReframingEnabled: snapshot.subjectAwareReframingEnabled,
+      visualRetentionPresetsEnabled: snapshot.visualRetentionPresetsEnabled,
       phasesValid: snapshot.phasesValid,
     },
     {

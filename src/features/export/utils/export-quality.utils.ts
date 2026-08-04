@@ -101,6 +101,16 @@ export interface FootieExportOptions {
    */
   shortForgeBrandStingEnabled?: boolean;
   /**
+   * Explicit Visual Retention Presets authoring capability.
+   * Guidance only — never a renderer requirement. Default ignored/fail-closed.
+   */
+  visualRetentionPresetsEnabled?: boolean;
+  /**
+   * Shared visual-retention capabilities readiness.
+   * Fail-closed while loading — preset guidance stays quiet until ready.
+   */
+  visualRetentionCapabilitiesReady?: boolean;
+  /**
    * Actual requested output target for source-quality guidance.
    * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
    */

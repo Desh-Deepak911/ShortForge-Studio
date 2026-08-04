@@ -104,6 +104,8 @@ export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {
     "An engagement prompt could not fit this scene and was left out of export.",
   BRAND_STING_OMITTED:
     "The ShortForge Studio outro could not be prepared and was left out of export.",
+  VISUAL_RETENTION_PRESET_STALE:
+    "Visual Retention Preset settings have changed since Apply. Export will use your current settings.",
 };
 
 /** @deprecated Sprint 6F.1 — use approveExportResolution instead of this flag. */

@@ -11,6 +11,7 @@ import { isShortForgeBrandStingCapabilityEnabled } from "../domain/shortforge-br
 import { isSourceQualityIntelligenceCapabilityEnabled } from "../domain/source-quality-intelligence-capability";
 import { isSubjectAwareReframingCapabilityEnabled } from "../domain/subject-aware-reframing-capability";
 import { isVisualBeatDensityCapabilityEnabled } from "../domain/visual-beat-density-capability";
+import { isVisualRetentionPresetsCapabilityEnabled } from "../domain/visual-retention-presets-capability";
 import { resolveVisualRetentionGatesFromEnvironment } from "../domain/visual-retention-environment";
 
 export interface VisualRetentionCreatorCapabilitiesV1 {
@@ -22,6 +23,7 @@ export interface VisualRetentionCreatorCapabilitiesV1 {
   readonly engagementOverlaysEnabled: boolean;
   readonly shortForgeBrandStingEnabled: boolean;
   readonly subjectAwareReframingEnabled: boolean;
+  readonly visualRetentionPresetsEnabled: boolean;
   readonly phasesValid: boolean;
 }
 
@@ -41,6 +43,8 @@ export function resolveVisualRetentionCreatorCapabilitiesFromEnvironment(
     shortForgeBrandStingEnabled: isShortForgeBrandStingCapabilityEnabled(gates),
     subjectAwareReframingEnabled:
       isSubjectAwareReframingCapabilityEnabled(gates),
+    visualRetentionPresetsEnabled:
+      isVisualRetentionPresetsCapabilityEnabled(gates),
     phasesValid: gates.valid === true,
   });
 }

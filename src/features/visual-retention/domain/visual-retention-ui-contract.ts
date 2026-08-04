@@ -91,6 +91,17 @@ const CAPABILITY_UI_SURFACES: Readonly<
     "headless-export",
     "warnings-and-errors",
   ),
+  /**
+   * Project-level preset selector surfaces — no separate Scene Inspector or
+   * timeline surface required; applied settings stay visible via native controls.
+   */
+  "visual-retention-presets-v1": uiSurfaces(
+    "editor",
+    "preview",
+    "browser-export",
+    "headless-export",
+    "warnings-and-errors",
+  ),
 });
 
 /**

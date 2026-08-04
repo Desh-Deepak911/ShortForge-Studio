@@ -53,6 +53,7 @@ export function VisualRetentionCapabilitiesProvider({
           engagementOverlaysEnabled: parsed.engagementOverlaysEnabled,
           shortForgeBrandStingEnabled: parsed.shortForgeBrandStingEnabled,
           subjectAwareReframingEnabled: parsed.subjectAwareReframingEnabled,
+          visualRetentionPresetsEnabled: parsed.visualRetentionPresetsEnabled,
           ready: true,
         });
       })
@@ -66,6 +67,7 @@ export function VisualRetentionCapabilitiesProvider({
           engagementOverlaysEnabled: false,
           shortForgeBrandStingEnabled: false,
           subjectAwareReframingEnabled: false,
+          visualRetentionPresetsEnabled: false,
           ready: true,
         });
       });
@@ -114,6 +116,10 @@ export function useShortForgeBrandStingEnabled(): boolean {
 
 export function useSubjectAwareReframingEnabled(): boolean {
   return useVisualRetentionCapabilities().subjectAwareReframingEnabled;
+}
+
+export function useVisualRetentionPresetsEnabled(): boolean {
+  return useVisualRetentionCapabilities().visualRetentionPresetsEnabled;
 }
 
 export function useVisualRetentionCapabilitiesReady(): boolean {

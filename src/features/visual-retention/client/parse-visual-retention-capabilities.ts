@@ -12,6 +12,7 @@ export interface VisualRetentionCapabilitiesSnapshot {
   readonly engagementOverlaysEnabled: boolean;
   readonly shortForgeBrandStingEnabled: boolean;
   readonly subjectAwareReframingEnabled: boolean;
+  readonly visualRetentionPresetsEnabled: boolean;
   readonly ready: boolean;
 }
 
@@ -24,6 +25,7 @@ export const VISUAL_RETENTION_CAPABILITIES_DISABLED: VisualRetentionCapabilities
     engagementOverlaysEnabled: false,
     shortForgeBrandStingEnabled: false,
     subjectAwareReframingEnabled: false,
+    visualRetentionPresetsEnabled: false,
     ready: false,
   });
 
@@ -39,6 +41,7 @@ function failClosedCapabilities(): Omit<
     engagementOverlaysEnabled: false,
     shortForgeBrandStingEnabled: false,
     subjectAwareReframingEnabled: false,
+    visualRetentionPresetsEnabled: false,
   };
 }
 
@@ -58,5 +61,7 @@ export function parseVisualRetentionCapabilitiesResponse(
     engagementOverlaysEnabled: record.engagementOverlaysEnabled === true,
     shortForgeBrandStingEnabled: record.shortForgeBrandStingEnabled === true,
     subjectAwareReframingEnabled: record.subjectAwareReframingEnabled === true,
+    visualRetentionPresetsEnabled:
+      record.visualRetentionPresetsEnabled === true,
   };
 }

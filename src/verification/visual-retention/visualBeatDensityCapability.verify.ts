@@ -151,6 +151,7 @@ function testServerResolversAndApiShape(): void {
     engagementOverlaysEnabled: false,
     shortForgeBrandStingEnabled: false,
     subjectAwareReframingEnabled: false,
+    visualRetentionPresetsEnabled: false,
     phasesValid: true,
   });
 
@@ -192,6 +193,7 @@ function testClientFailClosedAndSingleFetch(): void {
     engagementOverlaysEnabled: false,
     shortForgeBrandStingEnabled: false,
     subjectAwareReframingEnabled: false,
+    visualRetentionPresetsEnabled: false,
   };
   assert.deepEqual(parseVisualRetentionCapabilitiesResponse(null), {
     mixedMediaScenesEnabled: false,

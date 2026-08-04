@@ -8,9 +8,13 @@ import type { ExportAudioMode } from "@/features/export/utils/export-quality.uti
 import type { ExportSettings } from "@/features/export/utils/export-settings.utils";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import {
+  useEngagementOverlaysEnabled,
   useKeyframedVisualEffectsEnabled,
+  useShortForgeBrandStingEnabled,
   useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
+  useVisualRetentionCapabilitiesReady,
+  useVisualRetentionPresetsEnabled,
 } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import type { FootieScript } from "@/features/story/types";
 import {
@@ -99,6 +103,13 @@ export function HeadlessExportSection({
   const sourceQualityIntelligenceEnabled =
     useSourceQualityIntelligenceEnabled();
   const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
+  const engagementOverlaysEnabled = useEngagementOverlaysEnabled();
+  const visualRetentionCapabilitiesReady =
+    useVisualRetentionCapabilitiesReady();
+  const visualRetentionPresetsEnabled = useVisualRetentionPresetsEnabled();
+  const shortForgeBrandStingCapability = useShortForgeBrandStingEnabled();
+  const shortForgeBrandStingEnabled =
+    visualRetentionCapabilitiesReady && shortForgeBrandStingCapability;
   const clientRef = useRef(injectedClient ?? createHttpHeadlessRenderClient());
   const uploadPortRef = useRef(
     injectedOwnedUploadPort ?? new HttpOwnedUploadAdapter(),
@@ -391,6 +402,10 @@ export function HeadlessExportSection({
           visualBeatDensityEnabled,
           sourceQualityIntelligenceEnabled,
           keyframedVisualEffectsEnabled,
+          engagementOverlaysEnabled,
+          shortForgeBrandStingEnabled,
+          visualRetentionPresetsEnabled,
+          visualRetentionCapabilitiesReady,
           sourceQualityExportTarget: resolution,
         });
         ownedPreparation = await prepareOwnedHeadlessUpload({

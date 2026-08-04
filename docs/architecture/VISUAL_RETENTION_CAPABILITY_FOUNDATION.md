@@ -74,7 +74,8 @@ negotiated; fail-closed; single `GET /api/visual-retention/capabilities` fetch):
 | `shortforge-brand-sting-v1` | `shortForgeBrandStingEnabled` |
 | `subject-aware-reframing-v1` | `subjectAwareReframingEnabled` |
 
-Future staging activation value (do not set until UI and renderer slices land):
+Future staging activation value for motion capabilities (do not set until UI and
+renderer slices land):
 
 ```
 SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES=12A,12B,12C,12D,12E
@@ -86,6 +87,46 @@ Multi-keyframe / custom transforms must not become preview-only behavior that
 exports ignore. Keyframes cannot become render-authoritative until a versioned
 ExportManifest and all Preview, Browser, and Headless consumers support the same
 frozen motion fields.
+
+### Visual-retention presets (`12F`)
+
+| Capability ID | Creator boolean | Phase |
+|---|---|---|
+| `visual-retention-presets-v1` | `visualRetentionPresetsEnabled` | `12F` |
+
+**Current live staging** (as of this capability-foundation slice) remains phases
+through `12E` only:
+
+```
+SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES=12A,12B,12C,12D,12E
+```
+
+No live environment change was performed for `12F`. Presets stay fail-closed
+until an authorized later activation.
+
+`visual-retention-presets-v1` is creator-authoring orchestration. Future slices
+may orchestrate existing authoring settings through their native controls; the
+presets capability itself is not an ExportManifest renderer requirement and is
+not advertised in Browser or Headless supported-renderer capability registries.
+Creator Templates are unrelated generation-time story templates and remain a
+separate feature.
+
+Enablement requires explicit staging authority, an allowlisted branch, and an
+exactly ordered phase list through `12F`. Missing earlier phases (including
+`12E`) fail closed. Creator UI reads `visualRetentionPresetsEnabled` from the
+same capabilities API response (one request; API version remains `1`). This
+slice does **not** ship a preset catalog, commands, UI, persistence, QA harness,
+or live rollout.
+
+Future staging activation value (do not set until later gated slices are ready;
+do not mutate live environment variables from this documentation):
+
+```
+SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES=12A,12B,12C,12D,12E,12F
+```
+
+Allowlisted development branch for presets work: `staging-visual-retention-presets`
+(prior allowlisted staging-development branches remain accepted unchanged).
 
 ### Engagement overlays
 
