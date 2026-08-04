@@ -42,6 +42,7 @@ const MOTION_OFF = {
   engagementOverlaysEnabled: false,
   shortForgeBrandStingEnabled: false,
   subjectAwareReframingEnabled: false,
+  visualRetentionPresetsEnabled: false,
 } as const;
 
 function stagingEnv(input: {
@@ -141,6 +142,7 @@ function main(): void {
       engagementOverlaysEnabled: true,
       shortForgeBrandStingEnabled: true,
       subjectAwareReframingEnabled: true,
+      visualRetentionPresetsEnabled: false,
       phasesValid: true,
     });
   });
@@ -278,6 +280,7 @@ function main(): void {
         engagementOverlaysEnabled: true,
         shortForgeBrandStingEnabled: true,
         subjectAwareReframingEnabled: true,
+        visualRetentionPresetsEnabled: false,
       },
     );
   });

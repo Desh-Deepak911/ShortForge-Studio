@@ -17,6 +17,7 @@
     "test:verification:intelligence": "node scripts/run-verification.mjs intelligence",
     "test:visual-retention-capabilities": "tsx src/verification/visual-retention/visualRetentionCapabilities.verify.ts",
     "test:visual-motion-capabilities": "tsx src/verification/visual-retention/visualMotionCapabilities.verify.ts",
+    "test:visual-retention-presets": "tsx src/verification/visual-retention/visualRetentionPresetsCapability.verify.ts",
     "test:visual-beat-density": "tsx src/verification/visual-retention/visualBeatDensityCapability.verify.ts",
     "test:source-quality": "tsx src/verification/source-quality/sourceQualityAssessment.verify.ts && tsx src/verification/source-quality/sourceQualityCapability.verify.ts",
     "test:source-quality-ui": "tsx src/verification/source-quality/sourceQualityInspectorUi.verify.tsx",
