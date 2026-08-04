@@ -1,7 +1,7 @@
 /**
- * Visual Retention Presets — catalog, planning, and fingerprint surface.
+ * Visual Retention Presets — catalog, planning, fingerprint, Apply/Undo surface.
  *
- * Editor commands, provenance, UI, and export guidance are later slices.
+ * UI, export guidance, and inspector wiring are later slices.
  */
 
 export {
@@ -68,3 +68,34 @@ export {
   serializeVisualRetentionPresetFactsForCompare,
   type ProjectStoryVisualRetentionPresetInputOptions,
 } from "./adapters/project-story-visual-retention-preset-input";
+
+export {
+  evaluateVisualRetentionPresetStaleness,
+  VISUAL_RETENTION_PRESET_STALE_REASONS,
+  type VisualRetentionPresetEffectiveStatus,
+  type VisualRetentionPresetStaleReason,
+  type VisualRetentionPresetStalenessCapabilities,
+  type VisualRetentionPresetStalenessProjection,
+} from "./domain/evaluate-visual-retention-preset-staleness";
+
+export {
+  applyVisualRetentionPresetPlan,
+  dismissVisualRetentionPresetApplication,
+  keepVisualRetentionPresetApplication,
+  undoVisualRetentionPresetApplication,
+  type VisualRetentionPresetApplyFailure,
+  type VisualRetentionPresetApplyResult,
+  type VisualRetentionPresetApplySuccess,
+  type VisualRetentionPresetApplyTerminalCode,
+  type VisualRetentionPresetBeforeActionHook,
+  type VisualRetentionPresetCommandCapabilities,
+  type VisualRetentionPresetDismissFailure,
+  type VisualRetentionPresetDismissResult,
+  type VisualRetentionPresetDismissSuccess,
+  type VisualRetentionPresetDismissTerminalCode,
+  type VisualRetentionPresetFailedActionRef,
+  type VisualRetentionPresetUndoFailure,
+  type VisualRetentionPresetUndoResult,
+  type VisualRetentionPresetUndoSuccess,
+  type VisualRetentionPresetUndoTerminalCode,
+} from "./editor/visual-retention-preset.commands";

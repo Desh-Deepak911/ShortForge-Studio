@@ -1,4 +1,5 @@
 import type { FootieScript } from "@/features/story/types";
+import { normalizeVisualRetentionPresetProvenance } from "@/features/story/types/visual-retention-preset-provenance.types";
 
 import { getStoryTotalDuration, scenesHaveMsTiming } from "./scene.utils";
 import { normalizeStoryBackgroundMusic } from "./background-music.utils";
@@ -30,8 +31,11 @@ export function isAudioFirstStory(script: FootieScript | null | undefined): bool
 export function coerceLegacyStoryFields(script: FootieScript): FootieScript {
   const scenes = script.scenes ?? [];
   const legacyVoiceoverSpeed = (script as FootieScript & { voiceoverSpeed?: number }).voiceoverSpeed;
+  const visualRetentionPresetProvenance = normalizeVisualRetentionPresetProvenance(
+    script.visualRetentionPresetProvenance,
+  );
 
-  return {
+  const next: FootieScript = {
     ...script,
     title: script.title ?? "",
     narration: script.narration ?? "",
@@ -49,6 +53,12 @@ export function coerceLegacyStoryFields(script: FootieScript): FootieScript {
       ? { voiceoverDurationMs: script.voiceoverDurationMs }
       : {}),
   };
+  if (visualRetentionPresetProvenance) {
+    next.visualRetentionPresetProvenance = visualRetentionPresetProvenance;
+  } else {
+    delete next.visualRetentionPresetProvenance;
+  }
+  return next;
 }
 
 /** Resolves playback/export duration without requiring voiceover metadata. */

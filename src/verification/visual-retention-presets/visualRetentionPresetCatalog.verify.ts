@@ -502,7 +502,11 @@ function main(): void {
       assert.doesNotMatch(src, /VisualRetentionCapabilities|StoryWorkspace/);
       assert.doesNotMatch(src, /process\.env|Date\.now|Math\.random|fetch\(/);
       assert.doesNotMatch(src, /creator-templates|prepare-export|headless-renderer\/worker/);
-      assert.doesNotMatch(src, /\.commands|normalizeStory|localStorage/);
+      assert.doesNotMatch(src, /normalizeStory|localStorage/);
+      // Catalog/types remain command-free; barrel may re-export Apply/Undo commands.
+      if (!file.endsWith("/index.ts")) {
+        assert.doesNotMatch(src, /\.commands/);
+      }
     }
 
     const creatorRoot = path.join(

@@ -14,6 +14,7 @@ import type {
   SceneMediaSubjectAwareFramingProvenance,
   SceneMediaSubjectFocus,
 } from "./subject-focus.types";
+import type { VisualRetentionPresetProvenanceV1 } from "./visual-retention-preset-provenance.types";
 
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
 
@@ -486,4 +487,10 @@ export interface FootieScript {
    * Absent by default; malformed values normalize as absent. No migration required.
    */
   visualRetentionExtensions?: VisualRetentionProjectExtensionsV1;
+  /**
+   * Authoring-only Visual Retention Preset Apply provenance.
+   * Optional; Preview/Export/Headless ignore it. Malformed values normalize as absent.
+   * Not stored inside visualRetentionExtensions (those own render-authoritative payloads).
+   */
+  visualRetentionPresetProvenance?: VisualRetentionPresetProvenanceV1;
 }
