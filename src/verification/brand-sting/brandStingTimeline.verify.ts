@@ -868,7 +868,7 @@ test("Browser TTS full-story continues into authoritative silent sting after las
   // Silent rAF tail advances the existing preview clock only (sole authority).
   assert.match(
     preview,
-    /playbackModeRef\.current === "browser" &&\s*masterTimeline &&\s*narrationEndedRef\.current &&\s*brandStingDurationMs > 0 &&\s*isPlayingRef\.current/s,
+    /playbackModeRef\.current === "browser" &&\s*masterTimeline &&\s*narrationEndedRef\.current &&\s*brandStingDurationMs > 0 &&\s*isPlayingRef\.current/,
   );
   assert.match(preview, /syncSceneToTimelineTime\(nextMs, \{ updateSelection: false \}\)/);
   assert.match(preview, /nextMs >= effectiveRenderDurationMs/);
