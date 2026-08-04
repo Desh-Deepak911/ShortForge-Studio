@@ -83,6 +83,24 @@ export interface FootieExportOptions {
    */
   sourceQualityIntelligenceEnabled?: boolean;
   /**
+   * Explicit keyframed visual-effects capability.
+   * When true and usable keyframes exist, ExportManifest v5 freezes them.
+   * Default false (fail-closed).
+   */
+  keyframedVisualEffectsEnabled?: boolean;
+  /**
+   * Explicit engagement-overlays capability.
+   * When true and a usable overlay exists, ExportManifest v5 freezes it.
+   * Default false (fail-closed).
+   */
+  engagementOverlaysEnabled?: boolean;
+  /**
+   * Explicit ShortForge brand-sting capability.
+   * When true and a usable sting exists, ExportManifest v5 freezes it.
+   * Default false (fail-closed).
+   */
+  shortForgeBrandStingEnabled?: boolean;
+  /**
    * Actual requested output target for source-quality guidance.
    * Headless 4K must pass "4k" even when ExportManifest stays 1080p.
    */

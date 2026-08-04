@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
 import { resolveSceneMediaFraming } from "@/features/media-framing";
-import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
+import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import {
   resolvePreviewVideoClipTime,
   shouldPlayPreviewVideoClip,
@@ -17,6 +17,7 @@ import {
   useActiveVideoTrimPreviewOverride,
 } from "@/features/preview/video-trim-preview";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
+import { useKeyframedVisualEffectsEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { useFrameSize } from "@/hooks/useFrameSize";
 
 interface SceneFrameVideoProps {
@@ -79,6 +80,7 @@ export default function SceneFrameVideo({
 
   const trimPreview = useActiveVideoTrimPreviewOverride(sceneId);
   const trimPreviewActive = Boolean(trimPreview);
+  const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
 
   const url = media.url?.trim();
   const clipTime = resolvePreviewVideoClipTime({
@@ -215,6 +217,7 @@ export default function SceneFrameVideo({
           frameWidth,
           frameHeight,
           transformOffset,
+          keyframedVisualEffectsEnabled,
         }),
         ...(isDragging ? { willChange: "transform" as const } : {}),
       }
@@ -224,9 +227,13 @@ export default function SceneFrameVideo({
         transformOrigin: "center center" as const,
         ...(isDragging ? { willChange: "transform" as const } : {}),
       };
-  const visualFilter = buildMediaVisualFilter(
+  const visualFilter = buildComposedMediaVisualFilter(
     media.visualAdjustments,
-    frameWidth || 1080,
+    media.visualEffect,
+    {
+      keyframedVisualEffectsEnabled,
+      targetWidth: frameWidth || 1080,
+    },
   );
 
   return (

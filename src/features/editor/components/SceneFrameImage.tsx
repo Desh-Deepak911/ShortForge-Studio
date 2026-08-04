@@ -1,13 +1,14 @@
 "use client";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
-import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
+import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import {
   getSceneImage,
   getSceneImageObjectFit,
 } from "@/features/story/utils";
 import { useFrameSize } from "@/hooks/useFrameSize";
 import type { FootieScene } from "@/features/story/types";
+import { useKeyframedVisualEffectsEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 
 interface SceneFrameImageProps {
   scene: Pick<FootieScene, "image" | "uploadedImage" | "media">;
@@ -47,6 +48,7 @@ export default function SceneFrameImage({
   const { ref: containerRef, width: frameWidth, height: frameHeight } =
     useFrameSize<HTMLDivElement>();
   const baseImage = getSceneImage(scene);
+  const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
 
   if (!baseImage) {
     return null;
@@ -66,6 +68,7 @@ export default function SceneFrameImage({
           frameWidth,
           frameHeight,
           transformOffset,
+          keyframedVisualEffectsEnabled,
         }),
         ...(isDragging ? { willChange: "transform" as const } : {}),
       }
@@ -74,9 +77,13 @@ export default function SceneFrameImage({
         transformOrigin: "center center" as const,
         ...(isDragging ? { willChange: "transform" as const } : {}),
       };
-  const visualFilter = buildMediaVisualFilter(
+  const visualFilter = buildComposedMediaVisualFilter(
     scene.media?.visualAdjustments,
-    frameWidth || 1080,
+    scene.media?.visualEffect,
+    {
+      keyframedVisualEffectsEnabled,
+      targetWidth: frameWidth || 1080,
+    },
   );
 
   return (

@@ -449,7 +449,7 @@ test("preview and export wire shared media-motion engine", () => {
   assert.match(image, /@\/features\/editor\/preview\/motion|resolvePreviewMediaMotionStyle/);
   assert.match(video, /@\/features\/editor\/preview\/motion|resolvePreviewMediaMotionStyle/);
   assert.match(exportRenderer, /@\/features\/editor\/export\/motion|resolveExportMediaMotionTransform/);
-  assert.match(exportAdapter, /resolveMediaMotionStateForSceneTiming/);
+  assert.match(exportAdapter, /resolveRenderedMediaMotion/);
   assert.doesNotMatch(exportRenderer, /resolveSceneImageMotionTransformState/);
 });
 
@@ -595,8 +595,11 @@ test("media intent wiring present in StudioSceneInspector", () => {
   assert.match(inspector, /buildResetMediaMotionPatch/);
   assert.match(inspector, /handleMediaMotionChange/);
   assert.match(inspector, /intent: "media"/);
+  // Motion controls are hosted in the Adjust inspector section (not a
+  // standalone obsolete Motion title).
+  assert.match(inspector, /title="Adjust"/);
+  assert.match(inspector, /Framing, motion and visual treatment\./);
   assert.match(inspector, /MediaMotionInspectorPanel/);
-  assert.match(inspector, /title="Motion"/);
 });
 
 test("inspector panel is registry-driven", () => {
@@ -610,7 +613,8 @@ test("inspector panel is registry-driven", () => {
   assert.match(panel, /data-media-motion-intensity/);
   assert.match(panel, /data-media-motion-easing/);
   assert.match(panel, /data-media-motion-reset/);
-  assert.match(panel, /Enable Motion/);
+  // Enable control uses StudioSwitch label="Motion" (not a separate "Enable Motion" title).
+  assert.match(panel, /label="Motion"/);
   assert.match(panel, /Reset Motion/);
 });
 

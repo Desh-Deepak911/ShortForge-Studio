@@ -248,7 +248,7 @@ test("transition composition stays separate — adapter has no transition import
     "src/features/editor/preview/motion/previewMotionAdapter.ts",
   );
   assert.doesNotMatch(adapter, /TransitionOverlay|resolveTransition|transitionStateToPreview/);
-  assert.match(adapter, /resolveMediaMotionStateForSceneTiming/);
+  assert.match(adapter, /resolveRenderedMediaMotion/);
 });
 
 test("scene local time clamp + resolve from timeline", () => {

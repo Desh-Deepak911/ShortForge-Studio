@@ -27,6 +27,10 @@ import SceneMediaItemInspector from "@/features/editor/components/media/SceneMed
 import SceneMediaTransitionInspector from "@/features/editor/components/media/SceneMediaTransitionInspector";
 import SceneVideoInspector from "@/features/editor/components/media/SceneVideoInspector";
 import TransitionCard from "@/features/editor/components/TransitionCard";
+import {
+  EngagementOverlayControls,
+  type EngagementOverlayCommandResult,
+} from "@/features/engagement-overlays";
 import SmartEditImageAction, {
   SMART_EDIT_HAS_IMAGE_COPY,
 } from "@/features/tool/components/SmartEditImageAction";
@@ -56,6 +60,7 @@ import { resolveSourceQualityWinningAdjustmentTarget } from "@/features/source-q
 import SourceQualitySummary from "@/features/source-quality/editor/SourceQualitySummary";
 import VisualPacingPanel from "@/features/visual-beat-density/editor/VisualPacingPanel";
 import {
+  useEngagementOverlaysEnabled,
   useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
   useVisualRetentionCapabilitiesReady,
@@ -134,6 +139,7 @@ import type {
   CaptionMode,
   FootieScript,
   SceneImage,
+  SceneMedia,
   SceneType,
   TransitionTimelineItem,
 } from "@/features/story/types";
@@ -240,6 +246,9 @@ export default function StudioSceneInspector({
   const sourceQualityEnabled = useSourceQualityIntelligenceEnabled();
   const sourceQualityIntelligenceEnabled =
     visualRetentionCapabilitiesReady && sourceQualityEnabled;
+  const engagementOverlaysCapability = useEngagementOverlaysEnabled();
+  const engagementOverlaysEnabled =
+    visualRetentionCapabilitiesReady && engagementOverlaysCapability;
   const { replaceSceneMedia, removeSceneMedia, uploadError, clearUploadError } =
     useSceneMediaUpload({
       script,
@@ -649,6 +658,23 @@ export default function StudioSceneInspector({
       intent: "media",
     });
   }, [onScriptChange, sceneId, script]);
+
+  const handleVisualEffectMediaChange = useCallback(
+    (nextMedia: SceneMedia) => {
+      if (!sceneId) return;
+      onScriptChange(applySceneUpdate(script, sceneId, { media: nextMedia }), {
+        intent: "media",
+      });
+    },
+    [onScriptChange, sceneId, script],
+  );
+
+  const handleEngagementOverlayCommit = useCallback(
+    (result: EngagementOverlayCommandResult) => {
+      onScriptChange(result.script, { intent: "media" });
+    },
+    [onScriptChange],
+  );
 
   const handleCaptionModeChange = useCallback(
     (mode: CaptionMode) => {
@@ -1137,7 +1163,17 @@ export default function StudioSceneInspector({
                   <MediaMotionInspectorPanel
                     controlId={`inspector-scene-media-motion-${scene.id}`}
                     motion={resolveSceneMediaMotion(scene)}
+                    media={sceneMedia}
+                    mediaWindowDurationMs={
+                      scene.durationMs ??
+                      Math.round((scene.duration ?? 0) * 1000)
+                    }
+                    mediaItemId={null}
+                    requiresMediaItemSelection={
+                      mixedMediaScenesEnabled && mediaWindows.length > 1
+                    }
                     onMotionChange={handleMediaMotionChange}
+                    onVisualEffectMediaChange={handleVisualEffectMediaChange}
                     onReset={handleResetMediaMotion}
                   />
                   {sceneMedia && sceneMedia.type !== "placeholder" ? (
@@ -1149,6 +1185,19 @@ export default function StudioSceneInspector({
                   ) : null}
                 </>
               )}
+              {/* Scene-scoped CTA — independent of mixed-media item selection. */}
+              <EngagementOverlayControls
+                controlId={`inspector-scene-engagement-${scene.id}`}
+                script={script}
+                sceneId={scene.id}
+                sceneDurationMs={
+                  scene.durationMs ??
+                  Math.round((scene.duration ?? 0) * 1000)
+                }
+                engagementOverlaysEnabled={engagementOverlaysEnabled}
+                capabilitiesReady={visualRetentionCapabilitiesReady}
+                onScriptCommit={handleEngagementOverlayCommit}
+              />
             </InspectorSection>
           ) : null}
         </>

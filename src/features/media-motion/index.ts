@@ -5,6 +5,7 @@
 
 export type {
   MediaMotionEasing,
+  MediaMotionKeyframe,
   MediaMotionPresetDefinition,
   MediaMotionState,
   ResolveMediaMotionInput,
@@ -78,3 +79,110 @@ export {
   MEDIA_MOTION_INTENSITY_STEP,
 } from "./media-motion-inspector.config";
 export type { MediaMotionInspectorCategory } from "./media-motion-inspector.config";
+
+export {
+  MEDIA_MOTION_KEYFRAME_IDENTITY_OPACITY,
+  MEDIA_MOTION_KEYFRAME_IDENTITY_ROTATION,
+  MEDIA_MOTION_KEYFRAME_MAX_ABS_ROTATION_DEG,
+  MEDIA_MOTION_KEYFRAME_MAX_ABS_TRANSLATION_X,
+  MEDIA_MOTION_KEYFRAME_MAX_ABS_TRANSLATION_Y,
+  MEDIA_MOTION_KEYFRAME_MAX_OPACITY,
+  MEDIA_MOTION_KEYFRAME_MAX_SCALE,
+  MEDIA_MOTION_KEYFRAME_MIN_OPACITY,
+  MEDIA_MOTION_KEYFRAME_MIN_SCALE,
+  MEDIA_MOTION_KEYFRAME_REFERENCE_HEIGHT,
+  MEDIA_MOTION_KEYFRAME_REFERENCE_WIDTH,
+  MEDIA_MOTION_KEYFRAME_SERIALIZATION_MAX_OFFSET_MS,
+  MEDIA_MOTION_MAX_KEYFRAMES,
+  normalizeMediaMotionKeyframes,
+  selectEndpointPreservingKeyframes,
+} from "./domain/media-motion-keyframes";
+export type { NormalizeMediaMotionKeyframesOptions } from "./domain/media-motion-keyframes";
+
+export { resolveMediaMotionKeyframes } from "./domain/resolve-media-motion-keyframes";
+export type {
+  ResolveMediaMotionKeyframesInput,
+  ResolveMediaMotionKeyframesResult,
+  ResolveMediaMotionKeyframesUnavailableReason,
+  ResolvedMediaMotionKeyframeSample,
+} from "./domain/resolve-media-motion-keyframes";
+
+export {
+  mediaMotionRecordAllowsKeyframeAuthority,
+  resolveRenderedMediaMotion,
+} from "./adapters/resolve-rendered-media-motion";
+export type {
+  RenderedMediaMotionState,
+  ResolveRenderedMediaMotionInput,
+} from "./adapters/resolve-rendered-media-motion";
+
+export {
+  addMediaMotionKeyframe,
+  clearMediaMotionKeyframes,
+  deleteMediaMotionKeyframe,
+  findNearestMediaMotionKeyframeIndex,
+  initializeMediaMotionKeyframes,
+  MEDIA_MOTION_KEYFRAME_BELOW_TWO_WARNING,
+  MEDIA_MOTION_KEYFRAME_CAPABILITY_OFF_MESSAGE,
+  MEDIA_MOTION_KEYFRAME_CLAMP_WARNING,
+  MEDIA_MOTION_KEYFRAME_DUPLICATE_TIME_WARNING,
+  MEDIA_MOTION_KEYFRAME_INVALID_DURATION_MESSAGE,
+  MEDIA_MOTION_KEYFRAME_SELECTION_REQUIRED_MESSAGE,
+  resolveLocalMediaMotionKeyframeSelection,
+  resolveMediaMotionAuthoringTarget,
+  sampleMediaMotionKeyframeDefaults,
+  setMediaMotionEnabledPreservingKeyframes,
+  updateMediaMotionKeyframe,
+} from "./editor/media-motion-keyframe.commands";
+export type {
+  MediaMotionAuthoringTarget,
+  MediaMotionAuthoringTargetStatus,
+  MediaMotionKeyframeCommandOptions,
+  MediaMotionKeyframeCommandResult,
+  MediaMotionKeyframeCommandStatus,
+} from "./editor/media-motion-keyframe.commands";
+
+export {
+  getMediaVisualEffectPreset,
+  isMediaVisualEffectPresetId,
+  listMediaVisualEffectPresets,
+  MEDIA_VISUAL_EFFECT_IDENTITY_PARAMS,
+  MEDIA_VISUAL_EFFECT_PRESETS,
+  MEDIA_VISUAL_EFFECT_VERSION,
+} from "./domain/media-visual-effect-presets";
+export type {
+  MediaVisualEffectFilterParams,
+  MediaVisualEffectPresetDefinition,
+  MediaVisualEffectPresetId,
+  SceneMediaVisualEffect,
+} from "./domain/media-visual-effect-presets";
+
+export {
+  buildComposedMediaVisualFilter,
+  composeMediaVisualAdjustmentsWithEffect,
+  isActiveMediaVisualEffect,
+  multiplyVisualAdjustmentChannel,
+  normalizeSceneMediaVisualEffect,
+  projectMediaVisualEffectToManifest,
+  readFrozenMediaVisualEffectParams,
+  resolveMediaVisualEffect,
+} from "./domain/resolve-media-visual-effect";
+export type {
+  MediaVisualEffectSource,
+  ResolveMediaVisualEffectInput,
+  ResolvedMediaVisualEffect,
+} from "./domain/resolve-media-visual-effect";
+
+export {
+  applyMediaVisualEffectPreset,
+  MEDIA_VISUAL_EFFECT_CAPABILITY_OFF_MESSAGE,
+  MEDIA_VISUAL_EFFECT_SELECTION_REQUIRED_MESSAGE,
+  resetMediaVisualEffect,
+  resolveMediaVisualEffectCommandPresetId,
+  setMediaVisualEffectIntensity,
+} from "./editor/media-visual-effect.commands";
+export type {
+  MediaVisualEffectCommandOptions,
+  MediaVisualEffectCommandResult,
+  MediaVisualEffectCommandStatus,
+} from "./editor/media-visual-effect.commands";

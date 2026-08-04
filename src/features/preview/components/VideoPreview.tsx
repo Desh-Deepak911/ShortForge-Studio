@@ -17,12 +17,25 @@ import EditorCanvasEditLayer from "@/features/editor/components/EditorCanvasEdit
 import { useEditorSelection } from "@/features/editor/selection";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
 import { sceneHasFramableMedia } from "@/features/media-framing";
+import {
+  BrandStingPreview,
+  getShortForgeBrandSting,
+} from "@/features/brand-sting";
+import {
+  EngagementOverlayPreview,
+  getSceneEngagementOverlay,
+  shouldSuppressEngagementOverlayForInterSceneTransition,
+} from "@/features/engagement-overlays";
 import CaptionOverlay from "@/features/preview/components/CaptionOverlay";
 import PreviewFrame, {
   DynamicIsland,
   PreviewDeviceFrame,
 } from "@/features/preview/components/PreviewFrame";
 import SubtitleOverlay from "@/features/preview/components/SubtitleOverlay";
+import {
+  useEngagementOverlaysEnabled,
+  useVisualRetentionCapabilitiesReady,
+} from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import { usePreviewPlayback } from "@/features/preview/hooks/usePreviewPlayback";
 import {
   getPreviewSceneTiming,
@@ -107,6 +120,11 @@ export default function VideoPreview({
 
   const previewRootRef = useRef<HTMLDivElement>(null);
   const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
+  const visualRetentionCapabilitiesReady =
+    useVisualRetentionCapabilitiesReady();
+  const engagementOverlaysCapability = useEngagementOverlaysEnabled();
+  const engagementOverlaysEnabled =
+    visualRetentionCapabilitiesReady && engagementOverlaysCapability;
   const trimPreview = useVideoTrimPreviewOptional();
   const trimPreviewActive = Boolean(trimPreview?.override?.isActive);
   const playback = usePreviewPlayback({
@@ -144,6 +162,9 @@ export default function VideoPreview({
     browserSceneStartedAtMs,
     masterTimeline,
     currentTimeMs,
+    brandStingActive,
+    brandStingElapsedMs,
+    effectiveRenderDurationMs,
     scene,
     playbackScope,
     loopSceneEnabled,
@@ -278,9 +299,9 @@ export default function VideoPreview({
 
       onClockUpdate({
         currentTimeMs: isPlaying || isSpeaking ? timelineTimeMs : currentTimeMs,
-        renderDurationMs: masterTimeline.renderDurationMs,
+        renderDurationMs: effectiveRenderDurationMs || masterTimeline.renderDurationMs,
         isPlaying: isPlaying || isSpeaking,
-        activeSceneId: activeScene?.id ?? null,
+        activeSceneId: brandStingActive ? null : activeScene?.id ?? null,
       });
     };
 
@@ -300,8 +321,10 @@ export default function VideoPreview({
     return () => window.cancelAnimationFrame(frameId);
   }, [
     activeSceneIndex,
+    brandStingActive,
     browserSceneStartedAtMs,
     currentTimeMs,
+    effectiveRenderDurationMs,
     elapsedSec,
     isPlaying,
     isSpeaking,
@@ -419,6 +442,10 @@ export default function VideoPreview({
     : 0;
   // Scene-to-scene only — intra-scene transitions keep subtitles/captions continuous.
   const hideCaptionsDuringTransition = transitionOverlay != null;
+  const suppressEngagementOverlay =
+    shouldSuppressEngagementOverlayForInterSceneTransition(
+      transitionOverlay != null,
+    );
   const subtitleSceneIndex =
     playbackMode === "narration" && previewSceneTiming.activeSceneIndex != null
       ? previewSceneTiming.activeSceneIndex
@@ -487,49 +514,65 @@ export default function VideoPreview({
           isPlaying={playbackActive}
           mixedMediaScenesEnabled={mixedMediaScenesEnabled}
           overlay={
-            <>
-              {showSubtitles ? (
-                <SubtitleOverlay
-                  scene={subtitleScene}
-                  script={script}
-                  sceneIndex={subtitleSceneIndex}
-                  sceneElapsedMs={sceneElapsedMs}
-                  sceneDurationMs={sceneDurationMs}
-                  activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
-                  chunkProgress={previewSceneTiming.chunkProgress}
-                  captionAnimationState={
-                    previewSceneTiming.captionAnimationState
-                  }
-                  subtitleAvailableDurationMs={
-                    previewSceneTiming.subtitleAvailableDurationMs
-                  }
-                  captionTooShortForEffect={
-                    previewSceneTiming.captionTooShortForEffect
-                  }
-                  draggable={previewInteraction.allowCaptionDrag}
-                  allowPointerEvents={
-                    previewInteraction.allowCaptionPointerEvents
-                  }
-                  onOffsetCommit={handleCaptionOffsetCommit}
-                  onResetLayout={handleCaptionLayoutReset}
-                  className={captionOverlayClassName}
-                />
-              ) : null}
-              {showGeneratedCaption ? (
-                <CaptionOverlay
-                  scene={displayScene}
-                  script={script}
-                  sceneIndex={previewFrame.sceneIndex}
-                  draggable={previewInteraction.allowCaptionDrag}
-                  allowPointerEvents={
-                    previewInteraction.allowCaptionPointerEvents
-                  }
-                  onOffsetCommit={handleCaptionOffsetCommit}
-                  onResetLayout={handleCaptionLayoutReset}
-                  className={captionOverlayClassName}
-                />
-              ) : null}
-            </>
+            brandStingActive && script ? (
+              <BrandStingPreview
+                sting={getShortForgeBrandSting(script.visualRetentionExtensions)}
+                elapsedMs={brandStingElapsedMs}
+              />
+            ) : (
+              <>
+                {engagementOverlaysEnabled &&
+                script &&
+                !suppressEngagementOverlay ? (
+                  <EngagementOverlayPreview
+                    overlay={getSceneEngagementOverlay(script, displayScene.id)}
+                    sceneDurationMs={sceneDurationMs}
+                    sceneElapsedMs={sceneElapsedMs}
+                  />
+                ) : null}
+                {showSubtitles ? (
+                  <SubtitleOverlay
+                    scene={subtitleScene}
+                    script={script}
+                    sceneIndex={subtitleSceneIndex}
+                    sceneElapsedMs={sceneElapsedMs}
+                    sceneDurationMs={sceneDurationMs}
+                    activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
+                    chunkProgress={previewSceneTiming.chunkProgress}
+                    captionAnimationState={
+                      previewSceneTiming.captionAnimationState
+                    }
+                    subtitleAvailableDurationMs={
+                      previewSceneTiming.subtitleAvailableDurationMs
+                    }
+                    captionTooShortForEffect={
+                      previewSceneTiming.captionTooShortForEffect
+                    }
+                    draggable={previewInteraction.allowCaptionDrag}
+                    allowPointerEvents={
+                      previewInteraction.allowCaptionPointerEvents
+                    }
+                    onOffsetCommit={handleCaptionOffsetCommit}
+                    onResetLayout={handleCaptionLayoutReset}
+                    className={captionOverlayClassName}
+                  />
+                ) : null}
+                {showGeneratedCaption ? (
+                  <CaptionOverlay
+                    scene={displayScene}
+                    script={script}
+                    sceneIndex={previewFrame.sceneIndex}
+                    draggable={previewInteraction.allowCaptionDrag}
+                    allowPointerEvents={
+                      previewInteraction.allowCaptionPointerEvents
+                    }
+                    onOffsetCommit={handleCaptionOffsetCommit}
+                    onResetLayout={handleCaptionLayoutReset}
+                    className={captionOverlayClassName}
+                  />
+                ) : null}
+              </>
+            )
           }
           footer={
             <>

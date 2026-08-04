@@ -986,6 +986,8 @@ export async function exportFootieShort(
       visualBeatDensityEnabled: options.visualBeatDensityEnabled === true,
       sourceQualityIntelligenceEnabled:
         options.sourceQualityIntelligenceEnabled === true,
+      keyframedVisualEffectsEnabled:
+        options.keyframedVisualEffectsEnabled === true,
       sourceQualityExportTarget: options.sourceQualityExportTarget,
     });
 

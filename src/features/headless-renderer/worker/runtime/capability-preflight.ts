@@ -72,6 +72,23 @@ export function assertPhase3WorkerCapability(input: {
   }
 
   if (
+    "requiredCapabilities" in manifest &&
+    manifest.requiredCapabilities.some(
+      (capability) =>
+        !(HEADLESS_WORKER_PHASE3_SUPPORTED.rendererCapabilities as readonly string[]).includes(
+          capability,
+        ),
+    )
+  ) {
+    return {
+      ok: false,
+      reasonId: "UNSUPPORTED_CAPABILITY",
+      message: scrubWorkerMessage("capability"),
+      retryable: false,
+    };
+  }
+
+  if (
     !(HEADLESS_WORKER_PHASE3_SUPPORTED.audioModes as readonly string[]).includes(
       manifest.audio.mode,
     )

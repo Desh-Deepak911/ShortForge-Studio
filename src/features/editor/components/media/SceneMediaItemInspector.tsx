@@ -39,6 +39,11 @@ import {
   buildResetPosterPatch,
 } from "@/features/media-thumbnails";
 import {
+  readMixedMediaSequenceItems,
+  writeMixedMediaSequenceItems,
+} from "@/features/mixed-media-scenes";
+import { useMixedMediaScenesEnabled } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
+import {
   projectSceneMediaTimeline,
   resolveProjectedSceneMediaWindows,
   runSceneMediaItemTempEdit,
@@ -93,6 +98,7 @@ export default function SceneMediaItemInspector({
   section = "all",
 }: SceneMediaItemInspectorProps) {
   const selection = useEditorSelection();
+  const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
   const playbackLocked = selection.phase === SelectionPhase.PlaybackLocked;
   const [error, setError] = useState<SafeInspectorError | null>(null);
 
@@ -106,6 +112,10 @@ export default function SceneMediaItemInspector({
   const itemCount = projected.items.length;
   const media = item?.media ?? null;
   const sceneDurationMs = getSceneDurationMs(scene);
+  const itemDurationMs =
+    window && Number.isFinite(window.durationMs) && window.durationMs > 0
+      ? window.durationMs
+      : sceneDurationMs;
 
   const commitItemMedia = (nextMedia: SceneMedia): boolean => {
     if (playbackLocked) {
@@ -113,6 +123,43 @@ export default function SceneMediaItemInspector({
       return false;
     }
     try {
+      // Fail closed if the selected target disappeared between render and commit.
+      const liveProjected = projectSceneMediaTimeline(scene);
+      if (!liveProjected.items.some((entry) => entry.id === mediaItemId)) {
+        setError("rejected_edit");
+        return false;
+      }
+
+      const sequenceItems = readMixedMediaSequenceItems(scene);
+      if (mixedMediaScenesEnabled && sequenceItems.length > 0) {
+        const hasWinningSequenceItem = sequenceItems.some(
+          (sequenceItem) => sequenceItem.id === mediaItemId,
+        );
+        if (!hasWinningSequenceItem) {
+          setError("rejected_edit");
+          return false;
+        }
+        const nextItems = sequenceItems.map((sequenceItem) =>
+          sequenceItem.id === mediaItemId
+            ? { ...sequenceItem, media: nextMedia }
+            : sequenceItem,
+        );
+        const written = writeMixedMediaSequenceItems(scene, nextItems, {
+          mixedMediaScenesEnabled: true,
+        });
+        onScriptChange(
+          {
+            ...script,
+            scenes: script.scenes.map((entry) =>
+              entry.id === scene.id ? written.scene : entry,
+            ),
+          },
+          { intent: "media" },
+        );
+        setError(null);
+        return true;
+      }
+
       const result = updateSceneMediaItemMedia(scene, mediaItemId, nextMedia);
       const next = applySceneUpdate(script, scene.id, {
         media: result.scene.media,
@@ -352,12 +399,19 @@ export default function SceneMediaItemInspector({
           <MediaMotionInspectorPanel
             controlId={`inspector-media-item-motion-${scene.id}-${mediaItemId}`}
             motion={motion}
+            media={media}
             disabled={controlsDisabled}
+            mediaWindowDurationMs={itemDurationMs}
+            mediaItemId={mediaItemId}
+            requiresMediaItemSelection={false}
             onMotionChange={(patch: Partial<SceneMediaMotion>) => {
               runWithTempScene((temp) => {
                 const result = buildMediaMotionPatch(temp, patch);
                 return result?.media ? { media: result.media } : null;
               });
+            }}
+            onVisualEffectMediaChange={(nextMedia) => {
+              commitItemMedia(nextMedia);
             }}
             onReset={() => {
               runWithTempScene((temp) => {

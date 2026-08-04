@@ -1,5 +1,7 @@
 import { normalizeSceneCaptionSettings } from "./caption.utils";
+import { normalizeMediaMotionKeyframes } from "@/features/media-motion/domain/media-motion-keyframes";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
+import { normalizeSceneMediaVisualEffect } from "@/features/media-motion/domain/resolve-media-visual-effect";
 import { normalizeSourceQualityAdjustmentProvenance } from "@/features/source-quality/domain/source-quality-adjustment-provenance";
 import type {
   FootieScene,
@@ -14,6 +16,10 @@ import type {
   SceneMediaMotion,
   SceneMediaType,
 } from "@/features/story/types";
+import {
+  normalizeSceneMediaSubjectAwareFramingProvenance,
+  normalizeSceneMediaSubjectFocus,
+} from "@/features/story/types/subject-focus.types";
 
 export const DEFAULT_IMAGE_SCALE = 1;
 export const MIN_SCENE_IMAGE_SCALE = 0.5;
@@ -450,12 +456,21 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
     if (end) {
       motion.endTransform = end;
     }
+    const keyframes = normalizeMediaMotionKeyframes(motionRecord.keyframes);
+    if (keyframes) {
+      motion.keyframes = [...keyframes];
+    }
     normalized.motion = motion;
   }
 
   const visualAdjustments = freezeMediaVisualAdjustments(record.visualAdjustments);
   if (visualAdjustments) {
     normalized.visualAdjustments = visualAdjustments;
+  }
+
+  const visualEffect = normalizeSceneMediaVisualEffect(record.visualEffect);
+  if (visualEffect) {
+    normalized.visualEffect = visualEffect;
   }
 
   const sourceQualityAdjustmentProvenance =
@@ -465,6 +480,19 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
   if (sourceQualityAdjustmentProvenance) {
     normalized.sourceQualityAdjustmentProvenance =
       sourceQualityAdjustmentProvenance;
+  }
+
+  const subjectFocus = normalizeSceneMediaSubjectFocus(record.subjectFocus);
+  if (subjectFocus) {
+    normalized.subjectFocus = subjectFocus;
+  }
+
+  const subjectAwareFramingProvenance =
+    normalizeSceneMediaSubjectAwareFramingProvenance(
+      record.subjectAwareFramingProvenance,
+    );
+  if (subjectAwareFramingProvenance) {
+    normalized.subjectAwareFramingProvenance = subjectAwareFramingProvenance;
   }
 
   const posterUrl = normalizeSceneMediaUrl(record.posterUrl);

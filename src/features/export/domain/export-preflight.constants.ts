@@ -69,6 +69,8 @@ export const EXPORT_BLOCKER_MESSAGES: Record<ExportBlockerCode, string> = {
     "Background music was requested but no music track is available. Add music or export without it.",
   UNSUPPORTED_AUDIO_MODE:
     "This audio mode isn't supported for the selected export format.",
+  UNSUPPORTED_RENDERER_CAPABILITY:
+    "This export requires a renderer capability that is unavailable.",
 };
 
 export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {
@@ -98,6 +100,10 @@ export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {
     "Some media may be enlarged for this export and could look soft.",
   SOURCE_QUALITY_AGGRESSIVE_CROP:
     "Some media may be heavily cropped by the current vertical framing.",
+  ENGAGEMENT_OVERLAY_OMITTED:
+    "An engagement prompt could not fit this scene and was left out of export.",
+  BRAND_STING_OMITTED:
+    "The ShortForge Studio outro could not be prepared and was left out of export.",
 };
 
 /** @deprecated Sprint 6F.1 — use approveExportResolution instead of this flag. */

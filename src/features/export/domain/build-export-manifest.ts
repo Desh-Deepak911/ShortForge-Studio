@@ -43,6 +43,11 @@ import type { ExportAudioMode } from "@/features/export/utils/export-quality.uti
 import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import { isExportBackgroundMusicActiveFromMix } from "@/features/export/utils/export-background-music.utils";
 import { freezeMediaVisualAdjustments } from "@/features/media-visual-adjustments/normalize-media-visual-adjustments";
+import { projectBrandStingToManifest } from "@/features/brand-sting/domain/project-brand-sting-to-manifest";
+import { resolveBrandStingTimelineBounds } from "@/features/brand-sting/domain/resolve-brand-sting-frame";
+import { projectEngagementOverlayToManifest } from "@/features/engagement-overlays/domain/project-engagement-overlay-to-manifest";
+import { getSceneEngagementOverlay } from "@/features/engagement-overlays/domain/normalize-engagement-overlays";
+import { projectMediaVisualEffectToManifest } from "@/features/media-motion/domain/resolve-media-visual-effect";
 import { projectSceneVisualPlan } from "@/features/mixed-media-scenes/adapters/project-visual-sequence";
 import { resolveSceneMediaWindows } from "@/features/scene-media-timeline";
 
@@ -50,18 +55,28 @@ import { buildExportEnvironmentSnapshot } from "./export-environment.utils";
 import { buildExportManifestFingerprint } from "./export-manifest-fingerprint";
 import { deepFreezeExportManifest } from "./export-manifest-freeze";
 import { buildExportSceneMediaTransitionTrack } from "./build-export-scene-media-transitions";
+import { projectSceneMediaKeyframesToManifest } from "./project-media-motion-keyframes-to-manifest";
 import {
+  EXPORT_MANIFEST_V5_VERSION,
+  EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES,
+  EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
+  EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
+  EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_MANIFEST_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  type ExportBrandStingManifest,
   type ExportSceneManifestV3,
   type ExportAudioManifest,
   type ExportBrandingManifest,
   type ExportCapabilitySnapshot,
   type ExportCaptionManifest,
   type ExportEnvironmentSnapshot,
-  type ExportManifestV4,
   type ExportManifestV4Draft,
+  type ExportManifest,
+  type ExportManifestV5Draft,
   type ExportManifestFormat,
+  type ExportRendererCapabilityId,
   type ExportManifestResolutionLabel,
   type ExportMediaManifest,
   type ExportMediaMotionManifest,
@@ -93,10 +108,19 @@ export interface BuildExportManifestInput {
    * this module never reads environment variables.
    */
   readonly mixedMediaScenesEnabled?: boolean;
+  /** Explicit keyframed visual-effects capability. Defaults false (fail-closed). */
+  readonly keyframedVisualEffectsEnabled?: boolean;
+  /** Explicit engagement-overlays capability. Defaults false (fail-closed). */
+  readonly engagementOverlaysEnabled?: boolean;
+  /** Explicit ShortForge brand-sting capability. Defaults false (fail-closed). */
+  readonly shortForgeBrandStingEnabled?: boolean;
 }
 
-export function buildExportManifest(input: BuildExportManifestInput): ExportManifestV4 {
+export function buildExportManifest(input: BuildExportManifestInput): ExportManifest {
   const mixedMediaScenesEnabled = input.mixedMediaScenesEnabled === true;
+  const keyframedVisualEffectsEnabled = input.keyframedVisualEffectsEnabled === true;
+  const engagementOverlaysEnabled = input.engagementOverlaysEnabled === true;
+  const shortForgeBrandStingEnabled = input.shortForgeBrandStingEnabled === true;
   // Fallback preparation freezes timing only. Authoring guidance (Visual pacing)
   // is owned by prepareExportRequest, not manifest construction.
   const prepared =
@@ -118,13 +142,29 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
 
   const multiImageScenesEnabled = input.multiImageScenesEnabled !== false;
 
-  const project = buildProjectManifest(story, timeline, prepared);
+  const narrationEndMs = prepared.contentEndMs;
+  const projectedBrandSting = projectBrandStingToManifest(
+    story.visualRetentionExtensions?.shortForgeBrandSting,
+    narrationEndMs,
+    shortForgeBrandStingEnabled,
+  );
+  const brandSting: ExportBrandStingManifest | undefined =
+    projectedBrandSting.brandSting;
+  const brandStingDurationMs = brandSting?.durationMs ?? 0;
+  const project = buildProjectManifest(
+    story,
+    timeline,
+    prepared,
+    brandStingDurationMs,
+  );
   const output = buildOutputManifest(settings, quality);
   const scenes = buildSceneManifests(
     story,
     timeline,
     multiImageScenesEnabled,
     mixedMediaScenesEnabled,
+    keyframedVisualEffectsEnabled,
+    engagementOverlaysEnabled,
   );
   const captions = buildCaptionManifests(story, timeline);
   const audio = buildAudioManifest(story, audioMix, {
@@ -132,13 +172,38 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     includeMusic,
   });
   const branding = buildBrandingManifest();
+  const hasProjectedKeyframes = keyframedVisualEffectsEnabled && scenes.some((scene) =>
+    scene.mediaTimeline.items.some((item) => item.media.type !== "placeholder" &&
+      item.media.motion?.keyframes != null),
+  );
+  const hasProjectedVisualEffect = keyframedVisualEffectsEnabled && scenes.some((scene) =>
+    scene.mediaTimeline.items.some((item) => item.media.type !== "placeholder" &&
+      item.media.visualEffect != null),
+  );
+  const hasProjectedEngagementOverlay =
+    engagementOverlaysEnabled &&
+    scenes.some(
+      (scene) =>
+        Array.isArray(scene.engagementOverlays) &&
+        scene.engagementOverlays.length > 0,
+    );
+  const hasProjectedBrandSting = brandSting != null;
+  const requiredCapabilities: ExportRendererCapabilityId[] = [];
+  if (hasProjectedKeyframes || hasProjectedVisualEffect) {
+    requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS);
+  }
+  if (hasProjectedEngagementOverlay) {
+    requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS);
+  }
+  if (hasProjectedBrandSting) {
+    requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING);
+  }
+  const hasAuthoritativeEnhancement = requiredCapabilities.length > 0;
   const capabilities = buildCapabilitySnapshot(environment);
 
-  const draft: ExportManifestV4Draft = {
-    version: EXPORT_MANIFEST_VERSION,
+  const draftBase = {
     manifestId: createManifestId(),
     createdAt: new Date().toISOString(),
-    rendererContractVersion: EXPORT_RENDERER_CONTRACT_VERSION,
     project,
     output,
     scenes,
@@ -147,9 +212,22 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
     branding,
     capabilities,
   };
+  const draft: ExportManifestV4Draft | ExportManifestV5Draft = hasAuthoritativeEnhancement
+    ? {
+        ...draftBase,
+        version: EXPORT_MANIFEST_V5_VERSION,
+        rendererContractVersion: EXPORT_RENDERER_CONTRACT_V5,
+        requiredCapabilities,
+        ...(brandSting ? { brandSting } : {}),
+      }
+    : {
+        ...draftBase,
+        version: EXPORT_MANIFEST_VERSION,
+        rendererContractVersion: EXPORT_RENDERER_CONTRACT_VERSION,
+      };
 
   const fingerprint = buildExportManifestFingerprint(draft);
-  const manifest: ExportManifestV4 = { ...draft, fingerprint };
+  const manifest: ExportManifest = { ...draft, fingerprint } as ExportManifest;
   return deepFreezeExportManifest(manifest);
 }
 
@@ -157,13 +235,20 @@ function buildProjectManifest(
   story: FootieScript,
   timeline: MasterTimeline,
   prepared: ReturnType<typeof prepareStoryForExport>,
+  brandStingDurationMs = 0,
 ): ExportProjectManifest {
+  const endBufferMs = Math.max(0, timeline.renderDurationMs - prepared.contentEndMs);
+  const bounds = resolveBrandStingTimelineBounds({
+    narrationEndMs: prepared.contentEndMs,
+    endBufferMs,
+    brandStingDurationMs,
+  });
   return {
     projectId: slugifyStoryTitle(story.title ?? "") || "story",
     storyTitle: story.title ?? "",
-    contentDurationMs: prepared.contentEndMs,
-    renderDurationMs: timeline.renderDurationMs,
-    endBufferMs: Math.max(0, timeline.renderDurationMs - prepared.contentEndMs),
+    contentDurationMs: bounds.contentDurationMs,
+    renderDurationMs: bounds.renderDurationMs,
+    endBufferMs: bounds.endBufferMs,
     aspectRatio: "9:16",
     sceneCount: story.scenes.length,
   };
@@ -203,6 +288,8 @@ function buildSceneManifests(
   timeline: MasterTimeline,
   multiImageScenesEnabled: boolean,
   mixedMediaScenesEnabled: boolean,
+  keyframedVisualEffectsEnabled: boolean,
+  engagementOverlaysEnabled: boolean,
 ): readonly ExportSceneManifestV3[] {
   const transitions = collectTransitions(story, timeline);
   return story.scenes.map((scene, index) => {
@@ -217,6 +304,7 @@ function buildSceneManifests(
       durationMs,
       multiImageScenesEnabled,
       mixedMediaScenesEnabled,
+      keyframedVisualEffectsEnabled,
     );
     const media =
       mediaTimeline.items[0]?.media ?? ({ type: "placeholder" } as const);
@@ -226,6 +314,11 @@ function buildSceneManifests(
     const mediaTransitions = buildExportSceneMediaTransitionTrack(
       scene,
       mediaTimeline,
+    );
+    const projectedOverlay = projectEngagementOverlayToManifest(
+      getSceneEngagementOverlay(story, scene.id),
+      durationMs,
+      engagementOverlaysEnabled,
     );
 
     return {
@@ -240,6 +333,9 @@ function buildSceneManifests(
       transitionOut: transitions.get(scene.id) ?? null,
       captionMode: scene.captionMode ?? "generated",
       hasDrawableMedia,
+      ...(projectedOverlay.overlay
+        ? { engagementOverlays: [projectedOverlay.overlay] }
+        : {}),
     };
   });
 }
@@ -249,6 +345,7 @@ function buildSceneMediaTimelineManifest(
   sceneDurationMs: number,
   multiImageScenesEnabled: boolean,
   mixedMediaScenesEnabled: boolean,
+  keyframedVisualEffectsEnabled: boolean,
 ): ExportSceneMediaTimelineManifest {
   // Same explicit capability decision as Preview / headless.
   const visualPlan = projectSceneVisualPlan(scene, {
@@ -304,7 +401,11 @@ function buildSceneMediaTimelineManifest(
     startOffsetMs: window.startMs,
     endOffsetMs: window.endMs,
     durationMs: window.durationMs,
-    media: buildMediaManifestFromSceneMedia(window.media),
+    media: buildMediaManifestFromSceneMedia(
+      window.media,
+      window.durationMs,
+      keyframedVisualEffectsEnabled,
+    ),
   }));
 
   return { version: 1, items };
@@ -355,7 +456,11 @@ function collectTransitions(
  * Builds ExportMediaManifest from one item's SceneMedia.
  * Never resolves later items through the scene's first compatibility slot.
  */
-function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifest {
+function buildMediaManifestFromSceneMedia(
+  media: SceneMedia,
+  mediaWindowDurationMs: number,
+  keyframedVisualEffectsEnabled: boolean,
+): ExportMediaManifest {
   if (!media || media.type === "placeholder") {
     return { type: "placeholder" };
   }
@@ -363,13 +468,21 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
   const framingScene = { media };
   const framing = resolveSceneMediaFraming(framingScene, { media });
   const fitMode = resolveExportMediaFitMode(framingScene, media);
-  const motion = buildMotionManifestFromMedia(media);
+  const motion = buildMotionManifestFromMedia(
+    media,
+    mediaWindowDurationMs,
+    keyframedVisualEffectsEnabled,
+  );
   const positionX = framing.positionX;
   const positionY = framing.positionY;
   const zoom = framing.zoom;
   const rotationDeg = framing.rotationDeg;
   const source = typeof media.url === "string" ? media.url.trim() : "";
   const visualAdjustments = freezeMediaVisualAdjustments(media.visualAdjustments);
+  const visualEffect = projectMediaVisualEffectToManifest(
+    media.visualEffect,
+    keyframedVisualEffectsEnabled,
+  );
 
   if (media.type === "image") {
     return {
@@ -382,6 +495,7 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
       rotationDeg,
       motion,
       ...(visualAdjustments ? { visualAdjustments } : {}),
+      ...(visualEffect ? { visualEffect } : {}),
     };
   }
 
@@ -401,15 +515,23 @@ function buildMediaManifestFromSceneMedia(media: SceneMedia): ExportMediaManifes
     rotationDeg,
     motion,
     ...(visualAdjustments ? { visualAdjustments } : {}),
+    ...(visualEffect ? { visualEffect } : {}),
   };
 }
 
 function buildMotionManifestFromMedia(
   media: SceneMedia,
+  mediaWindowDurationMs: number,
+  keyframedVisualEffectsEnabled: boolean,
 ): ExportMediaMotionManifest | null {
   const motion = resolveSceneMediaMotion({ media });
   if (!motion) return null;
   const enabled = motion.enabled !== false && motion.presetId !== "static";
+  // Project only under the complete authority rule (cap + enabled + ≥2 frames).
+  const projected =
+    keyframedVisualEffectsEnabled === true && motion.enabled === true
+      ? projectSceneMediaKeyframesToManifest(media, mediaWindowDurationMs)
+      : undefined;
   if (!enabled && motion.presetId === "static") {
     return {
       enabled: false,
@@ -423,6 +545,7 @@ function buildMotionManifestFromMedia(
     presetId: motion.presetId ?? "static",
     easing: String(motion.easing ?? "linear"),
     intensity: typeof motion.intensity === "number" ? motion.intensity : 1,
+    ...(projected ?? {}),
   };
 }
 
@@ -680,6 +803,8 @@ function buildCapabilitySnapshot(
       !environment.ffmpegRuntimePoisoned,
     serverRendererAvailable: environment.serverRendererAvailable,
     environment,
+    // Implementation-owned Browser advertisement — never mirrors requiredCapabilities.
+    supportedCapabilities: [...EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES],
   };
 }
 

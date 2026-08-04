@@ -10,6 +10,7 @@ import type {
 import { normalizeSceneImageMotion } from "@/features/story/utils/scene.utils";
 import { SCENE_IMAGE_MOTION_INTENSITY_MAX_SCALE } from "@/features/story/utils/scene-image-motion.utils";
 
+import { normalizeMediaMotionKeyframes } from "./domain/media-motion-keyframes";
 import { getMediaMotionPreset, MEDIA_MOTION_MAX_ZOOM_DELTA } from "./media-motion.presets";
 import {
   MEDIA_MOTION_STATIC,
@@ -124,6 +125,8 @@ export function normalizeSceneMediaMotionRecord(
   );
 
   // Custom with identical identity transforms and no explicit enable → static.
+  // Exception: explicitly enabled custom motion with ≥2 usable keyframes stays
+  // enabled so keyframed authority is not stripped before capability gating.
   const isCustomIdentity =
     presetId === "custom" &&
     startTransform.scale === 1 &&
@@ -135,15 +138,23 @@ export function normalizeSceneMediaMotionRecord(
     (startTransform.rotation ?? 0) === 0 &&
     (endTransform.rotation ?? 0) === 0;
 
-  return {
+  const keyframes = normalizeMediaMotionKeyframes(record.keyframes);
+  const keepEnabledForAuthoredKeyframes =
+    enabled === true && Boolean(keyframes && keyframes.length >= 2);
+  const normalized: SceneMediaMotion = {
     version: MEDIA_MOTION_VERSION,
-    enabled: isCustomIdentity ? false : enabled,
+    enabled:
+      isCustomIdentity && !keepEnabledForAuthoredKeyframes ? false : enabled,
     presetId,
     easing,
     intensity,
     startTransform,
     endTransform,
   };
+  if (keyframes) {
+    normalized.keyframes = [...keyframes];
+  }
+  return normalized;
 }
 
 export { MEDIA_MOTION_IDENTITY_TRANSFORM };

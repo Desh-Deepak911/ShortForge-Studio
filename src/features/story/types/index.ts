@@ -20,9 +20,12 @@ export type {
   SceneImageMotionPreset,
   SceneImageMotionType,
   MediaMotionEasing,
+  MediaMotionKeyframe,
   SceneMedia,
   SceneMediaFitMode,
   SceneMediaMotion,
+  SceneMediaVisualEffect,
+  SceneMediaVisualEffectPresetId,
   SceneMediaSource,
   SceneMediaTimeline,
   SceneMediaTimelineItem,
@@ -41,6 +44,22 @@ export type {
   TransitionEffect,
   TransitionTimelineItem,
 } from "./story.types";
+export { SCENE_MEDIA_VISUAL_EFFECT_VERSION } from "./story.types";
+export type {
+  SceneMediaFramingSnapshot,
+  SceneMediaSubjectAwareFramingProvenance,
+  SceneMediaSubjectAwareFramingProvenanceV1,
+  SceneMediaSubjectFocus,
+  SceneMediaSubjectFocusSource,
+  SceneMediaSubjectFocusV1,
+} from "./subject-focus.types";
+export {
+  SCENE_MEDIA_SUBJECT_AWARE_FRAMING_PROVENANCE_VERSION,
+  SCENE_MEDIA_SUBJECT_FOCUS_VERSION,
+  normalizeSceneMediaSubjectAwareFramingProvenance,
+  normalizeSceneMediaSubjectFocus,
+  sceneMediaFramingSnapshotsEqual,
+} from "./subject-focus.types";
 export type {
   AudioFirstGenerationResult,
   StoryScript,

@@ -11,6 +11,15 @@
 import { resolveExportCaptionAnimationFromChunk } from "@/features/caption-animation";
 import type { CaptionLayout } from "@/features/caption-layout";
 import type { CaptionStyle } from "@/features/caption-style";
+import {
+  drawBrandSting,
+  resolveBrandStingFrame,
+} from "@/features/brand-sting";
+import {
+  drawEngagementOverlay,
+  resolveEngagementOverlayFrame,
+  shouldSuppressEngagementOverlayForInterSceneTransition,
+} from "@/features/engagement-overlays";
 import type { SubtitleEffect, TransitionEffect } from "@/features/story/types";
 import { resolveTransitionEffectLayers } from "@/features/timeline-intelligence/resolve-transition-state.utils";
 import {
@@ -73,6 +82,7 @@ function drawExactMediaBackground(
   itemElapsedMs: number,
   itemDurationMs: number,
   mediaItemId: string,
+  keyframedVisualEffectsEnabled: boolean,
 ) {
   drawSceneMediaFrame({
     ctx,
@@ -86,6 +96,7 @@ function drawExactMediaBackground(
     mediaItemId,
     itemElapsedMs,
     itemDurationMs,
+    keyframedVisualEffectsEnabled,
   });
 }
 
@@ -98,6 +109,7 @@ function drawSceneBackground(
   sceneElapsedMs: number,
   sceneDurationMs: number,
   prepared: PrepareExportSceneMediaResult | undefined,
+  keyframedVisualEffectsEnabled: boolean,
 ) {
   const active = resolveExportActiveSceneMediaFrame(
     drawScene.manifestScene,
@@ -116,6 +128,7 @@ function drawSceneBackground(
     mediaItemId: prepared?.mediaItemId ?? active?.item.id,
     itemElapsedMs: active?.itemElapsedMs ?? sceneElapsedMs,
     itemDurationMs: active?.itemDurationMs ?? sceneDurationMs,
+    keyframedVisualEffectsEnabled,
   });
 }
 
@@ -186,6 +199,7 @@ export function drawPreparedExportFrame(
   context: ExportRenderContext,
   preparedBySceneId: Map<string, PrepareExportSceneMediaResult>,
   preparedByMediaKey?: Map<string, PrepareExportSceneMediaResult>,
+  keyframedVisualEffectsEnabled = false,
 ): void {
   const ctx = context.canvasContext;
   const width = context.width;
@@ -196,6 +210,26 @@ export function drawPreparedExportFrame(
 
   resetExportCanvasDrawState(ctx);
   ctx.clearRect(0, 0, width, height);
+
+  if (frame.brandSting) {
+    const plan = resolveBrandStingFrame({
+      sting: {
+        version: 1,
+        enabled: true,
+        title: frame.brandSting.brandSting.title,
+        durationMs: frame.brandSting.brandSting.durationMs,
+        presetId: frame.brandSting.brandSting.presetId,
+        narrationPolicy: frame.brandSting.brandSting.narrationPolicy,
+        captionPolicy: frame.brandSting.brandSting.captionPolicy,
+        playbackSpeedPolicy: frame.brandSting.brandSting.playbackSpeedPolicy,
+      },
+      elapsedMs: frame.brandSting.elapsedMs,
+      frameWidth: width,
+      frameHeight: height,
+    });
+    drawBrandSting(ctx, plan, width, height);
+    return;
+  }
 
   const transition = frame.transition;
   const intra = frame.intraSceneTransition;
@@ -239,6 +273,7 @@ export function drawPreparedExportFrame(
           fromElapsed,
           transition.fromScene.durationMs,
           fromPrepared,
+          keyframedVisualEffectsEnabled,
         );
       },
       drawToBackground: (layerCtx, layerWidth, layerHeight) => {
@@ -252,6 +287,7 @@ export function drawPreparedExportFrame(
           toElapsed,
           transition.toScene.durationMs,
           toPrepared,
+          keyframedVisualEffectsEnabled,
         );
       },
     });
@@ -287,6 +323,7 @@ export function drawPreparedExportFrame(
           intra.outgoingItemLocalMs,
           intra.fromItem.durationMs,
           intra.fromItem.id,
+          keyframedVisualEffectsEnabled,
         );
       },
       drawToBackground: (layerCtx, layerWidth, layerHeight) => {
@@ -302,6 +339,7 @@ export function drawPreparedExportFrame(
           intra.incomingItemLocalMs,
           intra.toItem.durationMs,
           intra.toItem.id,
+          keyframedVisualEffectsEnabled,
         );
       },
     });
@@ -328,6 +366,7 @@ export function drawPreparedExportFrame(
       frame.media.sceneElapsedMs,
       frame.media.sceneDurationMs,
       preparedBySceneId.get(frame.drawScene.id),
+      keyframedVisualEffectsEnabled,
     );
   }
 
@@ -372,9 +411,27 @@ export function drawPreparedExportFrame(
     ctx.textAlign = "left";
   }
 
-  // Scene-to-scene: captions suppressed (unchanged). Intra-scene: captions continue.
-  if (transition) {
+  // Scene-to-scene: suppress engagement + captions (no half-overlay from either
+  // adjacent scene). Intra-scene media transitions keep both active.
+  if (shouldSuppressEngagementOverlayForInterSceneTransition(Boolean(transition))) {
     return;
+  }
+
+  const engagementOverlays =
+    "engagementOverlays" in frame.drawScene.manifestScene
+      ? frame.drawScene.manifestScene.engagementOverlays
+      : undefined;
+  if (engagementOverlays && engagementOverlays.length > 0) {
+    for (const overlay of engagementOverlays) {
+      const plan = resolveEngagementOverlayFrame({
+        overlay,
+        sceneDurationMs: frame.media.sceneDurationMs,
+        sceneElapsedMs: frame.media.sceneElapsedMs,
+        frameWidth: width,
+        frameHeight: height,
+      });
+      drawEngagementOverlay(ctx, plan);
+    }
   }
 
   const captionMode = normalizeCaptionMode(frame.drawScene.captionMode);

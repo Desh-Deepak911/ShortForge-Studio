@@ -4,6 +4,7 @@
  */
 
 import type {
+  ExportBrandStingManifest,
   ExportManifestDraft,
   ExportSceneManifest,
 } from "./export-manifest.types";
@@ -49,6 +50,19 @@ function sceneFingerprintPayload(scene: ExportSceneManifest) {
           overlayEndOffsetMs: boundary.overlayEndOffsetMs,
         })),
       },
+      ...(scene.engagementOverlays && scene.engagementOverlays.length > 0
+        ? {
+            engagementOverlays: scene.engagementOverlays.map((overlay) => ({
+              version: overlay.version,
+              id: overlay.id,
+              kind: overlay.kind,
+              startOffsetMs: overlay.startOffsetMs,
+              durationMs: overlay.durationMs,
+              position: overlay.position,
+              presetId: overlay.presetId,
+            })),
+          }
+        : {}),
     };
   }
 
@@ -98,6 +112,8 @@ export function buildExportManifestFingerprint(
       supportedFps: draft.capabilities.supportedFps,
       browserRendererAvailable: draft.capabilities.browserRendererAvailable,
       serverRendererAvailable: draft.capabilities.serverRendererAvailable,
+      // supportedCapabilities is renderer negotiation metadata and must not
+      // vary the canonical story/render fingerprint across Browser/Headless.
       envFlags: {
         supportsCanvasCaptureStream:
           draft.capabilities.environment.supportsCanvasCaptureStream,
@@ -111,6 +127,26 @@ export function buildExportManifestFingerprint(
           draft.capabilities.environment.ffmpegRuntimePoisoned,
       },
     },
+    ...("requiredCapabilities" in draft
+      ? { requiredCapabilities: draft.requiredCapabilities }
+      : {}),
+    ...("brandSting" in draft && draft.brandSting
+      ? (() => {
+          const brandSting = draft.brandSting as ExportBrandStingManifest;
+          return {
+            brandSting: {
+              version: brandSting.version,
+              title: brandSting.title,
+              durationMs: brandSting.durationMs,
+              presetId: brandSting.presetId,
+              narrationPolicy: brandSting.narrationPolicy,
+              captionPolicy: brandSting.captionPolicy,
+              playbackSpeedPolicy: brandSting.playbackSpeedPolicy,
+              startMs: brandSting.startMs,
+            },
+          };
+        })()
+      : {}),
   };
 
   return `em:${stableHash(stableStringify(payload))}`;

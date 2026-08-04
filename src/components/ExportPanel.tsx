@@ -38,9 +38,15 @@ import {
   applyStoryBackgroundMusic,
 } from "@/features/story/utils";
 import { useMixedMediaScenesEnabled } from "@/features/mixed-media-scenes/client/MixedMediaScenesCapabilityContext";
+import BrandStingExportControls from "@/features/brand-sting/editor/BrandStingExportControls";
+import { resolveAuthoritativeBrandStingDurationMs } from "@/features/brand-sting/domain/normalize-brand-sting";
 import {
+  useEngagementOverlaysEnabled,
+  useKeyframedVisualEffectsEnabled,
+  useShortForgeBrandStingEnabled,
   useSourceQualityIntelligenceEnabled,
   useVisualBeatDensityEnabled,
+  useVisualRetentionCapabilitiesReady,
 } from "@/features/visual-retention/client/VisualRetentionCapabilitiesContext";
 import {
   buildExportDownloadFileName,
@@ -262,6 +268,17 @@ export default function ExportPanel({
   const visualBeatDensityEnabled = useVisualBeatDensityEnabled();
   const sourceQualityIntelligenceEnabled =
     useSourceQualityIntelligenceEnabled();
+  const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
+  const engagementOverlaysEnabled = useEngagementOverlaysEnabled();
+  const visualRetentionCapabilitiesReady =
+    useVisualRetentionCapabilitiesReady();
+  const shortForgeBrandStingCapability = useShortForgeBrandStingEnabled();
+  const shortForgeBrandStingEnabled =
+    visualRetentionCapabilitiesReady && shortForgeBrandStingCapability;
+  const brandStingDurationMs = resolveAuthoritativeBrandStingDurationMs({
+    shortForgeBrandStingEnabled,
+    extensions: script.visualRetentionExtensions,
+  });
   const syncState = storySync?.state ?? createInitialStorySynchronizationState();
   const exportReadiness = useMemo(
     () => resolveExportReadiness(script, syncState),
@@ -512,6 +529,10 @@ export default function ExportPanel({
         mixedMediaScenesEnabled,
         visualBeatDensityEnabled,
         sourceQualityIntelligenceEnabled,
+        keyframedVisualEffectsEnabled,
+        engagementOverlaysEnabled,
+        shortForgeBrandStingEnabled,
+        brandStingDurationMs,
         sourceQualityExportTarget:
           exportSettings.resolution === "720x1280" ? "720p" : "1080p",
       }),
@@ -526,6 +547,10 @@ export default function ExportPanel({
       mixedMediaScenesEnabled,
       visualBeatDensityEnabled,
       sourceQualityIntelligenceEnabled,
+      keyframedVisualEffectsEnabled,
+      engagementOverlaysEnabled,
+      shortForgeBrandStingEnabled,
+      brandStingDurationMs,
     ],
   );
 
@@ -543,6 +568,9 @@ export default function ExportPanel({
       mixedMediaScenesEnabled,
       visualBeatDensityEnabled,
       sourceQualityIntelligenceEnabled,
+      keyframedVisualEffectsEnabled,
+      engagementOverlaysEnabled,
+      shortForgeBrandStingEnabled,
       sourceQualityExportTarget:
         exportSettings.resolution === "720x1280" ? "720p" : "1080p",
     }).then((prepared) => {
@@ -585,6 +613,9 @@ export default function ExportPanel({
     mixedMediaScenesEnabled,
     visualBeatDensityEnabled,
     sourceQualityIntelligenceEnabled,
+    keyframedVisualEffectsEnabled,
+    engagementOverlaysEnabled,
+    shortForgeBrandStingEnabled,
     capabilityRequestKey,
   ]);
 
@@ -839,6 +870,9 @@ export default function ExportPanel({
           mixedMediaScenesEnabled,
           visualBeatDensityEnabled,
           sourceQualityIntelligenceEnabled,
+          keyframedVisualEffectsEnabled,
+          engagementOverlaysEnabled,
+          shortForgeBrandStingEnabled,
           sourceQualityExportTarget:
             attemptSettings.resolution === "720x1280" ? "720p" : "1080p",
           ...(audioFallback ? { audioFallback } : {}),
@@ -1464,6 +1498,19 @@ export default function ExportPanel({
               </span>
             </span>
           </label>
+          {onScriptChange ? (
+            <BrandStingExportControls
+              script={script}
+              disabled={isBusy}
+              shortForgeBrandStingEnabled={shortForgeBrandStingEnabled}
+              capabilitiesReady={visualRetentionCapabilitiesReady}
+              onScriptCommit={(result) => {
+                if (result.status === "ok") {
+                  onScriptChange(result.script);
+                }
+              }}
+            />
+          ) : null}
         </ExportSettingsSection>
 
         <ExportSettingsSection
@@ -1495,8 +1542,14 @@ export default function ExportPanel({
           exportSettings={exportSettings}
           audioMode={exportAudioMode}
           includeBackgroundMusic={includeBackgroundMusic}
-          contentDurationMs={Math.max(1, Math.round(totalDuration * 1000))}
-          renderDurationMs={Math.max(1, Math.round(totalDuration * 1000) + 400)}
+          contentDurationMs={Math.max(
+            1,
+            Math.round(totalDuration * 1000) + brandStingDurationMs,
+          )}
+          renderDurationMs={Math.max(
+            1,
+            Math.round(totalDuration * 1000) + brandStingDurationMs + 400,
+          )}
           browserBusy={isExporting}
           disabled={disabled}
           onRendererChange={setExportRenderer}

@@ -64,14 +64,35 @@ its rendering contract has already frozen.
 
 ## Reserved optional extensions
 
-The foundation reserves, but does not yet attach or render, two later-phase
-contracts:
+Creator-capability IDs under the ordered phase chain through `12E` (independently
+negotiated; fail-closed; single `GET /api/visual-retention/capabilities` fetch):
+
+| Capability ID | Creator boolean |
+|---|---|
+| `keyframed-visual-effects-v1` | `keyframedVisualEffectsEnabled` |
+| `engagement-overlays-v1` | `engagementOverlaysEnabled` |
+| `shortforge-brand-sting-v1` | `shortForgeBrandStingEnabled` |
+| `subject-aware-reframing-v1` | `subjectAwareReframingEnabled` |
+
+Future staging activation value (do not set until UI and renderer slices land):
+
+```
+SHORTFORGE_STAGING_VISUAL_RETENTION_PHASES=12A,12B,12C,12D,12E
+```
+
+Allowlisted development branch for this work: `staging-keyframed-motion-overlays`.
+
+Multi-keyframe / custom transforms must not become preview-only behavior that
+exports ignore. Keyframes cannot become render-authoritative until a versioned
+ExportManifest and all Preview, Browser, and Headless consumers support the same
+frozen motion fields.
 
 ### Engagement overlays
 
 Like, Share, Subscribe, or combined animations may be attached to a scene with
 scene-relative start time, duration, position, and preset. They never change the
-owning scene duration or require music.
+owning scene duration or require music. Creator UI remains unimplemented until a
+later gated slice.
 
 ### ShortForge Studio brand sting
 
@@ -80,7 +101,14 @@ duration. When enabled it is a 2, 2.5, or 3 second animation whose primary title
 is exactly **ShortForge Studio**. It has no narration or captions and uses fixed
 playback timing, independent of voice and project speed changes. Its visual
 design remains preset-driven so the later brand-sting phase can deliver the
-strongest animation without weakening the frozen behavioral rules.
+strongest animation without weakening the frozen behavioral rules. Export-drawer
+controls remain unimplemented until a later gated slice.
+
+### Subject-aware reframing
+
+Optional subject/focus metadata may later suggest safe vertical framing with
+explicit Apply/Undo. Enablement requires `subject-aware-reframing-v1` and must
+not be inferred from `source-quality-intelligence-v1` alone.
 
 These contracts remain isolated from `FootieScript` and ExportManifest until
 their gated implementation lands. This prevents current projects or v2-v4

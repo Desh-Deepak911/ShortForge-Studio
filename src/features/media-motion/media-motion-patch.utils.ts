@@ -5,6 +5,7 @@
 import type { FootieScene, SceneMedia, SceneMediaMotion } from "@/features/story/types";
 import { getSceneMedia } from "@/features/story/utils/scene.utils";
 
+import { normalizeMediaMotionTransform } from "./media-motion.compose";
 import { getMediaMotionPreset } from "./media-motion.presets";
 import { normalizeSceneMediaMotionRecord } from "./media-motion.legacy";
 import { resolveSceneMediaMotion } from "./media-motion.normalize";
@@ -51,16 +52,41 @@ export function buildMediaMotionPatch(
   }
 
   const current = resolveSceneMediaMotion(scene);
-  const merged = normalizeSceneMediaMotionRecord({
+  // Partial intensity/preset patches omit `keyframes` and must keep authored
+  // frames. Keyframe Clear commits an explicit empty/absent field — do not
+  // rehydrate current.keyframes over that intentional removal.
+  const nextRecord = nextMotion as Partial<SceneMediaMotion>;
+  const clearsKeyframes =
+    Object.prototype.hasOwnProperty.call(nextRecord, "keyframes") &&
+    (nextRecord.keyframes == null ||
+      (Array.isArray(nextRecord.keyframes) && nextRecord.keyframes.length === 0));
+  const mergedInput: Partial<SceneMediaMotion> & { version: typeof MEDIA_MOTION_VERSION } = {
     ...current,
     ...nextMotion,
     version: MEDIA_MOTION_VERSION,
-  });
+  };
+  if (clearsKeyframes) {
+    delete mergedInput.keyframes;
+  }
+  const merged = normalizeSceneMediaMotionRecord(mergedInput);
 
-  // Selecting static / disabling clears to a disabled static record for clarity.
-  const motion =
+  // Selecting static / disabling clears to a disabled static record for clarity,
+  // but retains authored keyframes so capability-off / disabled motion can keep
+  // dormant metadata until the user clears or re-enables them.
+  const motion: SceneMediaMotion =
     merged.enabled === false || merged.presetId === "static"
-      ? { ...MEDIA_MOTION_STATIC }
+      ? {
+          ...MEDIA_MOTION_STATIC,
+          startTransform: normalizeMediaMotionTransform(
+            merged.startTransform ?? MEDIA_MOTION_STATIC.startTransform,
+          ),
+          endTransform: normalizeMediaMotionTransform(
+            merged.endTransform ?? MEDIA_MOTION_STATIC.endTransform,
+          ),
+          ...(merged.keyframes && merged.keyframes.length > 0
+            ? { keyframes: merged.keyframes.map((frame) => ({ ...frame })) }
+            : {}),
+        }
       : merged;
 
   const nextMedia: SceneMedia = {

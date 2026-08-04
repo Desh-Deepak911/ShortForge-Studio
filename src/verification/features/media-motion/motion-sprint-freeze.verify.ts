@@ -211,8 +211,8 @@ test("structural — single production interpolation path", () => {
     "src/features/media-motion/media-motion-patch.utils.ts",
   );
 
-  assert.match(previewAdapter, /resolveMediaMotionStateForSceneTiming/);
-  assert.match(exportAdapter, /resolveMediaMotionStateForSceneTiming/);
+  assert.match(previewAdapter, /resolveRenderedMediaMotion/);
+  assert.match(exportAdapter, /resolveRenderedMediaMotion/);
   assert.match(previewImage, /resolvePreviewMediaMotionStyle/);
   assert.match(previewVideo, /resolvePreviewMediaMotionStyle/);
   assert.match(exportRenderer, /resolveExportMediaMotionTransform/);

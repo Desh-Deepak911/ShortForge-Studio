@@ -143,6 +143,10 @@ function main(): void {
       mixedMediaScenesEnabled: true,
       visualBeatDensityEnabled: true,
       sourceQualityIntelligenceEnabled: true,
+      keyframedVisualEffectsEnabled: false,
+      engagementOverlaysEnabled: false,
+      shortForgeBrandStingEnabled: false,
+      subjectAwareReframingEnabled: false,
       phasesValid: true,
     });
     assert.equal(
@@ -168,10 +172,17 @@ function main(): void {
   });
 
   test("parser fail-closed + single shared capability fetch", () => {
+    const motionOff = {
+      keyframedVisualEffectsEnabled: false,
+      engagementOverlaysEnabled: false,
+      shortForgeBrandStingEnabled: false,
+      subjectAwareReframingEnabled: false,
+    };
     assert.deepEqual(parseVisualRetentionCapabilitiesResponse(null), {
       mixedMediaScenesEnabled: false,
       visualBeatDensityEnabled: false,
       sourceQualityIntelligenceEnabled: false,
+      ...motionOff,
     });
     assert.deepEqual(
       parseVisualRetentionCapabilitiesResponse({
@@ -183,6 +194,7 @@ function main(): void {
         mixedMediaScenesEnabled: true,
         visualBeatDensityEnabled: true,
         sourceQualityIntelligenceEnabled: false,
+        ...motionOff,
       },
     );
     assert.deepEqual(
@@ -195,6 +207,7 @@ function main(): void {
         mixedMediaScenesEnabled: true,
         visualBeatDensityEnabled: true,
         sourceQualityIntelligenceEnabled: true,
+        ...motionOff,
       },
     );
 

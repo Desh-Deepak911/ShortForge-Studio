@@ -8,6 +8,12 @@ import type { SceneMediaVisualAdjustments } from "@/features/media-visual-adjust
 import type { SourceQualityAdjustmentProvenance } from "@/features/source-quality/domain/source-quality-adjustment-provenance";
 import type { SpeechStylePreset } from "@/features/speech-style";
 import type { VisualBeatPlanV1 } from "@/features/visual-beat-density/domain/visual-beat-plan";
+import type { VisualRetentionProjectExtensionsV1 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
+
+import type {
+  SceneMediaSubjectAwareFramingProvenance,
+  SceneMediaSubjectFocus,
+} from "./subject-focus.types";
 
 export type SceneType = "intro" | "context" | "match" | "transition" | "ending";
 
@@ -78,6 +84,33 @@ export type SceneMediaFitMode = "cover" | "contain";
 export type MediaMotionEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
 
 /**
+ * One item-local media-motion keyframe.
+ * `offsetMs` is relative to the projected media window (full scene-media window
+ * for single-media; visualSequence/mediaTimeline item window for mixed-media).
+ *
+ * Transform units match `SceneMediaTransform` / preset deltas exactly:
+ * - `x`/`y` are reference-frame pixels in the fixed 1080×1920 design space
+ *   (not normalized 0–1, not output-resolution pixels, not percentages).
+ *   Preview/export scale them into the live frame, so values stay stable across
+ *   720p / 1080p / 4K.
+ * - `scale` is a unitless multiplier (identity 1).
+ * - `rotation` is degrees (identity 0).
+ * - `opacity` is unitless 0–1 (identity 1); current adapters ignore it.
+ * - `easing` is the outgoing segment curve to the next keyframe.
+ *
+ * Dormant until Preview/Export/Headless + ExportManifest agree.
+ */
+export interface MediaMotionKeyframe {
+  offsetMs: number;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  easing: MediaMotionEasing;
+}
+
+/**
  * Shared media motion config (4.2C).
  * Additive and optional — legacy `imageMotion` remains valid and is mapped on read.
  */
@@ -90,6 +123,37 @@ export interface SceneMediaMotion {
   intensity?: number;
   startTransform?: SceneMediaTransform;
   endTransform?: SceneMediaTransform;
+  /**
+   * Optional multi-keyframe motion path. Absent/malformed keyframes do not
+   * change preset or startTransform/endTransform authority.
+   */
+  keyframes?: MediaMotionKeyframe[];
+}
+
+/** Closed visual-effect preset identity (authoring + persistence). */
+export type SceneMediaVisualEffectPresetId =
+  | "none"
+  | "vivid"
+  | "cinematic"
+  | "monochrome";
+
+export const SCENE_MEDIA_VISUAL_EFFECT_VERSION = 1 as const;
+
+/**
+ * Optional media-level visual-effect contract.
+ * Authoring persists `{ version, presetId, intensity }` only.
+ * Optional brightness/contrast/saturation are export-hydrate carriers for
+ * frozen renderer parameters and are stripped by story normalize.
+ */
+export interface SceneMediaVisualEffect {
+  version: typeof SCENE_MEDIA_VISUAL_EFFECT_VERSION;
+  presetId: Exclude<SceneMediaVisualEffectPresetId, "none">;
+  /** Normalized intensity in (0, 1]. Zero/absent is identity. */
+  intensity: number;
+  /** Frozen export-only BCS; ignored by preview catalog resolve. */
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
 }
 
 export interface SceneMedia {
@@ -113,10 +177,27 @@ export interface SceneMedia {
   /** Appearance-only media adjustments; never affects playback or captions. */
   visualAdjustments?: SceneMediaVisualAdjustments;
   /**
+   * Optional closed visual-effect preset (capability-gated at render/export).
+   * Independent from motion.enabled and freeform visualAdjustments.
+   * Malformed values normalize as absent; no migration required.
+   */
+  visualEffect?: SceneMediaVisualEffect;
+  /**
    * Authoring-only source-quality adjustment provenance.
    * Optional; Preview/Export/Headless ignore it. Malformed values normalize as absent.
    */
   sourceQualityAdjustmentProvenance?: SourceQualityAdjustmentProvenance;
+  /**
+   * Authoring-only subject focus (manual 3×3 / future metadata).
+   * Optional; Preview/Export/Headless ignore until Apply writes ordinary framing.
+   * Malformed values normalize as absent.
+   */
+  subjectFocus?: SceneMediaSubjectFocus;
+  /**
+   * Authoring-only subject-aware framing Apply provenance.
+   * Optional; Preview/Export/Headless ignore it. Malformed values normalize as absent.
+   */
+  subjectAwareFramingProvenance?: SceneMediaSubjectAwareFramingProvenance;
   /** Optional still / poster frame URL (video). Images use `url` as poster. */
   posterUrl?: string;
   /** Absolute media time for the poster frame (video). Defaults to trim/window start. */
@@ -400,4 +481,9 @@ export interface FootieScript {
   defaultCaptionStyle?: CaptionStyle;
   /** Project-wide default caption animation preset. */
   defaultCaptionAnimation?: CaptionAnimation;
+  /**
+   * Optional visual-retention project extensions (engagement overlays, etc.).
+   * Absent by default; malformed values normalize as absent. No migration required.
+   */
+  visualRetentionExtensions?: VisualRetentionProjectExtensionsV1;
 }

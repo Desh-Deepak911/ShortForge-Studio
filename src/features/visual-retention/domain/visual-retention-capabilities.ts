@@ -11,6 +11,7 @@ export const VISUAL_RETENTION_CAPABILITY_IDS = [
   "keyframed-visual-effects-v1",
   "engagement-overlays-v1",
   "shortforge-brand-sting-v1",
+  "subject-aware-reframing-v1",
   "visual-retention-presets-v1",
 ] as const;
 
@@ -62,6 +63,7 @@ const CAPABILITY_PHASE: Readonly<
   "keyframed-visual-effects-v1": "12E",
   "engagement-overlays-v1": "12E",
   "shortforge-brand-sting-v1": "12E",
+  "subject-aware-reframing-v1": "12E",
   "visual-retention-presets-v1": "12F",
 });
 

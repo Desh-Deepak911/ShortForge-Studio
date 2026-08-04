@@ -5,9 +5,8 @@
  */
 import {
   MEDIA_MOTION_IDENTITY_TRANSFORM,
-  resolveMediaMotionStateForSceneTiming,
+  resolveRenderedMediaMotion,
   resolveSceneMediaMotion,
-  type MediaMotionState,
   type SceneMediaMotion,
   type SceneMediaTransform,
 } from "@/features/media-motion";
@@ -134,7 +133,7 @@ function normalizeBaseTransform(
  * Scales reference-frame x/y into the live preview frame.
  */
 export function toPreviewMotionStyle(
-  state: MediaMotionState,
+  state: { transform: SceneMediaTransform; opacity?: number },
   frameWidth = 0,
   frameHeight = 0,
 ): PreviewMotionStyle {
@@ -158,8 +157,7 @@ export function toPreviewMotionStyle(
 
   return {
     transform: `translate(${screenX}px, ${screenY}px) scale(${scale}) rotate(${rotation}deg)`,
-    // Shared engine has no opacity channel yet — neutral full opacity.
-    opacity: 1,
+    opacity: state?.opacity ?? 1,
     transformOrigin: "center center",
   };
 }
@@ -175,6 +173,8 @@ export interface ResolvePreviewMediaMotionStyleInput {
   media?: SceneMedia | null;
   /** Optional motion override (tests / diagnostics). */
   motion?: SceneMediaMotion | null;
+  /** Explicit capability decision; defaults false. */
+  keyframedVisualEffectsEnabled?: boolean;
 }
 
 /**
@@ -202,14 +202,15 @@ export function resolvePreviewMediaMotionStyle(
     media: input.media,
   });
 
-  const state = resolveMediaMotionStateForSceneTiming({
+  const state = resolveRenderedMediaMotion({
     motion,
     baseTransform,
-    sceneElapsedMs: clampPreviewSceneLocalTimeMs(
+    itemElapsedMs: clampPreviewSceneLocalTimeMs(
       input.sceneElapsedMs,
       input.sceneDurationMs,
     ),
-    sceneDurationMs: input.sceneDurationMs,
+    mediaWindowDurationMs: input.sceneDurationMs,
+    keyframedVisualEffectsEnabled: input.keyframedVisualEffectsEnabled === true,
   });
 
   return toPreviewMotionStyle(state, frameWidth, frameHeight);
@@ -223,11 +224,8 @@ export function getNeutralPreviewMotionStyle(
 ): PreviewMotionStyle {
   return toPreviewMotionStyle(
     {
-      active: false,
-      progress: 0,
-      easedProgress: 0,
       transform: normalizeBaseTransform(baseTransform),
-      presetId: "static",
+      opacity: 1,
     },
     frameWidth,
     frameHeight,

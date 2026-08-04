@@ -79,7 +79,13 @@ export async function renderExportChunkFrames(options: {
       globalFrameIndex,
       context,
     );
-    drawPreparedExportFrame(frame, context, preparedBySceneId, preparedByMediaKey);
+    drawPreparedExportFrame(
+      frame,
+      context,
+      preparedBySceneId,
+      preparedByMediaKey,
+      plan.keyframedVisualEffectsEnabled,
+    );
 
     lastSceneId = frame.scene.scene.id;
     lastCaptionCount = frame.captions.length;

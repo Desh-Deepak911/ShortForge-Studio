@@ -11,7 +11,12 @@ import type {
 import {
   isExportManifestV3,
   isExportManifestV4,
+  isExportManifestV5,
 } from "@/features/export/domain/export-manifest.types";
+import {
+  resolveBrandStingLocalElapsedMs,
+  resolveBrandStingTerminalElapsedMs,
+} from "@/features/brand-sting/domain/resolve-brand-sting-frame";
 import { resolveExportActiveSceneMediaFrame } from "@/features/export/domain/resolve-export-active-scene-media-frame";
 import { resolveExportIntraSceneTransitionAtElapsed } from "@/features/export/domain/resolve-export-intra-scene-transition";
 import {
@@ -63,6 +68,75 @@ export async function prepareExportFrame(
   const fps = manifest.output.fps;
   const timestampMs = resolveExportFrameTimestampMs(frameIndex, fps);
   const visualTimeMs = resolveExportVisualTimeMs(manifest, timestampMs);
+
+  const brandStingPayload =
+    plan.shortForgeBrandStingEnabled &&
+    isExportManifestV5(manifest) &&
+    manifest.brandSting
+      ? manifest.brandSting
+      : null;
+  const brandStingElapsedMs = brandStingPayload
+    ? resolveBrandStingLocalElapsedMs({
+        absoluteTimeMs: timestampMs,
+        narrationEndMs: brandStingPayload.startMs,
+        durationMs: brandStingPayload.durationMs,
+      })
+    : null;
+  // End buffer begins at brandStingEndMs — terminal (invisible) sample, never
+  // clamp back to the final branded frame and never restart the sting.
+  const brandStingEndMs = brandStingPayload
+    ? brandStingPayload.startMs + brandStingPayload.durationMs
+    : 0;
+  const brandStingTerminalElapsedMs =
+    brandStingPayload &&
+    brandStingElapsedMs == null &&
+    timestampMs >= brandStingEndMs
+      ? resolveBrandStingTerminalElapsedMs(brandStingPayload.durationMs)
+      : null;
+  const activeBrandStingElapsedMs =
+    brandStingElapsedMs ?? brandStingTerminalElapsedMs;
+  const brandStingFrame =
+    brandStingPayload && activeBrandStingElapsedMs != null
+      ? {
+          brandSting: brandStingPayload,
+          elapsedMs: Math.max(0, activeBrandStingElapsedMs),
+        }
+      : null;
+
+  if (brandStingFrame) {
+    const scene = resolveExportSceneFrame(manifest, brandStingPayload!.startMs);
+    const drawScene =
+      plan.sceneById.get(scene.scene.id) ?? plan.scenes[scene.sceneIndex]!;
+    return {
+      frame: {
+        frameIndex,
+        timestampMs,
+        visualTimeMs,
+        scene,
+        drawScene,
+        peerDrawScenes: new Map([[drawScene.id, drawScene]]),
+        media: {
+          drawScene,
+          sceneElapsedMs: scene.sceneElapsedMs,
+          sceneDurationMs: scene.sceneDurationMs,
+          sourceTimeMs: 0,
+          holdLastFrame: true,
+          mediaItemId: null,
+          itemElapsedMs: 0,
+          itemDurationMs: scene.sceneDurationMs,
+        },
+        captions: [],
+        transition: null,
+        intraSceneTransition: null,
+        branding: manifest.branding,
+        storyTitle: manifest.project.storyTitle,
+        brandSting: brandStingFrame,
+      },
+      preparedByMediaKey: new Map(),
+      preparedBySceneId: new Map(),
+    };
+  }
+
   const scene = resolveExportSceneFrame(manifest, timestampMs);
   const drawScene = plan.sceneById.get(scene.scene.id) ?? plan.scenes[scene.sceneIndex]!;
   const captions = resolveExportCaptionFrames(manifest, timestampMs);
@@ -272,6 +346,7 @@ export async function prepareExportFrame(
       intraSceneTransition,
       branding: manifest.branding,
       storyTitle: manifest.project.storyTitle,
+      brandSting: null,
     },
     preparedByMediaKey,
     preparedBySceneId,

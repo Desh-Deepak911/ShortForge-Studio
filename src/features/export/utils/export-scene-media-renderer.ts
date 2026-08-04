@@ -14,7 +14,7 @@ import {
   resolveSceneMediaFraming,
   resolveSceneMediaFramingAsImage,
 } from "@/features/media-framing/resolve-scene-media-framing";
-import { buildMediaVisualFilter } from "@/features/media-visual-adjustments/build-media-visual-filter";
+import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import { resolveSceneMediaPlayback } from "@/features/media-playback/media-playback.engine";
 import type { MediaPlaybackState } from "@/features/media-playback/media-playback.types";
 import type { FootieScene, SceneImage, SceneMedia, SceneType } from "@/features/story/types";
@@ -430,6 +430,8 @@ export function drawCanvasImageSource(
     opacity?: number;
   } | null,
   visualAdjustments?: SceneMedia["visualAdjustments"],
+  visualEffect?: SceneMedia["visualEffect"],
+  keyframedVisualEffectsEnabled = false,
 ): void {
   const resolvedTransform = resolveSceneImageTransformForFrame(sceneImage, width, height);
   const opacity =
@@ -439,11 +441,16 @@ export function drawCanvasImageSource(
 
   ctx.save();
   if (opacity < 1) {
-    ctx.globalAlpha = opacity;
+    ctx.globalAlpha *= opacity;
   }
 
   applyExportCanvasMediaQuality(ctx);
-  ctx.filter = buildMediaVisualFilter(visualAdjustments, width);
+  // Frozen manifest BCS only — never re-lookup the authoring preset catalog.
+  ctx.filter = buildComposedMediaVisualFilter(visualAdjustments, visualEffect, {
+    keyframedVisualEffectsEnabled,
+    targetWidth: width,
+    effectSource: "frozen",
+  });
 
   drawSceneImageInFrame(
     ctx,
@@ -477,6 +484,7 @@ function resolveExportFrameMotionState(
   sceneDurationMs: number,
   width: number,
   height: number,
+  keyframedVisualEffectsEnabled = false,
 ) {
   const motion = resolveExportMediaMotionTransform({
     scene,
@@ -484,6 +492,7 @@ function resolveExportFrameMotionState(
     sceneDurationMs,
     frameWidth: width,
     frameHeight: height,
+    keyframedVisualEffectsEnabled,
   });
   return toExportDrawTransformOverride(motion);
 }
@@ -499,6 +508,7 @@ export function drawSceneImageFrame(
   image: HTMLImageElement,
   sceneElapsedMs: number,
   sceneDurationMs: number,
+  keyframedVisualEffectsEnabled = false,
 ): boolean {
   const sceneImage = resolveExportSceneMediaDrawImage(scene);
   if (!sceneImage) {
@@ -513,6 +523,7 @@ export function drawSceneImageFrame(
     sceneDurationMs,
     width,
     height,
+    keyframedVisualEffectsEnabled,
   );
   const { width: sourceWidth, height: sourceHeight } = resolveSourceDimensions(image);
 
@@ -532,6 +543,8 @@ export function drawSceneImageFrame(
     sourceHeight,
     motionState,
     scene.media?.visualAdjustments,
+    scene.media?.visualEffect,
+    keyframedVisualEffectsEnabled,
   );
   return true;
 }
@@ -933,6 +946,7 @@ function drawPreparedSceneVideoFrame(
   sceneElapsedMs: number,
   sceneDurationMs: number,
   playback: MediaPlaybackState,
+  keyframedVisualEffectsEnabled = false,
 ): boolean {
   void playback;
   const media = resolveExportSceneMedia(scene);
@@ -959,6 +973,7 @@ function drawPreparedSceneVideoFrame(
     sceneDurationMs,
     width,
     height,
+    keyframedVisualEffectsEnabled,
   );
 
   try {
@@ -972,6 +987,8 @@ function drawPreparedSceneVideoFrame(
       sourceHeight,
       motionState,
       scene.media?.visualAdjustments,
+      scene.media?.visualEffect,
+      keyframedVisualEffectsEnabled,
     );
     return true;
   } catch {
@@ -996,6 +1013,8 @@ export interface PrepareExportSceneMediaFrameOptions {
   itemElapsedMs?: number;
   /** Item window duration — motion/clip denominator when set. */
   itemDurationMs?: number;
+  /** Explicit keyframed effects capability; defaults false. */
+  keyframedVisualEffectsEnabled?: boolean;
 }
 
 /**
@@ -1148,6 +1167,8 @@ export interface DrawSceneMediaFrameOptions {
   itemElapsedMs?: number;
   /** Item duration override for motion/clip (Sprint 8D). */
   itemDurationMs?: number;
+  /** Explicit keyframed visual-effects capability; defaults false. */
+  keyframedVisualEffectsEnabled?: boolean;
 }
 
 /**
@@ -1168,6 +1189,7 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
     mediaItemId,
     itemElapsedMs,
     itemDurationMs,
+    keyframedVisualEffectsEnabled = false,
   } = options;
 
   const elapsed =
@@ -1215,6 +1237,7 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
       asset.element,
       elapsed,
       duration,
+      keyframedVisualEffectsEnabled,
     );
     return finish("image", drew);
   }
@@ -1229,6 +1252,7 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
     elapsed,
     duration,
     playback,
+    keyframedVisualEffectsEnabled,
   );
 
   if (!drew) {

@@ -3,6 +3,7 @@
  */
 
 import type {
+  ExportBrandStingManifest,
   ExportBrandingManifest,
   ExportSceneMediaTimelineItemManifest,
   ExportSceneMediaTransitionBoundaryManifest,
@@ -47,6 +48,12 @@ export interface ResolvedExportIntraSceneTransitionFrame {
   readonly toMediaKey: string;
 }
 
+export interface PreparedExportBrandStingFrame {
+  readonly brandSting: ExportBrandStingManifest;
+  /** Sting-local elapsed ms. */
+  readonly elapsedMs: number;
+}
+
 export interface PreparedExportFrame {
   readonly frameIndex: number;
   readonly timestampMs: number;
@@ -62,4 +69,6 @@ export interface PreparedExportFrame {
   readonly intraSceneTransition: ResolvedExportIntraSceneTransitionFrame | null;
   readonly branding: ExportBrandingManifest;
   readonly storyTitle: string;
+  /** Present when absolute time is inside the trailing ShortForge Studio outro. */
+  readonly brandSting: PreparedExportBrandStingFrame | null;
 }

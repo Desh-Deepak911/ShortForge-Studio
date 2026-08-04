@@ -91,3 +91,48 @@ export { default as SourceQualitySummary } from "./editor/SourceQualitySummary";
 export type { SourceQualitySummaryProps } from "./editor/SourceQualitySummary";
 export { default as SourceQualityAdjustmentControls } from "./editor/SourceQualityAdjustmentControls";
 export type { SourceQualityAdjustmentControlsProps } from "./editor/SourceQualityAdjustmentControls";
+export {
+  SUBJECT_FOCUS_GRID_OPTIONS,
+  buildManualSubjectFocusFromGrid,
+  fingerprintSubjectFocus,
+  matchSubjectFocusGridId,
+  normalizeSceneMediaSubjectAwareFramingProvenance,
+  normalizeSceneMediaSubjectFocus,
+  resolveSubjectFocusGridOption,
+  toStoryFramingSnapshot,
+  type SubjectFocusGridId,
+  type SubjectFocusGridOption,
+} from "./domain/subject-focus";
+export {
+  SUBJECT_FOCUS_FRAMING_GENERATOR_VERSION,
+  SUBJECT_FOCUS_SAFE_REGION_INSET,
+  buildSubjectFocusFramingSuggestion,
+  projectSubjectFocusIntoFrame,
+  subjectFocusSuggestionsSemanticallyEqual,
+  type SubjectFocusFramingPatchProposal,
+  type SubjectFocusFramingSuggestion,
+  type SubjectFocusFramingSuggestionUnavailableReason,
+} from "./domain/subject-focus-framing-suggestion";
+export {
+  evaluateSubjectFramingStaleness,
+  type SubjectAwareFramingPresenceStatus,
+  type SubjectAwareFramingStaleReason,
+  type SubjectAwareFramingStalenessProjection,
+} from "./domain/evaluate-subject-framing-staleness";
+export type {
+  SubjectAwareFramingCommandFailure,
+  SubjectAwareFramingCommandResult,
+  SubjectAwareFramingCommandSuccess,
+  SubjectAwareFramingTerminalCode,
+} from "./editor/subject-aware-framing.commands";
+export {
+  applySubjectAwareFramingSuggestion,
+  clearSubjectFocus,
+  keepOrDismissSubjectAwareFraming,
+  setSubjectFocus,
+  undoSubjectAwareFraming,
+} from "./editor/subject-aware-framing.commands";
+export { default as SubjectAwareFramingControls } from "./editor/SubjectAwareFramingControls";
+export type { SubjectAwareFramingControlsProps } from "./editor/SubjectAwareFramingControls";
+export { default as SubjectFocusPicker } from "./editor/SubjectFocusPicker";
+export type { SubjectFocusPickerProps } from "./editor/SubjectFocusPicker";

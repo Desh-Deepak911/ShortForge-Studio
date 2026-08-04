@@ -63,6 +63,34 @@ const CAPABILITY_UI_SURFACES: Readonly<
     "headless-export",
     "warnings-and-errors",
   ),
+  /** Intended surfaces — controls are not rendered until a later capability slice. */
+  "keyframed-visual-effects-v1": uiSurfaces(
+    "editor",
+    "scene-inspector",
+    "timeline",
+    "preview",
+    "browser-export",
+    "headless-export",
+    "warnings-and-errors",
+  ),
+  /** Intended surfaces — controls are not rendered until a later capability slice. */
+  "engagement-overlays-v1": uiSurfaces(
+    "editor",
+    "scene-inspector",
+    "preview",
+    "browser-export",
+    "headless-export",
+    "warnings-and-errors",
+  ),
+  /** Intended surfaces — controls are not rendered until a later capability slice. */
+  "subject-aware-reframing-v1": uiSurfaces(
+    "editor",
+    "scene-inspector",
+    "preview",
+    "browser-export",
+    "headless-export",
+    "warnings-and-errors",
+  ),
 });
 
 /**

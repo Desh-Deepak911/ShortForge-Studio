@@ -4,11 +4,17 @@
  */
 import type {
   MediaMotionEasing,
+  MediaMotionKeyframe,
   SceneMediaMotion,
   SceneMediaTransform,
 } from "@/features/story/types";
 
-export type { MediaMotionEasing, SceneMediaMotion, SceneMediaTransform };
+export type {
+  MediaMotionEasing,
+  MediaMotionKeyframe,
+  SceneMediaMotion,
+  SceneMediaTransform,
+};
 
 export const MEDIA_MOTION_VERSION = 1 as const;
 

@@ -13,7 +13,12 @@ import type { ExportRenderContext } from "@/features/export/runtime/export-rende
 import { preloadExportManifestMedia } from "@/features/export/utils/export-media-cache.utils";
 import { resolveExportFrameTimestampMs } from "@/features/export/timing";
 import type { ExportManifest } from "@/features/export/domain/headless-safe";
-import { validateExportManifest } from "@/features/export/domain/headless-safe";
+import {
+  isExportManifestV3,
+  isExportManifestV4,
+  isExportManifestV5,
+  validateExportManifest,
+} from "@/features/export/domain/headless-safe";
 
 import {
   HEADLESS_PAGE_CONTRACT_VERSION,
@@ -24,7 +29,7 @@ import {
   type HeadlessPageBootstrapRejectionReasonId,
 } from "./page-bootstrap-rejection";
 import { createHeadlessPageRenderContext } from "./create-page-render-context";
-import { isExportManifestV3, isExportManifestV4 } from "@/features/export/domain/headless-safe";
+import { HEADLESS_WORKER_PHASE3_SUPPORTED } from "../runtime/worker-types";
 
 export interface HeadlessPageBootstrapConfig {
   readonly manifest: ExportManifest;
@@ -95,6 +100,23 @@ async function bootstrap(
         reasonId: mapExportManifestIssueCodeToBootstrapRejection(code),
       };
     }
+    // Reject unsupported required capabilities even if caller fabricates
+    // optimistic request metadata that skipped worker preflight.
+    if (isExportManifestV5(config.manifest)) {
+      const supported = HEADLESS_WORKER_PHASE3_SUPPORTED.rendererCapabilities;
+      const unsupported = config.manifest.requiredCapabilities.some(
+        (capability) =>
+          !(supported as readonly string[]).includes(capability),
+      );
+      if (unsupported) {
+        return {
+          ok: false,
+          reasonId: mapBootstrapInternalFailureToRejectionReason({
+            invalidTarget: true,
+          }),
+        };
+      }
+    }
     plan = prepareExportFromManifest(config.manifest);
     context = createHeadlessPageRenderContext(config.manifest, {
       width: config.targetWidth,
@@ -149,6 +171,7 @@ async function renderFrame(input: {
       context,
       prepared.preparedBySceneId,
       prepared.preparedByMediaKey,
+      plan.keyframedVisualEffectsEnabled,
     );
     return { ok: true };
   } catch (error) {

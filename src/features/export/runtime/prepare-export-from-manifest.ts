@@ -9,6 +9,10 @@ import {
   type ExportMediaManifest,
   type ExportMediaMotionManifest,
   type ExportSceneManifest,
+  isExportManifestV5,
+  EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
+  EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
 } from "@/features/export/domain/export-manifest.types";
 import { assertExportManifest as assertExportManifestAuthority } from "@/features/export/domain/validate-export-manifest";
 import type { SceneImage, SceneMedia, SceneMediaMotion, SceneType } from "@/features/story/types";
@@ -42,6 +46,9 @@ export interface ExportRenderPlan {
   readonly scenes: readonly ExportDrawScene[];
   readonly sceneById: ReadonlyMap<string, ExportDrawScene>;
   readonly captions: readonly ExportCaptionManifest[];
+  readonly keyframedVisualEffectsEnabled: boolean;
+  readonly engagementOverlaysEnabled: boolean;
+  readonly shortForgeBrandStingEnabled: boolean;
 }
 
 /**
@@ -64,6 +71,21 @@ export function prepareExportFromManifest(
     scenes,
     sceneById,
     captions: manifest.captions,
+    keyframedVisualEffectsEnabled:
+      isExportManifestV5(manifest) &&
+      manifest.requiredCapabilities.includes(
+        EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+      ),
+    engagementOverlaysEnabled:
+      isExportManifestV5(manifest) &&
+      manifest.requiredCapabilities.includes(
+        EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
+      ),
+    shortForgeBrandStingEnabled:
+      isExportManifestV5(manifest) &&
+      manifest.requiredCapabilities.includes(
+        EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
+      ),
   };
 }
 
@@ -127,6 +149,7 @@ function toSceneMedia(media: ExportMediaManifest): SceneMedia {
       ...(media.visualAdjustments
         ? { visualAdjustments: media.visualAdjustments }
         : {}),
+      ...(media.visualEffect ? { visualEffect: media.visualEffect } : {}),
     };
   }
 
@@ -144,6 +167,7 @@ function toSceneMedia(media: ExportMediaManifest): SceneMedia {
     ...(media.visualAdjustments
       ? { visualAdjustments: media.visualAdjustments }
       : {}),
+    ...(media.visualEffect ? { visualEffect: media.visualEffect } : {}),
   };
 }
 
@@ -173,6 +197,14 @@ function toSceneMediaMotion(
     presetId: motion.presetId,
     easing: normalizeEasing(motion.easing),
     intensity: motion.intensity,
+    ...(motion.keyframes
+      ? {
+          keyframes: motion.keyframes.map((frame) => ({
+            ...frame,
+            easing: normalizeEasing(frame.easing),
+          })),
+        }
+      : {}),
   };
 }
 

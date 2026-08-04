@@ -4,10 +4,10 @@ import {
   buildExportManifestFingerprint,
   deepFreezeExportManifest,
   validateExportManifest,
-  type ExportManifestV4,
+  type ExportManifest,
   type PrepareExportRequestResult,
 } from "@/features/export/domain";
-import type { ExportManifestV4Draft } from "@/features/export/domain/export-manifest.types";
+import type { ExportManifestDraft } from "@/features/export/domain/export-manifest.types";
 import {
   buildHeadlessAssetBundleFingerprint,
   extractRequiredHeadlessSourceSlots,
@@ -31,7 +31,7 @@ export type PreparedOwnedSource = {
 };
 
 export type PreparedOwnedUpload = {
-  readonly manifest: ExportManifestV4;
+  readonly manifest: ExportManifest;
   readonly manifestBytes: Uint8Array;
   readonly bundle: HeadlessAssetBundleV1;
   readonly bundleBytes: Uint8Array;
@@ -39,7 +39,7 @@ export type PreparedOwnedUpload = {
 };
 
 function sourceForSlot(
-  manifest: ExportManifestV4,
+  manifest: ExportManifest,
   slot: HeadlessRequiredSourceSlot,
 ): string | null {
   if (slot.role === "voiceover") {
@@ -92,20 +92,20 @@ async function readSource(
 }
 
 function rebindProject(
-  manifest: ExportManifestV4,
+  manifest: ExportManifest,
   projectId: string,
-): ExportManifestV4 {
-  const clone = JSON.parse(JSON.stringify(manifest)) as ExportManifestV4;
+): ExportManifest {
+  const clone = JSON.parse(JSON.stringify(manifest)) as ExportManifest;
   const { fingerprint: _oldFingerprint, ...withoutFingerprint } = clone;
   void _oldFingerprint;
-  const draft: ExportManifestV4Draft = {
+  const draft: ExportManifestDraft = {
     ...withoutFingerprint,
     project: { ...withoutFingerprint.project, projectId },
   };
-  const rebound: ExportManifestV4 = {
+  const rebound: ExportManifest = {
     ...draft,
     fingerprint: buildExportManifestFingerprint(draft),
-  };
+  } as ExportManifest;
   if (!validateExportManifest(rebound).ok) {
     throw new Error("INVALID_MANIFEST");
   }
@@ -117,7 +117,7 @@ export async function prepareOwnedHeadlessUpload(input: {
   readonly projectId: string;
   readonly signal?: AbortSignal;
 }): Promise<PreparedOwnedUpload> {
-  if (input.prepared.manifest.version !== 4) {
+  if (input.prepared.manifest.version !== 4 && input.prepared.manifest.version !== 5) {
     throw new Error("INVALID_MANIFEST");
   }
   const manifest = rebindProject(input.prepared.manifest, input.projectId);

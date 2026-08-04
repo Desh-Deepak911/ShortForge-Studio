@@ -11,7 +11,10 @@ import {
   resolveExportAudioEndPolicy,
 } from "./resolve-export-audio-end-policy";
 import { resolveClampedMusicFadeMs } from "./build-export-audio-filter";
-import type { ExportManifest } from "@/features/export/domain/export-manifest.types";
+import {
+  isExportManifestV5,
+  type ExportManifest,
+} from "@/features/export/domain/export-manifest.types";
 import { resolveExportDuckedMusicGain } from "@/features/export/utils/export-background-music.utils";
 
 import type {
@@ -67,6 +70,15 @@ export function resolveExportAudioMixPlan(
   ) {
     return { ok: false, message: "Invalid render duration." };
   }
+  // Brand sting is a silent trailing visual segment — narration/music end at start.
+  const brandStingStartMs =
+    isExportManifestV5(manifest) && manifest.brandSting
+      ? Math.max(0, Math.round(manifest.brandSting.startMs))
+      : null;
+  const musicLoopEndMs =
+    brandStingStartMs != null ? Math.max(1, brandStingStartMs) : outputDurationMs;
+  const narrationAudioEndMs =
+    brandStingStartMs != null ? Math.max(1, brandStingStartMs) : outputDurationMs;
 
   const endPolicy = resolveExportAudioEndPolicy(manifest);
   if (endPolicy.voiceover.action === "block") {
@@ -100,7 +112,8 @@ export function resolveExportAudioMixPlan(
     }
 
     const sourceTrimStartMs = 0;
-    const sourceTrimEndMs = Math.min(voice.durationMs, outputDurationMs);
+    // Narration content ends at the sting boundary; silence may pad the container.
+    const sourceTrimEndMs = Math.min(voice.durationMs, narrationAudioEndMs);
     const timelineStartMs = 0;
     const requireDelayMs = timelineStartMs;
     const padToOutputMs = Math.max(
@@ -131,8 +144,8 @@ export function resolveExportAudioMixPlan(
       return { ok: false, message: "Invalid music volume." };
     }
 
-    const fadeInMs = resolveClampedMusicFadeMs(track.fadeInMs, outputDurationMs);
-    const fadeOutMs = resolveClampedMusicFadeMs(track.fadeOutMs, outputDurationMs);
+    const fadeInMs = resolveClampedMusicFadeMs(track.fadeInMs, musicLoopEndMs);
+    const fadeOutMs = resolveClampedMusicFadeMs(track.fadeOutMs, musicLoopEndMs);
     const voiceMs = voiceover?.sourceDurationMs ?? 0;
     const applyDucking =
       Boolean(voiceover) && track.duckingEnabled && voiceMs > 0;
@@ -144,7 +157,7 @@ export function resolveExportAudioMixPlan(
       timelineStartMs: 0,
       requireDelayMs: 0,
       looping: true,
-      loopUntilOutputMs: outputDurationMs,
+      loopUntilOutputMs: musicLoopEndMs,
       volumeGain: track.volume,
       duckedVolumeGain,
       applyDucking,
