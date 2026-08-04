@@ -535,7 +535,6 @@ function main(): void {
       "src/features/export/domain/build-export-manifest.ts",
       "src/features/visual-retention/client/VisualRetentionCapabilitiesContext.tsx",
       "src/app/api/visual-retention/capabilities/route.ts",
-      "src/features/editor/components/EditorProjectInspector.tsx",
       "src/components/StoryWorkspace.tsx",
       "src/features/media-motion/media-motion.presets.ts",
       "src/features/visual-beat-density/domain/visual-beat-plan.ts",

@@ -1,7 +1,5 @@
 /**
- * Visual Retention Presets — catalog, planning, fingerprint, Apply/Undo surface.
- *
- * UI, export guidance, and inspector wiring are later slices.
+ * Visual Retention Presets — catalog, planning, fingerprint, Apply/Undo, Project Inspector UI.
  */
 
 export {
@@ -99,3 +97,16 @@ export {
   type VisualRetentionPresetUndoSuccess,
   type VisualRetentionPresetUndoTerminalCode,
 } from "./editor/visual-retention-preset.commands";
+
+export { useVisualRetentionPresetSelection } from "./editor/useVisualRetentionPresetSelection";
+
+export {
+  default as VisualRetentionPresetPlanPreview,
+  type VisualRetentionPresetPlanPreviewProps,
+} from "./editor/VisualRetentionPresetPlanPreview";
+
+export {
+  default as VisualRetentionPresetsPanel,
+  type VisualRetentionPresetsPanelCapabilities,
+  type VisualRetentionPresetsPanelProps,
+} from "./editor/VisualRetentionPresetsPanel";
