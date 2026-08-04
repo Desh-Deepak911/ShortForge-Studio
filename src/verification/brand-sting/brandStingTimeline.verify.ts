@@ -849,4 +849,192 @@ test("end buffer stays silent and never restarts narration/music", () => {
   assert.doesNotMatch(prepare, /resolveBrandStingFinalElapsedMs/);
 });
 
+test("Browser TTS full-story continues into authoritative silent sting after last scene", () => {
+  const preview = readSrc("src/features/preview/hooks/usePreviewPlayback.ts");
+
+  // Defect: Browser TTS previously stopped at the last narration scene and
+  // never advanced into the authoritative silent brand-sting interval.
+  assert.match(preview, /scheduleAdvanceAfterScene/);
+  assert.match(preview, /playbackModeRef\.current === "browser"/);
+  assert.match(preview, /playbackScopeRef\.current !== "scene"/);
+  assert.match(preview, /brandStingDurationMs > 0/);
+  assert.match(preview, /masterTimeline\.contentEndMs/);
+  assert.match(preview, /narrationEndedRef\.current = true/);
+  assert.match(
+    preview,
+    /No TTS replay, silence synthesis, or music\/narration restart/,
+  );
+
+  // Silent rAF tail advances the existing preview clock only (sole authority).
+  assert.match(
+    preview,
+    /playbackModeRef\.current === "browser" &&\s*masterTimeline &&\s*narrationEndedRef\.current &&\s*brandStingDurationMs > 0 &&\s*isPlayingRef\.current/s,
+  );
+  assert.match(preview, /syncSceneToTimelineTime\(nextMs, \{ updateSelection: false \}\)/);
+  assert.match(preview, /nextMs >= effectiveRenderDurationMs/);
+
+  // Enter at brandStingStartMs (= contentEndMs) with no gap; stop clears state.
+  const script = enableBrandSting(story(), {
+    shortForgeBrandStingEnabled: true,
+  }).script;
+  const timeline = buildPreviewMasterTimeline(script);
+  assert.ok(timeline);
+  const durationMs = resolveAuthoritativeBrandStingDurationMs({
+    shortForgeBrandStingEnabled: true,
+    extensions: script.visualRetentionExtensions,
+  });
+  assert.ok(durationMs > 0);
+  const bounds = resolveBrandStingTimelineBounds({
+    narrationEndMs: timeline!.contentEndMs,
+    endBufferMs: Math.max(0, timeline!.renderDurationMs - timeline!.contentEndMs),
+    brandStingDurationMs: durationMs,
+  });
+  assert.equal(bounds.brandStingStartMs, timeline!.contentEndMs);
+  assert.equal(bounds.brandStingEndMs, timeline!.contentEndMs + durationMs);
+  assert.equal(
+    resolveBrandStingLocalElapsedMs({
+      absoluteTimeMs: bounds.brandStingStartMs - 1,
+      narrationEndMs: bounds.narrationEndMs,
+      durationMs: bounds.durationMs,
+    }),
+    null,
+  );
+  assert.equal(
+    resolveBrandStingLocalElapsedMs({
+      absoluteTimeMs: bounds.brandStingStartMs,
+      narrationEndMs: bounds.narrationEndMs,
+      durationMs: bounds.durationMs,
+    }),
+    0,
+  );
+  assert.equal(
+    resolveBrandStingLocalElapsedMs({
+      absoluteTimeMs: bounds.brandStingEndMs - 1,
+      narrationEndMs: bounds.narrationEndMs,
+      durationMs: bounds.durationMs,
+    }),
+    resolveBrandStingFinalElapsedMs(durationMs),
+  );
+  assert.equal(
+    resolveBrandStingLocalElapsedMs({
+      absoluteTimeMs: bounds.brandStingEndMs,
+      narrationEndMs: bounds.narrationEndMs,
+      durationMs: bounds.durationMs,
+    }),
+    null,
+  );
+  const sting = createDefaultShortForgeBrandSting(
+    durationMs as 2000 | 2500 | 3000,
+  );
+  const atStart = resolveBrandStingFrame({ sting, elapsedMs: 0 });
+  assert.notEqual(atStart.phase, "hidden");
+  const midEntrance = resolveBrandStingFrame({ sting, elapsedMs: 200 });
+  assert.equal(midEntrance.visible, true);
+  assert.notEqual(midEntrance.phase, "hidden");
+  const afterEnd = resolveBrandStingFrame({
+    sting,
+    elapsedMs: resolveBrandStingTerminalElapsedMs(durationMs),
+  });
+  assert.equal(afterEnd.visible, false);
+  assert.equal(afterEnd.phase, "hidden");
+});
+
+test("Browser TTS sting entry excludes scene-only, capability-off, removed sting, and manual stop", () => {
+  const preview = readSrc("src/features/preview/hooks/usePreviewPlayback.ts");
+
+  // Scene-only narration never uses speakSceneAt / scheduleAdvanceAfterScene
+  // for sting entry; brandStingActive already requires !isSceneScopePlayback.
+  assert.match(preview, /!isSceneScopePlayback/);
+  assert.match(preview, /playbackScopeRef\.current === "scene"/);
+  assert.match(preview, /playScenePreview/);
+  assert.match(preview, /scope: "scene"/);
+
+  // Capability loading/off / missing / invalid / removed → duration 0 → legacy stop.
+  assert.match(preview, /exact legacy resolvePreviewDurationSec/);
+  assert.equal(
+    resolveAuthoritativeBrandStingDurationMs({
+      shortForgeBrandStingEnabled: false,
+      extensions: {
+        version: 1,
+        shortForgeBrandSting: createDefaultShortForgeBrandSting(),
+      },
+    }),
+    0,
+  );
+  assert.equal(
+    resolveAuthoritativeBrandStingDurationMs({
+      shortForgeBrandStingEnabled: true,
+      extensions: undefined,
+    }),
+    0,
+  );
+  const enabled = enableBrandSting(story(), {
+    shortForgeBrandStingEnabled: true,
+  }).script;
+  const removed = disableBrandSting(enabled, {
+    shortForgeBrandStingEnabled: true,
+  }).script;
+  assert.equal(
+    resolveAuthoritativeBrandStingDurationMs({
+      shortForgeBrandStingEnabled: true,
+      extensions: removed.visualRetentionExtensions,
+    }),
+    0,
+  );
+
+  // Manual stop during sting: stopVoice clears playing + timeline + narrationEnded.
+  assert.match(preview, /const stopVoice = useCallback/);
+  assert.match(preview, /resetTimeline\(\)/);
+  assert.match(preview, /narrationEndedRef\.current = false/);
+  assert.match(preview, /setNarrationEnded\(false\)/);
+  assert.match(preview, /window\.speechSynthesis\.cancel/);
+
+  // Removing sting mid-playback clamps via existing preview-duration helper.
+  assert.match(preview, /clamp without restart/);
+  assert.match(preview, /resolvePreviewPlaybackDurationMs/);
+
+  // Seeking/returning into narration clears stale sting flags on browser restart.
+  assert.match(preview, /const playWithBrowserVoice = useCallback/);
+  assert.match(
+    preview,
+    /playWithBrowserVoice[\s\S]*?narrationEndedRef\.current = false[\s\S]*?timelineClockMsRef\.current = 0[\s\S]*?speakSceneAt\(0\)/,
+  );
+});
+
+test("Browser TTS sting tail never restarts TTS/music and honors explicit loop policy only", () => {
+  const preview = readSrc("src/features/preview/hooks/usePreviewPlayback.ts");
+
+  // Sting entry sets speaking false and syncs to contentEndMs without TTS/music restart.
+  const advanceIdx = preview.indexOf("scheduleAdvanceAfterScene = useCallback");
+  assert.ok(advanceIdx >= 0);
+  const advanceBody = preview.slice(advanceIdx, advanceIdx + 2200);
+  assert.match(advanceBody, /setIsSpeaking\(false\)/);
+  assert.match(advanceBody, /syncSceneToTimelineTime\(masterTimeline\.contentEndMs/);
+  assert.doesNotMatch(advanceBody, /speakSceneAt\(/);
+  assert.doesNotMatch(advanceBody, /startBackgroundMusic\(/);
+
+  // Browser full-story disables scene loop; no independent loop-story restart.
+  const voiceIdx = preview.indexOf("const playWithBrowserVoice = useCallback");
+  assert.ok(voiceIdx >= 0);
+  const voiceBody = preview.slice(voiceIdx, voiceIdx + 1600);
+  assert.match(voiceBody, /setLoopSceneEnabled\(false\)/);
+  assert.match(voiceBody, /loopSceneEnabledRef\.current = false/);
+  assert.doesNotMatch(preview, /loopStory|Loop Story|loopFullStory/);
+
+  // After authoritative full-story duration, sting tail stops via stopVoice only.
+  const browserTailIdx = preview.indexOf(
+    'playbackModeRef.current === "browser" &&\n        masterTimeline &&\n        narrationEndedRef.current',
+  );
+  assert.ok(browserTailIdx >= 0);
+  const browserTail = preview.slice(browserTailIdx, browserTailIdx + 900);
+  assert.match(browserTail, /nextMs >= effectiveRenderDurationMs/);
+  assert.match(browserTail, /stopVoice\(\)/);
+  assert.doesNotMatch(browserTail, /speakSceneAt\(/);
+  assert.doesNotMatch(browserTail, /playWithBrowserVoice\(/);
+
+  // rAF cleanup on stop/unmount (isPlaying false tears down the effect).
+  assert.match(preview, /return \(\) => window\.cancelAnimationFrame\(frameId\)/);
+  assert.match(preview, /clearAdvanceTimeout/);
+});
+
 console.log(`\n${passed} passed\n`);

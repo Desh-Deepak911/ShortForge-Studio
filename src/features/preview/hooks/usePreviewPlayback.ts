@@ -526,16 +526,47 @@ export function usePreviewPlayback({
         if (!isPlayingRef.current) return;
         if (index + 1 < sceneCount) {
           advanceToSceneRef.current(index + 1);
-        } else {
-          isPlayingRef.current = false;
-          setIsPlaying(false);
-          setIsSpeaking(false);
-          stopBackgroundMusic();
-          playbackStartedAtMsRef.current = null;
+          return;
         }
+
+        // Full-story Browser TTS has no voiceover clock: after the last
+        // narration scene, enter the same silent sting tail used when
+        // narration audio ends. Scene-only playback never reaches here
+        // (speakSceneAt is browser-mode only) and must not enter the sting.
+        if (
+          playbackModeRef.current === "browser" &&
+          playbackScopeRef.current !== "scene" &&
+          brandStingDurationMs > 0 &&
+          masterTimeline
+        ) {
+          narrationEndedRef.current = true;
+          setNarrationEnded(true);
+          setIsSpeaking(false);
+          // No TTS replay, silence synthesis, or music/narration restart —
+          // existing rAF preview clock advances from brandStingStartMs.
+          lastTailTickWallMsRef.current = Date.now();
+          syncSceneToTimelineTime(masterTimeline.contentEndMs, {
+            updateSelection: false,
+          });
+          return;
+        }
+
+        isPlayingRef.current = false;
+        setIsPlaying(false);
+        setIsSpeaking(false);
+        stopBackgroundMusic();
+        playbackStartedAtMsRef.current = null;
       }, remainingMs);
     },
-    [clearAdvanceTimeout, sceneCount, scenes, stopBackgroundMusic],
+    [
+      brandStingDurationMs,
+      clearAdvanceTimeout,
+      masterTimeline,
+      sceneCount,
+      scenes,
+      stopBackgroundMusic,
+      syncSceneToTimelineTime,
+    ],
   );
 
   const speakSceneAt = useCallback(
@@ -678,6 +709,24 @@ export function usePreviewPlayback({
             }
           }
         }
+      } else if (
+        playbackModeRef.current === "browser" &&
+        masterTimeline &&
+        narrationEndedRef.current &&
+        brandStingDurationMs > 0 &&
+        isPlayingRef.current
+      ) {
+        const lastTick = lastTailTickWallMsRef.current ?? now;
+        lastTailTickWallMsRef.current = now;
+        const deltaMs = now - lastTick;
+        const nextMs = Math.min(
+          effectiveRenderDurationMs,
+          timelineClockMsRef.current + deltaMs,
+        );
+        syncSceneToTimelineTime(nextMs, { updateSelection: false });
+        if (nextMs >= effectiveRenderDurationMs) {
+          stopVoice();
+        }
       }
 
       syncBackgroundMusicVolume();
@@ -690,6 +739,7 @@ export function usePreviewPlayback({
     return () => window.cancelAnimationFrame(frameId);
   }, [
     applyScenePlaybackBoundary,
+    brandStingDurationMs,
     effectiveRenderDurationMs,
     isPlaying,
     masterTimeline,
@@ -755,7 +805,14 @@ export function usePreviewPlayback({
     setPlaybackMode("browser");
     isPlayingRef.current = true;
     setIsPlaying(true);
+    narrationEndedRef.current = false;
+    lastTailTickWallMsRef.current = null;
+    tailHoldLoggedRef.current = false;
+    setNarrationEnded(false);
     setCurrentSceneIndex(0);
+    setElapsedSec(0);
+    setCurrentTimeMs(0);
+    timelineClockMsRef.current = 0;
     onSelectedSceneChange(0);
     playbackStartedAtMsRef.current = Date.now();
     void startBackgroundMusic(0);
