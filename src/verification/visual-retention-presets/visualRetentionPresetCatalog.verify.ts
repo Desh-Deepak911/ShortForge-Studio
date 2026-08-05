@@ -159,11 +159,19 @@ function main(): void {
     assert.equal(share.title, "Share Ready");
     assert.deepEqual(share.recipe.engagement, {
       mode: "add-if-absent",
-      kind: "subscribe",
+      kind: "combined",
       position: "top-right",
       durationMs: 2500,
       timingPolicy: "closing-scene",
     });
+    assert.match(
+      `${share.description} ${share.previewCopy}`,
+      /Like,\s*Share\s*&\s*Subscribe/,
+    );
+    assert.doesNotMatch(
+      `${share.description} ${share.previewCopy}`,
+      /subscribe-only|Subscribe-only prompt/i,
+    );
     assert.deepEqual(share.recipe.outro, {
       mode: "enable-if-absent",
       durationMs: 2500,

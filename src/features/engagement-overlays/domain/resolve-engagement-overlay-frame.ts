@@ -1,5 +1,7 @@
 /**
  * Deterministic engagement-overlay frame planner (scene-local clock only).
+ * Combined overlays expose a frozen segment-state plan so Preview and canvas
+ * cannot diverge on active index or Subscribe confirmation timing.
  */
 
 import type {
@@ -31,6 +33,24 @@ export interface EngagementOverlayLayoutBox {
   readonly height: number;
 }
 
+/**
+ * Frozen per-segment render state for Preview/canvas parity.
+ * Derived only from scene-local elapsed time — never timers or React state.
+ */
+export interface ResolvedEngagementOverlaySegment {
+  readonly index: number;
+  readonly label: string;
+  readonly iconToken: EngagementOverlayIconToken;
+  /** Exactly one segment may be active during hold for combined kinds. */
+  readonly active: boolean;
+  /** Earlier beats that have finished their emphasis. */
+  readonly settled: boolean;
+  /** 0–1 deterministic pulse within the active beat (0 when inactive). */
+  readonly emphasis: number;
+  /** Subscribe confirmation — true only during the final combined beat. */
+  readonly confirmation: boolean;
+}
+
 export interface ResolvedEngagementOverlayFrame {
   readonly visible: boolean;
   readonly phase: EngagementOverlayPhase;
@@ -45,6 +65,11 @@ export interface ResolvedEngagementOverlayFrame {
   readonly position: EngagementOverlayPosition;
   readonly labels: readonly string[];
   readonly iconTokens: readonly EngagementOverlayIconToken[];
+  /**
+   * Shared segment plan. Length matches labels. Non-combined kinds have a
+   * single segment that is never confirmation-active.
+   */
+  readonly segments: readonly ResolvedEngagementOverlaySegment[];
   readonly window: ResolvedEngagementOverlayWindow;
 }
 
@@ -92,10 +117,10 @@ function layoutForPosition(
   const scaleX = frameWidth / ENGAGEMENT_OVERLAY_REFERENCE_WIDTH;
   const scaleY = frameHeight / ENGAGEMENT_OVERLAY_REFERENCE_HEIGHT;
   const scale = Math.min(scaleX, scaleY);
-  const width =
-    (kind === "combined" ? 420 : 220) * scale;
-  const height = (kind === "combined" ? 64 : 56) * scale;
-  const marginX = 48 * scale;
+  // Combined needs room for Like / Share / Subscribed + icons without clipping.
+  const width = (kind === "combined" ? 560 : 220) * scale;
+  const height = (kind === "combined" ? 72 : 56) * scale;
+  const marginX = 40 * scale;
   const marginY = 96 * scale;
   const safeBottom = 280 * scale; // keep clear of common caption band
   const safeTop = 72 * scale;
@@ -166,6 +191,112 @@ function slideDelta(
   }
 }
 
+/**
+ * Build frozen segment states from hold-local elapsed time.
+ * Combined: three ordered beats Like → Share → Subscribe.
+ * Non-combined: one segment, never confirmation, no multi-beat fabrication.
+ */
+function resolveSegments(input: {
+  readonly kind: EngagementOverlayKind;
+  readonly phase: EngagementOverlayPhase;
+  readonly holdLocalMs: number;
+  readonly holdMs: number;
+}): readonly ResolvedEngagementOverlaySegment[] {
+  const labels = engagementOverlayLabelsForKind(input.kind);
+  const icons = engagementOverlayIconsForKind(input.kind);
+  const count = labels.length;
+
+  if (input.kind !== "combined" || count <= 1) {
+    return labels.map((label, index) => ({
+      index,
+      label,
+      iconToken: icons[index] ?? icons[0] ?? "heart",
+      active: false,
+      settled: false,
+      emphasis: 0,
+      confirmation: false,
+    }));
+  }
+
+  const beatCount = 3;
+  let activeIndex = -1;
+  let beatProgress = 0;
+
+  if (input.phase === "hold" && input.holdMs > 0) {
+    const clampedHold = Math.min(
+      Math.max(0, input.holdLocalMs),
+      Math.max(0, input.holdMs - Number.EPSILON),
+    );
+    const beatMs = input.holdMs / beatCount;
+    activeIndex = Math.min(
+      beatCount - 1,
+      Math.max(0, Math.floor(clampedHold / beatMs)),
+    );
+    const beatStart = activeIndex * beatMs;
+    beatProgress = beatMs > 0 ? clamp01((clampedHold - beatStart) / beatMs) : 1;
+  }
+
+  // Deterministic pulse: 0 at beat edges, 1 at mid-beat (seek-stable).
+  const emphasis =
+    activeIndex >= 0 ? Math.sin(clamp01(beatProgress) * Math.PI) : 0;
+
+  return labels.map((label, index) => {
+    const active = index === activeIndex;
+    const settled = activeIndex >= 0 && index < activeIndex;
+    const confirmation = active && index === beatCount - 1;
+    return {
+      index,
+      label: confirmation ? "Subscribed" : label,
+      iconToken: icons[index] ?? icons[0] ?? "heart",
+      active,
+      settled,
+      emphasis: active ? emphasis : 0,
+      confirmation,
+    };
+  });
+}
+
+function buildFrame(input: {
+  readonly visible: boolean;
+  readonly phase: EngagementOverlayPhase;
+  readonly progress: number;
+  readonly opacity: number;
+  readonly scale: number;
+  readonly translateX: number;
+  readonly translateY: number;
+  readonly layout: EngagementOverlayLayoutBox;
+  readonly kind: EngagementOverlayKind;
+  readonly position: EngagementOverlayPosition;
+  readonly holdLocalMs: number;
+  readonly holdMs: number;
+  readonly window: ResolvedEngagementOverlayWindow;
+}): ResolvedEngagementOverlayFrame {
+  const labels = engagementOverlayLabelsForKind(input.kind);
+  const iconTokens = engagementOverlayIconsForKind(input.kind);
+  const segments = resolveSegments({
+    kind: input.kind,
+    phase: input.phase,
+    holdLocalMs: input.holdLocalMs,
+    holdMs: input.holdMs,
+  });
+  return {
+    visible: input.visible,
+    phase: input.phase,
+    progress: input.progress,
+    opacity: input.opacity,
+    scale: input.scale,
+    translateX: input.translateX,
+    translateY: input.translateY,
+    layout: input.layout,
+    kind: input.kind,
+    position: input.position,
+    labels,
+    iconTokens,
+    segments,
+    window: input.window,
+  };
+}
+
 function hiddenFrame(
   window: ResolvedEngagementOverlayWindow,
   overlay: SceneEngagementOverlayV1 | undefined,
@@ -174,7 +305,7 @@ function hiddenFrame(
 ): ResolvedEngagementOverlayFrame {
   const kind = overlay?.kind ?? "like";
   const position = overlay?.position ?? "top-right";
-  return {
+  return buildFrame({
     visible: false,
     phase: "hidden",
     progress: 0,
@@ -185,10 +316,10 @@ function hiddenFrame(
     layout: layoutForPosition(position, kind, frameWidth, frameHeight),
     kind,
     position,
-    labels: engagementOverlayLabelsForKind(kind),
-    iconTokens: engagementOverlayIconsForKind(kind),
+    holdLocalMs: 0,
+    holdMs: 0,
     window,
-  };
+  });
 }
 
 /**
@@ -244,14 +375,14 @@ export function resolveEngagementOverlayFrame(
     frameWidth,
     frameHeight,
   );
-  const labels = engagementOverlayLabelsForKind(window.overlay.kind);
-  const iconTokens = engagementOverlayIconsForKind(window.overlay.kind);
+  const kind = window.overlay.kind;
+  const position = window.overlay.position;
 
   if (local < entranceMs) {
     const progress = entranceMs > 0 ? local / entranceMs : 1;
     const eased = easeOutCubic(progress);
-    const slide = slideDelta(window.overlay.position, eased, layout);
-    return {
+    const slide = slideDelta(position, eased, layout);
+    return buildFrame({
       visible: true,
       phase: "entrance",
       progress: clamp01(progress),
@@ -260,37 +391,38 @@ export function resolveEngagementOverlayFrame(
       translateX: slide.x,
       translateY: slide.y,
       layout,
-      kind: window.overlay.kind,
-      position: window.overlay.position,
-      labels,
-      iconTokens,
+      kind,
+      position,
+      holdLocalMs: 0,
+      holdMs,
       window,
-    };
+    });
   }
 
   if (local < entranceMs + holdMs) {
-    return {
+    const holdLocalMs = local - entranceMs;
+    return buildFrame({
       visible: true,
       phase: "hold",
-      progress: holdMs > 0 ? clamp01((local - entranceMs) / holdMs) : 1,
+      progress: holdMs > 0 ? clamp01(holdLocalMs / holdMs) : 1,
       opacity: 1,
       scale: 1,
       translateX: 0,
       translateY: 0,
       layout,
-      kind: window.overlay.kind,
-      position: window.overlay.position,
-      labels,
-      iconTokens,
+      kind,
+      position,
+      holdLocalMs,
+      holdMs,
       window,
-    };
+    });
   }
 
   const exitLocal = local - entranceMs - holdMs;
   const progress = exitMs > 0 ? exitLocal / exitMs : 1;
   const eased = easeInCubic(progress);
-  const slide = slideDelta(window.overlay.position, 1 - eased, layout);
-  return {
+  const slide = slideDelta(position, 1 - eased, layout);
+  return buildFrame({
     visible: true,
     phase: "exit",
     progress: clamp01(progress),
@@ -299,10 +431,10 @@ export function resolveEngagementOverlayFrame(
     translateX: slide.x,
     translateY: slide.y,
     layout,
-    kind: window.overlay.kind,
-    position: window.overlay.position,
-    labels,
-    iconTokens,
+    kind,
+    position,
+    holdLocalMs: holdMs,
+    holdMs,
     window,
-  };
+  });
 }

@@ -229,6 +229,127 @@ function main(): void {
     assert.deepEqual(seekA, seekB);
   });
 
+  test("combined hold exposes three segments with ordered single-active emphasis", () => {
+    const input = {
+      overlay: overlay({
+        kind: "combined",
+        startOffsetMs: 0,
+        durationMs: 2500,
+      }),
+      sceneDurationMs: 5000,
+      frameWidth: 1080,
+      frameHeight: 1920,
+    };
+
+    const entrance = resolveEngagementOverlayFrame({
+      ...input,
+      sceneElapsedMs: 80,
+    });
+    assert.equal(entrance.phase, "entrance");
+    assert.equal(entrance.segments.length, 3);
+    assert.deepEqual(
+      entrance.segments.map((segment) => segment.label),
+      ["Like", "Share", "Subscribe"],
+    );
+    assert.ok(entrance.segments.every((segment) => !segment.active));
+    assert.ok(entrance.segments.every((segment) => segment.emphasis === 0));
+    assert.ok(entrance.segments.every((segment) => !segment.confirmation));
+
+    // entrance ≈ 400ms for 2500ms window → hold starts after entrance.
+    const samples = [450, 900, 1400, 1900] as const;
+    const activeBySample = samples.map((sceneElapsedMs) => {
+      const frame = resolveEngagementOverlayFrame({ ...input, sceneElapsedMs });
+      assert.equal(frame.phase, "hold");
+      assert.equal(frame.segments.length, 3);
+      const active = frame.segments.filter((segment) => segment.active);
+      assert.equal(active.length, 1);
+      assert.ok(
+        frame.segments.every(
+          (segment) => !segment.active || segment.emphasis > 0,
+        ),
+      );
+      assert.ok(
+        frame.segments.every(
+          (segment) => segment.active || segment.emphasis === 0,
+        ),
+      );
+      return active[0]!.index;
+    });
+    assert.deepEqual(
+      [...new Set(activeBySample)].sort((a, b) => a - b),
+      [0, 1, 2],
+    );
+    assert.ok(activeBySample[0] === 0);
+    assert.ok(activeBySample[activeBySample.length - 1] === 2);
+
+    const likeBeat = resolveEngagementOverlayFrame({
+      ...input,
+      sceneElapsedMs: 500,
+    });
+    assert.equal(likeBeat.segments[0]!.active, true);
+    assert.equal(likeBeat.segments[0]!.confirmation, false);
+    assert.equal(likeBeat.segments[2]!.label, "Subscribe");
+
+    const subscribeBeat = resolveEngagementOverlayFrame({
+      ...input,
+      sceneElapsedMs: 1900,
+    });
+    assert.equal(subscribeBeat.segments[2]!.active, true);
+    assert.equal(subscribeBeat.segments[2]!.confirmation, true);
+    assert.equal(subscribeBeat.segments[2]!.label, "Subscribed");
+    assert.equal(subscribeBeat.segments[0]!.settled, true);
+    assert.equal(subscribeBeat.segments[1]!.settled, true);
+    assert.ok(
+      subscribeBeat.segments.every(
+        (segment) => segment.index === 2 || !segment.confirmation,
+      ),
+    );
+
+    const exit = resolveEngagementOverlayFrame({
+      ...input,
+      sceneElapsedMs: 2400,
+    });
+    assert.equal(exit.phase, "exit");
+    assert.ok(exit.segments.every((segment) => !segment.active));
+    assert.ok(exit.segments.every((segment) => segment.emphasis === 0));
+
+    const hidden = resolveEngagementOverlayFrame({
+      ...input,
+      sceneElapsedMs: 2600,
+    });
+    assert.equal(hidden.visible, false);
+    assert.ok(hidden.segments.every((segment) => !segment.active));
+    assert.ok(hidden.segments.every((segment) => segment.emphasis === 0));
+
+    const seekA = resolveEngagementOverlayFrame({
+      ...input,
+      sceneElapsedMs: 1900,
+    });
+    const seekB = resolveEngagementOverlayFrame({
+      ...input,
+      sceneElapsedMs: 1900,
+    });
+    assert.deepEqual(seekA.segments, seekB.segments);
+  });
+
+  test("non-combined kinds keep a single non-confirmation segment", () => {
+    for (const kind of ["like", "share", "subscribe"] as const) {
+      const frame = resolveEngagementOverlayFrame({
+        overlay: overlay({ kind, startOffsetMs: 0, durationMs: 2500 }),
+        sceneDurationMs: 5000,
+        sceneElapsedMs: 1200,
+        frameWidth: 1080,
+        frameHeight: 1920,
+      });
+      assert.equal(frame.kind, kind);
+      assert.equal(frame.segments.length, 1);
+      assert.equal(frame.segments[0]!.active, false);
+      assert.equal(frame.segments[0]!.confirmation, false);
+      assert.equal(frame.segments[0]!.emphasis, 0);
+      assert.doesNotMatch(frame.segments[0]!.label, /Subscribed/);
+    }
+  });
+
   test("safe-area layout scales across 720p/1080p/4K", () => {
     for (const [w, h] of [
       [720, 1280],
@@ -236,7 +357,7 @@ function main(): void {
       [2160, 3840],
     ] as const) {
       const frame = resolveEngagementOverlayFrame({
-        overlay: overlay({ startOffsetMs: 0 }),
+        overlay: overlay({ kind: "combined", startOffsetMs: 0 }),
         sceneDurationMs: 5000,
         sceneElapsedMs: 1000,
         frameWidth: w,
@@ -246,6 +367,12 @@ function main(): void {
       assert.ok(frame.layout.y >= 0);
       assert.ok(frame.layout.x + frame.layout.width <= w + 1e-6);
       assert.ok(frame.layout.y + frame.layout.height <= h + 1e-6);
+      const scale = Math.min(w / 1080, h / 1920);
+      const captionBandTop = h - 280 * scale;
+      assert.ok(
+        frame.layout.y + frame.layout.height <= captionBandTop + 1e-6,
+        "combined card must stay above the reserved caption-safe band",
+      );
     }
   });
 

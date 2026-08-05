@@ -276,6 +276,62 @@ async function main(): Promise<void> {
     assert.equal(coerced.visualRetentionPresetProvenance, undefined);
   });
 
+  test("old Subscribe-only Share Ready provenance normalizes fail-safe", () => {
+    const subscribeOverlay = {
+      version: 1,
+      id: "engagement-s1",
+      kind: "subscribe",
+      startOffsetMs: 7500,
+      durationMs: 2500,
+      position: "top-right",
+      presetId: "compact-pill-v1",
+    };
+    const normalized = normalizeVisualRetentionPresetProvenance({
+      version: VISUAL_RETENTION_PRESET_PROVENANCE_VERSION,
+      catalogVersion: 1,
+      presetId: "visual-retention-share-ready",
+      inputFingerprint: "vrp1:old-share-ready-input",
+      planFingerprint: "vrp1:old-share-ready-plan",
+      status: "applied",
+      appliedAtIso: "2026-07-01T12:00:00.000Z",
+      changes: [
+        {
+          actionKind: "enable-brand-sting",
+          field: "shortForgeBrandSting",
+          target: { scope: "project" },
+          previousValue: null,
+          appliedValue: {
+            version: 1,
+            enabled: true,
+            title: "ShortForge Studio",
+            durationMs: 2500,
+            presetId: "shortforge-studio-outro-v1",
+            narrationPolicy: "none",
+            captionPolicy: "none",
+            playbackSpeedPolicy: "fixed",
+          },
+        },
+        {
+          actionKind: "add-engagement-overlay",
+          field: "engagementOverlay",
+          target: { scope: "scene", sceneId: "s1" },
+          previousValue: null,
+          appliedValue: subscribeOverlay,
+        },
+      ],
+    });
+    assert.ok(normalized);
+    assert.equal(normalized!.presetId, "visual-retention-share-ready");
+    const engagement = normalized!.changes.find(
+      (change) => change.actionKind === "add-engagement-overlay",
+    );
+    assert.ok(engagement);
+    assert.equal(
+      (engagement!.appliedValue as { kind?: string }).kind,
+      "subscribe",
+    );
+  });
+
   test("ExportManifest / fingerprint parity with and without provenance", () => {
     assert.equal(EXPORT_MANIFEST_VERSION, 4);
     const base = baseScript();

@@ -11,6 +11,7 @@ export {
   ENGAGEMENT_OVERLAY_MIN_DURATION_MS,
   ENGAGEMENT_OVERLAY_POSITION_OPTIONS,
   ENGAGEMENT_OVERLAY_PRESET_ID,
+  ENGAGEMENT_OVERLAY_STYLE,
   engagementOverlayIconsForKind,
   engagementOverlayKindLabel,
   engagementOverlayLabelsForKind,
@@ -45,6 +46,7 @@ export {
   type EngagementOverlayPhase,
   type ResolveEngagementOverlayFrameInput,
   type ResolvedEngagementOverlayFrame,
+  type ResolvedEngagementOverlaySegment,
 } from "./domain/resolve-engagement-overlay-frame";
 
 export {
