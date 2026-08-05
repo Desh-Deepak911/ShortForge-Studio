@@ -52,15 +52,37 @@ function main(): void {
     });
     assert.equal(plan.visible, true);
     assert.equal(plan.phase, "hold");
+    assert.equal(plan.segments.length, 3);
+    assert.equal(plan.segments.filter((segment) => segment.active).length, 1);
 
     const markup = renderToStaticMarkup(
       createElement(EngagementOverlayPreview, { frame: plan }),
     );
     assert.match(markup, /data-engagement-overlay-preview="true"/);
     assert.match(markup, /data-engagement-overlay-kind="combined"/);
+    assert.match(markup, /data-engagement-overlay-segment=/);
     assert.match(markup, /Like/);
     assert.match(markup, /Share/);
-    assert.match(markup, /Subscribe/);
+    assert.match(markup, /Subscribe|Subscribed/);
+    assert.match(markup, /pointer-events-none/);
+    assert.doesNotMatch(markup, /<button|<a |tabIndex|contentEditable/i);
+
+    const confirmPlan = resolveEngagementOverlayFrame({
+      overlay: overlay(),
+      sceneDurationMs: 5000,
+      sceneElapsedMs: 1900,
+      frameWidth: 1080,
+      frameHeight: 1920,
+    });
+    assert.equal(confirmPlan.segments[2]!.confirmation, true);
+    const confirmMarkup = renderToStaticMarkup(
+      createElement(EngagementOverlayPreview, { frame: confirmPlan }),
+    );
+    assert.match(confirmMarkup, /Subscribed/);
+    assert.match(
+      confirmMarkup,
+      /data-engagement-overlay-segment-confirmation="true"/,
+    );
 
     const draw = readSrc(
       "src/features/engagement-overlays/render/draw-engagement-overlay.ts",
@@ -69,8 +91,21 @@ function main(): void {
       "src/features/engagement-overlays/preview/EngagementOverlayPreview.tsx",
     );
     assert.match(draw, /ResolvedEngagementOverlayFrame/);
+    assert.match(draw, /frame\.segments/);
+    assert.match(draw, /segment\.confirmation/);
+    assert.match(draw, /segment\.emphasis/);
     assert.match(preview, /resolveEngagementOverlayFrame/);
+    assert.match(preview, /frame\.segments/);
+    assert.match(preview, /segment\.emphasis/);
     assert.match(preview, /z-\[2\]/);
+    assert.doesNotMatch(
+      draw,
+      /Math\.floor\([^)]*beat|setTimeout|requestAnimationFrame|Date\.now/,
+    );
+    assert.doesNotMatch(
+      preview,
+      /useEffect|useState|setTimeout|requestAnimationFrame|Date\.now/,
+    );
   });
 
   test("canvas save/restore isolates alpha/filter/font/shadow/transform fields", () => {
@@ -168,7 +203,15 @@ function main(): void {
       frameHeight: 1920,
     });
     drawEngagementOverlay(ctx as unknown as CanvasRenderingContext2D, plan);
-    assert.deepEqual(calls, ["save", "restore"]);
+    assert.ok(calls.length >= 2);
+    assert.equal(calls[0], "save");
+    assert.equal(calls[calls.length - 1], "restore");
+    assert.equal(
+      calls.filter((call) => call === "save").length,
+      calls.filter((call) => call === "restore").length,
+    );
+    // Outer card save/restore plus one nested pair per segment.
+    assert.ok(calls.filter((call) => call === "save").length >= 4);
     assert.equal(ctx.globalAlpha, 0.25);
     assert.equal(ctx.filter, "blur(2px)");
     assert.equal(ctx.shadowBlur, 8);
@@ -181,6 +224,7 @@ function main(): void {
     assert.match(drawSrc, /shadowBlur\s*=\s*0/);
     assert.match(drawSrc, /filter\s*=\s*["']none["']/);
     assert.match(drawSrc, /globalCompositeOperation/);
+    assert.match(drawSrc, /ENGAGEMENT_OVERLAY_STYLE/);
   });
 
   test("caption z-order contract: engagement below captions in preview and export", () => {
@@ -256,6 +300,13 @@ function main(): void {
     });
     assert.deepEqual(plan.labels, ["Like", "Share", "Subscribe"]);
     assert.deepEqual(plan.iconTokens, ["heart", "share", "bell"]);
+    assert.equal(plan.segments.length, 3);
+    assert.match(presets, /ENGAGEMENT_OVERLAY_STYLE/);
+    assert.match(presets, /cardFill/);
+    assert.match(presets, /accentFill/);
+    assert.doesNotMatch(presets, /from ["']@\/features\/brand-sting/);
+    assert.doesNotMatch(draw, /from ["']@\/features\/brand-sting/);
+    assert.doesNotMatch(preview, /from ["']@\/features\/brand-sting/);
   });
 
   test("preview and canvas share inter-scene transition suppression helper", () => {

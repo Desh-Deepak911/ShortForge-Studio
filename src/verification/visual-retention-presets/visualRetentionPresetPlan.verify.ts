@@ -340,6 +340,9 @@ function main(): void {
     if (engagement?.kind === "add-engagement-overlay") {
       assert.equal(engagement.sceneId, "eligible");
       assert.equal(engagement.timingPolicy, "closing-scene");
+      assert.equal(engagement.overlayKind, "combined");
+      assert.equal(engagement.durationMs, 2500);
+      assert.equal(engagement.position, "top-right");
       assert.equal("id" in engagement, false);
     }
   });

@@ -4,12 +4,16 @@ import type { CSSProperties, ReactNode } from "react";
 
 import type { SceneEngagementOverlayV1 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
 
-import type { EngagementOverlayIconToken } from "../domain/engagement-overlay.presets";
+import {
+  ENGAGEMENT_OVERLAY_STYLE,
+  type EngagementOverlayIconToken,
+} from "../domain/engagement-overlay.presets";
 import {
   ENGAGEMENT_OVERLAY_REFERENCE_HEIGHT,
   ENGAGEMENT_OVERLAY_REFERENCE_WIDTH,
   resolveEngagementOverlayFrame,
   type ResolvedEngagementOverlayFrame,
+  type ResolvedEngagementOverlaySegment,
 } from "../domain/resolve-engagement-overlay-frame";
 
 export interface EngagementOverlayPreviewProps {
@@ -23,7 +27,13 @@ export interface EngagementOverlayPreviewProps {
   height?: number;
 }
 
-function IconGlyph({ token }: { token: EngagementOverlayIconToken }): ReactNode {
+function IconGlyph({
+  token,
+  confirmation,
+}: {
+  token: EngagementOverlayIconToken;
+  confirmation?: boolean;
+}): ReactNode {
   const common = {
     width: "1em",
     height: "1em",
@@ -32,6 +42,20 @@ function IconGlyph({ token }: { token: EngagementOverlayIconToken }): ReactNode 
     "aria-hidden": true as const,
     focusable: false as const,
   };
+
+  if (confirmation) {
+    return (
+      <svg {...common}>
+        <path
+          d="M5 12.5 10 17.5 19 7"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
 
   if (token === "heart") {
     return (
@@ -82,6 +106,13 @@ function IconGlyph({ token }: { token: EngagementOverlayIconToken }): ReactNode 
   );
 }
 
+function segmentColor(segment: ResolvedEngagementOverlaySegment): string {
+  if (segment.confirmation) return ENGAGEMENT_OVERLAY_STYLE.confirmationFill;
+  if (segment.active) return ENGAGEMENT_OVERLAY_STYLE.accentFill;
+  if (segment.settled) return ENGAGEMENT_OVERLAY_STYLE.settledFill;
+  return ENGAGEMENT_OVERLAY_STYLE.inactiveFill;
+}
+
 function resolveFrame(
   props: EngagementOverlayPreviewProps,
 ): ResolvedEngagementOverlayFrame | null {
@@ -99,6 +130,7 @@ function resolveFrame(
 /**
  * Deterministic DOM preview for engagement overlays.
  * Stacks under captions (z-[2]); never captures pointer events.
+ * Segment emphasis/confirmation come only from the shared frame plan.
  */
 export default function EngagementOverlayPreview(
   props: EngagementOverlayPreviewProps,
@@ -131,10 +163,18 @@ export default function EngagementOverlayPreview(
     zIndex: 2,
   };
 
-  const segments = frame.labels.map((label, index) => ({
-    label,
-    icon: frame.iconTokens[index] ?? frame.iconTokens[0] ?? "heart",
-  }));
+  const segments =
+    frame.segments.length > 0
+      ? frame.segments
+      : frame.labels.map((label, index) => ({
+          index,
+          label,
+          iconToken: frame.iconTokens[index] ?? frame.iconTokens[0] ?? "heart",
+          active: false,
+          settled: false,
+          emphasis: 0,
+          confirmation: false,
+        }));
 
   return (
     <div
@@ -146,28 +186,47 @@ export default function EngagementOverlayPreview(
       aria-hidden="true"
     >
       <div
-        className="flex h-full max-w-full items-center gap-[0.45em] rounded-full px-[0.9em] text-white"
+        className="flex h-full max-w-full items-center justify-evenly rounded-full px-[0.75em] text-white"
         style={{
-          background: "rgba(12, 14, 20, 0.78)",
-          boxShadow: "0 1px 0 rgba(255,255,255,0.08) inset",
-          fontSize: Math.max(11, Math.round(layout.height * 0.34)),
+          background: ENGAGEMENT_OVERLAY_STYLE.cardFill,
+          boxShadow: `inset 0 1px 0 ${ENGAGEMENT_OVERLAY_STYLE.cardInsetHighlight}, 0 0 0 1px ${ENGAGEMENT_OVERLAY_STYLE.cardStroke}`,
+          fontSize: Math.max(11, Math.round(layout.height * 0.32)),
           fontFamily: "Arial, Helvetica, sans-serif",
           fontWeight: 600,
           letterSpacing: "0.01em",
           whiteSpace: "nowrap",
         }}
       >
-        {segments.map((segment) => (
-          <span
-            key={`${segment.icon}-${segment.label}`}
-            className="inline-flex items-center gap-[0.35em]"
-          >
-            <span className="inline-flex shrink-0 text-[1.05em] leading-none">
-              <IconGlyph token={segment.icon} />
+        {segments.map((segment) => {
+          const color = segmentColor(segment);
+          const pulseScale = segment.active
+            ? 1 + 0.07 * segment.emphasis + (segment.confirmation ? 0.03 : 0)
+            : 1;
+          return (
+            <span
+              key={`${segment.index}-${segment.iconToken}`}
+              className="inline-flex items-center gap-[0.32em]"
+              data-engagement-overlay-segment={segment.index}
+              data-engagement-overlay-segment-active={segment.active ? "true" : "false"}
+              data-engagement-overlay-segment-confirmation={
+                segment.confirmation ? "true" : "false"
+              }
+              style={{
+                color,
+                transform: `scale(${pulseScale})`,
+                transformOrigin: "center center",
+              }}
+            >
+              <span className="inline-flex shrink-0 text-[1.05em] leading-none">
+                <IconGlyph
+                  token={segment.iconToken}
+                  confirmation={segment.confirmation}
+                />
+              </span>
+              <span className="leading-none">{segment.label}</span>
             </span>
-            <span className="leading-none">{segment.label}</span>
-          </span>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

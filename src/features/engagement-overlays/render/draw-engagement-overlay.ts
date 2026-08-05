@@ -1,15 +1,18 @@
 /**
  * Pure canvas draw for engagement overlays (preview/export parity helper).
+ * Consumes the shared segment plan — never recalculates active beats.
  * Deterministic local fill/stroke only — no user filter strings or remote assets.
  */
 
-import type { EngagementOverlayIconToken } from "../domain/engagement-overlay.presets";
-import type { ResolvedEngagementOverlayFrame } from "../domain/resolve-engagement-overlay-frame";
+import {
+  ENGAGEMENT_OVERLAY_STYLE,
+  type EngagementOverlayIconToken,
+} from "../domain/engagement-overlay.presets";
+import type {
+  ResolvedEngagementOverlayFrame,
+  ResolvedEngagementOverlaySegment,
+} from "../domain/resolve-engagement-overlay-frame";
 
-const PILL_FILL = "rgba(12, 14, 20, 0.78)";
-const PILL_STROKE = "rgba(255, 255, 255, 0.12)";
-const LABEL_FILL = "rgba(255, 255, 255, 0.95)";
-const ICON_FILL = "rgba(255, 255, 255, 0.95)";
 /** Fixed stack shared with preview — no remote/system-dependent UI fonts. */
 const LABEL_FONT_FAMILY = "Arial, Helvetica, sans-serif";
 
@@ -107,18 +110,39 @@ function drawBellIcon(
   ctx.stroke();
 }
 
+function drawCheckIcon(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+): void {
+  const s = size / 24;
+  ctx.beginPath();
+  ctx.moveTo(cx - 6 * s, cy + 0.5 * s);
+  ctx.lineTo(cx - 1.5 * s, cy + 5.5 * s);
+  ctx.lineTo(cx + 7 * s, cy - 5 * s);
+  ctx.stroke();
+}
+
 function drawIcon(
   ctx: CanvasRenderingContext2D,
   token: EngagementOverlayIconToken,
   cx: number,
   cy: number,
   size: number,
+  fill: string,
+  confirmation: boolean,
 ): void {
-  ctx.fillStyle = ICON_FILL;
-  ctx.strokeStyle = ICON_FILL;
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = fill;
   ctx.lineWidth = Math.max(1.25, size * 0.08);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+  if (confirmation) {
+    ctx.lineWidth = Math.max(1.8, size * 0.11);
+    drawCheckIcon(ctx, cx, cy, size);
+    return;
+  }
   if (token === "heart") {
     drawHeartIcon(ctx, cx, cy, size);
     return;
@@ -130,9 +154,17 @@ function drawIcon(
   drawBellIcon(ctx, cx, cy, size);
 }
 
+function segmentFill(segment: ResolvedEngagementOverlaySegment): string {
+  if (segment.confirmation) return ENGAGEMENT_OVERLAY_STYLE.confirmationFill;
+  if (segment.active) return ENGAGEMENT_OVERLAY_STYLE.accentFill;
+  if (segment.settled) return ENGAGEMENT_OVERLAY_STYLE.settledFill;
+  return ENGAGEMENT_OVERLAY_STYLE.inactiveFill;
+}
+
 /**
  * Draw one resolved engagement-overlay frame into a canvas context.
  * Always pairs save/restore so globalAlpha and transforms do not leak.
+ * Active-segment scale is isolated inside a nested save/restore.
  */
 export function drawEngagementOverlay(
   ctx: CanvasRenderingContext2D,
@@ -168,40 +200,78 @@ export function drawEngagementOverlay(
 
     const radius = layout.height / 2;
     roundRectPath(ctx, 0, 0, layout.width, layout.height, radius);
-    ctx.fillStyle = PILL_FILL;
+    ctx.fillStyle = ENGAGEMENT_OVERLAY_STYLE.cardFill;
     ctx.fill();
-    ctx.strokeStyle = PILL_STROKE;
+    ctx.strokeStyle = ENGAGEMENT_OVERLAY_STYLE.cardStroke;
     ctx.lineWidth = Math.max(1, layout.height * 0.03);
     ctx.stroke();
 
-    const labels = frame.labels;
-    const icons = frame.iconTokens;
-    const count = Math.max(labels.length, 1);
-    const padX = layout.width * 0.08;
-    const gap = layout.width * 0.04;
+    const segments =
+      frame.segments.length > 0
+        ? frame.segments
+        : frame.labels.map((label, index) => ({
+            index,
+            label,
+            iconToken: frame.iconTokens[index] ?? frame.iconTokens[0] ?? "heart",
+            active: false,
+            settled: false,
+            emphasis: 0,
+            confirmation: false,
+          }));
+
+    const count = Math.max(segments.length, 1);
+    const padX = layout.width * 0.06;
+    const gap = layout.width * 0.03;
     const usable = Math.max(0, layout.width - padX * 2 - gap * (count - 1));
     const segmentWidth = usable / count;
-    const fontSize = Math.max(11, Math.round(layout.height * 0.34));
+    const fontSize = Math.max(11, Math.round(layout.height * 0.32));
     const iconSize = fontSize * 1.05;
 
     ctx.font = `600 ${fontSize}px ${LABEL_FONT_FAMILY}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = LABEL_FILL;
 
     for (let index = 0; index < count; index += 1) {
-      const label = labels[index] ?? labels[0] ?? "Like";
-      const icon = icons[index] ?? icons[0] ?? "heart";
+      const segment = segments[index]!;
+      const fill = segmentFill(segment);
       const segmentLeft = padX + index * (segmentWidth + gap);
-      const textWidth = ctx.measureText(label).width;
-      const contentWidth = iconSize + fontSize * 0.35 + textWidth;
+      const textWidth = ctx.measureText(segment.label).width;
+      const contentWidth = iconSize + fontSize * 0.32 + textWidth;
       const contentLeft =
         segmentLeft + Math.max(0, (segmentWidth - contentWidth) / 2);
       const cy = layout.height / 2;
+      const contentCenterX = contentLeft + contentWidth / 2;
+      const pulseScale = segment.active
+        ? 1 + 0.07 * segment.emphasis + (segment.confirmation ? 0.03 : 0)
+        : 1;
 
-      drawIcon(ctx, icon, contentLeft + iconSize / 2, cy, iconSize);
-      ctx.fillStyle = LABEL_FILL;
-      ctx.fillText(label, contentLeft + iconSize + fontSize * 0.35, cy);
+      ctx.save();
+      try {
+        if (pulseScale !== 1) {
+          ctx.translate(contentCenterX, cy);
+          ctx.scale(pulseScale, pulseScale);
+          ctx.translate(-contentCenterX, -cy);
+        }
+        if (segment.active) {
+          ctx.shadowBlur = Math.max(2, fontSize * 0.35);
+          ctx.shadowColor = ENGAGEMENT_OVERLAY_STYLE.accentGlow;
+        }
+        drawIcon(
+          ctx,
+          segment.iconToken,
+          contentLeft + iconSize / 2,
+          cy,
+          iconSize,
+          fill,
+          segment.confirmation,
+        );
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "rgba(0,0,0,0)";
+        ctx.fillStyle = fill;
+        ctx.fillText(segment.label, contentLeft + iconSize + fontSize * 0.32, cy);
+      } finally {
+        ctx.restore();
+      }
     }
   } finally {
     ctx.restore();

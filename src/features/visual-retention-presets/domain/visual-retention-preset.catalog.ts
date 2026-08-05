@@ -329,10 +329,10 @@ const SHARE_READY = definePreset({
   id: "visual-retention-share-ready",
   title: "Share Ready",
   description:
-    "Balanced visual polish with an optional subscribe prompt and ShortForge Studio outro.",
+    "Balanced visual polish with an optional combined Like, Share & Subscribe prompt and ShortForge Studio outro.",
   recommendedFor: "creators explicitly preparing promotional publishing",
   previewCopy:
-    "Balanced polish with a subscribe prompt and a 2.5-second ShortForge Studio outro.",
+    "Balanced polish with a combined Like, Share & Subscribe prompt and a 2.5-second ShortForge Studio outro.",
   recipe: {
     version: 1,
     pacing: { mode: "suggest", density: "balanced" },
@@ -344,7 +344,7 @@ const SHARE_READY = definePreset({
     look: { mode: "apply", presetId: "vivid", intensity: 0.4 },
     engagement: {
       mode: "add-if-absent",
-      kind: "subscribe",
+      kind: "combined",
       position: "top-right",
       durationMs: 2500,
       timingPolicy: "closing-scene",

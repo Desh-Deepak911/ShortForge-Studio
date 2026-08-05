@@ -464,7 +464,7 @@ function testChromeFlowStaticExpectations(): void {
   )!;
   assert.equal(share.recipe.engagement.mode, "add-if-absent");
   if (share.recipe.engagement.mode === "add-if-absent") {
-    assert.equal(share.recipe.engagement.kind, "subscribe");
+    assert.equal(share.recipe.engagement.kind, "combined");
     assert.equal(share.recipe.engagement.timingPolicy, "closing-scene");
   }
   assert.equal(share.recipe.outro.mode, "enable-if-absent");

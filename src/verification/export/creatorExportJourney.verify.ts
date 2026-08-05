@@ -551,7 +551,7 @@ function testShareReadyPlanApplyPreservation(): void {
 
   const overlay = getSceneEngagementOverlay(applied, CREATOR_EXPORT_QA_SCENE_3_ID);
   assert.ok(overlay);
-  assert.equal(overlay!.kind, "subscribe");
+  assert.equal(overlay!.kind, "combined");
 
   const sting = getShortForgeBrandSting(applied.visualRetentionExtensions);
   assert.ok(sting);

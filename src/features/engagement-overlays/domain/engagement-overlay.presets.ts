@@ -42,6 +42,26 @@ export const ENGAGEMENT_OVERLAY_POSITION_OPTIONS: readonly {
 
 export type EngagementOverlayIconToken = "heart" | "share" | "bell";
 
+/**
+ * Engagement-owned visual tokens for the polished pill card.
+ * Kept local to this feature — do not import brand-sting colors.
+ */
+export const ENGAGEMENT_OVERLAY_STYLE = Object.freeze({
+  /** Semi-transparent charcoal/navy card fill. */
+  cardFill: "rgba(18, 24, 38, 0.88)",
+  /** Subtle inset/border highlight. */
+  cardStroke: "rgba(255, 255, 255, 0.16)",
+  cardInsetHighlight: "rgba(255, 255, 255, 0.10)",
+  /** Inactive icon/label. */
+  inactiveFill: "rgba(255, 255, 255, 0.92)",
+  settledFill: "rgba(255, 255, 255, 0.72)",
+  /** Warm forge accent for the active segment (engagement-owned). */
+  accentFill: "rgba(232, 160, 74, 0.98)",
+  /** Strongest Subscribe/confirmation accent. */
+  confirmationFill: "rgba(245, 186, 96, 1)",
+  accentGlow: "rgba(232, 160, 74, 0.35)",
+} as const);
+
 export function engagementOverlayKindLabel(kind: EngagementOverlayKind): string {
   return (
     ENGAGEMENT_OVERLAY_KIND_OPTIONS.find((option) => option.id === kind)?.label ??

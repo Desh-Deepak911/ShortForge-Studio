@@ -576,6 +576,141 @@ function main(): void {
     );
   });
 
+  test("Share Ready adds combined when absent; preserves Subscribe-only", () => {
+    const absent = scriptOf(mixedSequenceScene("s1"));
+    const applied = applyPreset(absent, "visual-retention-share-ready");
+    assert.equal(applied.ok, true);
+    if (!applied.ok) return;
+    const overlay = getSceneEngagementOverlay(applied.script, "s1");
+    assert.ok(overlay);
+    assert.equal(overlay!.kind, "combined");
+    assert.equal(overlay!.position, "top-right");
+    assert.equal(overlay!.durationMs, 2500);
+    const engagementChange = applied.provenance.changes.find(
+      (change) => change.actionKind === "add-engagement-overlay",
+    );
+    assert.ok(engagementChange);
+    assert.equal(engagementChange!.previousValue, null);
+    assert.equal(
+      (engagementChange!.appliedValue as { kind?: string }).kind,
+      "combined",
+    );
+
+    const undone = undoVisualRetentionPresetApplication({
+      script: applied.script,
+      capabilities: allCapabilities(),
+    });
+    assert.equal(undone.ok, true);
+    if (!undone.ok) return;
+    assert.equal(getSceneEngagementOverlay(undone.script, "s1"), undefined);
+
+    const withSubscribe = scriptOf(mixedSequenceScene("s1"));
+    withSubscribe.visualRetentionExtensions = {
+      version: 1,
+      engagementOverlaysBySceneId: {
+        s1: [
+          {
+            version: 1,
+            id: "engagement-s1",
+            kind: "subscribe",
+            startOffsetMs: 7500,
+            durationMs: 2500,
+            position: "top-right",
+            presetId: "compact-pill-v1",
+          },
+        ],
+      },
+    };
+    const preserved = applyPreset(withSubscribe, "visual-retention-share-ready");
+    assert.equal(preserved.ok, true);
+    if (!preserved.ok) return;
+    const kept = getSceneEngagementOverlay(preserved.script, "s1");
+    assert.ok(kept);
+    assert.equal(kept!.kind, "subscribe");
+    assert.equal(kept!.id, "engagement-s1");
+    assert.ok(
+      !preserved.provenance.changes.some(
+        (change) => change.actionKind === "add-engagement-overlay",
+      ),
+    );
+  });
+
+  test("old Subscribe-only Share Ready provenance remains Undo-compatible", () => {
+    const script = scriptOf(mixedSequenceScene("s1"));
+    const subscribeOverlay = {
+      version: 1 as const,
+      id: "engagement-s1",
+      kind: "subscribe" as const,
+      startOffsetMs: 7500,
+      durationMs: 2500,
+      position: "top-right" as const,
+      presetId: "compact-pill-v1" as const,
+    };
+    script.visualRetentionExtensions = {
+      version: 1,
+      engagementOverlaysBySceneId: {
+        s1: [subscribeOverlay],
+      },
+      shortForgeBrandSting: {
+        version: 1,
+        enabled: true,
+        title: "ShortForge Studio",
+        durationMs: 2500,
+        presetId: "shortforge-studio-outro-v1",
+        narrationPolicy: "none",
+        captionPolicy: "none",
+        playbackSpeedPolicy: "fixed",
+      },
+    };
+    script.visualRetentionPresetProvenance = {
+      version: 1,
+      catalogVersion: 1,
+      presetId: "visual-retention-share-ready",
+      inputFingerprint: "vrp1:old-share-ready-input",
+      planFingerprint: "vrp1:old-share-ready-plan",
+      status: "applied",
+      appliedAtIso: "2026-07-01T12:00:00.000Z",
+      changes: [
+        {
+          actionKind: "enable-brand-sting",
+          field: "shortForgeBrandSting",
+          target: { scope: "project" },
+          previousValue: null,
+          appliedValue: {
+            version: 1,
+            enabled: true,
+            title: "ShortForge Studio",
+            durationMs: 2500,
+            presetId: "shortforge-studio-outro-v1",
+            narrationPolicy: "none",
+            captionPolicy: "none",
+            playbackSpeedPolicy: "fixed",
+          },
+        },
+        {
+          actionKind: "add-engagement-overlay",
+          field: "engagementOverlay",
+          target: { scope: "scene", sceneId: "s1" },
+          previousValue: null,
+          appliedValue: subscribeOverlay,
+        },
+      ],
+    };
+
+    const undone = undoVisualRetentionPresetApplication({
+      script,
+      capabilities: allCapabilities(),
+    });
+    assert.equal(undone.ok, true);
+    if (!undone.ok) return;
+    assert.equal(getSceneEngagementOverlay(undone.script, "s1"), undefined);
+    assert.equal(
+      getShortForgeBrandSting(undone.script.visualRetentionExtensions),
+      undefined,
+    );
+    assert.equal(undone.script.visualRetentionPresetProvenance, undefined);
+  });
+
   test("exact provenance actual-diff inventory; no-change stores none", () => {
     const script = scriptOf(mixedSequenceScene("s1"));
     const first = applyPreset(script, "visual-retention-balanced-clarity");
