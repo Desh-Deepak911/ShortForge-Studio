@@ -5,7 +5,10 @@
  */
 
 import type { AssembledContext } from "@/features/intelligence/context/assembled-context.types";
-import type { GraphContext, GraphContextFact } from "@/features/intelligence/context/graph-context.types";
+import type {
+  GraphContext,
+  GraphContextFact,
+} from "@/features/intelligence/context/graph-context.types";
 import type { NarrativePlan } from "@/features/intelligence/prompts/narrative-plan.types";
 import type { IntelligenceFact } from "@/features/intelligence/shared/knowledge.types";
 
@@ -22,8 +25,36 @@ export interface BuildRetentionGroundingContextInput {
   readonly graphContext?: GraphContext | null;
   readonly assembledContext?: AssembledContext | null;
   readonly narrativePlan?: NarrativePlan | null;
-  /** Optional creator manual context (unverified). */
+  /** Creator brief/topic. Creator-authorized, not independently verified. */
+  readonly creatorBrief?: string | null;
+  /** Optional creator notes. Creator-authorized, not independently verified. */
   readonly manualContext?: string | null;
+}
+
+const MAX_CREATOR_FACTS_PER_FIELD = 12;
+const CREATOR_INSTRUCTION_SENTENCE =
+  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?)/iu;
+
+function splitCreatorMaterial(
+  textRaw: string | null | undefined,
+): readonly string[] {
+  const text = sanitizeRetentionText(
+    textRaw ?? "",
+    RETENTION_MAX_CLAIM_TEXT_CHARS * MAX_CREATOR_FACTS_PER_FIELD,
+  );
+  if (!text) return Object.freeze([]);
+  return Object.freeze(
+    text
+      .split(/(?:\r?\n)+|(?<=[.!?…])\s+/u)
+      .map((part) =>
+        sanitizeRetentionText(part, RETENTION_MAX_CLAIM_TEXT_CHARS),
+      )
+      // Direction belongs to the controlling idea, not the fact ledger. Keeping
+      // it as a claim makes deterministic rescue speak prompts such as
+      // "Explain the offside trap" verbatim.
+      .filter((part) => Boolean(part) && !CREATOR_INSTRUCTION_SENTENCE.test(part))
+      .slice(0, MAX_CREATOR_FACTS_PER_FIELD),
+  );
 }
 
 function factRoleForId(
@@ -36,7 +67,8 @@ function factRoleForId(
 
   if (plan.requiredFacts.includes(factId)) roles.push("required");
   if (plan.optionalFacts.includes(factId)) roles.push("optional");
-  if (plan.openingIntent?.factIds.includes(factId)) roles.push("opening_intent");
+  if (plan.openingIntent?.factIds.includes(factId))
+    roles.push("opening_intent");
 
   const beatIds: string[] = [];
   for (const beat of plan.beats) {
@@ -52,7 +84,9 @@ function factRoleForId(
   if (roles.length === 0 && !piBeatId) return {};
   return {
     ...(piBeatId ? { piBeatId } : {}),
-    ...(roles.length ? { piFactRole: [...new Set(roles)].sort().join("+") } : {}),
+    ...(roles.length
+      ? { piFactRole: [...new Set(roles)].sort().join("+") }
+      : {}),
   };
 }
 
@@ -67,11 +101,15 @@ function graphCollections(graph: GraphContext): readonly GraphContextFact[][] {
 }
 
 /** True when Graph supplies at least one usable normalized structured fact. */
-export function graphContextHasUsableFacts(graph: GraphContext | null | undefined): boolean {
+export function graphContextHasUsableFacts(
+  graph: GraphContext | null | undefined,
+): boolean {
   if (!graph) return false;
   for (const collection of graphCollections(graph)) {
     for (const fact of collection) {
-      if (sanitizeRetentionText(fact.text ?? "", RETENTION_MAX_CLAIM_TEXT_CHARS)) {
+      if (
+        sanitizeRetentionText(fact.text ?? "", RETENTION_MAX_CLAIM_TEXT_CHARS)
+      ) {
         return true;
       }
     }
@@ -98,7 +136,9 @@ function pushGraphFacts(
         claimId,
         text,
         ...mapped,
-        sourceRef: fact.provenance?.source ? String(fact.provenance.source) : undefined,
+        sourceRef: fact.provenance?.source
+          ? String(fact.provenance.source)
+          : undefined,
         contentIdentity: claimId
           ? null
           : { kind: "graph_fact", type: fact.type, text },
@@ -128,7 +168,9 @@ function pushAssembledProviderCollections(
       claimId,
       text,
       ...mapped,
-      sourceRef: fact.provenance?.source ? String(fact.provenance.source) : undefined,
+      sourceRef: fact.provenance?.source
+        ? String(fact.provenance.source)
+        : undefined,
       contentIdentity: claimId ? null : { kind: "assembled_verified", text },
       hasAuthoritativeId: Boolean(claimId),
       ...links,
@@ -206,9 +248,10 @@ function pushAssembledProviderCollections(
       event.minute == null
         ? ""
         : `${event.minute}${event.extraMinute != null ? `+${event.extraMinute}` : ""}' `;
-    const text = `${minute}${event.team}${event.player ? ` — ${event.player}` : ""}${
-      event.detail ? ` (${event.detail})` : ""
-    }${event.type ? ` [${event.type}]` : ""}`.trim();
+    const text =
+      `${minute}${event.team}${event.player ? ` — ${event.player}` : ""}${
+        event.detail ? ` (${event.detail})` : ""
+      }${event.type ? ` [${event.type}]` : ""}`.trim();
     if (!text) continue;
     drafts.push({
       text,
@@ -248,18 +291,20 @@ function pushManualCreatorMaterial(
   textRaw: string | null | undefined,
   sourceRef: string,
 ): void {
-  const text = textRaw?.trim();
-  if (!text) return;
-  drafts.push({
-    text,
-    provenance: "manual_user",
-    verification: "unverified",
-    permittedFactualUse: false,
-    forbidden: false,
-    sourceRef,
-    // Same semantic identity for identical manual text regardless of source label.
-    contentIdentity: { kind: "manual_creator", text },
-  });
+  for (const text of splitCreatorMaterial(textRaw)) {
+    drafts.push({
+      text,
+      provenance: "manual_user",
+      verification: "unverified",
+      // The creator is authoritative for the story they asked ShortForge to tell.
+      // This never upgrades the statement to independently verified research.
+      permittedFactualUse: true,
+      forbidden: false,
+      sourceRef,
+      // Same semantic identity for identical creator text regardless of field.
+      contentIdentity: { kind: "manual_creator", text },
+    });
+  }
 }
 
 function pushForbiddenClaims(
@@ -300,6 +345,7 @@ export function buildRetentionGroundingContext(
     pushAssembledProviderCollections(drafts, input.assembledContext, plan);
   }
 
+  pushManualCreatorMaterial(drafts, input.creatorBrief, "creator_brief");
   pushManualCreatorMaterial(drafts, input.manualContext, "manual_context");
   pushManualCreatorMaterial(
     drafts,

@@ -7,12 +7,24 @@ import type { QualityMode, ScriptMode, Tone } from "@/types/footiebitz";
 
 export const CREATE_BRIEF_FORM_ID = "create-brief-form";
 
-export const BRIEF_TONE_OPTIONS: { value: Tone; label: string; description: string }[] = [
-  { value: "dramatic", label: "Dramatic", description: "High stakes, cinematic" },
+export const BRIEF_TONE_OPTIONS: {
+  value: Tone;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "dramatic",
+    label: "Dramatic",
+    description: "High stakes, cinematic",
+  },
   { value: "funny", label: "Funny", description: "Witty and banter-led" },
   { value: "tactical", label: "Tactical", description: "Insight and analysis" },
   { value: "news", label: "News", description: "Headline-style recap" },
-  { value: "emotional", label: "Emotional", description: "Passion and feeling" },
+  {
+    value: "emotional",
+    label: "Emotional",
+    description: "Passion and feeling",
+  },
 ];
 
 export const BRIEF_DURATION_OPTIONS = [25, 30, 35, 45, 60] as const;
@@ -26,19 +38,29 @@ export const BRIEF_FACT_HANDLING_OPTIONS: {
 }[] = [
   {
     value: "verified_facts_only",
-    label: "Verified facts only",
-    description: "Use research-backed facts; unsupported details stay out",
+    label: "Grounded story",
+    description:
+      "Use your brief and notes, plus research-backed facts when available",
   },
   {
     value: "creative_premise",
     label: "Creative premise",
-    description: "Use your supplied story-world facts for this narration",
+    description:
+      "Also treat your premise lines as story-world facts for this narration",
   },
 ];
 
-export const BRIEF_QUALITY_OPTIONS: { value: QualityMode; label: string; description: string }[] = [
+export const BRIEF_QUALITY_OPTIONS: {
+  value: QualityMode;
+  label: string;
+  description: string;
+}[] = [
   { value: "cheap", label: "Fast", description: "Quickest first pass" },
-  { value: "balanced", label: "Balanced", description: "Good balance of speed and polish" },
+  {
+    value: "balanced",
+    label: "Balanced",
+    description: "Good balance of speed and polish",
+  },
   { value: "best", label: "Studio", description: "Highest polish" },
 ];
 
@@ -59,7 +81,7 @@ export const BRIEF_RELIABILITY_OPTIONS: {
     value: "precise",
     label: "Precise",
     description:
-      "Prefer exact Hook/opening and strict structure. Unmet requirements get an explanation instead of silent Auto changes.",
+      "Prioritize exact choices and structure, then adapt safely if needed to finish the story.",
   },
 ];
 

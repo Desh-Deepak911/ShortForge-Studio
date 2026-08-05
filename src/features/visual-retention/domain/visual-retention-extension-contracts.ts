@@ -18,6 +18,8 @@ export type EngagementOverlayPosition =
   | "bottom-center"
   | "bottom-right";
 
+export type EngagementOverlaySize = "small" | "medium" | "large";
+
 export interface SceneEngagementOverlayV1 {
   readonly version: 1;
   readonly id: string;
@@ -26,6 +28,10 @@ export interface SceneEngagementOverlayV1 {
   readonly startOffsetMs: number;
   readonly durationMs: number;
   readonly position: EngagementOverlayPosition;
+  /** Creator-selected legibility preset. Missing legacy values normalize to medium. */
+  readonly size?: EngagementOverlaySize;
+  /** Fine adjustment within the bounded preset range. */
+  readonly scale?: number;
   readonly presetId: string;
 }
 
@@ -69,6 +75,11 @@ const ENGAGEMENT_POSITIONS = new Set<EngagementOverlayPosition>([
   "bottom-left",
   "bottom-center",
   "bottom-right",
+]);
+const ENGAGEMENT_SIZES = new Set<EngagementOverlaySize>([
+  "small",
+  "medium",
+  "large",
 ]);
 const BRAND_STING_DURATIONS = new Set([2000, 2500, 3000]);
 
@@ -116,6 +127,21 @@ export function validateVisualRetentionProjectExtensions(
           }
           if (!ENGAGEMENT_POSITIONS.has(overlay.position as EngagementOverlayPosition)) {
             issues.push(`Scene ${sceneId} contains an unsupported engagement overlay position.`);
+          }
+          if (
+            overlay.size !== undefined &&
+            !ENGAGEMENT_SIZES.has(overlay.size as EngagementOverlaySize)
+          ) {
+            issues.push(`Scene ${sceneId} contains an unsupported engagement overlay size.`);
+          }
+          if (
+            overlay.scale !== undefined &&
+            (typeof overlay.scale !== "number" ||
+              !Number.isFinite(overlay.scale) ||
+              overlay.scale < 0.85 ||
+              overlay.scale > 1.15)
+          ) {
+            issues.push(`Scene ${sceneId} engagement overlay scale is invalid.`);
           }
           if (
             typeof overlay.startOffsetMs !== "number" ||

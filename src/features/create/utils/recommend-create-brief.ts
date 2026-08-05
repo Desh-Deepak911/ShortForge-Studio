@@ -272,7 +272,7 @@ export { qualityLabel };
 export function factHandlingLabel(mode: FactHandlingMode): string {
   return mode === "creative_premise"
     ? "Creative premise"
-    : "Verified facts only";
+    : "Grounded story";
 }
 
 export type { HookStyleSelection };

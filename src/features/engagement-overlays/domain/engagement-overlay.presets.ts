@@ -6,6 +6,7 @@
 import type {
   EngagementOverlayKind,
   EngagementOverlayPosition,
+  EngagementOverlaySize,
 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
 
 export const ENGAGEMENT_OVERLAY_PRESET_ID = "compact-pill-v1" as const;
@@ -18,6 +19,10 @@ export const ENGAGEMENT_OVERLAY_DEFAULT_DURATION_MS = 2_500;
 /** Prefer top-right so bottom caption safe area stays clear. */
 export const ENGAGEMENT_OVERLAY_DEFAULT_POSITION: EngagementOverlayPosition =
   "top-right";
+export const ENGAGEMENT_OVERLAY_DEFAULT_SIZE: EngagementOverlaySize = "medium";
+export const ENGAGEMENT_OVERLAY_DEFAULT_SCALE = 1;
+export const ENGAGEMENT_OVERLAY_MIN_SCALE = 0.85;
+export const ENGAGEMENT_OVERLAY_MAX_SCALE = 1.15;
 
 export const ENGAGEMENT_OVERLAY_KIND_OPTIONS: readonly {
   readonly id: EngagementOverlayKind;
@@ -29,15 +34,27 @@ export const ENGAGEMENT_OVERLAY_KIND_OPTIONS: readonly {
   { id: "combined", label: "Like, Share & Subscribe" },
 ];
 
-/** Closed safe positions offered in UI (subset of the reserved contract). */
+/** All contract-supported caption-safe anchors offered in the editor. */
 export const ENGAGEMENT_OVERLAY_POSITION_OPTIONS: readonly {
   readonly id: EngagementOverlayPosition;
   readonly label: string;
 }[] = [
   { id: "top-left", label: "Top left" },
+  { id: "top-center", label: "Top center" },
   { id: "top-right", label: "Top right" },
+  { id: "center", label: "Center" },
   { id: "bottom-left", label: "Bottom left" },
+  { id: "bottom-center", label: "Bottom center" },
   { id: "bottom-right", label: "Bottom right" },
+];
+
+export const ENGAGEMENT_OVERLAY_SIZE_OPTIONS: readonly {
+  readonly id: EngagementOverlaySize;
+  readonly label: string;
+}[] = [
+  { id: "small", label: "Small" },
+  { id: "medium", label: "Medium" },
+  { id: "large", label: "Large" },
 ];
 
 export type EngagementOverlayIconToken = "heart" | "share" | "bell";

@@ -7,12 +7,15 @@
 import type {
   EngagementOverlayKind,
   EngagementOverlayPosition,
+  EngagementOverlaySize,
   SceneEngagementOverlayV1,
 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
 
 import {
   engagementOverlayIconsForKind,
   engagementOverlayLabelsForKind,
+  ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
+  ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
   type EngagementOverlayIconToken,
 } from "./engagement-overlay.presets";
 import {
@@ -111,18 +114,22 @@ function resolvePhaseDurations(windowDurationMs: number): {
 function layoutForPosition(
   position: EngagementOverlayPosition,
   kind: EngagementOverlayKind,
+  size: EngagementOverlaySize,
+  fineScale: number,
   frameWidth: number,
   frameHeight: number,
 ): EngagementOverlayLayoutBox {
   const scaleX = frameWidth / ENGAGEMENT_OVERLAY_REFERENCE_WIDTH;
   const scaleY = frameHeight / ENGAGEMENT_OVERLAY_REFERENCE_HEIGHT;
   const scale = Math.min(scaleX, scaleY);
-  // Combined needs room for Like / Share / Subscribed + icons without clipping.
-  const width = (kind === "combined" ? 560 : 220) * scale;
-  const height = (kind === "combined" ? 72 : 56) * scale;
+  const sizeMultiplier = size === "small" ? 0.82 : size === "large" ? 1.18 : 1;
+  // Medium is the larger legible default; fineScale remains bounded by normalization.
+  const authorScale = sizeMultiplier * fineScale;
+  const width = (kind === "combined" ? 680 : 300) * authorScale * scale;
+  const height = (kind === "combined" ? 112 : 96) * authorScale * scale;
   const marginX = 40 * scale;
   const marginY = 96 * scale;
-  const safeBottom = 280 * scale; // keep clear of common caption band
+  const safeBottom = 360 * scale; // reserve the common caption band at every size
   const safeTop = 72 * scale;
 
   let x = marginX;
@@ -246,7 +253,7 @@ function resolveSegments(input: {
     const confirmation = active && index === beatCount - 1;
     return {
       index,
-      label: confirmation ? "Subscribed" : label,
+      label,
       iconToken: icons[index] ?? icons[0] ?? "heart",
       active,
       settled,
@@ -313,7 +320,14 @@ function hiddenFrame(
     scale: 1,
     translateX: 0,
     translateY: 0,
-    layout: layoutForPosition(position, kind, frameWidth, frameHeight),
+    layout: layoutForPosition(
+      position,
+      kind,
+      overlay?.size ?? ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
+      overlay?.scale ?? ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
+      frameWidth,
+      frameHeight,
+    ),
     kind,
     position,
     holdLocalMs: 0,
@@ -372,6 +386,8 @@ export function resolveEngagementOverlayFrame(
   const layout = layoutForPosition(
     window.overlay.position,
     window.overlay.kind,
+    window.overlay.size ?? ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
+    window.overlay.scale ?? ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
     frameWidth,
     frameHeight,
   );

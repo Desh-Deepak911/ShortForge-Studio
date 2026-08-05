@@ -52,11 +52,11 @@ export function deriveRetentionClaimAdaptations(input: {
       out.push("unsupported_facts_omitted");
     }
   } else {
-    // Verified-only: creator manual/inferred facts that cannot support narration
-    // were omitted when present in grounding or supplied as factual manualContext.
-    const unverifiedCreator = input.grounding.claims.some(
+    // Grounded story always authorizes the creator brief and notes. Only
+    // genuinely ineligible inferred/unknown material is "unsupported".
+    const unsupportedMaterial = input.grounding.claims.some(
       (c) =>
-        (c.provenance === "manual_user" || c.provenance === "inferred") &&
+        (c.provenance === "inferred" || c.provenance === "unknown") &&
         !c.forbidden &&
         !c.permittedFactualUse,
     );
@@ -65,13 +65,7 @@ export function deriveRetentionClaimAdaptations(input: {
         usedRefs.has(c.claimId) &&
         (!c.permittedFactualUse || c.forbidden),
     );
-    const manual = (input.manualContext ?? "").trim();
-    const manualLooksFactual =
-      manual.length > 0 &&
-      (/\b\d+\s*[-–]\s*\d+\b/.test(manual) ||
-        /\b\d+\s+(fouls?|tackles?|goals?|shots?)\b/i.test(manual) ||
-        /\bxg\b/i.test(manual));
-    if ((unverifiedCreator || manualLooksFactual) && !usedUnsupported) {
+    if (unsupportedMaterial && !usedUnsupported) {
       out.push("unsupported_facts_omitted");
     }
   }

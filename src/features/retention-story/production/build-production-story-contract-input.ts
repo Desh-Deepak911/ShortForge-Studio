@@ -115,6 +115,7 @@ export function buildProductionStoryContractInput(
       : "verified_facts_only";
 
   const baseGrounding = buildRetentionGroundingContext({
+    creatorBrief: args.topic,
     graphContext: args.graphContext ?? null,
     assembledContext: args.assembledContext ?? null,
     narrativePlan: args.narrativePlan ?? null,
@@ -145,7 +146,9 @@ export function buildProductionStoryContractInput(
     ...(args.userAuthoredHook != null
       ? { userAuthoredHook: args.userAuthoredHook }
       : {}),
-    ...(args.manualContext != null ? { manualContext: args.manualContext } : {}),
+    ...(args.manualContext != null
+      ? { manualContext: args.manualContext }
+      : {}),
     ...(args.premiseDetails != null
       ? { premiseDetails: args.premiseDetails }
       : {}),

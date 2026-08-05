@@ -147,10 +147,14 @@ function buildComposerPrompt(request: RetentionComposerRequest): string {
     .join("\n");
 
   const targetWordBudget = request.targetWordBudget;
-  // Leave headroom for Hook repair/fallback expansions (hard word gate is absolute).
+  // Use most of the selected spoken duration with modest Hook-repair headroom.
   const composeTargetWords = Math.max(
     request.orderedBeatIds.length * 4,
-    Math.floor(targetWordBudget * 0.68),
+    Math.floor(targetWordBudget * 0.88),
+  );
+  const minimumUsefulWords = Math.max(
+    request.orderedBeatIds.length * 3,
+    Math.floor(targetWordBudget * 0.76),
   );
   const claimsEmpty = request.eligibleClaims.length === 0;
   const hookStrategyId = resolveHookStrategyId(request.hookDirectiveBlock);
@@ -176,16 +180,16 @@ function buildComposerPrompt(request: RetentionComposerRequest): string {
       ? [
           `LENGTH COMPRESSION: rewrite from previousStructuredCandidate so total words are ≤ ${targetWordBudget} (exact hard ceiling).`,
           `Hard requirement: total words MUST be ≤ ${composeTargetWords} (safer headroom under ${targetWordBudget}).`,
-          "Keep exact beatIds/order. One short complete spoken utterance per beat ending in . ! or ?.",
-          "Each segment text SHOULD be ≤ its suggestedWordBudget words.",
+          "Keep exact beatIds/order, but make the assembled narration read as one continuous paragraph.",
+          "Beat segments are attribution spans, not separate spoken lines; a sentence may flow across segment boundaries.",
           "Preserve the first spoken opening sentence exactly. Terminal payoff MUST stay a complete meaningful sentence.",
           "Do not add new facts. Never end mid-sentence. Never emit fragments.",
         ].join(" ")
       : request.modelCallKind === "repair" ||
           request.modelCallKind === "compatibility_fallback" ||
           request.modelCallKind === "safe_fallback"
-        ? `Revise segments to satisfy Hook opening constraints while preserving beat order and controlling idea. Keep total words ≤ ${targetWordBudget}. Every segment must be a complete spoken utterance. Keep the requested Hook strategy identity (do not invent a different opening style).`
-        : "Compose concise spoken narration segments for each beat in exact order.";
+        ? `Revise segments to satisfy Hook opening constraints while preserving beat order and controlling idea. Keep total words ≤ ${targetWordBudget}. Make the assembled segments one continuous narration; beat boundaries must remain inaudible. Keep the requested Hook strategy identity when it remains meaningful.`
+        : "Compose one continuous spoken narration, attributed across the exact ordered beat segments.";
 
   const openingRule = buildTopicAnchoredOpeningRule(
     request.topic,
@@ -216,11 +220,12 @@ function buildComposerPrompt(request: RetentionComposerRequest): string {
         NARRATION_BANLIST
       : "- claimRefs may only use eligible claim IDs that support the segment text",
     "- first segment is the spoken opening region for Hook Engine",
-    `- exact total word budget: total narration words MUST be ≤ ${targetWordBudget}`,
-    `- compose target: ~${composeTargetWords} words total (leave headroom under the exact budget)`,
-    "- respect each beat suggestedWordBudget (they sum to the exact total budget)",
-    "- EACH segment MUST be one complete spoken utterance ending with . ! or ?",
-    "- NO segment may end mid-sentence or on a dangling article/preposition/conjunction/auxiliary",
+    `- spoken-duration range: aim for ${minimumUsefulWords}–${composeTargetWords} words; ${targetWordBudget} is only the safety ceiling`,
+    "- suggestedWordBudget values are flexible emphasis guides, not per-beat limits",
+    "- beats are invisible planning scaffolds: do not write one isolated sentence, slogan, or fact per beat",
+    "- the assembled segment text MUST read as one coherent narration with natural transitions",
+    "- sentences MAY cross segment boundaries; segment boundaries must not be audible",
+    "- only the complete assembled narration must avoid dangling or incomplete language",
     "- terminal/payoff segment MUST be a complete spoken payoff sentence",
     "- progress the story: opening curiosity → escalation → clear complete payoff",
     "- preserve controlling-idea continuity across every segment",
@@ -228,7 +233,9 @@ function buildComposerPrompt(request: RetentionComposerRequest): string {
     "- avoid repetition across segments and avoid generic introductions (In today's… / Welcome to…)",
     openingRule,
     ...(matchupCoverageRule ? [matchupCoverageRule] : []),
-    hookStrategyId ? `activeHookStrategyId: ${hookStrategyId}` : "activeHookStrategyId: unresolved",
+    hookStrategyId
+      ? `activeHookStrategyId: ${hookStrategyId}`
+      : "activeHookStrategyId: unresolved",
     `modelCallKind: ${request.modelCallKind}`,
     `topic: ${request.topic}`,
     `topicAuthority: ${request.topicAuthority}`,
@@ -245,7 +252,7 @@ function buildComposerPrompt(request: RetentionComposerRequest): string {
       ? `hookDirectiveBlock:\n${request.hookDirectiveBlock}`
       : "hookDirectiveBlock: none",
     request.manualContext
-      ? `manualContext (unverified): ${request.manualContext}`
+      ? `creatorNotes (creator-supplied; use faithfully without presenting as independently verified): ${request.manualContext}`
       : "manualContext: none",
     request.userInstructions
       ? `userInstructions: ${request.userInstructions}`

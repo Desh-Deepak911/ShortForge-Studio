@@ -9,9 +9,7 @@ import {
   assertHookPlanFingerprint,
   assertHookRequestFingerprint,
 } from "../domain/hook-fingerprint";
-import {
-  isEligibleVerifiedFactualClaim,
-} from "../domain/normalize-hook-request";
+import { isEligibleVerifiedFactualClaim } from "../domain/normalize-hook-request";
 import { countHookWords } from "../domain/hook-word-count";
 import type {
   HookCandidate,
@@ -83,8 +81,9 @@ export function detectFactualRiskSignals(text: string): HookFactualRiskSignals {
     /\b(said|says|claimed|according to)\b/i.test(t);
 
   const rankings =
-    /\b(top\s+\d+|number\s+#?\d+|ranked\s+#?\d+|#\d+|world'?s?\s+best)\b/i.test(t) ||
-    /\b(1st|2nd|3rd|\d+th)\b/i.test(t);
+    /\b(top\s+\d+|number\s+#?\d+|ranked\s+#?\d+|#\d+|world'?s?\s+best)\b/i.test(
+      t,
+    ) || /\b(1st|2nd|3rd|\d+th)\b/i.test(t);
 
   const matchResults =
     /\b\d+\s*[-–—]\s*\d+\b/.test(t) ||
@@ -136,7 +135,8 @@ function hasPromptInjection(text: string): boolean {
     /\bsystem\s*:\s*/i.test(text) ||
     /\byou are now (an? |my )?(ai|assistant|system)\b/i.test(text) ||
     /\byou are now .{0,40}\b(ignore|disregard|override)\b/i.test(text) ||
-    (/\bdo not follow\b/i.test(text) && /\b(safety|instructions|prompts)\b/i.test(text)) ||
+    (/\bdo not follow\b/i.test(text) &&
+      /\b(safety|instructions|prompts)\b/i.test(text)) ||
     /\b(jailbreak|dan mode|developer mode)\b/i.test(text)
   );
 }
@@ -154,11 +154,15 @@ function hasHarmfulPersonalTargeting(text: string): boolean {
   );
 }
 
-function scoreProvocativeness(text: string, origin: HookCandidate["origin"]): number {
+function scoreProvocativeness(
+  text: string,
+  origin: HookCandidate["origin"],
+): number {
   let score = 0.4;
   if (/\?$/.test(text.trim())) score += 0.18;
   if (/!$/.test(text.trim())) score += 0.08;
-  if (/\b(what if|nobody|never|secret|twist|shock|wait|but)\b/i.test(text)) score += 0.12;
+  if (/\b(what if|nobody|never|secret|twist|shock|wait|but)\b/i.test(text))
+    score += 0.12;
   if (/\b(most|best|worst|only|never)\b/i.test(text)) score += 0.08;
   if (text.length >= 20 && text.length <= 90) score += 0.1;
   if (origin === "compatibility_fallback") score -= 0.05;
@@ -166,7 +170,64 @@ function scoreProvocativeness(text: string, origin: HookCandidate["origin"]): nu
   return clamp01(score);
 }
 
-function scoreClarity(text: string, wordCount: number, maxWords: number): number {
+const GENERIC_QUESTION_TOKENS = new Set([
+  "why",
+  "how",
+  "what",
+  "which",
+  "who",
+  "when",
+  "where",
+  "is",
+  "are",
+  "was",
+  "were",
+  "do",
+  "does",
+  "did",
+  "can",
+  "could",
+  "would",
+  "should",
+  "will",
+  "now",
+  "today",
+  "tonight",
+  "next",
+  "story",
+  "matter",
+  "happen",
+  "really",
+]);
+
+function hasMeaningfulQuestionTension(text: string, topic: string): boolean {
+  if (!text.includes("?")) return false;
+  // Reject malformed question fragments such as "Why Brighton are?" before
+  // token scoring can mistake the subject for semantic tension.
+  if (
+    /^(?:why|how|what|when|where|who)\s+.+?\s+(?:am|is|are|was|were|do|does|did|can|could|will|would|has|have|had)\?$/iu.test(
+      text.trim(),
+    )
+  ) {
+    return false;
+  }
+  const subjectTokens = new Set(extractHookSubjectTokens(topic));
+  const content = text
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .split(/\s+/u)
+    .filter((token) => token.length >= 3)
+    .filter((token) => !subjectTokens.has(token))
+    .filter((token) => !GENERIC_QUESTION_TOKENS.has(token));
+  return content.length > 0;
+}
+
+function scoreClarity(
+  text: string,
+  wordCount: number,
+  maxWords: number,
+): number {
   let score = 0.7;
   const complete =
     /[.!?…。！？]["”’)»\]]*$/.test(text.trim()) || wordCount <= maxWords + 2;
@@ -179,7 +240,8 @@ function scoreClarity(text: string, wordCount: number, maxWords: number): number
   }
   if (wordCount > maxWords * 2) score -= 0.2;
 
-  const punctDensity = (text.match(/[,;:—\-]/g) ?? []).length / Math.max(1, wordCount);
+  const punctDensity =
+    (text.match(/[,;:—\-]/g) ?? []).length / Math.max(1, wordCount);
   if (punctDensity > 0.45) score -= 0.15;
 
   if (/\s{2,}/.test(text)) score -= 0.05;
@@ -200,7 +262,10 @@ function scoreGrounding(
   return groundingPassed ? clamp01(0.75 + Math.min(0.2, claimCount * 0.05)) : 0;
 }
 
-function scoreSafety(safetyPassed: boolean, reasons: readonly string[]): number {
+function scoreSafety(
+  safetyPassed: boolean,
+  reasons: readonly string[],
+): number {
   if (!safetyPassed) return 0;
   const soft = reasons.filter((r) => r.startsWith("safety.soft_")).length;
   return clamp01(0.9 - soft * 0.1);
@@ -378,7 +443,14 @@ export function validateHookCandidate(
     reasons.push("quality.over_spoken_duration");
   }
 
-  const provocativeness = scoreProvocativeness(text, candidate.origin);
+  const questionMeaningful =
+    plan.strategyId !== "provocative_question" ||
+    hasMeaningfulQuestionTension(text, request.topic);
+  let provocativeness = scoreProvocativeness(text, candidate.origin);
+  if (!questionMeaningful) {
+    provocativeness = clamp01(provocativeness - 0.55);
+    reasons.push("quality.question_lacks_meaningful_tension");
+  }
   const clarity = scoreClarity(text, wordCount, constraints.maxOpeningWords);
   const grounding = scoreGrounding(
     signals,
@@ -394,7 +466,8 @@ export function validateHookCandidate(
     safety,
   });
 
-  const provocativenessPassed = provocativeness >= constraints.minProvocativeness;
+  const provocativenessPassed =
+    provocativeness >= constraints.minProvocativeness;
   const clarityPassed = clarity >= constraints.minClarity;
 
   if (!provocativenessPassed) {
@@ -406,7 +479,9 @@ export function validateHookCandidate(
 
   const uniqueReasons = Object.freeze([...new Set(reasons)]);
 
-  const fingerprintOk = !uniqueReasons.some((r) => r.startsWith("fingerprint."));
+  const fingerprintOk = !uniqueReasons.some((r) =>
+    r.startsWith("fingerprint."),
+  );
   const ok =
     fingerprintOk &&
     groundingPassed &&
@@ -443,7 +518,9 @@ export function validateHookCandidate(
   });
 }
 
-export function isQualityOnlyFailure(validation: HookValidationResult): boolean {
+export function isQualityOnlyFailure(
+  validation: HookValidationResult,
+): boolean {
   return (
     !validation.ok &&
     validation.hardGatesPassed.grounding &&

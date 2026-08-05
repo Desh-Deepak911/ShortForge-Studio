@@ -105,55 +105,66 @@ async function main(): Promise<void> {
     assert.ok(words <= budget, `words ${words} > budget ${budget}`);
   });
 
-  await check("manual context never grants factual authority", () => {
-    const input = buildProductionStoryContractInput({
-      topic: "Spain versus France tactical preview",
-      durationSec: 30,
-      generationPath: "script_only",
-      manualContext: "I think Spain scored 7 goals.",
-      qualityMode: "cheap",
-    });
-    const grounding = input.grounding!;
-    for (const claim of grounding.claims.filter(
-      (c) => c.provenance === "manual_user",
-    )) {
-      assert.equal(claim.permittedFactualUse, false);
-      assert.equal(claim.verification, "unverified");
-    }
-  });
+  await check(
+    "creator context is usable without becoming verified research",
+    () => {
+      const input = buildProductionStoryContractInput({
+        topic: "Spain versus France tactical preview",
+        durationSec: 30,
+        generationPath: "script_only",
+        manualContext: "I think Spain scored 7 goals.",
+        qualityMode: "cheap",
+      });
+      const grounding = input.grounding!;
+      for (const claim of grounding.claims.filter(
+        (c) => c.provenance === "manual_user",
+      )) {
+        assert.equal(claim.permittedFactualUse, true);
+        assert.equal(claim.verification, "unverified");
+      }
+    },
+  );
 
-  await check("eligible provider claims marked permitted; forbidden not", () => {
-    const eligible = eligibleClaimGrounding([
-      { id: "c1", text: "Spain pressed high in the first half" },
-    ]);
-    assert.equal(eligible.claims[0]!.permittedFactualUse, true);
-    const empty = emptyGrounding();
-    assert.equal(empty.claims.length, 0);
-  });
+  await check(
+    "eligible provider claims marked permitted; forbidden not",
+    () => {
+      const eligible = eligibleClaimGrounding([
+        { id: "c1", text: "Spain pressed high in the first half" },
+      ]);
+      assert.equal(eligible.claims[0]!.permittedFactualUse, true);
+      const empty = emptyGrounding();
+      assert.equal(empty.claims.length, 0);
+    },
+  );
 
-  await check("failed generation — no Retention plan/validation commit", async () => {
-    const result = await runRetentionProductionNarration({
-      topic: "   ",
-      durationSec: 30,
-      generationPath: "script_only",
-      qualityMode: "cheap",
-      planner: null,
-      composer: () => {
-        throw new Error("compose fail");
-      },
-    });
-    assert.equal(result.ok, false);
-    const envelope = buildRetentionSafeResponseEnvelope(result);
-    assert.equal(envelope.retentionPlan, undefined);
-    assert.equal(envelope.retentionValidation, undefined);
-    assertNoSecrets(JSON.stringify(result));
-    assertNoPrivateRetentionFieldsSerialized({
-      type: "complete",
-      success: false,
-      error: result.ok ? "" : result.error,
-      retentionDiagnostics: result.ok ? undefined : result.retentionDiagnostics,
-    });
-  });
+  await check(
+    "failed generation — no Retention plan/validation commit",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic: "   ",
+        durationSec: 30,
+        generationPath: "script_only",
+        qualityMode: "cheap",
+        planner: null,
+        composer: () => {
+          throw new Error("compose fail");
+        },
+      });
+      assert.equal(result.ok, false);
+      const envelope = buildRetentionSafeResponseEnvelope(result);
+      assert.equal(envelope.retentionPlan, undefined);
+      assert.equal(envelope.retentionValidation, undefined);
+      assertNoSecrets(JSON.stringify(result));
+      assertNoPrivateRetentionFieldsSerialized({
+        type: "complete",
+        success: false,
+        error: result.ok ? "" : result.error,
+        retentionDiagnostics: result.ok
+          ? undefined
+          : result.retentionDiagnostics,
+      });
+    },
+  );
 
   await check("Fast ceiling 5 — failed calls consume budget", () => {
     const policy = resolveRetentionModelCallBudgetPolicy("cheap");
@@ -181,50 +192,57 @@ async function main(): Promise<void> {
     );
   });
 
-  await check("Balanced ceiling 6 + planner slot; Studio 7 + rewrite ≤1", () => {
-    const balanced = resolveRetentionModelCallBudgetPolicy("balanced");
-    assert.equal(balanced.totalCeiling, 6);
-    assert.ok(balanced.maxPlanner >= 1);
-    assert.equal(balanced.maxInitialNarration, 2);
-    const studio = resolveRetentionModelCallBudgetPolicy("best");
-    assert.equal(studio.totalCeiling, 7);
-    assert.equal(studio.maxRetentionBodyRewrite, 1);
-    assert.ok(
-      resolveRetentionModelCallBudgetPolicy("cheap").maxRetentionBodyRewrite ===
-        0,
-    );
-  });
+  await check(
+    "Balanced ceiling 6 + planner slot; Studio 7 + rewrite ≤1",
+    () => {
+      const balanced = resolveRetentionModelCallBudgetPolicy("balanced");
+      assert.equal(balanced.totalCeiling, 6);
+      assert.ok(balanced.maxPlanner >= 1);
+      assert.equal(balanced.maxInitialNarration, 2);
+      const studio = resolveRetentionModelCallBudgetPolicy("best");
+      assert.equal(studio.totalCeiling, 7);
+      assert.equal(studio.maxRetentionBodyRewrite, 1);
+      assert.ok(
+        resolveRetentionModelCallBudgetPolicy("cheap")
+          .maxRetentionBodyRewrite === 0,
+      );
+    },
+  );
 
-  await check("Balanced/Studio production requires planner evidence path", async () => {
-    const balanced = await runRetentionProductionNarration({
-      topic: "Spain versus France tactical preview",
-      durationSec: 30,
-      generationPath: "script_only",
-      qualityMode: "balanced",
-      ...retentionProductionDoubles("balanced"),
-    });
-    assertPass(balanced);
-    assert.ok(
-      (balanced.approved.safeDiagnostics.budget?.planner ?? 0) >= 1 ||
-        balanced.approved.planSnapshot.planFingerprint.length > 0,
-    );
+  await check(
+    "Balanced/Studio production requires planner evidence path",
+    async () => {
+      const balanced = await runRetentionProductionNarration({
+        topic: "Spain versus France tactical preview",
+        durationSec: 30,
+        generationPath: "script_only",
+        qualityMode: "balanced",
+        ...retentionProductionDoubles("balanced"),
+      });
+      assertPass(balanced);
+      assert.ok(
+        (balanced.approved.safeDiagnostics.budget?.planner ?? 0) >= 1 ||
+          balanced.approved.planSnapshot.planFingerprint.length > 0,
+      );
 
-    const studio = await runRetentionProductionNarration({
-      topic: "Spain versus France tactical preview",
-      durationSec: 30,
-      generationPath: "script_only",
-      qualityMode: "best",
-      ...retentionProductionDoubles("best"),
-    });
-    assertPass(studio);
-    assert.ok(
-      studio.approved.safeDiagnostics.budget?.retentionBodyRewrite !==
-        undefined,
-    );
-    assert.ok(
-      (studio.approved.safeDiagnostics.budget?.retentionBodyRewrite ?? 0) <= 1,
-    );
-  });
+      const studio = await runRetentionProductionNarration({
+        topic: "Spain versus France tactical preview",
+        durationSec: 30,
+        generationPath: "script_only",
+        qualityMode: "best",
+        ...retentionProductionDoubles("best"),
+      });
+      assertPass(studio);
+      assert.ok(
+        studio.approved.safeDiagnostics.budget?.retentionBodyRewrite !==
+          undefined,
+      );
+      assert.ok(
+        (studio.approved.safeDiagnostics.budget?.retentionBodyRewrite ?? 0) <=
+          1,
+      );
+    },
+  );
 
   await check("commit gate rejects forged/incoherent ledger histories", () => {
     const live = createRetentionModelCallLedger("cheap");

@@ -91,14 +91,29 @@ export function normalizeRetentionComposerProposal(
   void record.diagnostics;
 
   if (typeof record.title !== "string") throwProposalInvalid();
-  const title = sanitizeRetentionText(
+  const sanitizedTitle = sanitizeRetentionText(
     record.title,
     RETENTION_MAX_COMPOSER_TITLE_CHARS,
   );
-  if (!title) throwProposalInvalid();
-  if (title !== record.title.normalize("NFC").replace(/\s+/g, " ").trim()) {
+  if (!sanitizedTitle) throwProposalInvalid();
+  if (
+    sanitizedTitle !== record.title.normalize("NFC").replace(/\s+/g, " ").trim()
+  ) {
     throwProposalInvalid();
   }
+  // A provider can return question-shaped fragments such as "Why Brighton
+  // are?". Keep generation fail-soft, but never present broken grammar as the
+  // creator's title. This is subject-agnostic and only repairs the malformed
+  // auxiliary-at-the-end shape.
+  const malformedQuestion = sanitizedTitle.match(
+    /^(?:why|how|what|when|where|who)\s+(.+?)\s+(?:am|is|are|was|were|do|does|did|can|could|will|would|has|have|had)\?$/iu,
+  );
+  const title = malformedQuestion
+    ? sanitizeRetentionText(
+        `${malformedQuestion[1]!.trim()}: What Happens Next`,
+        RETENTION_MAX_COMPOSER_TITLE_CHARS,
+      )
+    : sanitizedTitle;
 
   const orderedBeatIds = plan.beatPlan.beats.map((b) => b.id);
   const segmentsRaw = record.segments;

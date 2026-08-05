@@ -161,6 +161,19 @@ async function main(): Promise<void> {
     assert.match(markup, /role="radiogroup"/);
     assert.match(markup, /data-engagement-overlay-kind-group="true"/);
     assert.match(markup, /data-engagement-overlay-position-group="true"/);
+    assert.match(markup, /data-engagement-overlay-size-group="true"/);
+    assert.match(markup, /data-engagement-overlay-scale="true"/);
+    for (const position of [
+      "top-left",
+      "top-center",
+      "top-right",
+      "center",
+      "bottom-left",
+      "bottom-center",
+      "bottom-right",
+    ]) {
+      assert.match(markup, new RegExp(`data-engagement-overlay-position="${position}"`));
+    }
     assert.match(markup, /aria-labelledby=/);
     assert.match(markup, /Start/);
     assert.match(markup, /Duration/);

@@ -116,10 +116,7 @@ function leastTrustedProvenance(
   return PROVENANCE_TRUST[a] <= PROVENANCE_TRUST[b] ? a : b;
 }
 
-function mergeSourceRefs(
-  a?: string,
-  b?: string,
-): string | undefined {
+function mergeSourceRefs(a?: string, b?: string): string | undefined {
   const parts = new Set<string>();
   for (const value of [a, b]) {
     if (!value) continue;
@@ -131,7 +128,10 @@ function mergeSourceRefs(
   if (parts.size === 0) return undefined;
   // Sort → join → re-bound (order-independent after truncation).
   const joined = [...parts].sort((x, y) => x.localeCompare(y)).join("|");
-  const bounded = sanitizeRetentionText(joined, RETENTION_MAX_CLAIM_SOURCE_REF_CHARS);
+  const bounded = sanitizeRetentionText(
+    joined,
+    RETENTION_MAX_CLAIM_SOURCE_REF_CHARS,
+  );
   return bounded || undefined;
 }
 
@@ -146,7 +146,10 @@ function mergePiRoles(a?: string, b?: string): string | undefined {
   }
   if (roles.size === 0) return undefined;
   const joined = [...roles].sort((x, y) => x.localeCompare(y)).join("+");
-  const bounded = sanitizeRetentionText(joined, RETENTION_MAX_PI_FACT_ROLE_CHARS);
+  const bounded = sanitizeRetentionText(
+    joined,
+    RETENTION_MAX_PI_FACT_ROLE_CHARS,
+  );
   return bounded || undefined;
 }
 
@@ -155,7 +158,10 @@ function mergePiBeatIds(a?: string, b?: string): string | undefined {
   if (ids.length === 0) return undefined;
   // Singular field: lexicographically smallest, then re-bound.
   const selected = [...ids].sort((x, y) => x.localeCompare(y))[0]!;
-  const bounded = sanitizeRetentionText(selected, RETENTION_MAX_PI_BEAT_ID_CHARS);
+  const bounded = sanitizeRetentionText(
+    selected,
+    RETENTION_MAX_PI_BEAT_ID_CHARS,
+  );
   return bounded || undefined;
 }
 
@@ -192,11 +198,15 @@ function reapplyEligibility(claim: {
     claim.permittedFactualUse &&
     providerBacked;
 
-  // Sprint 10H.3 — Creative Premise creator-asserted facts stay unverified
-  // but may retain permittedFactualUse under creative_premise mode.
+  // Creator-provided brief/notes/premise facts stay unverified but remain
+  // eligible for the creator's narration. "Verified" is reserved for trusted
+  // research and must not suppress the creator's own supplied material.
   if (
     !forbidden &&
-    claim.sourceRef === "creative_premise" &&
+    (claim.sourceRef === "creator_brief" ||
+      claim.sourceRef === "manual_context" ||
+      claim.sourceRef === "manual_notes" ||
+      claim.sourceRef === "creative_premise") &&
     claim.provenance === "manual_user" &&
     claim.permittedFactualUse === true
   ) {
@@ -241,7 +251,10 @@ function mergeSameIdClaims(
   }
 
   const forbidden = a.forbidden || b.forbidden;
-  const verification = mostRestrictiveVerification(a.verification, b.verification);
+  const verification = mostRestrictiveVerification(
+    a.verification,
+    b.verification,
+  );
   const provenance = leastTrustedProvenance(a.provenance, b.provenance);
   const sourceRef = mergeSourceRefs(a.sourceRef, b.sourceRef);
   const piBeatId = mergePiBeatIds(a.piBeatId, b.piBeatId);
@@ -263,7 +276,10 @@ function mergeSameIdClaims(
 export function normalizeRetentionGroundingClaimDraft(
   draft: RetentionGroundingClaimDraft,
 ): RetentionGroundingClaim | null {
-  const text = sanitizeRetentionText(draft.text, RETENTION_MAX_CLAIM_TEXT_CHARS);
+  const text = sanitizeRetentionText(
+    draft.text,
+    RETENTION_MAX_CLAIM_TEXT_CHARS,
+  );
   if (!text) return null;
 
   let claimId = sanitizeClaimId(draft.claimId);
@@ -318,7 +334,12 @@ function applyForbiddenTextDominance(
 ): RetentionGroundingClaim[] {
   const forbiddenTexts = new Set(
     claims
-      .filter((c) => c.forbidden || c.verification === "forbidden" || c.verification === "rejected")
+      .filter(
+        (c) =>
+          c.forbidden ||
+          c.verification === "forbidden" ||
+          c.verification === "rejected",
+      )
       .map((c) => c.text),
   );
   if (forbiddenTexts.size === 0) return [...claims];
@@ -351,7 +372,9 @@ function collapseGeneratedManualDuplicates(
   const drop = new Set<string>();
   for (const group of byText.values()) {
     if (group.length < 2) continue;
-    const sorted = [...group].sort((a, b) => a.claimId.localeCompare(b.claimId));
+    const sorted = [...group].sort((a, b) =>
+      a.claimId.localeCompare(b.claimId),
+    );
     const keep = sorted[0]!;
     let merged = keep;
     for (let i = 1; i < sorted.length; i++) {
@@ -371,7 +394,10 @@ function collapseGeneratedManualDuplicates(
       const claim = group[0]!;
       // Only replace if we collapsed
       const originals = claims.filter(
-        (c) => c.provenance === "manual_user" && c.text === text && !authoritativeIds.has(c.claimId),
+        (c) =>
+          c.provenance === "manual_user" &&
+          c.text === text &&
+          !authoritativeIds.has(c.claimId),
       );
       if (originals.length > 1) {
         replacements.set(claim.claimId, claim);
@@ -389,7 +415,9 @@ function collapseGeneratedManualDuplicates(
     ) {
       if (seenManualText.has(claim.text)) continue;
       seenManualText.add(claim.text);
-      const replacement = [...replacements.values()].find((c) => c.text === claim.text);
+      const replacement = [...replacements.values()].find(
+        (c) => c.text === claim.text,
+      );
       out.push(replacement ?? claim);
       continue;
     }
@@ -399,11 +427,29 @@ function collapseGeneratedManualDuplicates(
 }
 
 function claimCapTier(claim: RetentionGroundingClaim): number {
-  if (claim.forbidden || claim.verification === "forbidden" || claim.verification === "rejected") {
+  if (
+    claim.forbidden ||
+    claim.verification === "forbidden" ||
+    claim.verification === "rejected"
+  ) {
     return 1;
   }
   const roles = new Set((claim.piFactRole ?? "").split("+").filter(Boolean));
-  if (roles.has("opening_intent") || roles.has("required") || roles.has("opening_hook")) {
+  if (
+    roles.has("opening_intent") ||
+    roles.has("required") ||
+    roles.has("opening_hook")
+  ) {
+    return 2;
+  }
+  if (
+    claim.permittedFactualUse &&
+    claim.provenance === "manual_user" &&
+    (claim.sourceRef === "creator_brief" ||
+      claim.sourceRef === "manual_context" ||
+      claim.sourceRef === "manual_notes" ||
+      claim.sourceRef === "creative_premise")
+  ) {
     return 2;
   }
   if (claim.permittedFactualUse && claim.verification === "verified") {

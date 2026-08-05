@@ -291,6 +291,8 @@ export interface ExportEngagementOverlayManifest {
     | "bottom-left"
     | "bottom-center"
     | "bottom-right";
+  readonly size?: "small" | "medium" | "large";
+  readonly scale?: number;
   readonly presetId: string;
 }
 

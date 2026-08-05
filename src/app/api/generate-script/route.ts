@@ -529,8 +529,9 @@ export async function POST(request: Request) {
       templatePromptHints: body.templatePromptHints,
     });
 
-    // Hook Style (7E.6) + Story Strategy (10G) — ignore for scenes-only;
-    // reject forged/unknown/incompatible. Never silently rewrite explicit intent.
+    // Hook Style (7E.6) + Story Strategy (10G) — ignore for scenes-only.
+    // Invalid/incompatible presentation values degrade to Auto rather than
+    // blocking story creation.
     let userAuthoredHook: string | undefined;
     let requestedStrategyId: HookSelectableStrategyId | undefined;
     let hookStyle: import("@/features/hook-engine").HookStyleSelection | undefined;
@@ -541,33 +542,21 @@ export async function POST(request: Request) {
 
     if (mode !== "scenes-only") {
       if (body.hookStyle != null && !isHookStyleSelection(body.hookStyle)) {
-        return jsonResponse(
-          { success: false, error: "Invalid Hook style selection." },
-          400,
-        );
+        hookStyle = "auto";
       }
-      hookStyle = parseHookStyleSelection(body.hookStyle) ?? "auto";
+      hookStyle = hookStyle ?? parseHookStyleSelection(body.hookStyle) ?? "auto";
 
       if (body.formatStrategyId != null && !isStoryStrategySelection(body.formatStrategyId)) {
-        return jsonResponse(
-          { success: false, error: "Invalid Story strategy selection." },
-          400,
-        );
+        formatStrategyId = "auto";
       }
-      formatStrategyId = parseStoryStrategySelection(body.formatStrategyId) ?? "auto";
+      formatStrategyId =
+        formatStrategyId ??
+        parseStoryStrategySelection(body.formatStrategyId) ??
+        "auto";
       try {
         assertStoryStrategyAllowed(formatStrategyId, duration);
-      } catch (error) {
-        return jsonResponse(
-          {
-            success: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : "Incompatible Story strategy for this duration.",
-          },
-          400,
-        );
+      } catch {
+        formatStrategyId = "auto";
       }
 
       if (hookStyle === "user_written") {
@@ -575,10 +564,11 @@ export async function POST(request: Request) {
           typeof body.userAuthoredHook === "string" ? body.userAuthoredHook : "",
         );
         if (!opening.ok) {
-          return jsonResponse({ success: false, error: opening.message }, 400);
+          hookStyle = "auto";
+          userAuthoredHook = undefined;
+        } else {
+          userAuthoredHook = opening.text;
         }
-        // Accept validated text as-is — never silently rewrite over-limit openings.
-        userAuthoredHook = opening.text;
       } else {
         // Explicit library selection — do not accept userAuthoredHook alongside.
         const candidate = requestedStrategyIdFromHookStyle(hookStyle);
@@ -587,16 +577,9 @@ export async function POST(request: Request) {
             assertRequestedStrategyAllowed(candidate, scriptMode);
             requestedStrategyId = candidate;
           } catch (error) {
-            return jsonResponse(
-              {
-                success: false,
-                error:
-                  error instanceof Error
-                    ? error.message
-                    : "Incompatible Hook style for this content type.",
-              },
-              400,
-            );
+            void error;
+            hookStyle = "auto";
+            requestedStrategyId = undefined;
           }
         }
         // Auto: omit requestedStrategyId; optional legacy userAuthoredHook still honored.
@@ -613,15 +596,13 @@ export async function POST(request: Request) {
         body.factHandlingMode !== "verified_facts_only" &&
         body.factHandlingMode !== "creative_premise"
       ) {
-        return jsonResponse(
-          { success: false, error: "Invalid Fact Handling selection." },
-          400,
-        );
+        factHandlingMode = "verified_facts_only";
       }
       factHandlingMode =
-        body.factHandlingMode === "creative_premise"
+        factHandlingMode ??
+        (body.factHandlingMode === "creative_premise"
           ? "creative_premise"
-          : "verified_facts_only";
+          : "verified_facts_only");
       if (
         factHandlingMode === "creative_premise" &&
         typeof body.premiseDetails === "string"
@@ -634,22 +615,11 @@ export async function POST(request: Request) {
         body.creationReliabilityMode !== "flexible" &&
         body.creationReliabilityMode !== "precise"
       ) {
-        return jsonResponse(
-          { success: false, error: "Invalid Generation mode selection." },
-          400,
-        );
+        creationReliabilityMode = "flexible";
       }
       if (body.creationReliabilityMode === "precise") {
         creationReliabilityMode = "precise";
       }
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey || apiKey === "your_key_here") {
-      return jsonResponse(
-        { success: false, error: "Server configuration error" },
-        500,
-      );
     }
 
     const params: GenerationParams = {

@@ -203,29 +203,62 @@ export function buildRetentionBeatPlan(
   const subjectAnchor =
     resolveRetentionDeterministicSubjectAnchor(contract.topic) ?? "this contest";
 
-  const premiseClaims =
-    proposal == null &&
-    (contract.factHandlingMode ?? "verified_facts_only") === "creative_premise"
+  const distributedClaims =
+    proposal == null
       ? Object.freeze(
           context.grounding.claims
-            .filter(
-              (c) =>
-                c.sourceRef === "creative_premise" &&
-                c.permittedFactualUse &&
-                !c.forbidden,
-            )
+            .filter((claim) => {
+              if (
+                claim.sourceRef !== "creator_brief" &&
+                claim.sourceRef !== "manual_context" &&
+                claim.sourceRef !== "manual_notes" &&
+                claim.sourceRef !== "creative_premise"
+              ) {
+                return false;
+              }
+              if (
+                !isClaimEligibleForNarrationSupport(
+                  context.grounding,
+                  claim.claimId,
+                  contract.factHandlingMode ?? "verified_facts_only",
+                )
+              ) {
+                return false;
+              }
+              const normalized = normalizeRetentionControllingIdeaStatement(
+                claim.text,
+              );
+              return (
+                normalized.length > 0 &&
+                normalized.length <=
+                  RETENTION_MAX_BEAT_INFORMATION_CONTRIBUTION_CHARS &&
+                !retentionBeatTextHasForbiddenMarker(normalized)
+              );
+            })
             .slice()
-            .sort((a, b) => a.claimId.localeCompare(b.claimId)),
+            .sort((a, b) => {
+              const byRank = groundedClaimRank(a) - groundedClaimRank(b);
+              if (byRank !== 0) return byRank;
+              const creatorRank = (claim: RetentionGroundingClaim) =>
+                claim.sourceRef === "creator_brief"
+                  ? 0
+                  : claim.sourceRef === "manual_context" ||
+                      claim.sourceRef === "manual_notes"
+                    ? 1
+                    : claim.sourceRef === "creative_premise"
+                      ? 2
+                      : 3;
+              const byCreatorAuthority = creatorRank(a) - creatorRank(b);
+              return byCreatorAuthority !== 0
+                ? byCreatorAuthority
+                : a.claimId.localeCompare(b.claimId);
+            }),
         )
       : Object.freeze([] as RetentionGroundingClaim[]);
-  // When Creative Premise distributes claims, do not also select a grounded
-  // premise claim (avoids duplicate result statements that break Hook authority).
   const grounded =
-    proposal == null && premiseClaims.length === 0
-      ? selectGroundedBeatClaim(context)
-      : null;
+    proposal == null ? selectGroundedBeatClaim(context) : null;
   let groundedIndex = -1;
-  if (grounded || premiseClaims.length > 0) {
+  if (grounded || distributedClaims.length > 0) {
     for (let i = 1; i < beatCount - 1; i++) {
       if (purposes[i] === "proof") {
         groundedIndex = i;
@@ -244,17 +277,28 @@ export function buildRetentionBeatPlan(
       groundedIndex = 1;
     }
   }
-  // Distribute creator premise facts one-per-middle-beat (exact text + one ref).
-  const premiseByBeatIndex = new Map<
+  // Distribute eligible creator/research facts one-per-middle-beat (exact text + one ref).
+  const claimByBeatIndex = new Map<
     number,
     { readonly claimId: string; readonly text: string }
   >();
-  if (premiseClaims.length > 0 && beatCount > 2) {
+  if (grounded && groundedIndex >= 0) {
+    claimByBeatIndex.set(groundedIndex, {
+      claimId: grounded.claimId,
+      text: grounded.text,
+    });
+  }
+  if (distributedClaims.length > 0 && beatCount > 2) {
     const middleIndexes: number[] = [];
-    for (let i = 1; i < beatCount - 1; i++) middleIndexes.push(i);
-    for (let p = 0; p < premiseClaims.length && p < middleIndexes.length; p++) {
-      const claim = premiseClaims[p]!;
-      premiseByBeatIndex.set(middleIndexes[p]!, {
+    for (let i = 1; i < beatCount - 1; i++) {
+      if (!claimByBeatIndex.has(i)) middleIndexes.push(i);
+    }
+    const remainingClaims = distributedClaims.filter(
+      (claim) => claim.claimId !== grounded?.claimId,
+    );
+    for (let p = 0; p < remainingClaims.length && p < middleIndexes.length; p++) {
+      const claim = remainingClaims[p]!;
+      claimByBeatIndex.set(middleIndexes[p]!, {
         claimId: claim.claimId,
         text: claim.text,
       });
@@ -287,22 +331,22 @@ export function buildRetentionBeatPlan(
       };
       groundingClaimRefs = proposed.groundingClaimRefs;
     } else {
-      const premise = premiseByBeatIndex.get(i);
+      const distributedClaim = claimByBeatIndex.get(i);
       const useGrounded =
-        !premise && i === groundedIndex && grounded != null;
+        !distributedClaim && i === groundedIndex && grounded != null;
       fields = {
         emotionalIntent: template.emotionalIntent,
         viewerQuestion: template.viewerQuestion,
-        informationContribution: premise
-          ? premise.text
+        informationContribution: distributedClaim
+          ? distributedClaim.text
           : useGrounded
             ? grounded!.text
             : template.informationContribution,
         narrationGoal: template.narrationGoal,
         visualOpportunity: template.visualOpportunity,
       };
-      if (premise) {
-        groundingClaimRefs = Object.freeze([premise.claimId]);
+      if (distributedClaim) {
+        groundingClaimRefs = Object.freeze([distributedClaim.claimId]);
       } else if (useGrounded) {
         groundingClaimRefs = Object.freeze([grounded!.claimId]);
       } else {

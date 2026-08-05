@@ -21,7 +21,10 @@ import {
 import { buildRetentionCreatorContextAuthority } from "../domain/retention-creator-context-authority";
 import { normalizeStoryContract } from "../domain/normalize-story-contract";
 import { normalizeRetentionGroundingContext } from "../grounding/retention-grounding-normalization";
-import { createRetentionModelCallLedger } from "../budget/create-retention-model-call-ledger";
+import {
+  createRetentionModelCallLedger,
+  recordDeterministicNarrationRescue,
+} from "../budget/create-retention-model-call-ledger";
 import { buildDeterministicFallbackComposer } from "../composition/build-deterministic-fallback-composer";
 import { buildDeterministicFallbackNarrationCandidate } from "../composition/build-deterministic-fallback-narration";
 import { buildRetentionStoryPlan } from "../planning/build-retention-story-plan";
@@ -87,6 +90,19 @@ function isSoftEmptyResearchGroundingReason(reason: string): boolean {
   );
 }
 
+function ensureDeterministicNarrationEvidence(
+  ledger: ReturnType<typeof createRetentionModelCallLedger>,
+): void {
+  const alreadyRecorded = ledger
+    .snapshot()
+    .events.some(
+      (event) =>
+        event.category === "initial_narration" &&
+        event.outcome === "skipped_deterministic",
+    );
+  if (!alreadyRecorded) recordDeterministicNarrationRescue(ledger);
+}
+
 /** Lazy-load so barrel / injected doubles never pull server-only AI clients. */
 async function resolveProductionScriptModel(qualityMode: string): Promise<string> {
   const { resolveScriptModel } = await import("@/lib/ai/script-models");
@@ -126,23 +142,11 @@ function resolveHookStyle(
   return undefined;
 }
 
-const WRITE_MY_OWN_OPENING_HARD_GATE_MESSAGE =
-  "Your Write My Own opening could not clear safety or grounding checks. Edit the opening and try again — Auto was not used.";
-
 const WRITE_MY_OWN_AUTHORITY_MISMATCH_MESSAGE =
   "Your Write My Own opening could not be kept exactly as written. Edit the opening and try again — Auto was not used.";
 
 const PRECISE_HOOK_NO_SILENT_AUTO_MESSAGE =
   "Precise mode could not apply your selected Hook style without changing it. Switch to Flexible or Auto Hook, then try again.";
-
-function isUserAuthoredOpeningHardGateFailure(bridge: {
-  readonly reason: string;
-  readonly hookDiagnostics?: { readonly fallbackReason?: string };
-}): boolean {
-  if (bridge.reason !== "hook_terminal_failure") return false;
-  const reason = bridge.hookDiagnostics?.fallbackReason ?? "";
-  return reason.includes("failed_hard_gate");
-}
 
 function failResult(
   category: RetentionProductionFailureCategory,
@@ -548,34 +552,13 @@ export async function runRetentionProductionNarration(
       hookBridge = null;
     }
 
-    // Sprint 10H.3B — Write My Own opening hard-gate: fail closed, never Auto.
-    if (
-      selectedHookStyle === "user_written" &&
-      hookBridge != null &&
-      hookBridge.status === "failed" &&
-      isUserAuthoredOpeningHardGateFailure(hookBridge)
-    ) {
-      return failResult("hook_terminal_failure", {
-        contractFingerprint: contract.contractFingerprint,
-        planFingerprint: plan.planFingerprint,
-        qualityMode: contract.qualityMode,
-        safeReasonIds: Object.freeze([
-          "user_authored_opening_hard_gate_failure",
-        ]),
-        budget: summarizeLedgerBudget(ledger.snapshot()),
-        errorMessage: WRITE_MY_OWN_OPENING_HARD_GATE_MESSAGE,
-        ...(hookBridge.hookPlanSnapshot
-          ? { hookPlanSnapshot: hookBridge.hookPlanSnapshot }
-          : {}),
-        ...(hookBridge.hookDiagnostics
-          ? { hookDiagnostics: hookBridge.hookDiagnostics }
-          : {}),
-      });
-    }
+    // A rejected user-written opening is a candidate failure, not a story
+    // failure. The deterministic rescue below first tries to preserve it, then
+    // may reconcile to a safe Auto opening with creator-facing diagnostics.
 
     // Sprint 10H.3B — explicit Hook preference: zero-model Auto reconcile
     // against the preserved composed candidate. Never a second model initial.
-    // Precise mode: no silent Auto alteration — explain instead.
+    // Explicit preferences may reconcile to Auto so story creation continues.
     // Provisional branch markers are not final disposition authority (10H.5B).
     const bridgeFailedForHookPreference =
       hookBridge != null &&
@@ -592,22 +575,6 @@ export async function runRetentionProductionNarration(
       hookBridge.status === "failed" &&
       hookBridge.composedCandidate
     ) {
-      if (preciseMode) {
-        return failResult("hook_terminal_failure", {
-          contractFingerprint: contract.contractFingerprint,
-          planFingerprint: plan.planFingerprint,
-          qualityMode: contract.qualityMode,
-          safeReasonIds: Object.freeze(["precise_mode_no_silent_hook_auto"]),
-          budget: summarizeLedgerBudget(ledger.snapshot()),
-          errorMessage: PRECISE_HOOK_NO_SILENT_AUTO_MESSAGE,
-          ...(hookBridge.hookPlanSnapshot
-            ? { hookPlanSnapshot: hookBridge.hookPlanSnapshot }
-            : {}),
-          ...(hookBridge.hookDiagnostics
-            ? { hookDiagnostics: hookBridge.hookDiagnostics }
-            : {}),
-        });
-      }
       const reconciled = reconcileRetentionHookPreferenceZeroModel({
         contract,
         plan,
@@ -645,12 +612,8 @@ export async function runRetentionProductionNarration(
           selectedHookStyle === "user_written" && input.userAuthoredHook
             ? input.userAuthoredHook
             : null;
-        const explicitNonAuto =
-          selectedHookStyle != null &&
-          selectedHookStyle !== "auto" &&
-          selectedHookStyle !== "user_written";
         const rescueHookContext =
-          selectedHookStyle === "user_written" || (preciseMode && explicitNonAuto)
+          selectedHookStyle === "user_written"
             ? buildHookContext()
             : buildHookContext("auto");
         const fallbackComposer = buildDeterministicFallbackComposer({
@@ -675,15 +638,6 @@ export async function runRetentionProductionNarration(
             hookBridge = rescued;
             adaptations.push("reliability_rescue_used");
             adaptations.push("deterministic_story_fallback_used");
-          } else if (preciseMode && explicitNonAuto) {
-            return failResult("hook_terminal_failure", {
-              contractFingerprint: contract.contractFingerprint,
-              planFingerprint: plan.planFingerprint,
-              qualityMode: contract.qualityMode,
-              safeReasonIds: Object.freeze(["precise_mode_no_silent_hook_auto"]),
-              budget: summarizeLedgerBudget(ledger.snapshot()),
-              errorMessage: PRECISE_HOOK_NO_SILENT_AUTO_MESSAGE,
-            });
           }
         } catch {
           deterministicRescueUsed = true;
@@ -692,13 +646,8 @@ export async function runRetentionProductionNarration(
       }
     }
 
-    // Flexible last resort: zero-model det candidate + Auto-compatible promote
-    // when Hook bridge is still not ready after ordinary rescue (not WMO/Precise).
-    if (
-      (hookBridge == null || hookBridge.status !== "ready") &&
-      !preciseMode &&
-      selectedHookStyle !== "user_written"
-    ) {
+    // Last resort: zero-model deterministic candidate + Auto-compatible Hook.
+    if (hookBridge == null || hookBridge.status !== "ready") {
       const reliabilityPlan = buildReliabilityDeterministicRetentionPlan({
         contract,
         grounding,
@@ -718,6 +667,7 @@ export async function runRetentionProductionNarration(
           plan,
           grounding,
         });
+        ensureDeterministicNarrationEvidence(ledger);
         omittedAuthorizedClaimIds = [...built.omittedClaimIds];
         const promoted = rebuildRetentionReadyBridgeFromCandidate({
           contract,
@@ -902,8 +852,6 @@ export async function runRetentionProductionNarration(
           ));
       const allowOrdinaryDetRescue = !deterministicRescueUsed;
       const allowFlexibleStructural =
-        !preciseMode &&
-        selectedHookStyle !== "user_written" &&
         recoverable &&
         !flexibleStructuralRescueUsed;
       const allowWmoLengthRescue =
@@ -955,6 +903,7 @@ export async function runRetentionProductionNarration(
                 ? { preserveOpeningText: preserveOpening }
                 : {}),
             });
+            ensureDeterministicNarrationEvidence(ledger);
             omittedAuthorizedClaimIds = [...built.omittedClaimIds];
             const promoted = rebuildRetentionReadyBridgeFromCandidate({
               contract,

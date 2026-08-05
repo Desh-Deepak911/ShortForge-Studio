@@ -95,7 +95,10 @@ function minimalGraph(): GraphContext {
         text: "Player scored 7 goals in the tournament.",
         type: "statistic",
         confidence: { tier: "high", percent: 90 },
-        provenance: { source: "api-football", fetchedAt: "2026-01-01T00:00:00.000Z" },
+        provenance: {
+          source: "api-football",
+          fetchedAt: "2026-01-01T00:00:00.000Z",
+        },
       },
     ],
     rankedFacts: [],
@@ -115,7 +118,10 @@ function minimalGraph(): GraphContext {
     groundingRules: [],
     warnings: [],
     confidence: { tier: "high", percent: 80 },
-    provenance: { source: "api-football", fetchedAt: "2099-01-01T00:00:00.000Z" },
+    provenance: {
+      source: "api-football",
+      fetchedAt: "2099-01-01T00:00:00.000Z",
+    },
     diagnostics: {
       nodeCount: 0,
       edgeCount: 0,
@@ -152,7 +158,10 @@ function minimalAssembled(): AssembledContext {
       {
         id: "af-1",
         text: "Ranked player A leads the table.",
-        provenance: { source: "api-football", fetchedAt: "2020-01-01T00:00:00.000Z" },
+        provenance: {
+          source: "api-football",
+          fetchedAt: "2020-01-01T00:00:00.000Z",
+        },
       },
       {
         id: "af-user",
@@ -200,14 +209,29 @@ function minimalAssembled(): AssembledContext {
       {
         team: "Home FC",
         formation: "4-3-3",
-        startingXi: ["GK", "RB", "CB", "CB", "LB", "CM", "CM", "CM", "RW", "ST", "LW"],
+        startingXi: [
+          "GK",
+          "RB",
+          "CB",
+          "CB",
+          "LB",
+          "CM",
+          "CM",
+          "CM",
+          "RW",
+          "ST",
+          "LW",
+        ],
         substitutes: ["Sub1"],
       },
     ],
     manualNotes: "Creator note: emphasize rivalry.",
     warnings: [],
     confidence: { tier: "medium", percent: 70 },
-    provenance: { source: "api-football", fetchedAt: "2099-06-01T00:00:00.000Z" },
+    provenance: {
+      source: "api-football",
+      fetchedAt: "2099-06-01T00:00:00.000Z",
+    },
     promptSections: [],
     diagnostics: [],
   };
@@ -286,7 +310,8 @@ check("invalid quality rejected; invalid scriptMode falls back", () => {
   assert.throws(
     () => normalizeStoryContract(baseInput({ qualityMode: "ultra" })),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "invalid_quality_mode",
+      err instanceof RetentionStoryError &&
+      err.reason === "invalid_quality_mode",
   );
   assert.equal(
     normalizeStoryContract(baseInput({ scriptMode: "nope" })).scriptMode,
@@ -381,9 +406,12 @@ check("explicit incompatible + unknown + long-form rejected", () => {
   );
   assert.throws(
     () =>
-      normalizeStoryContract(baseInput({ formatStrategyId: "mystery" as never })),
+      normalizeStoryContract(
+        baseInput({ formatStrategyId: "mystery" as never }),
+      ),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "unknown_format_strategy",
+      err instanceof RetentionStoryError &&
+      err.reason === "unknown_format_strategy",
   );
   assert.throws(
     () =>
@@ -391,9 +419,12 @@ check("explicit incompatible + unknown + long-form rejected", () => {
         baseInput({ formatStrategyId: "long_form_explainer" }),
       ),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "long_form_not_supported",
+      err instanceof RetentionStoryError &&
+      err.reason === "long_form_not_supported",
   );
-  const cap = assertRetentionFormatStrategyProductionCapable("long_form_documentary");
+  const cap = assertRetentionFormatStrategyProductionCapable(
+    "long_form_documentary",
+  );
   assert.equal(cap.ok, false);
 });
 
@@ -416,8 +447,9 @@ check("path mappings + missing api → full", () => {
     "scenes_only",
   );
   assert.equal(
-    normalizeStoryContract(baseInput({ apiMode: "full", generationPath: undefined }))
-      .generationPath,
+    normalizeStoryContract(
+      baseInput({ apiMode: "full", generationPath: undefined }),
+    ).generationPath,
     "audio_first_full",
   );
 });
@@ -433,7 +465,8 @@ check("matching dual ok; mismatch rejected; scenes-only normalizes", () => {
         baseInput({ generationPath: "script_only", apiMode: "full" }),
       ),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "generation_path_mismatch",
+      err instanceof RetentionStoryError &&
+      err.reason === "generation_path_mismatch",
   );
 });
 
@@ -460,7 +493,8 @@ check("missing user_written / internal / unknown rejected", () => {
   assert.throws(
     () => normalizeStoryContract(baseInput({ hookStyle: "user_written" })),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "missing_user_authored_hook",
+      err instanceof RetentionStoryError &&
+      err.reason === "missing_user_authored_hook",
   );
   assert.throws(
     () => normalizeStoryContract(baseInput({ hookStyle: "evidence_surprise" })),
@@ -498,7 +532,9 @@ check("userAuthoredHook ignored unless user_written", () => {
 console.log("grounding");
 check("GraphContext provider facts", () => {
   const g = buildRetentionGroundingContext({ graphContext: minimalGraph() });
-  assert.ok(g.claims.some((c) => c.claimId === "gf-1" && c.permittedFactualUse));
+  assert.ok(
+    g.claims.some((c) => c.claimId === "gf-1" && c.permittedFactualUse),
+  );
   assert.ok(
     g.claims
       .filter((c) => c.claimId === "gf-1" || c.claimId === "gf-stat-1")
@@ -519,18 +555,20 @@ check("AssembledContext fallback collections + manual/inferred", () => {
   assert.equal(byId.get("af-inferred")?.provenance, "inferred");
   assert.ok(g.claims.some((c) => c.text.includes("Player A")));
   assert.ok(g.claims.some((c) => c.text.includes("Home FC")));
-  assert.ok(g.claims.some((c) => c.forbidden && c.text.includes("best player")));
+  assert.ok(
+    g.claims.some((c) => c.forbidden && c.text.includes("best player")),
+  );
   assert.ok(byId.get("af-1")?.piFactRole?.includes("required"));
 });
 
-check("manual never verified; forbidden never permitted", () => {
+check("creator manual is permitted without becoming verified", () => {
   const g = buildRetentionGroundingContext({
     manualContext: "My opinion only",
     narrativePlan: minimalPlan(),
   });
   for (const claim of g.claims) {
     if (claim.provenance === "manual_user") {
-      assert.equal(claim.permittedFactualUse, false);
+      assert.equal(claim.permittedFactualUse, true);
       assert.notEqual(claim.verification, "verified");
     }
     if (claim.forbidden) assert.equal(claim.permittedFactualUse, false);
@@ -641,14 +679,17 @@ check("conflicting same ID fail-closed (restrictive wins)", () => {
         },
       ]),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "grounding_claim_conflict",
+      err instanceof RetentionStoryError &&
+      err.reason === "grounding_claim_conflict",
   );
 });
 
 check("grounding input not mutated; contract omits claim text", () => {
   const assembled = minimalAssembled();
   const before = JSON.stringify(assembled);
-  const grounding = buildRetentionGroundingContext({ assembledContext: assembled });
+  const grounding = buildRetentionGroundingContext({
+    assembledContext: assembled,
+  });
   assert.equal(JSON.stringify(assembled), before);
   const n = normalizeStoryContract(baseInput({ grounding }));
   assert.equal(n.groundingSummary.claimCount, grounding.claims.length);
@@ -660,10 +701,16 @@ check("queryId/fetchedAt do not change research identity", () => {
   const g1 = minimalGraph();
   const g2 = minimalGraph();
   g2.queryId = "different-query";
-  g2.provenance = { source: "api-football", fetchedAt: "1999-01-01T00:00:00.000Z" };
+  g2.provenance = {
+    source: "api-football",
+    fetchedAt: "1999-01-01T00:00:00.000Z",
+  };
   g2.verifiedFacts[0] = {
     ...g2.verifiedFacts[0]!,
-    provenance: { source: "api-football", fetchedAt: "1999-01-01T00:00:00.000Z" },
+    provenance: {
+      source: "api-football",
+      fetchedAt: "1999-01-01T00:00:00.000Z",
+    },
   };
   const a = buildRetentionGroundingContext({ graphContext: g1 });
   const b = buildRetentionGroundingContext({ graphContext: g2 });
@@ -797,7 +844,10 @@ check("Graph fact provenance follows fact.provenance.source", () => {
 
 check("Assembled bundle provenance controls structured collections", () => {
   const assembled = minimalAssembled();
-  assembled.provenance = { source: "user", fetchedAt: "2099-01-01T00:00:00.000Z" };
+  assembled.provenance = {
+    source: "user",
+    fetchedAt: "2099-01-01T00:00:00.000Z",
+  };
   assembled.verifiedFacts = [
     {
       id: "af-provider",
@@ -815,7 +865,8 @@ check("Assembled bundle provenance controls structured collections", () => {
     g.claims
       .filter((c) => c.sourceRef === "ranking" || c.sourceRef === "fixture")
       .every(
-        (c) => c.provenance === "manual_user" && c.permittedFactualUse === false,
+        (c) =>
+          c.provenance === "manual_user" && c.permittedFactualUse === false,
       ),
   );
 });
@@ -843,17 +894,20 @@ check("Empty / unusable Graph falls back to Assembled", () => {
   assert.ok(g2.claims.some((c) => c.claimId === "af-1"));
 });
 
-check("Usable Graph suppresses Assembled provider collections but keeps manual notes", () => {
-  const assembled = minimalAssembled();
-  assembled.manualNotes = "Keep this creator note";
-  const g = buildRetentionGroundingContext({
-    graphContext: minimalGraph(),
-    assembledContext: assembled,
-  });
-  assert.ok(g.claims.some((c) => c.claimId === "gf-1"));
-  assert.ok(!g.claims.some((c) => c.claimId === "af-1"));
-  assert.ok(g.claims.some((c) => c.text.includes("Keep this creator note")));
-});
+check(
+  "Usable Graph suppresses Assembled provider collections but keeps manual notes",
+  () => {
+    const assembled = minimalAssembled();
+    assembled.manualNotes = "Keep this creator note";
+    const g = buildRetentionGroundingContext({
+      graphContext: minimalGraph(),
+      assembledContext: assembled,
+    });
+    assert.ok(g.claims.some((c) => c.claimId === "gf-1"));
+    assert.ok(!g.claims.some((c) => c.claimId === "af-1"));
+    assert.ok(g.claims.some((c) => c.text.includes("Keep this creator note")));
+  },
+);
 
 // --- 10B.1 Canonical grounding in normalizeStoryContract ---
 console.log("10b1-canonical-grounding");
@@ -977,22 +1031,25 @@ check("same-ID merge order-independent including refs/roles", () => {
   assert.ok(forward.claims[0]?.piFactRole?.includes("required"));
 });
 
-check("content-derived IDs use structured serialization (delimiter-safe)", () => {
-  const id1 = buildRetentionContentDerivedClaimId({
-    kind: "content_identity",
-    contentIdentity: { kind: "manual_creator", text: "a|b" },
-    text: "a|b",
-    provenance: "manual_user",
-  });
-  const id2 = buildRetentionContentDerivedClaimId({
-    kind: "content_identity",
-    contentIdentity: { kind: "manual_creator", text: "a" },
-    text: "a",
-    provenance: "manual_user",
-  });
-  // Delimiter-like content must not collide with structured siblings.
-  assert.notEqual(id1, id2);
-});
+check(
+  "content-derived IDs use structured serialization (delimiter-safe)",
+  () => {
+    const id1 = buildRetentionContentDerivedClaimId({
+      kind: "content_identity",
+      contentIdentity: { kind: "manual_creator", text: "a|b" },
+      text: "a|b",
+      provenance: "manual_user",
+    });
+    const id2 = buildRetentionContentDerivedClaimId({
+      kind: "content_identity",
+      contentIdentity: { kind: "manual_creator", text: "a" },
+      text: "a",
+      provenance: "manual_user",
+    });
+    // Delimiter-like content must not collide with structured siblings.
+    assert.notEqual(id1, id2);
+  },
+);
 
 // --- Forbidden-text dominance ---
 console.log("10b1-forbidden-dominance");
@@ -1152,7 +1209,8 @@ check("Hook Style / ScriptMode compatibility", () => {
         baseInput({ hookStyle: "countdown_tease", scriptMode: "match_recap" }),
       ),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "incompatible_hook_style",
+      err instanceof RetentionStoryError &&
+      err.reason === "incompatible_hook_style",
   );
   assert.equal(
     normalizeStoryContract(
@@ -1172,11 +1230,13 @@ check("Hook Style / ScriptMode compatibility", () => {
         baseInput({ hookStyle: "cold_open", scriptMode: "tactical_review" }),
       ),
     (err: unknown) =>
-      err instanceof RetentionStoryError && err.reason === "incompatible_hook_style",
+      err instanceof RetentionStoryError &&
+      err.reason === "incompatible_hook_style",
   );
   assert.equal(
-    normalizeStoryContract(baseInput({ hookStyle: "auto", scriptMode: "match_recap" }))
-      .identities.hookStyleIdentity,
+    normalizeStoryContract(
+      baseInput({ hookStyle: "auto", scriptMode: "match_recap" }),
+    ).identities.hookStyleIdentity,
     "auto",
   );
 });
@@ -1283,7 +1343,9 @@ check("Graph facts map every listed source through trust policy", () => {
         text: `Graph fact for ${row.source ?? "missing"}`,
         provenance: row.source
           ? { source: row.source as GraphContextFact["provenance"]["source"] }
-          : ({ source: undefined } as unknown as GraphContextFact["provenance"]),
+          : ({
+              source: undefined,
+            } as unknown as GraphContextFact["provenance"]),
       }),
     ];
     graph.statisticFacts = [];
@@ -1298,94 +1360,120 @@ check("Graph facts map every listed source through trust policy", () => {
   }
 });
 
-check("Assembled verifiedFacts map every listed source through trust policy", () => {
-  for (const row of SOURCE_TRUST_CASES) {
-    const assembled = minimalAssembled();
-    assembled.rankings = [];
-    assembled.fixtures = [];
-    assembled.statistics = [];
-    assembled.events = [];
-    assembled.lineups = [];
-    assembled.manualNotes = "";
-    assembled.verifiedFacts = [
-      {
-        id: `af-${row.source ?? "missing"}`,
-        text: `Assembled fact for ${row.source ?? "missing"}`,
-        provenance: row.source
-          ? { source: row.source as "api-football" }
-          : ({} as { source: "api-football" }),
-      },
-    ];
-    const g = buildRetentionGroundingContext({ assembledContext: assembled });
-    const claim = g.claims.find((c) =>
-      c.text.includes(`Assembled fact for ${row.source ?? "missing"}`),
-    );
-    assert.ok(claim, `missing claim for assembled source ${row.source}`);
-    assert.equal(claim!.provenance, row.assembledProvenance);
-    assert.equal(claim!.permittedFactualUse, row.permitted);
-  }
-});
+check(
+  "Assembled verifiedFacts map every listed source through trust policy",
+  () => {
+    for (const row of SOURCE_TRUST_CASES) {
+      const assembled = minimalAssembled();
+      assembled.rankings = [];
+      assembled.fixtures = [];
+      assembled.statistics = [];
+      assembled.events = [];
+      assembled.lineups = [];
+      assembled.manualNotes = "";
+      assembled.verifiedFacts = [
+        {
+          id: `af-${row.source ?? "missing"}`,
+          text: `Assembled fact for ${row.source ?? "missing"}`,
+          provenance: row.source
+            ? { source: row.source as "api-football" }
+            : ({} as { source: "api-football" }),
+        },
+      ];
+      const g = buildRetentionGroundingContext({ assembledContext: assembled });
+      const claim = g.claims.find((c) =>
+        c.text.includes(`Assembled fact for ${row.source ?? "missing"}`),
+      );
+      assert.ok(claim, `missing claim for assembled source ${row.source}`);
+      assert.equal(claim!.provenance, row.assembledProvenance);
+      assert.equal(claim!.permittedFactualUse, row.permitted);
+    }
+  },
+);
 
-check("Assembled rankings/fixtures/statistics/events/lineups follow bundle trust", () => {
-  const untrustedBundles = ["manual", "fallback", "future-provider-xyz", "user"] as const;
-  for (const source of untrustedBundles) {
-    const assembled = minimalAssembled();
-    assembled.provenance = {
-      source: source as AssembledContext["provenance"]["source"],
-      fetchedAt: "2099-01-01T00:00:00.000Z",
-    };
-    assembled.verifiedFacts = [];
-    assembled.manualNotes = "";
-    const g = buildRetentionGroundingContext({ assembledContext: assembled });
-    const structured = g.claims.filter((c) =>
-      ["ranking", "fixture", "statistic", "timeline", "lineup"].includes(
-        c.sourceRef ?? "",
-      ),
-    );
-    assert.ok(structured.length > 0, `expected structured claims for ${source}`);
-    assert.ok(
-      structured.every((c) => c.permittedFactualUse === false),
-      `bundle ${source} must not grant eligible facts`,
-    );
-  }
+check(
+  "Assembled rankings/fixtures/statistics/events/lineups follow bundle trust",
+  () => {
+    const untrustedBundles = [
+      "manual",
+      "fallback",
+      "future-provider-xyz",
+      "user",
+    ] as const;
+    for (const source of untrustedBundles) {
+      const assembled = minimalAssembled();
+      assembled.provenance = {
+        source: source as AssembledContext["provenance"]["source"],
+        fetchedAt: "2099-01-01T00:00:00.000Z",
+      };
+      assembled.verifiedFacts = [];
+      assembled.manualNotes = "";
+      const g = buildRetentionGroundingContext({ assembledContext: assembled });
+      const structured = g.claims.filter((c) =>
+        ["ranking", "fixture", "statistic", "timeline", "lineup"].includes(
+          c.sourceRef ?? "",
+        ),
+      );
+      assert.ok(
+        structured.length > 0,
+        `expected structured claims for ${source}`,
+      );
+      assert.ok(
+        structured.every((c) => c.permittedFactualUse === false),
+        `bundle ${source} must not grant eligible facts`,
+      );
+    }
 
-  for (const source of ["api-football", "statsbomb", "static-fallback"] as const) {
-    const assembled = minimalAssembled();
-    assembled.provenance = {
-      source,
-      fetchedAt: "2099-01-01T00:00:00.000Z",
-    };
-    assembled.verifiedFacts = [];
-    assembled.manualNotes = "";
-    const g = buildRetentionGroundingContext({ assembledContext: assembled });
-    const structured = g.claims.filter((c) =>
-      ["ranking", "fixture", "statistic", "timeline", "lineup"].includes(
-        c.sourceRef ?? "",
-      ),
-    );
-    assert.ok(structured.every((c) => c.provenance === "research_provider"));
-    assert.ok(structured.every((c) => c.permittedFactualUse === true));
-  }
-});
+    for (const source of [
+      "api-football",
+      "statsbomb",
+      "static-fallback",
+    ] as const) {
+      const assembled = minimalAssembled();
+      assembled.provenance = {
+        source,
+        fetchedAt: "2099-01-01T00:00:00.000Z",
+      };
+      assembled.verifiedFacts = [];
+      assembled.manualNotes = "";
+      const g = buildRetentionGroundingContext({ assembledContext: assembled });
+      const structured = g.claims.filter((c) =>
+        ["ranking", "fixture", "statistic", "timeline", "lineup"].includes(
+          c.sourceRef ?? "",
+        ),
+      );
+      assert.ok(structured.every((c) => c.provenance === "research_provider"));
+      assert.ok(structured.every((c) => c.permittedFactualUse === true));
+    }
+  },
+);
 
-check("manual / fallback / unknown never produce eligible factual claims", () => {
-  for (const source of ["manual", "fallback", "totally-unknown-runtime"] as const) {
-    const graph = minimalGraph();
-    graph.verifiedFacts = [
-      graphFact({
-        id: `deny-${source}`,
-        text: `Deny ${source}`,
-        provenance: { source: source as "api-football" },
-      }),
-    ];
-    graph.statisticFacts = [];
-    const g = buildRetentionGroundingContext({ graphContext: graph });
-    assert.equal(
-      g.claims.find((c) => c.claimId === `deny-${source}`)?.permittedFactualUse,
-      false,
-    );
-  }
-});
+check(
+  "manual / fallback / unknown never produce eligible factual claims",
+  () => {
+    for (const source of [
+      "manual",
+      "fallback",
+      "totally-unknown-runtime",
+    ] as const) {
+      const graph = minimalGraph();
+      graph.verifiedFacts = [
+        graphFact({
+          id: `deny-${source}`,
+          text: `Deny ${source}`,
+          provenance: { source: source as "api-football" },
+        }),
+      ];
+      graph.statisticFacts = [];
+      const g = buildRetentionGroundingContext({ graphContext: graph });
+      assert.equal(
+        g.claims.find((c) => c.claimId === `deny-${source}`)
+          ?.permittedFactualUse,
+        false,
+      );
+    }
+  },
+);
 
 console.log("10b1a-grounding-structure");
 check("normalizeRetentionGroundingContext rejects malformed structure", () => {
@@ -1396,7 +1484,15 @@ check("normalizeRetentionGroundingContext rejects malformed structure", () => {
     { claims: [] },
     {
       version: 1,
-      claims: [{ text: "x", provenance: "nope", verification: "verified", permittedFactualUse: true, forbidden: false }],
+      claims: [
+        {
+          text: "x",
+          provenance: "nope",
+          verification: "verified",
+          permittedFactualUse: true,
+          forbidden: false,
+        },
+      ],
     },
   ];
   for (const bad of cases) {
@@ -1617,7 +1713,8 @@ check("post-merge metadata re-bounds are order-independent", () => {
       RETENTION_MAX_PI_FACT_ROLE_CHARS,
   );
   assert.ok(
-    (forward.claims[0]?.piBeatId?.length ?? 0) <= RETENTION_MAX_PI_BEAT_ID_CHARS,
+    (forward.claims[0]?.piBeatId?.length ?? 0) <=
+      RETENTION_MAX_PI_BEAT_ID_CHARS,
   );
 });
 
@@ -1647,8 +1744,9 @@ check("no Hook/Export fingerprint or generation imports; no env/model", () => {
     const src = readFileSync(file, "utf8");
     const inIntegration = file.includes(`${path.sep}integration${path.sep}`);
     const inProduction = file.includes(`${path.sep}production${path.sep}`);
-    const isReconcile =
-      file.endsWith(`${path.sep}reconcile-retention-candidate-after-hook.ts`);
+    const isReconcile = file.endsWith(
+      `${path.sep}reconcile-retention-candidate-after-hook.ts`,
+    );
     const isTerminalHookAuthority =
       file.endsWith(
         `${path.sep}assert-retention-terminal-hook-authority-coherence.ts`,
@@ -1698,10 +1796,7 @@ check("no Hook/Export fingerprint or generation imports; no env/model", () => {
     path.join(MODULE_ROOT, "domain/normalize-story-contract.ts"),
     "utf8",
   );
-  assert.match(
-    normalizeSrc,
-    /hook-engine\/presentation\/hook-style-selection/,
-  );
+  assert.match(normalizeSrc, /hook-engine\/presentation\/hook-style-selection/);
 });
 
 console.log(`\nAll story contract foundation checks passed (${passed}).\n`);

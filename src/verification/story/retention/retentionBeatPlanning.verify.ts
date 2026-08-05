@@ -453,6 +453,10 @@ async function main(): Promise<void> {
     assert.ok(
       detectRetentionFactualRisk("the greatest player of all time").risky,
     );
+    assert.deepEqual(
+      detectRetentionFactualRisk("Nobody saw Brighton coming").signals,
+      ["universal_belief_attribution"],
+    );
   });
 
   await check("bare match-result safe anchors remain subject-derived", () => {

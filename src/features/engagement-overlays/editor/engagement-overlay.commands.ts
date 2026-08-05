@@ -7,6 +7,7 @@ import type { FootieScript } from "@/features/story/types";
 import type {
   EngagementOverlayKind,
   EngagementOverlayPosition,
+  EngagementOverlaySize,
   SceneEngagementOverlayV1,
   VisualRetentionProjectExtensionsV1,
 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
@@ -14,8 +15,12 @@ import type {
 import {
   ENGAGEMENT_OVERLAY_DEFAULT_DURATION_MS,
   ENGAGEMENT_OVERLAY_DEFAULT_POSITION,
+  ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
+  ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
   ENGAGEMENT_OVERLAY_MAX_DURATION_MS,
   ENGAGEMENT_OVERLAY_MIN_DURATION_MS,
+  ENGAGEMENT_OVERLAY_MAX_SCALE,
+  ENGAGEMENT_OVERLAY_MIN_SCALE,
   ENGAGEMENT_OVERLAY_PRESET_ID,
   isUiEngagementOverlayPosition,
 } from "../domain/engagement-overlay.presets";
@@ -150,6 +155,39 @@ function requireScene(
   return null;
 }
 
+function missingOverlay(script: FootieScript): EngagementOverlayCommandResult {
+  return {
+    status: "terminal",
+    script: cloneScript(script),
+    overlay: undefined,
+    warnings: [],
+    message: "Add an engagement prompt first.",
+    focusTarget: "add",
+  };
+}
+
+function invalidValue(
+  script: FootieScript,
+  overlay: SceneEngagementOverlayV1,
+  message: string,
+): EngagementOverlayCommandResult {
+  return {
+    status: "terminal",
+    script: cloneScript(script),
+    overlay,
+    warnings: [],
+    message,
+    focusTarget: "kind",
+  };
+}
+
+function okResult(
+  script: FootieScript,
+  overlay: SceneEngagementOverlayV1,
+): EngagementOverlayCommandResult {
+  return { status: "ok", script, overlay, warnings: [], focusTarget: "kind" };
+}
+
 function createDefaultOverlay(
   script: FootieScript,
   sceneId: string,
@@ -166,6 +204,8 @@ function createDefaultOverlay(
     startOffsetMs,
     durationMs,
     position: ENGAGEMENT_OVERLAY_DEFAULT_POSITION,
+    size: ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
+    scale: ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
     presetId: ENGAGEMENT_OVERLAY_PRESET_ID,
   };
 }
@@ -330,6 +370,48 @@ export function setEngagementOverlayPosition(
     overlay: nextOverlay,
     warnings: [],
   };
+}
+
+export function setEngagementOverlaySize(
+  script: FootieScript,
+  sceneId: string,
+  size: EngagementOverlaySize,
+  options?: EngagementOverlayCommandOptions,
+): EngagementOverlayCommandResult {
+  const refused = refuseCapability(script, options);
+  if (refused) return refused;
+  const missing = requireScene(script, sceneId);
+  if (missing) return missing;
+  const current = getSceneEngagementOverlay(script, sceneId);
+  if (!current) return missingOverlay(script);
+  if (size !== "small" && size !== "medium" && size !== "large") {
+    return invalidValue(script, current, "Choose Small, Medium, or Large.");
+  }
+  const overlay = { ...current, size };
+  return okResult(withOverlay(script, sceneId, overlay), overlay);
+}
+
+export function setEngagementOverlayScale(
+  script: FootieScript,
+  sceneId: string,
+  scale: number,
+  options?: EngagementOverlayCommandOptions,
+): EngagementOverlayCommandResult {
+  const refused = refuseCapability(script, options);
+  if (refused) return refused;
+  const missing = requireScene(script, sceneId);
+  if (missing) return missing;
+  const current = getSceneEngagementOverlay(script, sceneId);
+  if (!current) return missingOverlay(script);
+  if (!Number.isFinite(scale)) {
+    return invalidValue(script, current, "Enter a valid overlay scale.");
+  }
+  const bounded = Math.min(
+    ENGAGEMENT_OVERLAY_MAX_SCALE,
+    Math.max(ENGAGEMENT_OVERLAY_MIN_SCALE, scale),
+  );
+  const overlay = { ...current, scale: bounded };
+  return okResult(withOverlay(script, sceneId, overlay), overlay);
 }
 
 /** UI steppers pass seconds; values above 120 are treated as milliseconds. */

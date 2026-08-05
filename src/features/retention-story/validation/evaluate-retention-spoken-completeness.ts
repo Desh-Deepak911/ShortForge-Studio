@@ -1,7 +1,8 @@
 /**
  * Deterministic spoken-narration completeness evaluator — Sprint 10H.2B.
- * Total / non-throwing. Rejects incomplete sentences and clipped fragments.
- * Optionally validates setup/payoff spoken segments against plan metadata.
+ * Total / non-throwing. Beat segments are invisible attribution spans, so
+ * sentences may cross segment boundaries. Completeness belongs to the final
+ * assembled narration, not to every beat in isolation.
  */
 
 import type { RetentionStoryPlan } from "../planning/retention-story-plan.types";
@@ -155,8 +156,8 @@ function isMeaningfulCompleteUtterance(text: string): boolean {
 }
 
 /**
- * Evaluate whether every segment is a complete spoken utterance.
- * When `plan` is supplied, also require complete setup + payoff narration.
+ * Evaluate whether the assembled narration is complete and the terminal
+ * payoff is a meaningful spoken ending.
  */
 export function evaluateRetentionSpokenCompleteness(
   candidate: RetentionNarrationCandidate,
@@ -172,32 +173,20 @@ export function evaluateRetentionSpokenCompleteness(
   }
 
   for (const segment of candidate.segments) {
-    reasons.push(...segmentIncompleteReasons(segment.text));
+    if (!segment.text.trim()) reasons.push("empty_segment");
   }
 
   const assembled = candidate.assembledNarration.trim();
+  reasons.push(...segmentIncompleteReasons(assembled));
   if (assembled && !TERMINAL_PUNCT_RE.test(assembled)) {
     reasons.push("assembled_ends_mid_clause");
-    reasons.push("missing_terminal_sentence_punctuation");
   }
 
   if (plan) {
     const beats = plan.beatPlan.beats;
-    const byId = new Map(
-      candidate.segments.map((s) => [s.beatId, s.text] as const),
-    );
-    for (let i = 0; i < beats.length; i++) {
-      const beat = beats[i]!;
-      const text = byId.get(beat.id) ?? "";
-      if (beat.payoffRelation === "setup" && !isMeaningfulCompleteUtterance(text)) {
-        reasons.push("setup_narration_incomplete");
-      }
-      if (beat.payoffRelation === "deliver" && !isMeaningfulCompleteUtterance(text)) {
-        reasons.push("payoff_narration_incomplete");
-      }
-    }
-    // Terminal segment must always be a meaningful complete payoff utterance
-    // when the plan marks the last beat as deliver (or always for spoken end).
+    void beats;
+    // The terminal attribution span must complete a meaningful ending, while
+    // earlier beat spans may be clauses joined across invisible boundaries.
     const terminal = candidate.segments[candidate.segments.length - 1];
     if (terminal && !isMeaningfulCompleteUtterance(terminal.text)) {
       reasons.push("payoff_narration_incomplete");

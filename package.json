@@ -411,6 +411,7 @@
     "test:retention-production-integration": "node --require ./scripts/stub-server-only.cjs --import tsx src/verification/story/retention/retentionProductionIntegration.verify.ts",
     "test:retention-story-ui": "tsx src/verification/story/retention/retentionStoryUi.verify.ts",
     "test:retention-story-golden": "node --require ./scripts/stub-server-only.cjs --import tsx src/verification/story/retention/retentionStoryGolden.verify.ts",
+    "test:narration-quality-acceptance": "tsx src/verification/story/narration-quality/narrationQualityAcceptanceContract.verify.ts",
     "test:retention-story-safety-qa": "node --require ./scripts/stub-server-only.cjs --import tsx src/verification/story/retention/retentionStorySafetyQa.verify.ts",
     "test:retention-story-persistence-qa": "node --require ./scripts/stub-server-only.cjs --import tsx src/verification/story/retention/retentionStoryPersistenceQa.verify.ts",
     "test:retention-story-streaming-qa": "node --require ./scripts/stub-server-only.cjs --import tsx src/verification/story/retention/retentionStoryStreamingQa.verify.ts",

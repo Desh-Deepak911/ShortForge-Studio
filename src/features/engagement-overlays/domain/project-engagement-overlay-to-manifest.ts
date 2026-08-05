@@ -35,6 +35,8 @@ export function projectEngagementOverlayToManifest(
       startOffsetMs: resolved.startOffsetMs,
       durationMs: resolved.durationMs,
       position: resolved.overlay.position,
+      size: resolved.overlay.size,
+      scale: resolved.overlay.scale,
       presetId: resolved.overlay.presetId,
     },
     warnings: resolved.warnings,

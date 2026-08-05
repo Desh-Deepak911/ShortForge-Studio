@@ -48,7 +48,10 @@ function toClaimSummary(
 ): RetentionComposerClaimSummary {
   return Object.freeze({
     claimId: claim.claimId,
-    text: sanitizeRetentionBeatText(claim.text, RETENTION_MAX_SEGMENT_TEXT_CHARS),
+    text: sanitizeRetentionBeatText(
+      claim.text,
+      RETENTION_MAX_SEGMENT_TEXT_CHARS,
+    ),
     provenance: claim.provenance,
     verification: claim.verification,
     eligibleForFactualSupport: eligible,
@@ -147,10 +150,10 @@ export function buildRetentionComposerRequest(
 
   const orderedBeatIds = assertedPlan.beatPlan.beats.map((b) => b.id);
   const targetWordBudget = assertedPlan.compressionGoals.targetWordBudget;
-  // Guidance budgets leave headroom under the hard ceiling (threshold unchanged).
+  // Target most of the spoken duration while keeping modest repair headroom.
   const suggestedTotal = Math.max(
     orderedBeatIds.length * 4,
-    Math.floor(targetWordBudget * 0.68),
+    Math.floor(targetWordBudget * 0.88),
   );
   const beatSuggestedWordBudgets = allocateRetentionSegmentWordBudgets(
     assertedPlan,

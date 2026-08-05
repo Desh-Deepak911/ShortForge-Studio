@@ -7,6 +7,7 @@ import type { FootieScript } from "@/features/story/types/story.types";
 import type {
   EngagementOverlayKind,
   EngagementOverlayPosition,
+  EngagementOverlaySize,
   SceneEngagementOverlayV1,
   VisualRetentionProjectExtensionsV1,
 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
@@ -15,7 +16,11 @@ import { normalizeShortForgeBrandSting } from "@/features/brand-sting/domain/nor
 
 import {
   ENGAGEMENT_OVERLAY_MAX_DURATION_MS,
+  ENGAGEMENT_OVERLAY_MAX_SCALE,
   ENGAGEMENT_OVERLAY_MIN_DURATION_MS,
+  ENGAGEMENT_OVERLAY_MIN_SCALE,
+  ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
+  ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
   ENGAGEMENT_OVERLAY_PRESET_ID,
 } from "./engagement-overlay.presets";
 
@@ -35,6 +40,7 @@ const POSITIONS = new Set<EngagementOverlayPosition>([
   "bottom-center",
   "bottom-right",
 ]);
+const SIZES = new Set<EngagementOverlaySize>(["small", "medium", "large"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -67,6 +73,16 @@ export function normalizeSceneEngagementOverlay(
     typeof value.presetId === "string" && value.presetId.trim()
       ? value.presetId.trim()
       : ENGAGEMENT_OVERLAY_PRESET_ID;
+  const size = SIZES.has(value.size as EngagementOverlaySize)
+    ? (value.size as EngagementOverlaySize)
+    : ENGAGEMENT_OVERLAY_DEFAULT_SIZE;
+  const scale =
+    typeof value.scale === "number" && Number.isFinite(value.scale)
+      ? Math.min(
+          ENGAGEMENT_OVERLAY_MAX_SCALE,
+          Math.max(ENGAGEMENT_OVERLAY_MIN_SCALE, value.scale),
+        )
+      : ENGAGEMENT_OVERLAY_DEFAULT_SCALE;
 
   return {
     version: 1,
@@ -75,6 +91,8 @@ export function normalizeSceneEngagementOverlay(
     startOffsetMs: value.startOffsetMs,
     durationMs: value.durationMs,
     position: value.position as EngagementOverlayPosition,
+    size,
+    scale,
     presetId,
   };
 }

@@ -89,6 +89,13 @@ const SIGNAL_PATTERNS: readonly { readonly id: string; readonly re: RegExp }[] =
       id: "unqualified_superlative",
       re: /\b(?:the\s+)?(?:best|worst|greatest)\s+(?:player|team|club|side|striker|midfielder|defender|goalkeeper|manager|coach)\b|\b(?:first|only)\s+(?:player|team|club|side|manager|goal)\b/i,
     },
+    {
+      // Universal audience-belief claims are not harmless hook decoration.
+      // They assert unsupported social consensus unless a supplied claim backs
+      // them (for example, "Nobody saw Brighton coming").
+      id: "universal_belief_attribution",
+      re: /\b(?:nobody|no\s+one|everyone|everybody)\s+(?:saw|expected|believed|thought|knew)\b/i,
+    },
   ]);
 
 /**

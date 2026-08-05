@@ -9,6 +9,7 @@ import path from "node:path";
 
 import {
   ENGAGEMENT_OVERLAY_DEFAULT_POSITION,
+  ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
   ENGAGEMENT_OVERLAY_MIN_DURATION_MS,
   ENGAGEMENT_OVERLAY_PRESET_ID,
   normalizeSceneEngagementOverlay,
@@ -149,12 +150,15 @@ function main(): void {
     assert.equal(window.omitReason, "malformed");
   });
 
-  test("each kind and corner position resolves labels/icons and layout", () => {
+  test("each kind and all seven positions resolve labels/icons and layout", () => {
     for (const kind of ["like", "share", "subscribe", "combined"] as const) {
       for (const position of [
         "top-left",
+        "top-center",
         "top-right",
+        "center",
         "bottom-left",
+        "bottom-center",
         "bottom-right",
       ] as const) {
         const frame = resolveEngagementOverlayFrame({
@@ -174,6 +178,7 @@ function main(): void {
       }
     }
     assert.equal(ENGAGEMENT_OVERLAY_DEFAULT_POSITION, "top-right");
+    assert.equal(ENGAGEMENT_OVERLAY_DEFAULT_SIZE, "medium");
   });
 
   test("timing clamp and unusable short scene omit without mutating authoring", () => {
@@ -296,7 +301,7 @@ function main(): void {
     });
     assert.equal(subscribeBeat.segments[2]!.active, true);
     assert.equal(subscribeBeat.segments[2]!.confirmation, true);
-    assert.equal(subscribeBeat.segments[2]!.label, "Subscribed");
+    assert.equal(subscribeBeat.segments[2]!.label, "Subscribe");
     assert.equal(subscribeBeat.segments[0]!.settled, true);
     assert.equal(subscribeBeat.segments[1]!.settled, true);
     assert.ok(
@@ -368,12 +373,33 @@ function main(): void {
       assert.ok(frame.layout.x + frame.layout.width <= w + 1e-6);
       assert.ok(frame.layout.y + frame.layout.height <= h + 1e-6);
       const scale = Math.min(w / 1080, h / 1920);
-      const captionBandTop = h - 280 * scale;
+      const captionBandTop = h - 360 * scale;
       assert.ok(
         frame.layout.y + frame.layout.height <= captionBandTop + 1e-6,
         "combined card must stay above the reserved caption-safe band",
       );
     }
+  });
+
+  test("size presets and bounded fine scale produce legible ordered layouts", () => {
+    const widths = ["small", "medium", "large"].map((size) =>
+      resolveEngagementOverlayFrame({
+        overlay: overlay({
+          kind: "combined",
+          size: size as "small" | "medium" | "large",
+          scale: 1,
+          startOffsetMs: 0,
+        }),
+        sceneDurationMs: 5000,
+        sceneElapsedMs: 1000,
+      }).layout.width,
+    );
+    assert.ok(widths[0]! < widths[1]! && widths[1]! < widths[2]!);
+    const legacy = normalizeSceneEngagementOverlay(overlay({ size: undefined, scale: undefined }));
+    assert.equal(legacy?.size, "medium");
+    assert.equal(legacy?.scale, 1);
+    const bounded = normalizeSceneEngagementOverlay(overlay({ scale: 99 }));
+    assert.equal(bounded?.scale, 1.15);
   });
 
   test("capability off ignores dormant overlays and keeps v4 fingerprint/warnings stable", () => {
@@ -766,7 +792,7 @@ function main(): void {
         frameWidth: w,
         frameHeight: h,
       });
-      const captionBandTop = h - 280 * (h / 1920);
+      const captionBandTop = h - 360 * (h / 1920);
       assert.ok(frame.layout.y + frame.layout.height < captionBandTop);
       assert.ok(frame.layout.x + frame.layout.width <= w + 1e-6);
     }

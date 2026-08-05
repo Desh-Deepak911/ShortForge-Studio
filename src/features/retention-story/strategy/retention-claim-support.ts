@@ -22,29 +22,40 @@ export function isClaimEligibleForControllingIdeaSupport(
   const claim = grounding.claims.find((c) => c.claimId === claimId);
   if (!claim) return false;
   if (claim.forbidden) return false;
-  if (claim.verification !== "verified") return false;
   if (!claim.permittedFactualUse) return false;
   if (
-    claim.provenance !== "research_graph" &&
-    claim.provenance !== "research_provider"
+    claim.verification === "verified" &&
+    (claim.provenance === "research_graph" ||
+      claim.provenance === "research_provider")
   ) {
-    return false;
+    return true;
   }
-  return true;
+  return (
+    claim.verification === "unverified" &&
+    claim.provenance === "manual_user" &&
+    (claim.sourceRef === "creator_brief" ||
+      claim.sourceRef === "manual_context" ||
+      claim.sourceRef === "manual_notes" ||
+      claim.sourceRef === "creative_premise")
+  );
 }
 
 /**
  * Narration segment claim support — Sprint 10H.3.
- * Verified research claims remain eligible. Under Creative Premise, exact
- * creator-asserted premise claim IDs may also support narration (never as
- * research_verified).
+ * Verified research and creator-supplied brief/notes claims remain eligible.
+ * Creative Premise additionally authorizes explicit story-world premise lines.
  */
 export function isClaimEligibleForNarrationSupport(
   grounding: RetentionGroundingContext,
   claimId: string,
-  factHandlingMode: "verified_facts_only" | "creative_premise" = "verified_facts_only",
+  factHandlingMode:
+    "verified_facts_only" | "creative_premise" = "verified_facts_only",
 ): boolean {
   if (isClaimEligibleForControllingIdeaSupport(grounding, claimId)) {
+    const claim = grounding.claims.find((c) => c.claimId === claimId);
+    if (claim?.sourceRef === "creative_premise") {
+      return factHandlingMode === "creative_premise";
+    }
     return true;
   }
   if (factHandlingMode !== "creative_premise") return false;
@@ -107,12 +118,15 @@ export function claimRefSupportsNarrationStatement(
   grounding: RetentionGroundingContext,
   claimId: string,
   statement: string,
-  factHandlingMode: "verified_facts_only" | "creative_premise" = "verified_facts_only",
+  factHandlingMode:
+    "verified_facts_only" | "creative_premise" = "verified_facts_only",
 ): boolean {
   if (claimRefSupportsControllingIdeaStatement(grounding, claimId, statement)) {
     return true;
   }
-  if (!isClaimEligibleForNarrationSupport(grounding, claimId, factHandlingMode)) {
+  if (
+    !isClaimEligibleForNarrationSupport(grounding, claimId, factHandlingMode)
+  ) {
     return false;
   }
   const claim = grounding.claims.find((c) => c.claimId === claimId);

@@ -45,16 +45,17 @@ function foldToken(raw: string): string {
 }
 
 function buildBoundedQualitativeAnchor(topic: string): string {
-  if (
-    topic.length <= MAX_QUALITATIVE_ANCHOR_CHARS &&
-    topic.split(/\s+/).filter(Boolean).length <= MAX_QUALITATIVE_ANCHOR_WORDS
-  ) {
-    return topic;
-  }
-
   const firstThought = topic.split(/[\n.!?]+/u)[0]?.trim() || topic;
   const withoutInstruction =
     firstThought.replace(CREATOR_INSTRUCTION_PREFIX, "").trim() || firstThought;
+  if (
+    withoutInstruction.length <= MAX_QUALITATIVE_ANCHOR_CHARS &&
+    withoutInstruction.split(/\s+/).filter(Boolean).length <=
+      MAX_QUALITATIVE_ANCHOR_WORDS
+  ) {
+    return withoutInstruction;
+  }
+
   const words = withoutInstruction.split(/\s+/).filter(Boolean);
   let bounded = words.slice(0, MAX_QUALITATIVE_ANCHOR_WORDS).join(" ");
   while (bounded.length > MAX_QUALITATIVE_ANCHOR_CHARS && words.length > 1) {

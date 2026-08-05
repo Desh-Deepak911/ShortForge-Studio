@@ -96,7 +96,24 @@ function resolveSafeSubject(topic: string): string {
 
 /** Prefer capitalized creator name tokens; fall back to first non-skip tokens. */
 function shortSubjectLabel(topic: string, subject: string): string {
-  const ordered = extractOrderedRetentionSubjectTokens(topic);
+  // `subject` has already removed creator-direction prefixes and unsafe topic
+  // detail. Deriving the spoken label from raw topic text can otherwise turn
+  // "Explain ..." or "Tell ..." into the apparent entity.
+  const ordered = extractOrderedRetentionSubjectTokens(subject);
+  const properNameRuns = subject
+    .normalize("NFC")
+    .match(/(?:\b[\p{Lu}][\p{L}\p{N}'’-]*\b(?:\s+|$)){1,3}/gu)
+    ?.map((run) => run.trim())
+    .filter((run) =>
+      run
+        .split(/\s+/)
+        .some((word) => word.length >= 3 && !OPENING_SKIP.has(word.toLowerCase())),
+    )
+    .sort((a, b) => {
+      const byWords = b.split(/\s+/).length - a.split(/\s+/).length;
+      return byWords !== 0 ? byWords : subject.indexOf(a) - subject.indexOf(b);
+    });
+  if (properNameRuns?.[0]) return properNameRuns[0];
   const capitalized = ordered.filter(
     (t) =>
       t.folded.length >= 3 &&
@@ -119,13 +136,14 @@ function shortSubjectLabel(topic: string, subject: string): string {
   return fallback.join(" ") || "This contest";
 }
 
-/** Short ≤5-word question opening using a meaningful topic token (not articles). */
+/** Topic-anchored fallback question with conflict and a body-payoff promise. */
 function topicAnchoredOpening(topic: string, subject: string): string {
   const short = shortSubjectLabel(topic, subject)
     .split(/\s+/)
     .slice(0, 2)
     .join(" ");
-  return `Why does ${short} matter?`;
+  const possessive = /s$/iu.test(short) ? `${short}'` : `${short}'s`;
+  return `What decides ${possessive} outcome?`;
 }
 
 function qualitativeUtterance(input: {
@@ -147,7 +165,7 @@ function qualitativeUtterance(input: {
   if (index === total - 1) {
     return opponentLabel
       ? `In the end, ${spokenSubject} against ${opponentLabel} is defined by who keeps pushing.`
-      : `In the end, ${spokenSubject} is defined by who keeps pushing.`;
+      : `In the end, ${spokenSubject}'s outcome is decided by what happens next.`;
   }
   if (purpose === "setup" || index === total - 2) {
     return `That contrast sets up the real verdict on ${spokenSubject}.`;
@@ -168,6 +186,17 @@ function ensureTerminalPunctuation(text: string): string {
   if (/[.!?…]$/u.test(trimmed)) return trimmed;
   return `${trimmed}.`;
 }
+
+/**
+ * Safe connective language for duration rescue. These sentences advance the
+ * existing question/pressure/payoff relationship without adding people,
+ * numbers, outcomes, or other factual claims.
+ */
+const DURATION_BRIDGES = Object.freeze([
+  "That pressure keeps the central question open, because every response changes the options and consequences that follow.",
+  "From there, the pressure grows and the consequences become clearer.",
+  "Every response changes what can happen next.",
+] as const);
 
 /**
  * Build a complete, duration-aware fallback candidate from plan beat IDs.
@@ -200,11 +229,14 @@ export function buildDeterministicFallbackNarrationCandidate(input: {
     input.preserveOpeningText.trim().length > 0
       ? ensureTerminalPunctuation(input.preserveOpeningText.trim())
       : null;
-  const targetWords = Math.max(
-    beats.length * 5,
-    Math.floor(input.contract.durationSec * RETENTION_WORDS_PER_SECOND * 0.72),
-  );
   const hardBudget = input.plan.compressionGoals.targetWordBudget;
+  const targetWords = Math.min(
+    hardBudget,
+    Math.max(
+      beats.length * 5,
+      Math.floor(input.contract.durationSec * RETENTION_WORDS_PER_SECOND * 0.92),
+    ),
+  );
   const claimsById = new Map(
     (input.grounding?.claims ?? []).map((c) => [c.claimId, c]),
   );
@@ -398,6 +430,54 @@ export function buildDeterministicFallbackNarrationCandidate(input: {
         factualRisk: false,
       });
     });
+  }
+
+  // Duration fidelity for deterministic rescue: add at most a small number of
+  // complete connective sentences to qualitative middle beats. Never repeat
+  // supplied facts, alter claim refs, split utterances, or cross the hard word
+  // budget. This keeps beats invisible beneath one continuous narration.
+  let bridgeCursor = 0;
+  while (
+    countRetentionNarrationWords(assembledPreview()) < targetWords &&
+    bridgeCursor < DURATION_BRIDGES.length
+  ) {
+    const currentWords = countRetentionNarrationWords(assembledPreview());
+    const remainingBudget = hardBudget - currentWords;
+    const remainingTarget = targetWords - currentWords;
+    const bridgeOptions = DURATION_BRIDGES.slice(bridgeCursor)
+      .map((text, offset) => ({
+        text,
+        index: bridgeCursor + offset,
+        words: countRetentionNarrationWords(text),
+      }))
+      .filter((option) => option.words <= remainingBudget)
+      .sort((a, b) => {
+        const aDistance = Math.abs(a.words - remainingTarget);
+        const bDistance = Math.abs(b.words - remainingTarget);
+        return aDistance !== bDistance ? aDistance - bDistance : b.words - a.words;
+      });
+    const selected = bridgeOptions[0];
+    if (!selected) break;
+
+    const targetIndex = working.findIndex(
+      (draft, index) =>
+        index > 0 &&
+        index < working.length - 1 &&
+        draft.claimRefs.length === 0,
+    );
+    if (targetIndex < 0) break;
+
+    working = working.map((draft, index) => {
+      if (index !== targetIndex) return draft;
+      const text = ensureTerminalPunctuation(`${draft.text} ${selected.text}`);
+      return Object.freeze({
+        beatId: draft.beatId,
+        text,
+        claimRefs: draft.claimRefs,
+        factualRisk: detectRetentionFactualRisk(text).risky,
+      });
+    });
+    bridgeCursor = selected.index + 1;
   }
 
   const finalUsed = new Set<string>();

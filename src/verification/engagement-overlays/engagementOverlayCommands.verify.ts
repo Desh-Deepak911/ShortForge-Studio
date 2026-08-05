@@ -15,6 +15,8 @@ import {
   setEngagementOverlayDurationMs,
   setEngagementOverlayKind,
   setEngagementOverlayPosition,
+  setEngagementOverlayScale,
+  setEngagementOverlaySize,
   setEngagementOverlayStartMs,
 } from "@/features/engagement-overlays";
 import { prepareExportRequest } from "@/features/export/domain/prepare-export-request";
@@ -90,23 +92,51 @@ async function main(): Promise<void> {
     assert.ok(added.overlay);
     assert.equal(getSceneEngagementOverlay(script, "scene-a"), undefined);
     assert.ok(getSceneEngagementOverlay(added.script, "scene-a"));
+    assert.equal(added.overlay?.size, "medium");
+    assert.equal(added.overlay?.scale, 1);
     assert.notEqual(added.script, script);
   });
 
-  test("kind/position/start/duration mutate only the target scene", () => {
+  test("kind/position/size/scale/start/duration mutate only the target scene", () => {
     let script = addEngagementOverlay(baseStory(), "scene-a", ON).script;
     script = setEngagementOverlayKind(script, "scene-a", "share", ON).script;
     script = setEngagementOverlayPosition(script, "scene-a", "bottom-left", ON)
       .script;
+    script = setEngagementOverlaySize(script, "scene-a", "large", ON).script;
+    script = setEngagementOverlayScale(script, "scene-a", 1.1, ON).script;
     script = setEngagementOverlayStartMs(script, "scene-a", 0.5, ON).script;
     script = setEngagementOverlayDurationMs(script, "scene-a", 2, ON).script;
 
     const target = getSceneEngagementOverlay(script, "scene-a");
     assert.equal(target?.kind, "share");
     assert.equal(target?.position, "bottom-left");
+    assert.equal(target?.size, "large");
+    assert.equal(target?.scale, 1.1);
     assert.equal(target?.startOffsetMs, 500);
     assert.equal(target?.durationMs, 2000);
     assert.equal(getSceneEngagementOverlay(script, "scene-b"), undefined);
+  });
+
+  test("all seven positions and bounded fine scaling are authorable", () => {
+    let script = addEngagementOverlay(baseStory(), "scene-a", ON).script;
+    for (const position of [
+      "top-left",
+      "top-center",
+      "top-right",
+      "center",
+      "bottom-left",
+      "bottom-center",
+      "bottom-right",
+    ] as const) {
+      const result = setEngagementOverlayPosition(script, "scene-a", position, ON);
+      assert.equal(result.status, "ok");
+      assert.equal(result.overlay?.position, position);
+      script = result.script;
+    }
+    script = setEngagementOverlayScale(script, "scene-a", 9, ON).script;
+    assert.equal(getSceneEngagementOverlay(script, "scene-a")?.scale, 1.15);
+    script = setEngagementOverlayScale(script, "scene-a", -2, ON).script;
+    assert.equal(getSceneEngagementOverlay(script, "scene-a")?.scale, 0.85);
   });
 
   test("deleted-scene refusal and prune on timeline delete", () => {

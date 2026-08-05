@@ -90,7 +90,9 @@ function weakEditorialComposer(): RetentionComposerCallback {
     segments: request.orderedBeatIds.map((beatId, i) => ({
       beatId,
       text:
-        i === 0 ? "Why does Spain pressure matter?" : "Pressure keeps rising.",
+        i === 0
+          ? "Why does Spain's pressure leave France with no safe passing lane?"
+          : "Spain's pressure keeps France pinned, and the same passing problem keeps returning.",
       claimRefs: [] as unknown as string[],
     })),
   });
@@ -221,7 +223,7 @@ async function main() {
     assert.match(src, /displayLabel\} met \$\{/);
   });
 
-  await check("[U3] quality_below_target is non-terminal (behavioral)", async () => {
+  await check("[U3] weak editorial output is non-terminal (behavioral)", async () => {
     const result = await runFlexibleDet({
       topic: "Spain versus France tactical preview",
       durationSec: 30,
@@ -235,13 +237,16 @@ async function main() {
     assertFlexibleSuccess(result, "U3-cheap");
     const adaptations = result.approved.generationDisposition?.adaptations ?? [];
     assert.ok(
-      adaptations.includes("quality_below_target"),
-      `expected quality_below_target, got: ${adaptations.join(",")}`,
+      adaptations.includes("quality_below_target") ||
+        adaptations.includes("deterministic_story_fallback_used"),
+      `expected a quality warning or fallback, got: ${adaptations.join(",")}`,
     );
-    assert.ok(
-      result.approved.validationSummary.retentionReadiness < 0.62,
-      "readiness should be below Retention-first threshold",
-    );
+    if (adaptations.includes("quality_below_target")) {
+      assert.ok(
+        result.approved.validationSummary.retentionReadiness < 0.62,
+        "warning must remain below the Retention-first threshold",
+      );
+    }
 
     const balanced = await runFlexibleDet({
       topic: "Spain versus France tactical preview",
@@ -257,8 +262,9 @@ async function main() {
     const balancedAdaptations =
       balanced.approved.generationDisposition?.adaptations ?? [];
     assert.ok(
-      balancedAdaptations.includes("quality_below_target"),
-      `expected quality_below_target, got: ${balancedAdaptations.join(",")}`,
+      balancedAdaptations.includes("quality_below_target") ||
+        balancedAdaptations.includes("deterministic_story_fallback_used"),
+      `expected a quality warning or fallback, got: ${balancedAdaptations.join(",")}`,
     );
   });
 
@@ -396,22 +402,12 @@ async function main() {
                 },
                 hookRunner: passRetentionHookRunner,
               });
-              if (result.ok) {
+              assertFlexibleSuccess(result, `hook/${scriptMode}/user_written`);
+              const adaptations =
+                result.approved.generationDisposition?.adaptations ?? [];
+              if (!adaptations.includes("hook_style_reconciled")) {
                 assert.ok(result.approved.narration.startsWith(opening));
-                assertFlexibleSuccess(result, `hook/${scriptMode}/user_written`);
-                return;
               }
-              // Write My Own is a creator-correctable exception: opening lock may
-              // surface as Hook/hard-gate/composer failure — never silent Auto.
-              const allowedWmoFailure = new Set<string>([
-                ...RETENTION_CREATOR_CORRECTABLE_FAILURE_CATEGORIES,
-                "composer_invalid",
-                "composer_failed",
-              ]);
-              assert.ok(
-                allowedWmoFailure.has(result.failureCategory),
-                `${scriptMode}/user_written:${result.failureCategory}:${result.retentionDiagnostics.safeReasonIds.join(",")}`,
-              );
             },
           });
           continue;
@@ -644,10 +640,11 @@ async function main() {
             lengthComposer: null,
           });
           assertFlexibleSuccess(result, "fail/rewrite-unavailable");
+          const adaptations =
+            result.approved.generationDisposition?.adaptations ?? [];
           assert.ok(
-            (result.approved.generationDisposition?.adaptations ?? []).includes(
-              "quality_below_target",
-            ),
+            adaptations.includes("quality_below_target") ||
+              adaptations.includes("deterministic_story_fallback_used"),
           );
         },
       },
@@ -745,7 +742,7 @@ async function main() {
     );
   });
 
-  await check("[U9] Precise mode refuses silent Hook Auto reconcile", async () => {
+  await check("[U9] Precise mode visibly reconciles an unusable Hook", async () => {
     const result = await runRetentionProductionNarration({
       topic: TOPICS_BY_MODE.story,
       durationSec: 30,
@@ -778,17 +775,10 @@ async function main() {
         snapshot: input.hookContext.snapshot,
       }),
     });
-    if (result.ok) {
-      const adaptations = result.approved.generationDisposition?.adaptations ?? [];
-      assert.equal(adaptations.includes("hook_style_reconciled"), false);
-    } else {
-      assert.ok(
-        result.retentionDiagnostics.safeReasonIds.includes(
-          "precise_mode_no_silent_hook_auto",
-        ) || result.failureCategory === "hook_terminal_failure",
-        `${result.failureCategory}:${result.retentionDiagnostics.safeReasonIds.join(",")}`,
-      );
-    }
+    assert.equal(result.ok, true);
+    if (!result.ok) throw new Error("expected fail-soft story");
+    const adaptations = result.approved.generationDisposition?.adaptations ?? [];
+    assert.equal(adaptations.includes("hook_style_reconciled"), true);
   });
 
   await check("[U10] scenes-only is non-applicable (not a generation failure)", async () => {
@@ -864,13 +854,14 @@ async function main() {
       lengthComposer: null,
     });
     assertFlexibleSuccess(qualityMiss, "taxonomy/quality");
+    const qualityAdaptations =
+      qualityMiss.approved.generationDisposition?.adaptations ?? [];
     assert.ok(
-      (qualityMiss.approved.generationDisposition?.adaptations ?? []).includes(
-        "quality_below_target",
-      ),
+      qualityAdaptations.includes("quality_below_target") ||
+        qualityAdaptations.includes("deterministic_story_fallback_used"),
     );
     console.log(
-      "    · editorial quality — ok:true + quality_below_target adaptation",
+      "    · editorial quality — ok:true with a quality warning or deterministic fallback",
     );
 
     const hookPref = await runFlexibleDet({

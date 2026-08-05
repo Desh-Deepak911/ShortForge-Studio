@@ -22,7 +22,9 @@ export function clamp01(value: number): number {
   return value;
 }
 
-function freezeScores(scores: RetentionEditorialScores): RetentionEditorialScores {
+function freezeScores(
+  scores: RetentionEditorialScores,
+): RetentionEditorialScores {
   return Object.freeze({
     clarity: clamp01(scores.clarity),
     curiosity: clamp01(scores.curiosity),
@@ -47,12 +49,63 @@ function tokenize(text: string): string[] {
     .filter((t) => t.length >= 3);
 }
 
+const QUESTION_PROMISE_STOPWORDS = new Set([
+  "why",
+  "how",
+  "what",
+  "which",
+  "who",
+  "when",
+  "where",
+  "this",
+  "that",
+  "with",
+  "from",
+  "into",
+  "does",
+  "could",
+  "would",
+  "should",
+  "really",
+  "today",
+  "tonight",
+  "now",
+  "next",
+]);
+
+function tokenRelated(left: string, right: string): boolean {
+  if (left === right) return true;
+  const min = Math.min(left.length, right.length);
+  if (min < 5) return false;
+  return left.slice(0, min - 1) === right.slice(0, min - 1);
+}
+
+function scoreQuestionPromisePayoff(
+  contract: NormalizedStoryContract,
+  candidate: RetentionNarrationCandidate,
+): number {
+  const narration = candidate.assembledNarration.trim();
+  const openingEnd = narration.search(/[?]/u);
+  if (openingEnd < 0) return 1;
+  const opening = narration.slice(0, openingEnd + 1);
+  const body = narration.slice(openingEnd + 1);
+  const subjectTokens = new Set(tokenize(contract.topic));
+  const promiseTokens = tokenize(opening).filter(
+    (token) =>
+      !subjectTokens.has(token) && !QUESTION_PROMISE_STOPWORDS.has(token),
+  );
+  if (promiseTokens.length === 0) return 0;
+  const payoffTokens = tokenize(body);
+  const related = promiseTokens.some((promise) =>
+    payoffTokens.some((payoff) => tokenRelated(promise, payoff)),
+  );
+  return related ? 1 : 0.25;
+}
+
 function scoreClarity(candidate: RetentionNarrationCandidate): number {
   const segments = candidate.segments;
   if (segments.length === 0) return 0;
-  const uniqueTexts = new Set(
-    segments.map((s) => s.text.trim().toLowerCase()),
-  );
+  const uniqueTexts = new Set(segments.map((s) => s.text.trim().toLowerCase()));
   const uniqueness = uniqueTexts.size / segments.length;
   let total = 0;
   for (const segment of segments) {
@@ -108,6 +161,7 @@ function scoreCuriosityOpeningSignal(text: string): number {
 }
 
 function scoreCuriosity(
+  contract: NormalizedStoryContract,
   plan: RetentionStoryPlan,
   candidate: RetentionNarrationCandidate,
 ): number {
@@ -128,7 +182,7 @@ function scoreCuriosity(
     }
     score += clamp01(local);
   }
-  return score / early;
+  return (score / early) * scoreQuestionPromisePayoff(contract, candidate);
 }
 
 function scoreEmotionalProgression(plan: RetentionStoryPlan): number {
@@ -154,10 +208,11 @@ function scoreCompressionQuality(
   const actual = countRetentionNarrationWords(candidate.assembledNarration);
   if (allowed <= 0 || actual <= 0) return 0;
   const ratio = actual / allowed;
-  if (ratio >= 0.55 && ratio <= 1) return 0.95;
-  if (ratio >= 0.4 && ratio < 0.55) return 0.7;
+  if (ratio >= 0.78 && ratio <= 1) return 0.98;
+  if (ratio >= 0.65 && ratio < 0.78) return 0.85;
+  if (ratio >= 0.5 && ratio < 0.65) return 0.65;
   if (ratio > 1 && ratio <= 1.15) return 0.35;
-  if (ratio < 0.4) return 0.45;
+  if (ratio < 0.5) return 0.4;
   return 0.15;
 }
 
@@ -215,7 +270,9 @@ function scoreVisualPotential(
   return clamp01(hits / beats.length);
 }
 
-function scoreRepetitionPenalty(candidate: RetentionNarrationCandidate): number {
+function scoreRepetitionPenalty(
+  candidate: RetentionNarrationCandidate,
+): number {
   const texts = candidate.segments.map((s) => s.text.trim().toLowerCase());
   if (texts.length <= 1) return 0;
   let duplicatePairs = 0;
@@ -276,7 +333,7 @@ export function scoreRetentionEditorialQuality(input: {
 }): RetentionEditorialScores {
   return freezeScores({
     clarity: scoreClarity(input.candidate),
-    curiosity: scoreCuriosity(input.plan, input.candidate),
+    curiosity: scoreCuriosity(input.contract, input.plan, input.candidate),
     emotionalProgression: scoreEmotionalProgression(input.plan),
     compressionQuality: scoreCompressionQuality(input.plan, input.candidate),
     novelty: scoreNovelty(input.plan),

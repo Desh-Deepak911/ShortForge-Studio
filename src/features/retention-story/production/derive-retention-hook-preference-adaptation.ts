@@ -129,27 +129,23 @@ export function deriveRetentionHookPreferenceAdaptation(input: {
     requested.strategySource === finalPlan.strategySource;
 
   if (style === "user_written") {
-    if (!isUserAuthoredAuthority(requested) || !isUserAuthoredAuthority(finalPlan) || !exact) {
+    if (!isUserAuthoredAuthority(requested)) {
       return Object.freeze({
         status: "fail" as const,
-        safeReasonId: "user_authored_hook_authority_mismatch",
+        safeReasonId: "hook_preference_authority_incoherent",
       });
     }
-    return Object.freeze({ status: "ok" as const, adaptation: null });
+    return Object.freeze({
+      status: "ok" as const,
+      adaptation:
+        isUserAuthoredAuthority(finalPlan) && exact
+          ? null
+          : "hook_style_reconciled",
+    });
   }
 
-  // Explicit selectable Hook style
-  if (input.reliabilityMode === "precise") {
-    if (!exact) {
-      return Object.freeze({
-        status: "fail" as const,
-        safeReasonId: "precise_mode_no_silent_hook_auto",
-      });
-    }
-    return Object.freeze({ status: "ok" as const, adaptation: null });
-  }
-
-  // Flexible explicit: mismatch → reconcile; exact → silent success (no adaptation)
+  // Explicit preferences are best-effort in every mode: mismatch reconciles
+  // visibly instead of failing story creation.
   if (exact) {
     return Object.freeze({ status: "ok" as const, adaptation: null });
   }

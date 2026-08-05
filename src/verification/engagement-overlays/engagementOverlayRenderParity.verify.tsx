@@ -63,7 +63,7 @@ function main(): void {
     assert.match(markup, /data-engagement-overlay-segment=/);
     assert.match(markup, /Like/);
     assert.match(markup, /Share/);
-    assert.match(markup, /Subscribe|Subscribed/);
+    assert.match(markup, /Subscribe/);
     assert.match(markup, /pointer-events-none/);
     assert.doesNotMatch(markup, /<button|<a |tabIndex|contentEditable/i);
 
@@ -78,7 +78,8 @@ function main(): void {
     const confirmMarkup = renderToStaticMarkup(
       createElement(EngagementOverlayPreview, { frame: confirmPlan }),
     );
-    assert.match(confirmMarkup, /Subscribed/);
+    assert.match(confirmMarkup, /Subscribe/);
+    assert.doesNotMatch(confirmMarkup, /Subscribed/);
     assert.match(
       confirmMarkup,
       /data-engagement-overlay-segment-confirmation="true"/,

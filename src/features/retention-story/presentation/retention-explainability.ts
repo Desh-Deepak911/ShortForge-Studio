@@ -32,9 +32,7 @@ const UNAVAILABLE_LEGACY =
 const UNAVAILABLE_UNSAFE =
   "Story intelligence details aren’t available for this draft.";
 
-function unavailable(
-  message: string,
-): RetentionExplainabilityModel {
+function unavailable(message: string): RetentionExplainabilityModel {
   return Object.freeze({
     available: false,
     unavailableMessage: message,
@@ -126,10 +124,7 @@ function complianceLabel(score: number): string {
   return `Partial (${pct}%)`;
 }
 
-function readBriefField(
-  input: unknown,
-  key: string,
-): unknown {
+function readBriefField(input: unknown, key: string): unknown {
   if (input == null || typeof input !== "object" || Array.isArray(input)) {
     return undefined;
   }
@@ -336,11 +331,14 @@ export function buildRetentionExplainabilityModel(
       dispositionRaw != null &&
       typeof dispositionRaw === "object" &&
       Array.isArray((dispositionRaw as Record<string, unknown>).adaptations)
-        ? ((dispositionRaw as Record<string, unknown>).adaptations as unknown[])
-            .filter((id): id is string => typeof id === "string")
+        ? (
+            (dispositionRaw as Record<string, unknown>).adaptations as unknown[]
+          ).filter((id): id is string => typeof id === "string")
         : [];
     const premiseUsed = adaptationIds.includes("creative_premise_used");
-    const unsupportedOmitted = adaptationIds.includes("unsupported_facts_omitted");
+    const unsupportedOmitted = adaptationIds.includes(
+      "unsupported_facts_omitted",
+    );
     const reliabilityFallback = adaptationIds.includes(
       "deterministic_story_fallback_used",
     );
@@ -364,7 +362,9 @@ export function buildRetentionExplainabilityModel(
       rows.push({
         id: "creator_premise",
         label: "Fact Handling",
-        value: "Verified facts only",
+        value: "Grounded story",
+        description:
+          "Uses creator-supplied brief details and verified research when available.",
       });
     }
     if (unsupportedOmitted) {

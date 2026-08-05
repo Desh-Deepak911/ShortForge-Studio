@@ -14,6 +14,7 @@ import { useEngagementOverlaysEnabled } from "@/features/visual-retention/client
 import type {
   EngagementOverlayKind,
   EngagementOverlayPosition,
+  EngagementOverlaySize,
 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
 import {
   studioDestructiveButton,
@@ -25,7 +26,10 @@ import {
 import {
   ENGAGEMENT_OVERLAY_KIND_OPTIONS,
   ENGAGEMENT_OVERLAY_MAX_DURATION_MS,
+  ENGAGEMENT_OVERLAY_MAX_SCALE,
+  ENGAGEMENT_OVERLAY_MIN_SCALE,
   ENGAGEMENT_OVERLAY_POSITION_OPTIONS,
+  ENGAGEMENT_OVERLAY_SIZE_OPTIONS,
 } from "../domain/engagement-overlay.presets";
 import { getSceneEngagementOverlay } from "../domain/normalize-engagement-overlays";
 import {
@@ -34,6 +38,8 @@ import {
   setEngagementOverlayDurationMs,
   setEngagementOverlayKind,
   setEngagementOverlayPosition,
+  setEngagementOverlayScale,
+  setEngagementOverlaySize,
   setEngagementOverlayStartMs,
   type EngagementOverlayCommandOptions,
   type EngagementOverlayCommandResult,
@@ -142,7 +148,7 @@ export default function EngagementOverlayControls({
 
   const commit = (
     result: EngagementOverlayCommandResult,
-    trigger?: "add" | "kind" | "position" | "timing" | "remove",
+    trigger?: "add" | "kind" | "position" | "size" | "timing" | "remove",
   ) => {
     if (result.status === "terminal") {
       setStatusMessage(
@@ -349,6 +355,77 @@ export default function EngagementOverlayControls({
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="min-w-0 space-y-1.5">
+              <p id={`${controlId}-size-label`} className={studioFieldLabel}>
+                Size
+              </p>
+              <div
+                role="radiogroup"
+                aria-labelledby={`${controlId}-size-label`}
+                className="flex max-w-full flex-wrap gap-1.5"
+                data-engagement-overlay-size-group="true"
+              >
+                {ENGAGEMENT_OVERLAY_SIZE_OPTIONS.map((option) => {
+                  const selected = (overlay.size ?? "medium") === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="radio"
+                      tabIndex={selected ? 0 : -1}
+                      aria-checked={selected}
+                      disabled={disabled}
+                      data-engagement-overlay-size={option.id}
+                      className={selected ? radioSelectedClass : radioIdleClass}
+                      onClick={() =>
+                        commit(
+                          setEngagementOverlaySize(
+                            script,
+                            sceneId,
+                            option.id as EngagementOverlaySize,
+                            commandOptions,
+                          ),
+                          "size",
+                        )
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <label htmlFor={`${controlId}-scale`} className={studioFieldLabel}>
+                Fine scale
+              </label>
+              <StudioNumberStepper
+                id={`${controlId}-scale`}
+                compact
+                min={ENGAGEMENT_OVERLAY_MIN_SCALE}
+                max={ENGAGEMENT_OVERLAY_MAX_SCALE}
+                step={0.05}
+                value={overlay.scale ?? 1}
+                disabled={disabled}
+                aria-label="Engagement prompt fine scale"
+                data-engagement-overlay-scale="true"
+                onStepValue={(value) =>
+                  commit(
+                    setEngagementOverlayScale(script, sceneId, value, commandOptions),
+                    "size",
+                  )
+                }
+                onValueCommit={(value) =>
+                  commit(
+                    setEngagementOverlayScale(script, sceneId, value, commandOptions),
+                    "size",
+                  )
+                }
+              />
             </div>
           </div>
 
