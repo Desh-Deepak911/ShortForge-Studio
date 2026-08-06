@@ -33,7 +33,7 @@ export interface BuildRetentionGroundingContextInput {
 
 const MAX_CREATOR_FACTS_PER_FIELD = 12;
 const CREATOR_INSTRUCTION_SENTENCE =
-  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?)/iu;
+  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make|preview|recap|review|analyze|compare|rank)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?)/iu;
 
 function splitCreatorMaterial(
   textRaw: string | null | undefined,

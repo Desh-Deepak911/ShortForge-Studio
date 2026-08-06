@@ -35,7 +35,7 @@ const SHORT_MEANINGFUL = new Set([
 const MAX_QUALITATIVE_ANCHOR_WORDS = 12;
 const MAX_QUALITATIVE_ANCHOR_CHARS = 96;
 const CREATOR_INSTRUCTION_PREFIX =
-  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?\s*)/i;
+  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make|preview|recap|review|analyze|compare|rank)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?\s*)/i;
 
 function foldToken(raw: string): string {
   return raw
