@@ -104,6 +104,25 @@ async function main() {
   });
 
   await check(
+    "[R2A] Creative Premise prose paragraphs preserve each supplied fact",
+    () => {
+      const facts = parseCreativePremiseFacts(
+        "Northbridge entered administration in 2018. Captain Elias Ward stayed. Academy players reached a cup semifinal. The run restored belief.",
+      );
+      assert.equal(facts.length, 4);
+      assert.deepEqual(
+        facts.map((fact) => fact.text),
+        [
+          "Northbridge entered administration in 2018.",
+          "Captain Elias Ward stayed.",
+          "Academy players reached a cup semifinal.",
+          "The run restored belief.",
+        ],
+      );
+    },
+  );
+
+  await check(
     "[R3] Creative Premise claims support narration only in that mode",
     () => {
       const input = buildProductionStoryContractInput({
@@ -161,7 +180,13 @@ async function main() {
         composer: makeRetentionComposer(),
         hookRunner: passRetentionHookRunner,
       });
-      assert.equal(result.ok, true);
+      assert.equal(
+        result.ok,
+        true,
+        result.ok
+          ? ""
+          : `${result.failureCategory}: ${result.error}`,
+      );
       if (!result.ok) throw new Error("expected ok");
       assert.ok(result.approved.narration.trim().length > 40);
       assert.ok(
@@ -487,7 +512,9 @@ async function main() {
       assert.equal(
         result.ok,
         true,
-        result.ok ? "" : `${result.failureCategory}: ${result.error}`,
+        result.ok
+          ? ""
+          : `${result.failureCategory}: ${JSON.stringify(result.retentionDiagnostics)}`,
       );
       if (!result.ok) throw new Error("expected ok");
       const narration = result.approved.narration.toLowerCase();
@@ -578,10 +605,72 @@ async function main() {
         },
         hookRunner: passRetentionHookRunner,
       });
-      assert.equal(result.ok, true);
+      assert.equal(
+        result.ok,
+        true,
+        result.ok
+          ? ""
+          : JSON.stringify({
+              category: result.failureCategory,
+              reasons: result.retentionDiagnostics.safeReasonIds,
+              gates:
+                result.retentionDiagnostics.validationFailureSummary
+                  ?.failedHardGateIds,
+            }),
+      );
       if (!result.ok) throw new Error("expected instruction-only rescue");
       assert.doesNotMatch(result.approved.narration, /\bExplain(?:'s)?\b/i);
       assert.match(result.approved.narration, /\boffside\b/i);
+      const sentences = result.approved.narration
+        .split(/(?<=[.!?…])\s+/u)
+        .map((sentence) => sentence.trim())
+        .filter(Boolean);
+      assert.equal(new Set(sentences).size, sentences.length);
+    },
+  );
+
+  await check(
+    "[R13A.2] changing a premise changes the rescued narration",
+    async () => {
+      const create = (topic: string, premiseDetails: string) =>
+        runRetentionProductionNarration({
+          topic,
+          durationSec: 35,
+          generationPath: "script_only",
+          qualityMode: "balanced",
+          tone: "tactical",
+          scriptMode: "tactical_review",
+          formatStrategyId: "short_retention",
+          factHandlingMode: "creative_premise",
+          premiseDetails,
+          planner: null,
+          composer: () => {
+            throw new Error("model composer unavailable");
+          },
+          hookRunner: passRetentionHookRunner,
+        });
+
+      const riverside = await create(
+        "Preview Riverside against Albion through the weak side.",
+        "Albion press with two narrow forwards. Riverside’s weak-side winger stays high.",
+      );
+      const northbridge = await create(
+        "Trace Northbridge FC through its rebuilding year.",
+        "Northbridge entered administration in 2018. Captain Elias Ward stayed with the club.",
+      );
+      assert.equal(riverside.ok, true);
+      assert.equal(northbridge.ok, true);
+      if (!riverside.ok || !northbridge.ok) {
+        throw new Error("expected premise-sensitive rescue");
+      }
+      assert.match(riverside.approved.narration, /narrow forwards/i);
+      assert.match(riverside.approved.narration, /weak-side winger/i);
+      assert.match(northbridge.approved.narration, /administration in 2018/i);
+      assert.match(northbridge.approved.narration, /Elias Ward stayed/i);
+      assert.notEqual(
+        riverside.approved.narration,
+        northbridge.approved.narration,
+      );
     },
   );
 

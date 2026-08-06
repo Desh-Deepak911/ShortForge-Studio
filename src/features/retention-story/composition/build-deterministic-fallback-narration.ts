@@ -152,9 +152,10 @@ function qualitativeUtterance(input: {
   readonly purpose: string;
   readonly subject: string;
   readonly topic: string;
+  readonly scriptMode: NormalizedStoryContract["scriptMode"];
   readonly opponentLabel?: string | null;
 }): string {
-  const { index, total, purpose, subject, topic, opponentLabel } = input;
+  const { index, total, purpose, subject, topic, scriptMode, opponentLabel } = input;
   const spokenSubject = shortSubjectLabel(topic, subject);
   if (index === 0) {
     return topicAnchoredOpening(topic, subject);
@@ -163,21 +164,77 @@ function qualitativeUtterance(input: {
     return `${spokenSubject} met ${opponentLabel}.`;
   }
   if (index === total - 1) {
-    return opponentLabel
-      ? `In the end, ${spokenSubject} against ${opponentLabel} is defined by who keeps pushing.`
-      : `In the end, ${spokenSubject}'s outcome is decided by what happens next.`;
+    if (opponentLabel) {
+      return `Together, those details bring ${spokenSubject} against ${opponentLabel} into focus.`;
+    }
+    if (scriptMode === "tactical_review") {
+      return `Together, those details show what decides the tactical outcome for ${spokenSubject}.`;
+    }
+    if (scriptMode === "historical_explainer") {
+      return `Together, those details explain why ${spokenSubject}'s turning point still matters.`;
+    }
+    if (scriptMode === "opinion_debate") {
+      return `Together, those details leave the argument around ${spokenSubject} open to judgment.`;
+    }
+    return `Together, those details bring ${spokenSubject}'s central idea into focus.`;
   }
   if (purpose === "setup" || index === total - 2) {
-    return `That contrast sets up the real verdict on ${spokenSubject}.`;
+    return `That connection brings the central question around ${spokenSubject} into focus.`;
   }
-  const middles = [
-    `Physical duels tighten and the tempo snaps.`,
-    `One side keeps asking questions; the other starts protecting space.`,
-    `Momentum swings with every collision and reset.`,
-    `Tension rises as the contest becomes a fight for control.`,
-    `The pattern is clear: push forward, or shrink from the fight.`,
-  ];
-  return middles[(index - 1) % middles.length]!;
+  if (scriptMode === "tactical_review") {
+    return [
+      `For ${spokenSubject}, space and timing define the first tactical problem.`,
+      `The next decision for ${spokenSubject} changes which option remains available.`,
+      `That sequence shows how ${spokenSubject} can turn one opening into another.`,
+    ][(index - 1) % 3]!;
+  }
+  if (scriptMode === "historical_explainer") {
+    return [
+      `For ${spokenSubject}, the earlier context gives the turning point its meaning.`,
+      `What followed changed how ${spokenSubject} should be understood.`,
+      `The consequence connects that moment to the wider story of ${spokenSubject}.`,
+    ][(index - 1) % 3]!;
+  }
+  if (scriptMode === "player_analysis") {
+    return [
+      `${spokenSubject} comes into focus through the first decision.`,
+      `Execution changes the value of the next choice for ${spokenSubject}.`,
+      `The consequence shows what matters most in judging ${spokenSubject}.`,
+    ][(index - 1) % 3]!;
+  }
+  if (scriptMode === "opinion_debate") {
+    return [
+      `The case for ${spokenSubject} begins with the strongest available reason.`,
+      `A competing view changes how that reason should be weighed.`,
+      `The tension around ${spokenSubject} grows when both readings remain possible.`,
+    ][(index - 1) % 3]!;
+  }
+  if (scriptMode === "top_5") {
+    return [
+      `${spokenSubject} first has to be judged by impact.`,
+      `Context changes how that impact should be ranked.`,
+      `The final position for ${spokenSubject} depends on consequence as well as impression.`,
+    ][(index - 1) % 3]!;
+  }
+  if (scriptMode === "match_preview") {
+    return [
+      `${spokenSubject} begins with the first matchup choice.`,
+      `That choice changes the space available in the next phase.`,
+      `The response then shapes what ${spokenSubject} can become.`,
+    ][(index - 1) % 3]!;
+  }
+  if (scriptMode === "match_recap") {
+    return [
+      `${spokenSubject} becomes clearer through the first shift in control.`,
+      `The response gave the next moment a different consequence.`,
+      `That sequence reveals how the story of ${spokenSubject} changed.`,
+    ][(index - 1) % 3]!;
+  }
+  return [
+    `${spokenSubject} begins with a choice whose consequence keeps growing.`,
+    `The response changes which path remains open for ${spokenSubject}.`,
+    `That connection gives the next part of ${spokenSubject} its meaning.`,
+  ][(index - 1) % 3]!;
 }
 
 function ensureTerminalPunctuation(text: string): string {
@@ -192,11 +249,52 @@ function ensureTerminalPunctuation(text: string): string {
  * existing question/pressure/payoff relationship without adding people,
  * numbers, outcomes, or other factual claims.
  */
-const DURATION_BRIDGES = Object.freeze([
-  "That pressure keeps the central question open, because every response changes the options and consequences that follow.",
-  "From there, the pressure grows and the consequences become clearer.",
-  "Every response changes what can happen next.",
-] as const);
+function durationBridges(
+  scriptMode: NormalizedStoryContract["scriptMode"],
+): readonly string[] {
+  if (scriptMode === "tactical_review") {
+    return Object.freeze([
+      "The tactical picture changes as those details connect space, timing, and the next available choice.",
+      "The next detail shows how one decision opens or closes another option.",
+      "That relationship is the key to the tactical answer.",
+    ]);
+  }
+  if (scriptMode === "historical_explainer") {
+    return Object.freeze([
+      "Each detail changes how the turning point and everything that followed should be understood.",
+      "The earlier context gives the next moment a different meaning.",
+      "That connection keeps the wider story moving forward.",
+    ]);
+  }
+  if (scriptMode === "opinion_debate") {
+    return Object.freeze([
+      "The argument shifts as each new detail changes the weight of the evidence.",
+      "That tension leaves room for a competing interpretation.",
+      "The final judgment depends on how those details connect.",
+    ]);
+  }
+  return Object.freeze([
+    "The central question stays open because each new detail changes the options and consequences that follow.",
+    "From there, the earlier detail gains a different consequence.",
+    "That connection changes what can happen next.",
+  ]);
+}
+
+function fallbackTitle(
+  scriptMode: NormalizedStoryContract["scriptMode"],
+  topic: string,
+  subject: string,
+): string {
+  const label = shortSubjectLabel(topic, subject);
+  if (scriptMode === "tactical_review") return `${label}: the tactical question`;
+  if (scriptMode === "historical_explainer") return `${label}: the turning point`;
+  if (scriptMode === "player_analysis") return `${label}: choices under pressure`;
+  if (scriptMode === "opinion_debate") return `${label}: the case in question`;
+  if (scriptMode === "top_5") return `${label}: ranking the impact`;
+  if (scriptMode === "match_preview") return `${label}: what could decide it`;
+  if (scriptMode === "match_recap") return `${label}: how control shifted`;
+  return `${label}: the central question`;
+}
 
 /**
  * Build a complete, duration-aware fallback candidate from plan beat IDs.
@@ -300,14 +398,9 @@ export function buildDeterministicFallbackNarrationCandidate(input: {
         purpose: beat.purpose,
         subject: primaryLabel,
         topic: input.contract.topic,
+        scriptMode: input.contract.scriptMode,
         opponentLabel,
       });
-      // Light pad with complete second sentence when under share.
-      const share = Math.max(5, Math.floor(targetWords / beats.length));
-      const words = text.trim().split(/\s+/).filter(Boolean).length;
-      if (words + 4 <= share && index > 0 && index < beats.length - 1) {
-        text = `${text} The stakes stay live.`;
-      }
     }
 
     text = ensureTerminalPunctuation(text);
@@ -325,6 +418,7 @@ export function buildDeterministicFallbackNarrationCandidate(input: {
                 purpose: beat.purpose,
                 subject,
                 topic: input.contract.topic,
+                scriptMode: input.contract.scriptMode,
               })
             : `The contest tightens through pressure and resolve.`;
       text = ensureTerminalPunctuation(text);
@@ -356,6 +450,7 @@ export function buildDeterministicFallbackNarrationCandidate(input: {
           purpose: beats[index]!.purpose,
           subject: primaryLabel,
           topic: input.contract.topic,
+          scriptMode: input.contract.scriptMode,
           opponentLabel,
         }),
       );
@@ -436,15 +531,16 @@ export function buildDeterministicFallbackNarrationCandidate(input: {
   // complete connective sentences to qualitative middle beats. Never repeat
   // supplied facts, alter claim refs, split utterances, or cross the hard word
   // budget. This keeps beats invisible beneath one continuous narration.
+  const availableDurationBridges = durationBridges(input.contract.scriptMode);
   let bridgeCursor = 0;
   while (
     countRetentionNarrationWords(assembledPreview()) < targetWords &&
-    bridgeCursor < DURATION_BRIDGES.length
+    bridgeCursor < availableDurationBridges.length
   ) {
     const currentWords = countRetentionNarrationWords(assembledPreview());
     const remainingBudget = hardBudget - currentWords;
     const remainingTarget = targetWords - currentWords;
-    const bridgeOptions = DURATION_BRIDGES.slice(bridgeCursor)
+    const bridgeOptions = availableDurationBridges.slice(bridgeCursor)
       .map((text, offset) => ({
         text,
         index: bridgeCursor + offset,
@@ -505,7 +601,7 @@ export function buildDeterministicFallbackNarrationCandidate(input: {
   return {
     title:
       input.title?.trim() ||
-      `${primaryLabel}: pressure tells the truth`,
+      fallbackTitle(input.contract.scriptMode, input.contract.topic, primaryLabel),
     candidate,
     omittedClaimIds: Object.freeze(omittedClaimIds),
     usedClaimIds: Object.freeze([...finalUsed]),

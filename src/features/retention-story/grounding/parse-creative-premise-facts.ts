@@ -26,16 +26,19 @@ export function parseCreativePremiseFacts(
   if (typeof premiseDetails !== "string" || !premiseDetails.trim()) {
     return Object.freeze([]);
   }
-  const lines = premiseDetails
+  const facts = premiseDetails
     .normalize("NFC")
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter((line) => line.length > 0)
+    // Creators naturally use either one fact per line or a prose paragraph.
+    // Preserve complete sentence punctuation while splitting both forms so a
+    // rich paragraph cannot collapse into one oversized, unusable claim.
+    .split(/(?:\r?\n)+|(?<=[.!?…])\s+/u)
+    .map((fact) => fact.replace(/\s+/g, " ").trim())
+    .filter((fact) => fact.length > 0)
     .slice(0, MAX_PREMISE_FACTS);
 
   const claims: RetentionGroundingClaim[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const text = lines[i]!.slice(0, MAX_FACT_CHARS);
+  for (let i = 0; i < facts.length; i++) {
+    const text = facts[i]!.slice(0, MAX_FACT_CHARS);
     if (!text) continue;
     claims.push(
       Object.freeze({
