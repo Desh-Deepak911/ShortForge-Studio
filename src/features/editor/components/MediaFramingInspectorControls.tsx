@@ -8,6 +8,8 @@ import {
   MEDIA_FRAMING_POSITION_UI_MIN,
   framingPositionReferenceToUi,
   framingPositionUiToReference,
+  isFitWithBlurredBackgroundActive,
+  type SceneMediaBackgroundTreatment,
   type SceneMediaFraming,
   type SceneMediaFramingFitMode,
 } from "@/features/media-framing";
@@ -31,25 +33,65 @@ import {
 
 const ZOOM_STEP = 0.05;
 
+type FramingPresentationMode = "fit" | "fill" | "fit_with_background";
+
 const FRAME_OPTIONS: {
-  value: SceneMediaFramingFitMode;
+  value: FramingPresentationMode;
   label: string;
   shortLabel: string;
   title: string;
+  description: string;
 }[] = [
   {
     value: "fit",
     label: "Fit",
     shortLabel: "Fit",
     title: "Show the entire media inside the frame",
+    description: "Show the entire media inside the frame",
+  },
+  {
+    value: "fit_with_background",
+    label: "Fit with background",
+    shortLabel: "Fit+BG",
+    title:
+      "Keeps the full video visible and fills the canvas with a blurred background.",
+    description:
+      "Keeps the full video visible and fills the canvas with a blurred background.",
   },
   {
     value: "fill",
     label: "Fill",
     shortLabel: "Fill",
     title: "Crop to fill the vertical frame",
+    description: "Crop to fill the vertical frame",
   },
 ];
+
+function resolvePresentationMode(
+  framing: SceneMediaFraming,
+): FramingPresentationMode {
+  const fitMode = normalizeSceneImageFitMode(framing.fitMode);
+  if (fitMode === "fill") {
+    return "fill";
+  }
+  if (isFitWithBlurredBackgroundActive(framing)) {
+    return "fit_with_background";
+  }
+  return "fit";
+}
+
+function presentationToFramingPatch(mode: FramingPresentationMode): {
+  fitMode: SceneMediaFramingFitMode;
+  backgroundTreatment: SceneMediaBackgroundTreatment;
+} {
+  if (mode === "fill") {
+    return { fitMode: "fill", backgroundTreatment: "none" };
+  }
+  if (mode === "fit_with_background") {
+    return { fitMode: "fit", backgroundTreatment: "blurred_fill" };
+  }
+  return { fitMode: "fit", backgroundTreatment: "none" };
+}
 
 function InspectorSubsection({
   title,
@@ -97,7 +139,7 @@ export default function MediaFramingInspectorControls({
   controlId,
   mediaLabel = "media",
 }: MediaFramingInspectorControlsProps) {
-  const activeFitMode = normalizeSceneImageFitMode(framing.fitMode);
+  const activeMode = resolvePresentationMode(framing);
   const clampedZoom = clampSceneImageScale(framing.zoom);
   const uiX = framingPositionReferenceToUi(framing.positionX, "x");
   const uiY = framingPositionReferenceToUi(framing.positionY, "y");
@@ -107,9 +149,11 @@ export default function MediaFramingInspectorControls({
   };
 
   const fitHelper =
-    activeFitMode === "fill"
+    activeMode === "fill"
       ? "Drag the media to choose which area stays in frame."
-      : "The full media remains visible; empty space may appear.";
+      : activeMode === "fit_with_background"
+        ? "Keeps the full video visible and fills the canvas with a blurred background."
+        : "The full media remains visible; empty space may appear.";
 
   return (
     <div className="space-y-4" data-media-framing-inspector={mediaLabel}>
@@ -120,7 +164,7 @@ export default function MediaFramingInspectorControls({
           aria-label={`${mediaLabel} frame mode`}
         >
           {FRAME_OPTIONS.map((option) => {
-            const isActive = activeFitMode === option.value;
+            const isActive = activeMode === option.value;
             return (
               <button
                 key={option.value}
@@ -128,10 +172,13 @@ export default function MediaFramingInspectorControls({
                 role="radio"
                 aria-checked={isActive}
                 title={option.title}
-                onClick={() => onFramingChange({ fitMode: option.value })}
+                onClick={() =>
+                  onFramingChange(presentationToFramingPatch(option.value))
+                }
                 className={
                   isActive ? studioImageFitSegmentActive : studioImageFitSegment
                 }
+                data-framing-mode={option.value}
               >
                 <span className="sm:hidden">{option.shortLabel}</span>
                 <span className="hidden sm:inline">{option.label}</span>
@@ -164,7 +211,12 @@ export default function MediaFramingInspectorControls({
 
         {repositionActive ? (
           <p className={`${studioSubtleText} mt-2`}>
-            Drag to reposition · {activeFitMode === "fill" ? "Fill" : "Fit"}{" "}
+            Drag to reposition ·{" "}
+            {activeMode === "fill"
+              ? "Fill"
+              : activeMode === "fit_with_background"
+                ? "Fit with background"
+                : "Fit"}{" "}
             mode
           </p>
         ) : null}

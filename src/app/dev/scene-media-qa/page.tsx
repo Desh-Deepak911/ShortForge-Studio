@@ -445,6 +445,33 @@ export default function SceneMediaQaPage() {
       setArtifactFilename(filename);
       setArtifactMime(capturedBlob.type || "video/webm");
       replaceArtifactUrl(capturedBlob);
+      // Dev-only capture surface for local Browser artifact certification.
+      if (typeof window !== "undefined") {
+        (
+          window as Window & {
+            __SCENE_MEDIA_QA_LAST_EXPORT__?: {
+              filename: string;
+              mimeType: string;
+              bytes: number;
+              base64: string;
+            };
+          }
+        ).__SCENE_MEDIA_QA_LAST_EXPORT__ = {
+          filename,
+          mimeType: capturedBlob.type || "video/webm",
+          bytes,
+          base64: await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+            reader.onload = () => {
+              const result = String(reader.result ?? "");
+              const comma = result.indexOf(",");
+              resolve(comma >= 0 ? result.slice(comma + 1) : result);
+            };
+            reader.readAsDataURL(capturedBlob);
+          }),
+        };
+      }
 
       const validation = validateFinalExportArtifact({
         artifact: {
@@ -642,12 +669,16 @@ export default function SceneMediaQaPage() {
         <h2 className="font-medium">Production 720p WebM export</h2>
         <button
           type="button"
+          data-scene-media-qa-export
           className="rounded-md bg-foreground px-3 py-2 text-background disabled:opacity-40"
           onClick={() => void runProductionExport()}
         >
           Prepare + render exact production manifest
         </button>
-        <p className="text-[12px] text-muted">
+        <p
+          className="text-[12px] text-muted"
+          data-scene-media-qa-export-status={exportStatus}
+        >
           Status: {exportStatus} · generation: {generationState}
           {hardFailure ? " · hard-failure" : ""}
         </p>

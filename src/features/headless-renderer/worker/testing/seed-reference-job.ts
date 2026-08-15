@@ -68,8 +68,14 @@ export async function seedAndCreateReferenceJob(input: {
       }
       throw new Error(`No fixture bytes for slot ${slot.role}`);
     },
-    mimeForSlot: (slot) =>
-      slot.expectedMediaKind === "audio" ? "audio/wav" : "image/png",
+    mimeForSlot: (slot) => {
+      for (const [url, mimeType] of input.fixture.assetMimeByUrl) {
+        if (headlessSourceDigest(url) === slot.sourceDigest) {
+          return mimeType;
+        }
+      }
+      throw new Error(`No fixture MIME for slot ${slot.role}`);
+    },
   });
   if (!seeded.ok) {
     throw new Error(`Seed failed: ${seeded.issues[0]?.message}`);

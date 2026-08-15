@@ -355,6 +355,11 @@ export default function SceneMediaItemInspector({
           positionY={framing.positionY}
           rotationDeg={framing.rotationDeg}
           fitMode={framing.fitMode === "fill" ? "fill" : "fit"}
+          backgroundTreatment={
+            framing.backgroundTreatment === "blurred_fill"
+              ? "blurred_fill"
+              : undefined
+          }
           onScaleChange={(scale) => {
             if (controlsDisabled) {
               setError("playback_locked");
@@ -368,6 +373,35 @@ export default function SceneMediaItemInspector({
           onFitModeChange={(fitMode) => {
             runWithTempScene((temp) => {
               const result = buildMediaFramingPatch(temp, { fitMode });
+              return result?.media ? { media: result.media } : null;
+            });
+          }}
+          onPresentationChange={({ fitMode, backgroundTreatment }) => {
+            if (controlsDisabled) {
+              setError("playback_locked");
+              return;
+            }
+            runWithTempScene((temp) => {
+              const result = buildMediaFramingPatch(temp, {
+                fitMode,
+                backgroundTreatment:
+                  backgroundTreatment === "blurred_fill"
+                    ? "blurred_fill"
+                    : "none",
+              });
+              return result?.media ? { media: result.media } : null;
+            });
+          }}
+          onBackgroundTreatmentChange={(treatment) => {
+            if (controlsDisabled) {
+              setError("playback_locked");
+              return;
+            }
+            runWithTempScene((temp) => {
+              const result = buildMediaFramingPatch(temp, {
+                backgroundTreatment:
+                  treatment === "blurred_fill" ? "blurred_fill" : "none",
+              });
               return result?.media ? { media: result.media } : null;
             });
           }}

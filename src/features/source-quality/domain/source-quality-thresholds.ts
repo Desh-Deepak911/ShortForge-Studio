@@ -56,3 +56,16 @@ export const SOURCE_QUALITY_ASPECT_MISMATCH_RELATIVE_TOLERANCE = 0.12;
  * vertical crop. 0.5 means less than half of the source area remains visible.
  */
 export const SOURCE_QUALITY_AGGRESSIVE_CROP_RETAINED_AREA_THRESHOLD = 0.5;
+
+/**
+ * Advisory detail-class thresholds on source pixels per output pixel
+ * (`1 / activeScale`). Inclusive lower bound for each band; never terminal.
+ *
+ * - native_or_downsampled: ≥ 1
+ * - mild_upscale: ≥ 0.8 and &lt; 1
+ * - material_upscale: ≥ 0.5 and &lt; 0.8
+ * - severe_upscale: &lt; 0.5
+ */
+export const SOURCE_QUALITY_DETAIL_NATIVE_MIN_SOURCE_PIXELS_PER_OUTPUT = 1;
+export const SOURCE_QUALITY_DETAIL_MILD_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT = 0.8;
+export const SOURCE_QUALITY_DETAIL_MATERIAL_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT = 0.5;

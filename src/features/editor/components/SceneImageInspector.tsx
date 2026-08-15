@@ -40,9 +40,21 @@ export interface SceneImageInspectorProps {
   positionY?: number;
   rotationDeg?: number;
   fitMode?: SceneImageFitMode;
+  backgroundTreatment?: "blurred_fill";
   imageMotion?: SceneImageMotion;
   onScaleChange: (scale: number) => void;
   onFitModeChange: (fitMode: SceneImageFitMode) => void;
+  /**
+   * Preferred when Fit / Fill / Fit-with-background change together
+   * so one history commit persists both fields.
+   */
+  onPresentationChange?: (patch: {
+    fitMode: SceneImageFitMode;
+    backgroundTreatment: "blurred_fill" | null;
+  }) => void;
+  onBackgroundTreatmentChange?: (
+    treatment: "blurred_fill" | null,
+  ) => void;
   onPositionChange?: (position: { x?: number; y?: number }) => void;
   onMotionChange?: (patch: Partial<SceneImageMotion>) => void;
   onReset: () => void;
@@ -66,9 +78,12 @@ export default function SceneImageInspector({
   positionY = 0,
   rotationDeg = 0,
   fitMode,
+  backgroundTreatment,
   imageMotion,
   onScaleChange,
   onFitModeChange,
+  onPresentationChange,
+  onBackgroundTreatmentChange,
   onPositionChange,
   onMotionChange,
   onReset,
@@ -91,6 +106,8 @@ export default function SceneImageInspector({
     positionY,
     zoom: scale,
     rotationDeg,
+    backgroundTreatment:
+      backgroundTreatment === "blurred_fill" ? "blurred_fill" : "none",
   };
 
   const containerClassName =
@@ -117,8 +134,29 @@ export default function SceneImageInspector({
         onReposition={onReposition}
         onReset={onReset}
         onFramingChange={(patch) => {
-          if (patch.fitMode !== undefined) {
-            onFitModeChange(patch.fitMode);
+          if (
+            patch.fitMode !== undefined &&
+            patch.backgroundTreatment !== undefined &&
+            onPresentationChange
+          ) {
+            onPresentationChange({
+              fitMode: patch.fitMode,
+              backgroundTreatment:
+                patch.backgroundTreatment === "blurred_fill"
+                  ? "blurred_fill"
+                  : null,
+            });
+          } else {
+            if (patch.fitMode !== undefined) {
+              onFitModeChange(patch.fitMode);
+            }
+            if (patch.backgroundTreatment !== undefined) {
+              onBackgroundTreatmentChange?.(
+                patch.backgroundTreatment === "blurred_fill"
+                  ? "blurred_fill"
+                  : null,
+              );
+            }
           }
           if (patch.zoom !== undefined) {
             onScaleChange(patch.zoom);

@@ -69,13 +69,16 @@ function messageForCode(
   code: SourceQualityExportGuidanceCode,
   exportTarget: SourceQualityExportTarget,
 ): string {
+  const label = targetLabel(exportTarget);
+  // Keep story-level preflight copy concise. Detailed per-media guidance lives
+  // in the inspector Source Quality summary to avoid duplicate walls of text.
   if (code === SOURCE_QUALITY_EXPORT_GUIDANCE_CODES.SOURCE_QUALITY_DIMENSIONS_UNKNOWN) {
-    return "Some media dimensions are unavailable. Export will continue using the current framing.";
+    return `Source dimensions are unavailable, so quality cannot be estimated for ${label}. Export is still available.`;
   }
   if (code === SOURCE_QUALITY_EXPORT_GUIDANCE_CODES.SOURCE_QUALITY_MAY_UPSCALE) {
-    return `Some media may be enlarged for this ${targetLabel(exportTarget)} export and could look soft.`;
+    return `Some media may look soft at ${label}. Export remains available. Framing is not changed automatically.`;
   }
-  return "Some media may be heavily cropped by the current vertical framing.";
+  return `Some media may be heavily cropped by the current vertical framing for ${label}. Export remains available.`;
 }
 
 function normalizeExportTarget(

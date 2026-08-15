@@ -8,6 +8,7 @@ import {
 import { planPreviewMediaLayers } from "@/features/scene-media-transitions/preview";
 import { studioPreviewDevice, studioPreviewScreen } from "@/lib/utils/studioUi";
 import type { FootieScene, SceneType } from "@/features/story/types";
+import { resolveLegibilityLayerPlan } from "@/features/legibility-layer";
 
 import type { PreviewSceneFrame } from "@/features/preview/utils";
 import type { PreviewTransitionOverlay } from "@/features/preview/utils/previewTransitionOverlay";
@@ -183,6 +184,12 @@ interface PreviewFrameProps {
    * Resolved once by VideoPreview — not fetched per frame.
    */
   mixedMediaScenesEnabled?: boolean;
+  /** Absolute content/timeline time (ms) for shared title timing. */
+  contentTimeMs?: number;
+  /** Content duration (ms) excluding brand sting. */
+  contentDurationMs?: number;
+  /** Brand watermark visibility — matches export branding authority. */
+  watermarkEnabled?: boolean;
 }
 
 export default function PreviewFrame({
@@ -205,9 +212,29 @@ export default function PreviewFrame({
   isPlaying = false,
   maxWidth,
   mixedMediaScenesEnabled = false,
+  contentTimeMs = 0,
+  contentDurationMs = 0,
+  watermarkEnabled = true,
 }: PreviewFrameProps) {
   void sceneDurationMs;
   const mixedMediaEnabled = mixedMediaScenesEnabled === true;
+
+  const legibilityPlan = resolveLegibilityLayerPlan({
+    absoluteContentTimeMs: contentTimeMs,
+    contentDurationMs,
+    storyTitle: title,
+    hasActiveCaption: false,
+    captionPlacement: "none",
+    captionStyleBackgroundEnabled: true,
+    captionStyleBackgroundOpacity: 45,
+    watermarkEnabled,
+    suppressCaptionOverlays: Boolean(transitionOverlay),
+  });
+
+  const brandingTextShadow =
+    "0 1px 2px rgba(0,0,0,0.9), 0 0 1px rgba(0,0,0,0.85)";
+  const titleTextShadow =
+    "0 1px 3px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.8)";
 
   const transitionStyles = transitionOverlay
     ? transitionStateToPreviewLayerStyles(
@@ -322,28 +349,41 @@ export default function PreviewFrame({
 
       {editLayer}
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/40" />
-
-      <div
-        className={`absolute inset-x-0 top-0 z-10 px-4 pb-2 pt-11 transition-opacity duration-150 ${
-          frameEditActive ? "cursor-default opacity-80" : ""
-        }`}
-        onPointerDown={
-          frameEditActive
-            ? (event) => {
-                event.stopPropagation();
-                onExitFrameEdit?.();
-              }
-            : undefined
-        }
-      >
-        <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/45">
-          FootieBitz
-        </p>
-        <h3 className="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-white/95">
-          {title}
-        </h3>
-      </div>
+      {(legibilityPlan.branding.enabled || legibilityPlan.title.visible) && (
+        <div
+          className={`absolute inset-x-0 top-0 z-10 px-4 pb-2 pt-11 transition-opacity duration-150 ${
+            frameEditActive ? "cursor-default opacity-80" : ""
+          }`}
+          onPointerDown={
+            frameEditActive
+              ? (event) => {
+                  event.stopPropagation();
+                  onExitFrameEdit?.();
+                }
+              : undefined
+          }
+        >
+          {legibilityPlan.branding.enabled ? (
+            <p
+              className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/70"
+              style={{ textShadow: brandingTextShadow }}
+            >
+              FootieBitz
+            </p>
+          ) : null}
+          {legibilityPlan.title.visible ? (
+            <h3
+              className="mt-1 line-clamp-2 max-w-full rounded-md bg-black/70 px-2 py-1 text-[13px] font-semibold leading-snug text-white/95"
+              style={{
+                opacity: legibilityPlan.title.opacity,
+                textShadow: titleTextShadow,
+              }}
+            >
+              {title}
+            </h3>
+          ) : null}
+        </div>
+      )}
 
       {overlay}
 

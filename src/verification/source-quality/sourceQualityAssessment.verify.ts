@@ -246,7 +246,14 @@ function main(): void {
       (fill1080!.retainedSourceAreaFraction ?? 1) <
         SOURCE_QUALITY_AGGRESSIVE_CROP_RETAINED_AREA_THRESHOLD,
     );
-    assert.equal(fit1080!.retainedSourceAreaFraction, null);
+    // Fit preserves the full source (letterboxes); retained area is 1, coverage < 1.
+    assert.equal(fit1080!.retainedSourceAreaFraction, 1);
+    assert.ok((fit1080!.frameCoverageFraction ?? 1) < 0.32);
+    assert.equal(fit1080!.detailClass, "native_or_downsampled");
+    assert.equal(fill1080!.detailClass, "material_upscale");
+    assert.equal(fill1080!.softnessCause, "aspect_conversion");
+    assert.equal(fit.authoredZoom, 1);
+    assert.equal(fill.authoredZoom, 1);
   });
 
   test("fill retained area accounts for zoom and stays clamped", () => {

@@ -18,6 +18,7 @@ import {
   type ExportEnvironmentSnapshot,
   type ExportManifestV2,
   type ExportManifestV4,
+  type ExportManifestV5,
 } from "@/features/export/domain";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
 import { applyStoryBackgroundMusic } from "@/features/story/utils/background-music.utils";
@@ -122,10 +123,12 @@ export type HeadlessFixtureAudioMode =
   | "with-voice-and-music";
 
 export interface HeadlessReferenceFixture {
-  readonly manifestV3: ExportManifestV4;
+  readonly manifestV3: ExportManifestV4 | ExportManifestV5;
   readonly manifestV2: ExportManifestV2;
   readonly rendererProfile: HeadlessRendererProfile;
   readonly assetBytesByUrl: ReadonlyMap<string, Uint8Array>;
+  /** Exact fixture MIME authority used when owned test assets are seeded. */
+  readonly assetMimeByUrl: ReadonlyMap<string, string>;
   readonly voiceBytes: Uint8Array | null;
   readonly musicBytes: Uint8Array | null;
   readonly urls: {
@@ -349,12 +352,20 @@ export function buildHeadlessReferenceFixture(input?: {
   ]);
   if (voiceBytes) assetBytesByUrl.set(urls.voice, voiceBytes);
   if (musicBytes) assetBytesByUrl.set(urls.music, musicBytes);
+  const assetMimeByUrl = new Map<string, string>([
+    [urls.a, "image/png"],
+    [urls.b, "image/png"],
+    [urls.c, "image/png"],
+  ]);
+  if (voiceBytes) assetMimeByUrl.set(urls.voice, "audio/wav");
+  if (musicBytes) assetMimeByUrl.set(urls.music, "audio/wav");
 
   return {
     manifestV3,
     manifestV2,
     rendererProfile,
     assetBytesByUrl,
+    assetMimeByUrl,
     voiceBytes,
     musicBytes,
     urls,

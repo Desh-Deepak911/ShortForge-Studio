@@ -22,6 +22,7 @@ export function synthesizeMotionMp4Fixture(input?: {
   readonly width?: number;
   readonly height?: number;
   readonly fps?: number;
+  readonly pattern?: "testsrc" | "smptehdbars";
 }): MotionMp4Fixture {
   const ffmpeg = resolveNativeFfmpegBinaries();
   if (!ffmpeg.ok) {
@@ -33,7 +34,8 @@ export function synthesizeMotionMp4Fixture(input?: {
   const fps = input?.fps ?? 30;
   const dir = mkdtempSync(join(tmpdir(), "hf-motion-mp4-"));
   const out = join(dir, "motion.mp4");
-  const lavfi = `testsrc=size=${width}x${height}:rate=${fps}:duration=${durationSec.toFixed(3)}`;
+  const pattern = input?.pattern ?? "testsrc";
+  const lavfi = `${pattern}=size=${width}x${height}:rate=${fps}:duration=${durationSec.toFixed(3)}`;
   const result = spawnSync(
     ffmpeg.ffmpegExecutable,
     [

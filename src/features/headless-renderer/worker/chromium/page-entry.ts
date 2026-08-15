@@ -172,6 +172,7 @@ async function renderFrame(input: {
       prepared.preparedBySceneId,
       prepared.preparedByMediaKey,
       plan.keyframedVisualEffectsEnabled,
+      plan.fitWithBlurredBackgroundEnabled,
     );
     return { ok: true };
   } catch (error) {

@@ -85,6 +85,7 @@ export async function renderExportChunkFrames(options: {
       preparedBySceneId,
       preparedByMediaKey,
       plan.keyframedVisualEffectsEnabled,
+      plan.fitWithBlurredBackgroundEnabled,
     );
 
     lastSceneId = frame.scene.scene.id;

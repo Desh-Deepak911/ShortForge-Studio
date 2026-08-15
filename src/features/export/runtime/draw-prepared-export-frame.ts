@@ -11,15 +11,13 @@
 import { resolveExportCaptionAnimationFromChunk } from "@/features/caption-animation";
 import type { CaptionLayout } from "@/features/caption-layout";
 import type { CaptionStyle } from "@/features/caption-style";
+import { drawBrandSting } from "@/features/brand-sting/render/draw-brand-sting";
+import { resolveBrandStingFrame } from "@/features/brand-sting/domain/resolve-brand-sting-frame";
+import { drawEngagementOverlay } from "@/features/engagement-overlays/render/draw-engagement-overlay";
 import {
-  drawBrandSting,
-  resolveBrandStingFrame,
-} from "@/features/brand-sting";
-import {
-  drawEngagementOverlay,
   resolveEngagementOverlayFrame,
   shouldSuppressEngagementOverlayForInterSceneTransition,
-} from "@/features/engagement-overlays";
+} from "@/features/engagement-overlays/domain/resolve-engagement-overlay-frame";
 import type { SubtitleEffect, TransitionEffect } from "@/features/story/types";
 import { resolveTransitionEffectLayers } from "@/features/timeline-intelligence/resolve-transition-state.utils";
 import {
@@ -38,6 +36,14 @@ import type { ResolvedExportCaptionFrame } from "@/features/export/timing";
 import type { ExportCaptionManifest } from "@/features/export/domain/export-manifest.types";
 import { resolveExportActiveSceneMediaFrame } from "@/features/export/domain/resolve-export-active-scene-media-frame";
 import { captionLayoutManifestToCaptionLayout } from "@/features/export/domain/resolve-export-caption-layout";
+import {
+  applyLegibilityTextShadow,
+  clearLegibilityTextShadow,
+  drawLegibilityCaptionScrimIfNeeded,
+  drawLegibilityLocalScrim,
+  mapCaptionAnchorToLegibilityPlacement,
+  resolveLegibilityLayerPlan,
+} from "@/features/legibility-layer";
 
 import type { ExportRenderContext } from "./export-render-context.types";
 import type { ExportDrawScene } from "./prepare-export-from-manifest";
@@ -110,12 +116,15 @@ function drawSceneBackground(
   sceneDurationMs: number,
   prepared: PrepareExportSceneMediaResult | undefined,
   keyframedVisualEffectsEnabled: boolean,
+  fitWithBlurredBackgroundEnabled = false,
 ) {
   const active = resolveExportActiveSceneMediaFrame(
     drawScene.manifestScene,
     sceneElapsedMs,
   );
-  const activeScene = buildActiveExportDrawScene(drawScene, active);
+  const activeScene = buildActiveExportDrawScene(drawScene, active, {
+    fitWithBlurredBackgroundEnabled,
+  });
   drawSceneMediaFrame({
     ctx,
     width,
@@ -200,6 +209,7 @@ export function drawPreparedExportFrame(
   preparedBySceneId: Map<string, PrepareExportSceneMediaResult>,
   preparedByMediaKey?: Map<string, PrepareExportSceneMediaResult>,
   keyframedVisualEffectsEnabled = false,
+  fitWithBlurredBackgroundEnabled = false,
 ): void {
   const ctx = context.canvasContext;
   const width = context.width;
@@ -274,6 +284,7 @@ export function drawPreparedExportFrame(
           transition.fromScene.durationMs,
           fromPrepared,
           keyframedVisualEffectsEnabled,
+          fitWithBlurredBackgroundEnabled,
         );
       },
       drawToBackground: (layerCtx, layerWidth, layerHeight) => {
@@ -288,6 +299,7 @@ export function drawPreparedExportFrame(
           transition.toScene.durationMs,
           toPrepared,
           keyframedVisualEffectsEnabled,
+          fitWithBlurredBackgroundEnabled,
         );
       },
     });
@@ -367,26 +379,76 @@ export function drawPreparedExportFrame(
       frame.media.sceneDurationMs,
       preparedBySceneId.get(frame.drawScene.id),
       keyframedVisualEffectsEnabled,
+      fitWithBlurredBackgroundEnabled,
     );
   }
 
-  const overlay = ctx.createLinearGradient(0, 0, 0, height);
-  overlay.addColorStop(0, "rgba(0,0,0,0.60)");
-  overlay.addColorStop(0.35, "rgba(0,0,0,0.15)");
-  overlay.addColorStop(1, "rgba(0,0,0,0.90)");
-  ctx.fillStyle = overlay;
-  ctx.fillRect(0, 0, width, height);
+  // Scene-to-scene: captions suppressed (no half-overlay from either
+  // adjacent scene). Intra-scene: captions continue.
+  // Engagement overlays share the same inter-scene suppression rule.
+  const suppressCaptionOverlays =
+    shouldSuppressEngagementOverlayForInterSceneTransition(Boolean(transition));
 
-  if (frame.branding.watermarkEnabled) {
+  const captionMode = normalizeCaptionMode(frame.drawScene.captionMode);
+  const activeCaptionCandidate = frame.captions[0];
+  const captionModeAllowsDraw =
+    captionMode === "subtitles" || captionMode === "generated";
+  const hasActiveCaption =
+    Boolean(activeCaptionCandidate) &&
+    captionModeAllowsDraw &&
+    !suppressCaptionOverlays;
+
+  const captionPlacement = hasActiveCaption
+    ? mapCaptionAnchorToLegibilityPlacement(
+        activeCaptionCandidate!.caption.layout.usesLegacyBottomCenter
+          ? "bottom_center"
+          : activeCaptionCandidate!.caption.layout.anchor,
+      )
+    : "none";
+
+  const legibilityPlan = resolveLegibilityLayerPlan({
+    absoluteContentTimeMs: frame.visualTimeMs,
+    contentDurationMs: frame.contentDurationMs,
+    storyTitle: frame.storyTitle,
+    hasActiveCaption,
+    captionPlacement,
+    captionStyleBackgroundEnabled:
+      activeCaptionCandidate?.caption.style.backgroundEnabled === true,
+    captionStyleBackgroundOpacity:
+      activeCaptionCandidate?.caption.style.backgroundOpacity ?? 0,
+    watermarkEnabled: frame.branding.watermarkEnabled === true,
+    suppressCaptionOverlays,
+    frameWidth: width,
+    frameHeight: height,
+  });
+
+  // Local caption scrim only when creator style lacks a sufficient background.
+  drawLegibilityCaptionScrimIfNeeded(ctx, legibilityPlan);
+
+  if (legibilityPlan.branding.enabled) {
     const brandOpacity = frame.branding.opacity ?? 0.55;
+    applyLegibilityTextShadow(ctx, scale);
     ctx.fillStyle = `rgba(255,255,255,${brandOpacity})`;
     ctx.font = `bold ${36 * scale}px Arial, Helvetica, sans-serif`;
     ctx.fillText(frame.branding.watermarkText, padX, 116 * scale);
+    clearLegibilityTextShadow(ctx);
   }
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `600 ${48 * scale}px Arial, Helvetica, sans-serif`;
-  wrapText(ctx, frame.storyTitle, padX, titleY, width - padX * 2, 58 * scale);
+  if (legibilityPlan.title.visible) {
+    drawLegibilityLocalScrim(
+      ctx,
+      legibilityPlan.title.region,
+      legibilityPlan.title.opacity,
+    );
+    ctx.save();
+    ctx.globalAlpha = legibilityPlan.title.opacity;
+    applyLegibilityTextShadow(ctx, scale);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `600 ${48 * scale}px Arial, Helvetica, sans-serif`;
+    wrapText(ctx, frame.storyTitle, padX, titleY, width - padX * 2, 58 * scale);
+    clearLegibilityTextShadow(ctx);
+    ctx.restore();
+  }
 
   const activeDrawMediaItemId =
     (intra
@@ -411,9 +473,7 @@ export function drawPreparedExportFrame(
     ctx.textAlign = "left";
   }
 
-  // Scene-to-scene: suppress engagement + captions (no half-overlay from either
-  // adjacent scene). Intra-scene media transitions keep both active.
-  if (shouldSuppressEngagementOverlayForInterSceneTransition(Boolean(transition))) {
+  if (transition) {
     return;
   }
 
@@ -434,10 +494,8 @@ export function drawPreparedExportFrame(
     }
   }
 
-  const captionMode = normalizeCaptionMode(frame.drawScene.captionMode);
-  const activeCaption = frame.captions[0];
-  if (activeCaption && (captionMode === "subtitles" || captionMode === "generated")) {
-    const caption = activeCaption.caption;
+  if (hasActiveCaption && activeCaptionCandidate) {
+    const caption = activeCaptionCandidate.caption;
     const captionLayout = captionLayoutFromManifest(caption);
     const captionStyle = captionStyleFromManifest(caption);
     const scene: {
@@ -460,7 +518,7 @@ export function drawPreparedExportFrame(
       width,
       height,
       scale,
-      display: captionToSubtitleDisplay(activeCaption, scene),
+      display: captionToSubtitleDisplay(activeCaptionCandidate, scene),
       scene,
       script: {
         // Layout/style already resolved onto the caption — avoid default overwrite.

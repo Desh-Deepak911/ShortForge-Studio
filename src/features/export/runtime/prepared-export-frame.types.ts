@@ -69,6 +69,8 @@ export interface PreparedExportFrame {
   readonly intraSceneTransition: ResolvedExportIntraSceneTransitionFrame | null;
   readonly branding: ExportBrandingManifest;
   readonly storyTitle: string;
+  /** Narration/content duration — title timing authority (excludes brand sting). */
+  readonly contentDurationMs: number;
   /** Present when absolute time is inside the trailing ShortForge Studio outro. */
   readonly brandSting: PreparedExportBrandStingFrame | null;
 }

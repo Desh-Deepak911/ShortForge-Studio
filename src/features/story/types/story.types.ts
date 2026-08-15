@@ -171,6 +171,11 @@ export interface SceneMedia {
   muted?: boolean;
   fitMode?: SceneMediaFitMode;
   transform?: SceneMediaTransform;
+  /**
+   * Optional Fit presentation: blurred Fill behind sharp Fit.
+   * Absent ≡ none. Never reinterpreted from legacy Fit alone.
+   */
+  backgroundTreatment?: "blurred_fill";
   /** @deprecated Prefer `motion`. Kept for upload dual-write / legacy reads. */
   imageMotion?: SceneImageMotion;
   /** Shared image/video motion — optional; no migration required. */
@@ -264,6 +269,11 @@ export interface SceneImage {
   y: number;
   rotation?: number;
   fitMode?: SceneImageFitMode;
+  /**
+   * Optional Fit presentation: blurred Fill behind sharp Fit.
+   * Absent ≡ none. Dual-written to scene.media.backgroundTreatment for images.
+   */
+  backgroundTreatment?: "blurred_fill";
   /** Slow drift/zoom during playback. Defaults to none/subtle when omitted. */
   imageMotion?: SceneImageMotion;
 }
