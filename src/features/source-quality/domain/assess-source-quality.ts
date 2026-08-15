@@ -9,14 +9,11 @@
  *   baseScale = fill ? cover(w,h,target) : contain(w,h,target)
  *   activeScale = baseScale × normalizedZoom
  *   mayUpscale = activeScale > 1
+ *   sourcePixelsPerOutputPixel = 1 / activeScale
  *
- * Fill retained-area upper bound (conservative; rotation preserves area):
- *   scaledSourceArea = sourceW × sourceH × activeScale²
- *   retainedAreaUpperBound = clamp01(targetW × targetH / scaledSourceArea)
- * Arbitrary rotation may clip more than this bound; the assessment avoids
- * false precision. Pan/position is excluded. Fit letterboxing is non-terminal.
- *
- * Rotation AABB remains only for effective displayed aspect-ratio guidance.
+ * Retained region / coverage use centered Fit/Fill rectangles (pan ignored).
+ * Rotation preserves area; extra rotational clipping is not claimed precisely.
+ * Fit letterboxing is non-terminal and never blocks export.
  */
 
 import type { SceneMediaFraming } from "@/features/media-framing/media-framing.types";
@@ -24,8 +21,11 @@ import type { SceneMedia } from "@/features/story/types";
 
 import type {
   SourceQualityAssessment,
+  SourceQualityDetailClass,
   SourceQualityMetrics,
+  SourceQualitySoftnessCause,
   SourceQualitySummaryKey,
+  SourceQualityTargetId,
   SourceQualityTargetReadiness,
   SourceQualityWarningCode,
 } from "./source-quality-assessment";
@@ -36,9 +36,13 @@ import {
 import {
   SOURCE_QUALITY_AGGRESSIVE_CROP_RETAINED_AREA_THRESHOLD,
   SOURCE_QUALITY_ASPECT_MISMATCH_RELATIVE_TOLERANCE,
+  SOURCE_QUALITY_DETAIL_MATERIAL_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT,
+  SOURCE_QUALITY_DETAIL_MILD_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT,
+  SOURCE_QUALITY_DETAIL_NATIVE_MIN_SOURCE_PIXELS_PER_OUTPUT,
   SOURCE_QUALITY_TARGET_ASPECT_RATIO,
   SOURCE_QUALITY_VERTICAL_TARGETS,
 } from "./source-quality-thresholds";
+import { normalizeSceneMediaBackgroundTreatment } from "@/features/media-framing/media-framing.types";
 
 function positiveDimension(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0
@@ -106,37 +110,171 @@ function clamp01(value: number): number {
   return value;
 }
 
-/**
- * Conservative retained-area upper bound using original source area and the
- * renderer-parity active scale. Rotation preserves area; extra rotational
- * clipping is not claimed precisely.
- */
-function retainedAreaUpperBound(
-  sourceW: number,
-  sourceH: number,
-  targetW: number,
-  targetH: number,
-  activeScale: number,
-): number {
-  if (!(activeScale > 0) || !(sourceW > 0) || !(sourceH > 0)) {
-    return 1;
-  }
-  const scaledSourceArea = sourceW * sourceH * activeScale * activeScale;
-  if (!(scaledSourceArea > 0)) {
-    return 1;
-  }
-  return clamp01((targetW * targetH) / scaledSourceArea);
-}
-
 function aspectMismatched(aspectRatio: number): boolean {
   const relative = Math.abs(aspectRatio / SOURCE_QUALITY_TARGET_ASPECT_RATIO - 1);
   return relative > SOURCE_QUALITY_ASPECT_MISMATCH_RELATIVE_TOLERANCE;
 }
 
+export function classifySourceQualityDetail(
+  sourcePixelsPerOutputPixel: number,
+): SourceQualityDetailClass {
+  if (
+    sourcePixelsPerOutputPixel >=
+    SOURCE_QUALITY_DETAIL_NATIVE_MIN_SOURCE_PIXELS_PER_OUTPUT
+  ) {
+    return "native_or_downsampled";
+  }
+  if (
+    sourcePixelsPerOutputPixel >=
+    SOURCE_QUALITY_DETAIL_MILD_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT
+  ) {
+    return "mild_upscale";
+  }
+  if (
+    sourcePixelsPerOutputPixel >=
+    SOURCE_QUALITY_DETAIL_MATERIAL_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT
+  ) {
+    return "material_upscale";
+  }
+  return "severe_upscale";
+}
+
+function resolveSoftnessCause(input: {
+  readonly fitMode: "fit" | "fill";
+  readonly zoom: number;
+  readonly cover: number;
+  readonly contain: number;
+  readonly baseScale: number;
+  readonly sourcePixelsPerOutputPixel: number;
+  readonly sourceAspectRatio: number;
+}): SourceQualitySoftnessCause {
+  if (input.sourcePixelsPerOutputPixel >= 1) {
+    return "none";
+  }
+  const zoomContributes = input.zoom > 1;
+  const baseUpscales = input.baseScale > 1;
+  const aspectConversion =
+    input.fitMode === "fill" &&
+    aspectMismatched(input.sourceAspectRatio) &&
+    input.cover > input.contain &&
+    baseUpscales;
+
+  if (zoomContributes && baseUpscales) {
+    return "combined";
+  }
+  if (zoomContributes) {
+    return "authored_zoom";
+  }
+  if (aspectConversion) {
+    return "aspect_conversion";
+  }
+  return "source_dimensions";
+}
+
 export type SourceQualityFramingInput = Pick<
   SceneMediaFraming,
-  "fitMode" | "zoom" | "rotationDeg"
+  "fitMode" | "zoom" | "rotationDeg" | "backgroundTreatment"
 >;
+
+export interface SourceQualityTargetGeometryInput {
+  readonly sourceWidth: number;
+  readonly sourceHeight: number;
+  readonly fitMode: "fit" | "fill";
+  readonly zoom: number;
+  readonly targetId: SourceQualityTargetId;
+  readonly targetWidth: number;
+  readonly targetHeight: number;
+}
+
+/**
+ * Single geometry authority for one source × framing × output target.
+ * Used by assessment and verification so density math is not duplicated.
+ */
+export function measureSourceQualityTargetGeometry(
+  input: SourceQualityTargetGeometryInput,
+): SourceQualityTargetReadiness {
+  const zoom = normalizeSourceQualityZoom(input.zoom);
+  const fitMode = input.fitMode === "fit" ? "fit" : "fill";
+  const cover = coverScale(
+    input.sourceWidth,
+    input.sourceHeight,
+    input.targetWidth,
+    input.targetHeight,
+  );
+  const contain = containScale(
+    input.sourceWidth,
+    input.sourceHeight,
+    input.targetWidth,
+    input.targetHeight,
+  );
+  const baseScale = fitMode === "fit" ? contain : cover;
+  const activeScale = baseScale * zoom;
+  const sourcePixelsPerOutputPixel = 1 / activeScale;
+  const scaledWidth = input.sourceWidth * activeScale;
+  const scaledHeight = input.sourceHeight * activeScale;
+  const visibleWidth = Math.min(input.targetWidth, scaledWidth);
+  const visibleHeight = Math.min(input.targetHeight, scaledHeight);
+  const visibleArea = visibleWidth * visibleHeight;
+  const scaledSourceArea = scaledWidth * scaledHeight;
+  const retainedSourceAreaFraction = clamp01(visibleArea / scaledSourceArea);
+  const frameCoverageFraction = clamp01(
+    visibleArea / (input.targetWidth * input.targetHeight),
+  );
+  const retainedSourceRegion = Object.freeze({
+    width: visibleWidth / activeScale,
+    height: visibleHeight / activeScale,
+  });
+  const detailClass = classifySourceQualityDetail(sourcePixelsPerOutputPixel);
+  const softnessCause = resolveSoftnessCause({
+    fitMode,
+    zoom,
+    cover,
+    contain,
+    baseScale,
+    sourcePixelsPerOutputPixel,
+    sourceAspectRatio: input.sourceWidth / input.sourceHeight,
+  });
+
+  return Object.freeze({
+    targetId: input.targetId,
+    width: input.targetWidth,
+    height: input.targetHeight,
+    mayUpscale: activeScale > 1,
+    coverScale: cover,
+    containScale: contain,
+    baseScale,
+    activeScale,
+    sourcePixelsPerOutputPixel,
+    retainedSourceAreaFraction,
+    retainedSourceRegion,
+    frameCoverageFraction,
+    detailClass,
+    softnessCause,
+  } satisfies SourceQualityTargetReadiness);
+}
+
+function unknownTargetReadiness(
+  targetId: SourceQualityTargetId,
+  width: number,
+  height: number,
+): SourceQualityTargetReadiness {
+  return Object.freeze({
+    targetId,
+    width,
+    height,
+    mayUpscale: false,
+    coverScale: null,
+    containScale: null,
+    baseScale: null,
+    activeScale: null,
+    sourcePixelsPerOutputPixel: null,
+    retainedSourceAreaFraction: null,
+    retainedSourceRegion: null,
+    frameCoverageFraction: null,
+    detailClass: null,
+    softnessCause: null,
+  } satisfies SourceQualityTargetReadiness);
+}
 
 /**
  * Assess source readiness for vertical export targets under the current framing.
@@ -147,6 +285,9 @@ export function assessSourceQuality(input: {
   readonly framing: SourceQualityFramingInput;
 }): SourceQualityAssessment {
   const framingFitMode = input.framing.fitMode === "fit" ? "fit" : "fill";
+  const backgroundTreatment = normalizeSceneMediaBackgroundTreatment(
+    input.framing.backgroundTreatment,
+  );
   const zoom = normalizeSourceQualityZoom(input.framing.zoom);
   const hasMedia = mediaHasRenderableSource(input.media);
   const metrics = readMetrics(hasMedia ? input.media : null);
@@ -157,6 +298,8 @@ export function assessSourceQuality(input: {
       hasMedia: false,
       metrics,
       framingFitMode,
+      backgroundTreatment: "none",
+      authoredZoom: null,
       targets: Object.freeze([]),
       warningCodes: Object.freeze([]),
       summaryKey: "no_media" satisfies SourceQualitySummaryKey,
@@ -173,18 +316,12 @@ export function assessSourceQuality(input: {
       hasMedia: true,
       metrics,
       framingFitMode,
+      backgroundTreatment:
+        framingFitMode === "fit" ? backgroundTreatment : "none",
+      authoredZoom: zoom,
       targets: Object.freeze(
         SOURCE_QUALITY_VERTICAL_TARGETS.map((target) =>
-          Object.freeze({
-            targetId: target.id,
-            width: target.width,
-            height: target.height,
-            mayUpscale: false,
-            coverScale: null,
-            containScale: null,
-            activeScale: null,
-            retainedSourceAreaFraction: null,
-          } satisfies SourceQualityTargetReadiness),
+          unknownTargetReadiness(target.id, target.width, target.height),
         ),
       ),
       warningCodes: Object.freeze([
@@ -203,32 +340,17 @@ export function assessSourceQuality(input: {
     input.framing.rotationDeg,
   );
 
-  const targets = SOURCE_QUALITY_VERTICAL_TARGETS.map((target) => {
-    const cover = coverScale(width, height, target.width, target.height);
-    const contain = containScale(width, height, target.width, target.height);
-    const baseScale = framingFitMode === "fit" ? contain : cover;
-    const activeScale = baseScale * zoom;
-    const retained =
-      framingFitMode === "fill"
-        ? retainedAreaUpperBound(
-            width,
-            height,
-            target.width,
-            target.height,
-            activeScale,
-          )
-        : null;
-    return Object.freeze({
+  const targets = SOURCE_QUALITY_VERTICAL_TARGETS.map((target) =>
+    measureSourceQualityTargetGeometry({
+      sourceWidth: width,
+      sourceHeight: height,
+      fitMode: framingFitMode,
+      zoom,
       targetId: target.id,
-      width: target.width,
-      height: target.height,
-      mayUpscale: activeScale > 1,
-      coverScale: cover,
-      containScale: contain,
-      activeScale,
-      retainedSourceAreaFraction: retained,
-    } satisfies SourceQualityTargetReadiness);
-  });
+      targetWidth: target.width,
+      targetHeight: target.height,
+    }),
+  );
 
   const warningCodes: SourceQualityWarningCode[] = [];
   if (aspectMismatched(effective.effectiveWidth / effective.effectiveHeight)) {
@@ -279,6 +401,9 @@ export function assessSourceQuality(input: {
     hasMedia: true,
     metrics,
     framingFitMode,
+    backgroundTreatment:
+      framingFitMode === "fit" ? backgroundTreatment : "none",
+    authoredZoom: zoom,
     targets: Object.freeze(targets),
     warningCodes: Object.freeze(warningCodes),
     summaryKey,

@@ -34,6 +34,21 @@ function cloneMediaPreservingPlayback(media: SceneMedia): SceneMedia {
   return { ...media };
 }
 
+function applyBackgroundTreatmentToMedia(
+  media: SceneMedia,
+  framing: SceneMediaFraming,
+): SceneMedia {
+  if (framing.backgroundTreatment === "blurred_fill" && framing.fitMode === "fit") {
+    return { ...media, backgroundTreatment: "blurred_fill" };
+  }
+  if (media.backgroundTreatment != null) {
+    const rest = { ...media };
+    delete rest.backgroundTreatment;
+    return rest;
+  }
+  return media;
+}
+
 /**
  * Builds an undoable scene patch for framing changes.
  * Images: dual-write scene.image + scene.media.transform/fitMode.
@@ -52,11 +67,14 @@ export function buildMediaFramingPatch(
     if (!media.url?.trim()) {
       return null;
     }
-    const nextMedia: SceneMedia = {
-      ...cloneMediaPreservingPlayback(media),
-      fitMode: mapImageFitToMediaFit(nextFraming.fitMode) ?? "cover",
-      transform: framingToMediaTransform(nextFraming),
-    };
+    const nextMedia: SceneMedia = applyBackgroundTreatmentToMedia(
+      {
+        ...cloneMediaPreservingPlayback(media),
+        fitMode: mapImageFitToMediaFit(nextFraming.fitMode) ?? "cover",
+        transform: framingToMediaTransform(nextFraming),
+      },
+      nextFraming,
+    );
     return {
       patch: { media: nextMedia },
       framing: nextFraming,
@@ -86,6 +104,11 @@ export function buildMediaFramingPatch(
     return null;
   }
 
+  // Drop stale treatment when switching away from Fit+background.
+  if (nextImage.backgroundTreatment && nextFraming.backgroundTreatment !== "blurred_fill") {
+    delete (nextImage as { backgroundTreatment?: "blurred_fill" }).backgroundTreatment;
+  }
+
   const baseMedia =
     media?.type === "image"
       ? cloneMediaPreservingPlayback(media)
@@ -98,14 +121,17 @@ export function buildMediaFramingPatch(
           imageMotion: nextImage.imageMotion,
         };
 
-  const nextMedia: SceneMedia = {
-    ...baseMedia,
-    type: "image",
-    url: nextImage.url,
-    fitMode: mapImageFitToMediaFit(nextFraming.fitMode),
-    transform: framingToMediaTransform(nextFraming),
-    imageMotion: nextImage.imageMotion,
-  };
+  const nextMedia: SceneMedia = applyBackgroundTreatmentToMedia(
+    {
+      ...baseMedia,
+      type: "image",
+      url: nextImage.url,
+      fitMode: mapImageFitToMediaFit(nextFraming.fitMode),
+      transform: framingToMediaTransform(nextFraming),
+      imageMotion: nextImage.imageMotion,
+    },
+    nextFraming,
+  );
 
   return {
     patch: { image: nextImage, media: nextMedia },
@@ -128,6 +154,7 @@ export function buildResetMediaFramingPatch(
     positionY: 0,
     zoom: DEFAULT_IMAGE_SCALE,
     rotationDeg: 0,
+    backgroundTreatment: "none",
   });
 }
 
@@ -149,14 +176,17 @@ export function syncSceneMediaFramingFromImage(
   }
 
   const framing = resolveSceneMediaFraming({ ...scene, image });
-  const nextMedia: SceneMedia = {
-    ...(media?.type === "image" ? media : { type: "image", source: "legacy" as const }),
-    type: "image",
-    url: image.url,
-    fitMode: mapImageFitToMediaFit(framing.fitMode),
-    transform: framingToMediaTransform(framing),
-    imageMotion: image.imageMotion,
-  };
+  const nextMedia: SceneMedia = applyBackgroundTreatmentToMedia(
+    {
+      ...(media?.type === "image" ? media : { type: "image", source: "legacy" as const }),
+      type: "image",
+      url: image.url,
+      fitMode: mapImageFitToMediaFit(framing.fitMode),
+      transform: framingToMediaTransform(framing),
+      imageMotion: image.imageMotion,
+    },
+    framing,
+  );
 
   return {
     ...scene,

@@ -61,6 +61,7 @@ import {
   EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES,
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_MANIFEST_VERSION,
@@ -188,6 +189,14 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
         scene.engagementOverlays.length > 0,
     );
   const hasProjectedBrandSting = brandSting != null;
+  const hasProjectedBackgroundTreatment = scenes.some((scene) =>
+    scene.mediaTimeline.items.some(
+      (item) =>
+        item.media.type !== "placeholder" &&
+        item.media.backgroundTreatment === "blurred_fill" &&
+        item.media.fitMode === "fit",
+    ),
+  );
   const requiredCapabilities: ExportRendererCapabilityId[] = [];
   if (hasProjectedKeyframes || hasProjectedVisualEffect) {
     requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS);
@@ -197,6 +206,11 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   }
   if (hasProjectedBrandSting) {
     requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING);
+  }
+  if (hasProjectedBackgroundTreatment) {
+    requiredCapabilities.push(
+      EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
+    );
   }
   const hasAuthoritativeEnhancement = requiredCapabilities.length > 0;
   const capabilities = buildCapabilitySnapshot(environment);
@@ -496,6 +510,9 @@ function buildMediaManifestFromSceneMedia(
       motion,
       ...(visualAdjustments ? { visualAdjustments } : {}),
       ...(visualEffect ? { visualEffect } : {}),
+      ...(framing.backgroundTreatment === "blurred_fill" && fitMode !== "fill"
+        ? { backgroundTreatment: "blurred_fill" as const }
+        : {}),
     };
   }
 
@@ -516,6 +533,9 @@ function buildMediaManifestFromSceneMedia(
     motion,
     ...(visualAdjustments ? { visualAdjustments } : {}),
     ...(visualEffect ? { visualEffect } : {}),
+    ...(framing.backgroundTreatment === "blurred_fill" && fitMode !== "fill"
+      ? { backgroundTreatment: "blurred_fill" as const }
+      : {}),
   };
 }
 

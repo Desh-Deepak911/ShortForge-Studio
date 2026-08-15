@@ -236,6 +236,19 @@ function validateMediaShape(
     );
   }
 
+  if (
+    media.backgroundTreatment !== undefined &&
+    media.backgroundTreatment !== "blurred_fill"
+  ) {
+    issues.push(
+      issue(
+        "INVALID_MEDIA_BACKGROUND_TREATMENT",
+        `Scene "${sceneId}" ${label} backgroundTreatment must be "blurred_fill" when present.`,
+        sceneId,
+      ),
+    );
+  }
+
   for (const field of ["positionX", "positionY", "zoom", "rotationDeg"] as const) {
     if (!isFiniteNumber(media[field])) {
       issues.push(

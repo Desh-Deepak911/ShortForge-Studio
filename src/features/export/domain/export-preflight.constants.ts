@@ -95,11 +95,11 @@ export const EXPORT_WARNING_MESSAGES: Record<ExportWarningCode, string> = {
   VISUAL_PACING_METADATA_INVALID:
     "Saved Visual pacing metadata could not be read. Export will use the current sequence timing.",
   SOURCE_QUALITY_DIMENSIONS_UNKNOWN:
-    "Some media dimensions are unavailable. Export will continue using the current framing.",
+    "Source dimensions are unavailable, so quality cannot be estimated. Export is still available.",
   SOURCE_QUALITY_MAY_UPSCALE:
-    "Some media may be enlarged for this export and could look soft.",
+    "Some media may look soft at the selected resolution. Export remains available.",
   SOURCE_QUALITY_AGGRESSIVE_CROP:
-    "Some media may be heavily cropped by the current vertical framing.",
+    "Some media may be heavily cropped by the current vertical framing. Export remains available.",
   ENGAGEMENT_OVERLAY_OMITTED:
     "An engagement prompt could not fit this scene and was left out of export.",
   BRAND_STING_OMITTED:

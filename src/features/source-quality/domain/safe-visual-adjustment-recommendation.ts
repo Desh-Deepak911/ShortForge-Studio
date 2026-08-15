@@ -159,7 +159,15 @@ function improvesWarnings(
 }
 
 function framingFromAssessmentInput(
-  framing: Pick<SceneMediaFraming, "fitMode" | "positionX" | "positionY" | "zoom" | "rotationDeg">,
+  framing: Pick<
+    SceneMediaFraming,
+    | "fitMode"
+    | "positionX"
+    | "positionY"
+    | "zoom"
+    | "rotationDeg"
+    | "backgroundTreatment"
+  >,
 ): SceneMediaFraming {
   return {
     fitMode: framing.fitMode === "fit" ? "fit" : "fill",
@@ -167,6 +175,7 @@ function framingFromAssessmentInput(
     positionY: framing.positionY,
     zoom: normalizeSourceQualityZoom(framing.zoom),
     rotationDeg: framing.rotationDeg,
+    backgroundTreatment: framing.backgroundTreatment ?? "none",
   };
 }
 
@@ -180,6 +189,7 @@ function assessWithFraming(
       fitMode: framing.fitMode,
       zoom: framing.zoom,
       rotationDeg: framing.rotationDeg,
+      backgroundTreatment: framing.backgroundTreatment ?? "none",
     },
   });
 }

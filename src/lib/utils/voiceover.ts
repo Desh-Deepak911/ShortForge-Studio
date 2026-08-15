@@ -483,6 +483,14 @@ export function applyMediaFramingSettings(
     ...(updates.y !== undefined ? { positionY: updates.y } : {}),
     ...(updates.scale !== undefined ? { zoom: updates.scale } : {}),
     ...(updates.rotation !== undefined ? { rotationDeg: updates.rotation } : {}),
+    ...(updates.backgroundTreatment !== undefined
+      ? {
+          backgroundTreatment:
+            updates.backgroundTreatment === "blurred_fill"
+              ? ("blurred_fill" as const)
+              : ("none" as const),
+        }
+      : {}),
   };
 
   const result = buildMediaFramingPatch(scene, framingPatch);

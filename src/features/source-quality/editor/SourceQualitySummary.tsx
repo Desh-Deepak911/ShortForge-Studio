@@ -19,8 +19,12 @@ import { resolveSourceQualityMedia } from "../adapters/resolve-source-quality-me
 import { assessSourceQuality } from "../domain/assess-source-quality";
 import type {
   SourceQualityAssessment,
-  SourceQualityWarningCode,
+  SourceQualityTargetId,
 } from "../domain/source-quality-assessment";
+import {
+  presentSourceQualityGuidance,
+  resolveSourceQualityTargetFromExportResolution,
+} from "../domain/present-source-quality-guidance";
 import {
   recommendSafeVisualAdjustment,
   type SourceQualitySafeAdjustmentRecommendation,
@@ -42,7 +46,12 @@ export interface SourceQualitySummaryProps {
   readonly media?: SceneMedia | null;
   readonly framing?: Pick<
     SceneMediaFraming,
-    "fitMode" | "positionX" | "positionY" | "zoom" | "rotationDeg"
+    | "fitMode"
+    | "positionX"
+    | "positionY"
+    | "zoom"
+    | "rotationDeg"
+    | "backgroundTreatment"
   >;
   /**
    * Winning command media-item id paired with `media`. Must be the resolved
@@ -51,6 +60,12 @@ export interface SourceQualitySummaryProps {
    */
   readonly mediaItemId?: string | null;
   readonly mixedMediaScenesEnabled?: boolean;
+  /**
+   * Selected export target for creator-facing guidance.
+   * Defaults from `script.exportSettings.resolution` (720p/1080p).
+   * Pass `"4k"` explicitly when certifying Headless 4K guidance.
+   */
+  readonly exportTarget?: SourceQualityTargetId;
   /**
    * Optional readiness override for verification harnesses.
    * Production mounts omit this and read the shared capability snapshot.
@@ -63,51 +78,10 @@ export interface SourceQualitySummaryProps {
   };
 }
 
-const WARNING_COPY: Record<SourceQualityWarningCode, string> = {
-  SOURCE_DIMENSIONS_UNKNOWN:
-    "Source dimensions are unavailable for quality guidance.",
-  SOURCE_MAY_UPSCALE_AT_720P: "This source may look soft at 720p.",
-  SOURCE_MAY_UPSCALE_AT_1080P: "This source may look soft at 1080p.",
-  SOURCE_MAY_UPSCALE_AT_4K: "4K export may upscale this source.",
-  SOURCE_ASPECT_RATIO_MISMATCH:
-    "This source’s shape differs from the vertical frame.",
-  SOURCE_AGGRESSIVE_VERTICAL_CROP:
-    "Vertical fill may crop a large part of this source.",
-};
-
-function badgeLabel(assessment: SourceQualityAssessment): string {
-  if (!assessment.hasMedia) {
-    return "No media";
-  }
-  if (assessment.summaryKey === "unknown") {
-    return "Source details unavailable";
-  }
-  if (assessment.summaryKey === "suitable_1080p") {
-    return "Suitable for 1080p";
-  }
-  return "Quality guidance";
-}
-
-function supportingCopy(assessment: SourceQualityAssessment): string | null {
-  if (!assessment.hasMedia) {
-    return "Quality guidance will appear after media is attached.";
-  }
-  if (assessment.summaryKey === "unknown") {
-    return "Preview and export can still continue. Quality guidance will improve when dimensions are available.";
-  }
-  if (assessment.summaryKey === "suitable_1080p") {
-    return assessment.suitableFor4k
-      ? "This source can render at 1080p and 4K without upscaling under the current framing."
-      : "This source can render at 1080p without upscaling under the current framing. 4K may still upscale.";
-  }
-  const firstWarning = assessment.warningCodes.find(
-    (code) => code !== "SOURCE_DIMENSIONS_UNKNOWN",
-  );
-  if (firstWarning) {
-    return WARNING_COPY[firstWarning];
-  }
-  return "Review target readiness below. Editing and export stay available.";
-}
+const FACT_KEY_BY_LABEL: Readonly<Record<string, string>> = Object.freeze({
+  "Source dimensions": "dimensions",
+  Framing: "framing",
+});
 
 function recommendationPreviewCopy(
   recommendation: SourceQualitySafeAdjustmentRecommendation,
@@ -157,9 +131,22 @@ function recommendationPreviewCopy(
   return { lines, improvement };
 }
 
+function resolveExportTarget(
+  explicit: SourceQualityTargetId | undefined,
+  script: FootieScript | undefined,
+): SourceQualityTargetId {
+  if (explicit === "720p" || explicit === "1080p" || explicit === "4k") {
+    return explicit;
+  }
+  return resolveSourceQualityTargetFromExportResolution(
+    script?.exportSettings?.resolution,
+  );
+}
+
 /**
  * Compact source-quality summary for the Scene Inspector Media section.
  * Capability-gated and fail-closed. Adjustment actions live only in expanded Details.
+ * Guidance is advisory only — never blocks export or mutates framing.
  */
 export default function SourceQualitySummary({
   scene,
@@ -169,6 +156,7 @@ export default function SourceQualitySummary({
   framing,
   mediaItemId,
   mixedMediaScenesEnabled = false,
+  exportTarget: exportTargetProp,
   readiness,
 }: SourceQualitySummaryProps) {
   const hookReady = useVisualRetentionCapabilitiesReady();
@@ -182,7 +170,9 @@ export default function SourceQualitySummary({
   const detailsToggleRef = useRef<HTMLButtonElement>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const { assessment, recommendation, resolvedMedia, resolvedFraming } =
+  const exportTarget = resolveExportTarget(exportTargetProp, script);
+
+  const { assessment, recommendation, resolvedMedia, resolvedFraming, guidance } =
     useMemo(() => {
       const nextMedia = resolveSourceQualityMedia({ scene, media });
       const nextFraming =
@@ -199,24 +189,23 @@ export default function SourceQualitySummary({
         framing: nextFraming,
         mediaItemId,
       });
+      const nextGuidance = presentSourceQualityGuidance({
+        assessment: nextAssessment,
+        exportTarget,
+      });
       return {
         assessment: nextAssessment,
         recommendation: nextRecommendation,
         resolvedMedia: nextMedia,
         resolvedFraming: nextFraming,
+        guidance: nextGuidance,
       };
-    }, [framing, media, mediaItemId, scene]);
+    }, [exportTarget, framing, media, mediaItemId, scene]);
 
   if (!ready || !enabled) {
     return null;
   }
 
-  const label = badgeLabel(assessment);
-  const support = supportingCopy(assessment);
-  const demotingWarnings = assessment.warningCodes.filter(
-    (code) =>
-      code !== "SOURCE_MAY_UPSCALE_AT_4K" || assessment.status === "warning",
-  );
   const suggestion =
     recommendation.recommendationCodes.length > 0
       ? recommendationPreviewCopy(recommendation)
@@ -228,12 +217,23 @@ export default function SourceQualitySummary({
   const canMountSubjectAware =
     canMountControls && ready && enabled && subjectAwareEnabled;
 
+  // Prefer creator guidance suggestions; fall back to adjustment preview lines
+  // without duplicating identical text in the collapsed summary.
+  const summarySuggestions = guidance.suggestions;
+  const detailSuggestionLines = dedupeLines([
+    ...summarySuggestions,
+    ...(suggestion?.lines ?? []),
+  ]);
+
   return (
     <section
       className="mb-3 min-w-0 rounded-xl bg-background/20 px-3 py-2.5 ring-1 ring-border/30"
       data-source-quality-summary=""
       data-source-quality-status={assessment.status}
       data-source-quality-summary-key={assessment.summaryKey}
+      data-source-quality-rating={guidance.rating}
+      data-source-quality-export-target={guidance.exportTarget}
+      data-source-quality-blocks-export={guidance.blocksExport ? "true" : "false"}
       aria-labelledby={`${detailsId}-heading`}
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
@@ -247,14 +247,35 @@ export default function SourceQualitySummary({
           <p
             className="mt-1 inline-flex max-w-full items-center rounded-md bg-surface-elevated/50 px-2 py-0.5 text-[11px] font-medium text-foreground/90 ring-1 ring-border/35"
             data-source-quality-badge=""
+            data-source-quality-rating-label=""
           >
-            <span className="truncate">{label}</span>
+            <span className="truncate">{guidance.ratingLabel}</span>
           </p>
-          {support ? (
-            <p className={`${studioSubtleText} mt-1.5 text-[11px] leading-snug`}>
-              {support}
-            </p>
+          <p
+            className={`${studioSubtleText} mt-1.5 text-[11px] leading-snug`}
+            data-source-quality-explanation=""
+          >
+            {guidance.explanation}
+          </p>
+          {summarySuggestions.length > 0 ? (
+            <ul
+              className="mt-1.5 space-y-1"
+              data-source-quality-suggestions=""
+            >
+              {summarySuggestions.map((line) => (
+                <li
+                  key={line}
+                  className="text-[11px] leading-snug text-foreground/85"
+                  data-source-quality-suggestion-line=""
+                >
+                  {line}
+                </li>
+              ))}
+            </ul>
           ) : null}
+          <p className={`${studioSubtleText} mt-1.5 text-[11px] leading-snug`}>
+            Export remains available. Framing is not changed automatically.
+          </p>
         </div>
         {assessment.hasMedia ? (
           <button
@@ -281,88 +302,56 @@ export default function SourceQualitySummary({
             className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[11px] leading-snug"
             data-source-quality-facts=""
           >
-            <dt className="text-muted">Dimensions</dt>
-            <dd
-              className="min-w-0 truncate text-foreground/85"
-              data-source-quality-fact="dimensions"
-            >
-              {assessment.metrics.width != null &&
-              assessment.metrics.height != null
-                ? `${assessment.metrics.width} × ${assessment.metrics.height}`
-                : "Unavailable"}
-            </dd>
-            <dt className="text-muted">Media type</dt>
-            <dd
-              className="min-w-0 truncate text-foreground/85 capitalize"
-              data-source-quality-fact="media-type"
-            >
-              {assessment.metrics.mediaType ?? "Unavailable"}
-            </dd>
-            {assessment.metrics.mimeType ? (
-              <>
-                <dt className="text-muted">MIME</dt>
-                <dd
-                  className="min-w-0 truncate text-foreground/85"
-                  data-source-quality-fact="mime-type"
-                >
-                  {assessment.metrics.mimeType}
-                </dd>
-              </>
+            {guidance.details.map((fact) => (
+              <FactRow
+                key={fact.label}
+                label={fact.label}
+                value={fact.value}
+                factKey={FACT_KEY_BY_LABEL[fact.label]}
+              />
+            ))}
+            {assessment.metrics.mediaType ? (
+              <FactRow
+                label="Media type"
+                value={assessment.metrics.mediaType}
+                capitalize
+                factKey="media-type"
+              />
             ) : null}
-            <dt className="text-muted">Framing</dt>
-            <dd
-              className="min-w-0 truncate text-foreground/85"
-              data-source-quality-fact="framing"
-            >
-              {assessment.framingFitMode === "fill"
-                ? "Fill frame"
-                : "Fit inside frame"}
-            </dd>
+            {assessment.metrics.mimeType ? (
+              <FactRow
+                label="MIME"
+                value={assessment.metrics.mimeType}
+                factKey="mime-type"
+              />
+            ) : null}
           </dl>
-          {demotingWarnings.length > 0 ? (
-            <ul className="space-y-1" data-source-quality-warnings="">
-              {demotingWarnings.map((code) => (
-                <li
-                  key={code}
-                  className="flex gap-2 text-[11px] leading-snug text-foreground/85"
-                  data-source-quality-warning={code}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-foreground/55"
-                  />
-                  <span>{WARNING_COPY[code]}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
           {assessment.targets.length > 0 ? (
             <ul className="space-y-1" data-source-quality-targets="">
-              {assessment.targets.map((target) => (
-                <li
-                  key={target.targetId}
-                  className="text-[11px] leading-snug text-muted"
-                  data-source-quality-target={target.targetId}
-                  data-source-quality-target-upscale={
-                    target.mayUpscale ? "true" : "false"
-                  }
-                >
-                  <span className="font-medium text-foreground/80">
-                    {target.targetId === "4k"
-                      ? "4K"
-                      : target.targetId.toUpperCase()}
-                  </span>
-                  {": "}
-                  {assessment.metrics.width == null
-                    ? "dimensions unknown"
-                    : target.mayUpscale
-                      ? "may upscale"
-                      : "ready without upscale"}
-                </li>
-              ))}
+              {assessment.targets.map((target) => {
+                const targetGuidance = presentSourceQualityGuidance({
+                  assessment,
+                  exportTarget: target.targetId,
+                });
+                return (
+                  <li
+                    key={target.targetId}
+                    className="text-[11px] leading-snug text-muted"
+                    data-source-quality-target={target.targetId}
+                    data-source-quality-target-upscale={
+                      target.mayUpscale ? "true" : "false"
+                    }
+                    data-source-quality-target-rating={targetGuidance.rating}
+                  >
+                    <span className="font-medium text-foreground/80">
+                      {targetGuidance.ratingLabel}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
-          {suggestion && suggestion.lines.length > 0 ? (
+          {detailSuggestionLines.length > 0 ? (
             <div
               className="space-y-1.5"
               data-source-quality-suggestion=""
@@ -377,7 +366,7 @@ export default function SourceQualitySummary({
                 Suggested adjustment
               </p>
               <ul className="space-y-1">
-                {suggestion.lines.map((line) => (
+                {detailSuggestionLines.map((line) => (
                   <li
                     key={line}
                     className="text-[11px] leading-snug text-foreground/85"
@@ -386,7 +375,7 @@ export default function SourceQualitySummary({
                   </li>
                 ))}
               </ul>
-              {suggestion.improvement ? (
+              {suggestion?.improvement ? (
                 <p
                   className="text-[11px] leading-snug text-muted"
                   data-source-quality-suggestion-improvement=""
@@ -430,3 +419,50 @@ export default function SourceQualitySummary({
     </section>
   );
 }
+
+function FactRow({
+  label,
+  value,
+  capitalize = false,
+  factKey,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly capitalize?: boolean;
+  readonly factKey?: string;
+}) {
+  const key =
+    factKey ??
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  return (
+    <>
+      <dt className="text-muted">{label}</dt>
+      <dd
+        className={`min-w-0 truncate text-foreground/85${capitalize ? " capitalize" : ""}`}
+        data-source-quality-fact={key}
+      >
+        {value}
+      </dd>
+    </>
+  );
+}
+
+function dedupeLines(lines: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const line of lines) {
+    const key = line.trim().toLowerCase();
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(line);
+  }
+  return out;
+}
+
+/** @internal test helper — assessment shape still exported for harnesses. */
+export type { SourceQualityAssessment };

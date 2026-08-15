@@ -24,10 +24,12 @@ import {
 import type {
   SceneMediaFraming,
   SceneMediaFramingFitMode,
+  SceneMediaBackgroundTreatment,
 } from "./media-framing.types";
 import {
   MEDIA_FRAMING_POSITION_UI_MAX,
   MEDIA_FRAMING_POSITION_UI_MIN,
+  normalizeSceneMediaBackgroundTreatment,
 } from "./media-framing.types";
 
 export const DEFAULT_SCENE_MEDIA_FRAMING: SceneMediaFraming = {
@@ -36,6 +38,7 @@ export const DEFAULT_SCENE_MEDIA_FRAMING: SceneMediaFraming = {
   positionY: 0,
   zoom: DEFAULT_IMAGE_SCALE,
   rotationDeg: 0,
+  backgroundTreatment: "none",
 };
 
 function finiteOr(value: unknown, fallback: number): number {
@@ -72,23 +75,52 @@ export function framingToMediaTransform(
 
 export function framingToSceneImageFields(
   framing: SceneMediaFraming,
-): Pick<SceneImage, "fitMode" | "x" | "y" | "scale" | "rotation"> {
+): Pick<
+  SceneImage,
+  "fitMode" | "x" | "y" | "scale" | "rotation" | "backgroundTreatment"
+> {
+  const treatment = normalizeSceneMediaBackgroundTreatment(
+    framing.backgroundTreatment,
+  );
   return {
     fitMode: framing.fitMode,
     x: framing.positionX,
     y: framing.positionY,
     scale: clampSceneImageScale(framing.zoom),
     rotation: framing.rotationDeg,
+    ...(treatment === "blurred_fill" ? { backgroundTreatment: "blurred_fill" } : {}),
   };
 }
 
+function readBackgroundTreatment(input: {
+  readonly imageTreatment?: unknown;
+  readonly mediaTreatment?: unknown;
+  readonly fitMode: SceneImageFitMode;
+}): SceneMediaBackgroundTreatment {
+  // Fill never carries Fit-with-background; clear silently for safety.
+  if (input.fitMode === "fill") {
+    return "none";
+  }
+  const fromImage = normalizeSceneMediaBackgroundTreatment(input.imageTreatment);
+  if (fromImage === "blurred_fill") {
+    return "blurred_fill";
+  }
+  return normalizeSceneMediaBackgroundTreatment(input.mediaTreatment);
+}
+
 function normalizeFraming(partial: Partial<SceneMediaFraming>): SceneMediaFraming {
+  const fitMode = normalizeSceneImageFitMode(partial.fitMode);
+  const treatment = normalizeSceneMediaBackgroundTreatment(
+    partial.backgroundTreatment,
+  );
   return {
-    fitMode: normalizeSceneImageFitMode(partial.fitMode),
+    fitMode,
     positionX: finiteOr(partial.positionX, 0),
     positionY: finiteOr(partial.positionY, 0),
     zoom: clampSceneImageScale(finiteOr(partial.zoom, DEFAULT_IMAGE_SCALE)),
     rotationDeg: finiteOr(partial.rotationDeg, 0),
+    // Treatment only applies with Fit geometry.
+    backgroundTreatment: fitMode === "fit" ? treatment : "none",
   };
 }
 
@@ -109,36 +141,52 @@ export function resolveSceneMediaFraming(
 
   // Image write authority: inspector + drag dual-write image; prefer image when present.
   if (image && media?.type !== "video") {
+    const fitMode = normalizeSceneImageFitMode(image.fitMode);
     return normalizeFraming({
-      fitMode: image.fitMode,
+      fitMode,
       positionX: image.x,
       positionY: image.y,
       zoom: image.scale,
       rotationDeg: image.rotation ?? 0,
+      backgroundTreatment: readBackgroundTreatment({
+        imageTreatment: image.backgroundTreatment,
+        mediaTreatment: media?.backgroundTreatment,
+        fitMode,
+      }),
     });
   }
 
   if (media && (media.type === "video" || media.type === "image")) {
     const transform = media.transform;
+    const fitMode = mapMediaFitToImageFit(
+      media.fitMode,
+      media.type === "video" ? "fill" : DEFAULT_IMAGE_FIT_MODE,
+    );
     return normalizeFraming({
-      fitMode: mapMediaFitToImageFit(
-        media.fitMode,
-        media.type === "video" ? "fill" : DEFAULT_IMAGE_FIT_MODE,
-      ),
+      fitMode,
       positionX: transform?.x,
       positionY: transform?.y,
       zoom: transform?.scale,
       rotationDeg: transform?.rotation,
+      backgroundTreatment: readBackgroundTreatment({
+        mediaTreatment: media.backgroundTreatment,
+        fitMode,
+      }),
     });
   }
 
   if (image) {
+    const fitMode = normalizeSceneImageFitMode(image.fitMode);
     return normalizeFraming({
-      fitMode: image.fitMode,
+      fitMode,
       positionX: image.x,
       positionY: image.y,
       zoom: image.scale,
       rotationDeg: image.rotation ?? 0,
+      backgroundTreatment: readBackgroundTreatment({
+        imageTreatment: image.backgroundTreatment,
+        fitMode,
+      }),
     });
   }
 
@@ -191,6 +239,8 @@ export function mergeSceneMediaFraming(
     positionY: patch.positionY ?? current.positionY,
     zoom: patch.zoom ?? current.zoom,
     rotationDeg: patch.rotationDeg ?? current.rotationDeg,
+    backgroundTreatment:
+      patch.backgroundTreatment ?? current.backgroundTreatment,
   });
 }
 

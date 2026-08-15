@@ -1,6 +1,12 @@
 "use client";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
+import {
+  isFitWithBlurredBackgroundActive,
+  resolveMediaFramingLayerPlan,
+  resolveSceneMediaFraming,
+  scaleFitBackgroundBlurPx,
+} from "@/features/media-framing";
 import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import {
   getSceneImage,
@@ -33,6 +39,7 @@ interface SceneFrameImageProps {
 /**
  * Renders a scene image inside a clipped frame with pan/zoom/rotation transform.
  * Motion is resolved via the shared media-motion engine (preview adapter → CSS).
+ * Fit with background: blurred Fill layer under sharp Fit (same source URL).
  */
 export default function SceneFrameImage({
   scene,
@@ -54,10 +61,14 @@ export default function SceneFrameImage({
     return null;
   }
 
-  const objectFit = getSceneImageObjectFit(baseImage);
+  const framing = resolveSceneMediaFraming(scene, { media: scene.media });
+  const layerPlan = resolveMediaFramingLayerPlan(framing);
+  const fitWithBackground = isFitWithBlurredBackgroundActive(framing);
+  const objectFit = fitWithBackground
+    ? "contain"
+    : getSceneImageObjectFit(baseImage);
   const hasFrameSize = frameWidth > 0 && frameHeight > 0;
 
-  // Shared engine composes base framing × motion delta; adapter emits CSS.
   const transformStyle = hasFrameSize
     ? {
         ...resolvePreviewMediaMotionStyle({
@@ -85,6 +96,14 @@ export default function SceneFrameImage({
       targetWidth: frameWidth || 1080,
     },
   );
+  const blurPx = scaleFitBackgroundBlurPx(
+    frameWidth || 1080,
+    layerPlan.backgroundBlurPxAt1080,
+  );
+  const backgroundFilter =
+    visualFilter && visualFilter !== "none"
+      ? `${visualFilter} blur(${blurPx}px) brightness(${1 - layerPlan.backgroundDimAlpha})`
+      : `blur(${blurPx}px) brightness(${1 - layerPlan.backgroundDimAlpha})`;
 
   return (
     <div
@@ -92,17 +111,34 @@ export default function SceneFrameImage({
       className={className}
       data-scene-frame-media="image"
       data-scene-media-item-id={mediaItemId ?? undefined}
+      data-fit-with-background={fitWithBackground ? "true" : "false"}
     >
-      {/* MotionLayer + BaseMediaTransformLayer: composition owned by resolveMediaMotionState */}
-      <img
-        src={baseImage.url}
-        alt={alt}
-        draggable={false}
-        className={`absolute inset-0 h-full w-full max-w-none ${
-          objectFit === "contain" ? "object-contain" : "object-cover"
-        } ${imageClassName}`}
-        style={{ ...transformStyle, filter: visualFilter }}
-      />
+      <div className="absolute inset-0" style={transformStyle}>
+        {fitWithBackground ? (
+          <img
+            src={baseImage.url}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className={`absolute inset-0 h-full w-full max-w-none object-cover ${imageClassName}`}
+            style={{
+              filter: backgroundFilter,
+              transform: `scale(${layerPlan.backgroundCoverEdgePad})`,
+            }}
+            data-scene-frame-layer="background"
+          />
+        ) : null}
+        <img
+          src={baseImage.url}
+          alt={alt}
+          draggable={false}
+          className={`absolute inset-0 h-full w-full max-w-none ${
+            objectFit === "contain" ? "object-contain" : "object-cover"
+          } ${imageClassName}`}
+          style={{ filter: visualFilter }}
+          data-scene-frame-layer="foreground"
+        />
+      </div>
     </div>
   );
 }

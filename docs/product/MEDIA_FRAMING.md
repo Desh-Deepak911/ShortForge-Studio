@@ -25,6 +25,10 @@ Preview adapter          Export adapter
 
 Fit mapping: `fill` ↔ `cover`, `fit` ↔ `contain`.
 
+Optional presentation: `backgroundTreatment: "blurred_fill"` (Fit with background).
+Absent ≡ none. Never reinterpreted from legacy Fit alone. Geometry authority stays Fit/Fill;
+Preview/Browser/Headless share `resolveMediaFramingLayerPlan`.
+
 Pan/zoom are stored in **reference-frame units** (`1080×1920`), not viewport pixels.
 
 ## Local drag vs persisted state

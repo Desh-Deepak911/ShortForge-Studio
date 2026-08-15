@@ -19,6 +19,7 @@ import {
   EXPORT_MEDIA_MOTION_KEYFRAME_SCHEMA_VERSION,
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
 } from "./export-manifest.types";
@@ -120,14 +121,20 @@ export function validateExportManifestV5SceneMedia(
   const requiresBrandSting = required.includes(
     EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   );
+  const requiresBlurredFillBackground = required.includes(
+    EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
+  );
   if (
     required.length < 1 ||
-    (!requiresKeyframed && !requiresEngagement && !requiresBrandSting)
+    (!requiresKeyframed &&
+      !requiresEngagement &&
+      !requiresBrandSting &&
+      !requiresBlurredFillBackground)
   ) {
     issues.push({
       code: "MISSING_REQUIRED_CAPABILITY",
       message:
-        "ExportManifest v5 must require keyframed-visual-effects-v1, engagement-overlays-v1, and/or shortforge-brand-sting-v1.",
+        "ExportManifest v5 must require keyframed-visual-effects-v1, engagement-overlays-v1, shortforge-brand-sting-v1, and/or media-background-treatment-blurred-fill-v1.",
     });
   }
 
@@ -135,6 +142,7 @@ export function validateExportManifestV5SceneMedia(
   let authoritativeEffectItems = 0;
   let authoritativeEngagementScenes = 0;
   let authoritativeBrandSting = 0;
+  let authoritativeBlurredFillItems = 0;
   const sceneIds = new Set<string>();
 
   if (manifest.brandSting !== undefined) {
@@ -346,6 +354,29 @@ export function validateExportManifestV5SceneMedia(
         }
       }
 
+      if (media.backgroundTreatment !== undefined) {
+        const treatmentLocation =
+          `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media.backgroundTreatment`;
+        if (!requiresBlurredFillBackground) {
+          issues.push({
+            code: "UNSUPPORTED_MEDIA_BACKGROUND_TREATMENT",
+            message: `${treatmentLocation} requires media-background-treatment-blurred-fill-v1.`,
+          });
+        } else if (media.backgroundTreatment !== "blurred_fill") {
+          issues.push({
+            code: "INVALID_MEDIA_BACKGROUND_TREATMENT",
+            message: `${treatmentLocation} must be "blurred_fill" when present.`,
+          });
+        } else if (media.fitMode !== "fit") {
+          issues.push({
+            code: "INVALID_MEDIA_BACKGROUND_TREATMENT",
+            message: `${treatmentLocation} requires fitMode "fit".`,
+          });
+        } else {
+          authoritativeBlurredFillItems += 1;
+        }
+      }
+
       const motion = isObject(media.motion) ? media.motion : null;
       if (!motion) continue;
 
@@ -489,6 +520,14 @@ export function validateExportManifestV5SceneMedia(
       code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
       message:
         "ExportManifest v5 with shortforge-brand-sting-v1 requires a valid brandSting payload.",
+    });
+  }
+
+  if (requiresBlurredFillBackground && authoritativeBlurredFillItems < 1) {
+    issues.push({
+      code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
+      message:
+        "ExportManifest v5 with media-background-treatment-blurred-fill-v1 requires Fit media with backgroundTreatment blurred_fill.",
     });
   }
 

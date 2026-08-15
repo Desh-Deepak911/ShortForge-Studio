@@ -8,8 +8,11 @@ import {
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
   isExportManifestV4,
+  isExportManifestV5,
   type ExportEnvironmentSnapshot,
   type ExportManifestV2,
+  type ExportManifestV4,
+  type ExportManifestV5,
 } from "@/features/export/domain";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
@@ -35,6 +38,21 @@ const CAPABLE_ENV: Partial<ExportEnvironmentSnapshot> = {
 export function buildHeadlessVideoMotionReferenceFixture(input?: {
   readonly contentDurationMs?: number;
   readonly rendererProfile?: Partial<HeadlessRendererProfile>;
+  readonly sourceWidth?: number;
+  readonly sourceHeight?: number;
+  readonly fitMode?: "fit" | "fill";
+  readonly zoom?: number;
+  readonly positionX?: number;
+  readonly positionY?: number;
+  readonly sourcePattern?: "testsrc" | "smptehdbars";
+  readonly sourceDurationSec?: number;
+  readonly trimStartMs?: number;
+  /** Fit-with-background treatment — escalates frozen manifest to v5. */
+  readonly backgroundTreatment?: "blurred_fill";
+  /** Optional prebuilt source MP4 bytes (realistic-motion corpus). */
+  readonly sourceBytes?: Uint8Array;
+  /** Empty title avoids opening-title contamination in encode audits. */
+  readonly storyTitle?: string;
 }): HeadlessReferenceFixture {
   const contentDurationMs = input?.contentDurationMs ?? 6000;
   const rendererProfile: HeadlessRendererProfile = {
@@ -43,7 +61,32 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     fps: 30,
     quality: input?.rendererProfile?.quality ?? "high",
   };
-  const motion = synthesizeMotionMp4Fixture({ durationSec: 20 });
+  const sourceWidth = input?.sourceWidth ?? 320;
+  const sourceHeight = input?.sourceHeight ?? 240;
+  const sourceDurationSec = input?.sourceDurationSec ?? 20;
+  const sourceDurationMs = Math.max(1, Math.round(sourceDurationSec * 1000));
+  const trimStartMs = Math.min(
+    Math.max(0, input?.trimStartMs ?? 10_000),
+    sourceDurationMs - 1,
+  );
+  const trimEndMs = Math.min(
+    sourceDurationMs,
+    trimStartMs + Math.max(contentDurationMs, 1_000),
+  );
+  const motion = input?.sourceBytes
+    ? {
+        bytes: input.sourceBytes,
+        durationSec: sourceDurationSec,
+        width: sourceWidth,
+        height: sourceHeight,
+        fps: 30,
+      }
+    : synthesizeMotionMp4Fixture({
+        durationSec: sourceDurationSec,
+        width: sourceWidth,
+        height: sourceHeight,
+        pattern: input?.sourcePattern,
+      });
   const urls = {
     a: "https://fixture.local/headless/motion.mp4",
     b: "https://fixture.local/headless/motion.mp4",
@@ -51,15 +94,29 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     voice: "https://fixture.local/headless/voice.wav",
     music: "https://fixture.local/headless/music.wav",
   };
+  const fitMode = input?.fitMode === "fit" ? ("contain" as const) : ("cover" as const);
+  const backgroundTreatment =
+    input?.backgroundTreatment === "blurred_fill" && fitMode === "contain"
+      ? ("blurred_fill" as const)
+      : undefined;
   const videoMedia: SceneMedia = {
     type: "video",
     url: urls.a,
-    durationMs: 20_000,
-    trimStartMs: 10_000,
-    trimEndMs: 18_000,
+    mimeType: "video/mp4",
+    width: sourceWidth,
+    height: sourceHeight,
+    durationMs: sourceDurationMs,
+    trimStartMs,
+    trimEndMs,
     muted: true,
-    fitMode: "cover",
-    transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+    fitMode,
+    transform: {
+      x: input?.positionX ?? 0,
+      y: input?.positionY ?? 0,
+      scale: input?.zoom ?? 1,
+      rotation: 0,
+    },
+    ...(backgroundTreatment ? { backgroundTreatment } : {}),
   };
   const scene: FootieScene = {
     id: "video-motion-scene",
@@ -78,7 +135,7 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     },
   };
   const story = syncFootieScript({
-    title: "Headless Video Motion Reference",
+    title: input?.storyTitle ?? "Headless Video Motion Reference",
     narration: "",
     totalDuration: contentDurationMs / 1000,
     scenes: [scene],
@@ -97,17 +154,53 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
       quality: rendererProfile.quality,
     },
   });
-  if (!isExportManifestV4(manifest)) {
-    throw new Error("Expected v4 video motion manifest.");
+  if (!isExportManifestV4(manifest) && !isExportManifestV5(manifest)) {
+    throw new Error("Expected v4 or v5 video motion manifest.");
   }
-  const appliedV3 = applyHeadlessFormatToManifest(manifest, rendererProfile);
-  if (!appliedV3.ok) {
-    throw new Error(appliedV3.message);
+  if (backgroundTreatment && !isExportManifestV5(manifest)) {
+    throw new Error("Fit-with-background must freeze as ExportManifest v5.");
   }
-  const manifestV3 = appliedV3.manifest;
+  if (!backgroundTreatment && !isExportManifestV4(manifest)) {
+    throw new Error("Legacy Fit/Fill video motion fixture must freeze as v4.");
+  }
+  const appliedPrimary = applyHeadlessFormatToManifest(manifest, rendererProfile);
+  if (!appliedPrimary.ok) {
+    throw new Error(appliedPrimary.message);
+  }
+  const manifestV3 = appliedPrimary.manifest as ExportManifestV4 | ExportManifestV5;
+
+  // Companion v2 is legacy-only: strip v5 fields so older fixture consumers stay valid.
   const v2Scenes = manifestV3.scenes.map((sceneRow) => {
-    const rest = { ...sceneRow };
-    delete (rest as { mediaTransitions?: unknown }).mediaTransitions;
+    const rest = { ...sceneRow } as Record<string, unknown>;
+    delete rest.mediaTransitions;
+    delete rest.engagementOverlays;
+    if (rest.media && typeof rest.media === "object") {
+      const media = { ...(rest.media as Record<string, unknown>) };
+      delete media.backgroundTreatment;
+      delete media.visualEffect;
+      rest.media = media;
+    }
+    if (
+      rest.mediaTimeline &&
+      typeof rest.mediaTimeline === "object" &&
+      Array.isArray((rest.mediaTimeline as { items?: unknown }).items)
+    ) {
+      const timeline = {
+        ...(rest.mediaTimeline as { version: number; items: unknown[] }),
+      };
+      timeline.items = timeline.items.map((item) => {
+        if (!item || typeof item !== "object") return item;
+        const row = { ...(item as Record<string, unknown>) };
+        if (row.media && typeof row.media === "object") {
+          const media = { ...(row.media as Record<string, unknown>) };
+          delete media.backgroundTreatment;
+          delete media.visualEffect;
+          row.media = media;
+        }
+        return row;
+      });
+      rest.mediaTimeline = timeline;
+    }
     return rest;
   });
   const v2Draft = {
@@ -116,6 +209,8 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     rendererContractVersion: EXPORT_RENDERER_CONTRACT_V2,
     scenes: v2Scenes,
   } as unknown as Omit<ExportManifestV2, "fingerprint">;
+  delete (v2Draft as { requiredCapabilities?: unknown }).requiredCapabilities;
+  delete (v2Draft as { brandSting?: unknown }).brandSting;
   const appliedV2 = applyHeadlessFormatToManifest(
     {
       ...v2Draft,
@@ -136,6 +231,7 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     manifestV2: appliedV2.manifest,
     rendererProfile,
     assetBytesByUrl,
+    assetMimeByUrl: new Map([[urls.a, "video/mp4"]]),
     voiceBytes: null,
     musicBytes: null,
     urls,

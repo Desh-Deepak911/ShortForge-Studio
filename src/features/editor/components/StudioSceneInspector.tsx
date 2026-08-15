@@ -1010,6 +1010,14 @@ export default function StudioSceneInspector({
                           ...(patch.fitMode !== undefined
                             ? { fitMode: patch.fitMode }
                             : {}),
+                          ...(patch.backgroundTreatment !== undefined
+                            ? {
+                                backgroundTreatment:
+                                  patch.backgroundTreatment === "blurred_fill"
+                                    ? "blurred_fill"
+                                    : null,
+                              }
+                            : {}),
                           ...(patch.positionX !== undefined
                             ? { x: patch.positionX }
                             : {}),
@@ -1122,11 +1130,23 @@ export default function StudioSceneInspector({
                       positionY={sceneImage.y}
                       rotationDeg={sceneImage.rotation ?? 0}
                       fitMode={sceneImage.fitMode}
+                      backgroundTreatment={sceneImage.backgroundTreatment}
                       imageMotion={sceneImage.imageMotion}
                       onScaleChange={(scale) =>
                         handleImageTransformChange({ scale })
                       }
                       onFitModeChange={handleFitModeChange}
+                      onPresentationChange={({ fitMode, backgroundTreatment }) =>
+                        handleImageTransformChange({
+                          fitMode,
+                          backgroundTreatment,
+                        })
+                      }
+                      onBackgroundTreatmentChange={(treatment) =>
+                        handleImageTransformChange({
+                          backgroundTreatment: treatment,
+                        })
+                      }
                       onPositionChange={(position) =>
                         handleImageTransformChange(position)
                       }

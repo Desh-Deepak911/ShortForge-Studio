@@ -1014,7 +1014,7 @@ async function main(): Promise<void> {
         readiness: { ready: true, enabled: true },
       }),
     );
-    assert.match(known, /Suitable for 1080p/);
+    assert.match(known, /Excellent for 1080p/);
 
     const prior = renderToStaticMarkup(
       createElement(SourceQualitySummary, {
@@ -1023,13 +1023,14 @@ async function main(): Promise<void> {
         readiness: { ready: true, enabled: true },
       }),
     );
-    assert.match(prior, /Suitable for 1080p/);
+    assert.match(prior, /Excellent for 1080p/);
 
     const summarySrc = readSrc(
       "src/features/source-quality/editor/SourceQualitySummary.tsx",
     );
     assert.match(summarySrc, /data-source-quality-facts/);
-    assert.match(summarySrc, /data-source-quality-fact="dimensions"/);
+    assert.match(summarySrc, /"Source dimensions":\s*"dimensions"/);
+    assert.match(summarySrc, /data-source-quality-fact=\{key\}/);
     assert.match(summarySrc, /No changes are applied automatically/);
     assert.doesNotMatch(summarySrc, /buildMediaFramingPatch/);
 

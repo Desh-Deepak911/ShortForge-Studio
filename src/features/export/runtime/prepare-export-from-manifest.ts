@@ -6,17 +6,20 @@
 import {
   type ExportCaptionManifest,
   type ExportManifest,
-  type ExportMediaManifest,
-  type ExportMediaMotionManifest,
   type ExportSceneManifest,
   isExportManifestV5,
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
+  EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
 } from "@/features/export/domain/export-manifest.types";
 import { assertExportManifest as assertExportManifestAuthority } from "@/features/export/domain/validate-export-manifest";
-import type { SceneImage, SceneMedia, SceneMediaMotion, SceneType } from "@/features/story/types";
-import type { MediaMotionEasing } from "@/features/media-motion";
+import type { SceneImage, SceneMedia, SceneType } from "@/features/story/types";
+
+import {
+  hydrateExportDrawSceneImage,
+  hydrateExportDrawSceneMedia,
+} from "./hydrate-export-draw-media";
 
 /**
  * Frozen draw DTO synthesized from ExportManifest only.
@@ -49,6 +52,8 @@ export interface ExportRenderPlan {
   readonly keyframedVisualEffectsEnabled: boolean;
   readonly engagementOverlaysEnabled: boolean;
   readonly shortForgeBrandStingEnabled: boolean;
+  /** Fit-with-background draw enablement — requires v5 capability. */
+  readonly fitWithBlurredBackgroundEnabled: boolean;
 }
 
 /**
@@ -61,8 +66,14 @@ export function prepareExportFromManifest(
 ): ExportRenderPlan {
   assertExportManifest(manifest);
 
+  const fitWithBlurredBackgroundEnabled =
+    isExportManifestV5(manifest) &&
+    manifest.requiredCapabilities.includes(
+      EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
+    );
+
   const scenes = manifest.scenes.map((scene) =>
-    toExportDrawScene(scene, manifest.captions),
+    toExportDrawScene(scene, manifest.captions, fitWithBlurredBackgroundEnabled),
   );
   const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
 
@@ -86,6 +97,7 @@ export function prepareExportFromManifest(
       manifest.requiredCapabilities.includes(
         EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
       ),
+    fitWithBlurredBackgroundEnabled,
   };
 }
 
@@ -102,11 +114,18 @@ export function assertExportManifestV2(manifest: ExportManifest): void {
 function toExportDrawScene(
   scene: ExportSceneManifest,
   captions: readonly ExportCaptionManifest[],
+  fitWithBlurredBackgroundEnabled: boolean,
 ): ExportDrawScene {
   const sceneCaptions = captions.filter((caption) => caption.sceneId === scene.id);
   const text = sceneCaptions.map((caption) => caption.text).join(" ").trim();
-  const media = toSceneMedia(scene.media);
-  const image = toSceneImage(scene.media);
+  const media = hydrateExportDrawSceneMedia(
+    scene.media,
+    fitWithBlurredBackgroundEnabled,
+  );
+  const image = hydrateExportDrawSceneImage(
+    scene.media,
+    fitWithBlurredBackgroundEnabled,
+  );
 
   return {
     id: scene.id,
@@ -122,101 +141,4 @@ function toExportDrawScene(
     ...(image ? { image } : {}),
     manifestScene: scene,
   };
-}
-
-function toSceneMedia(media: ExportMediaManifest): SceneMedia {
-  if (media.type === "placeholder") {
-    return { type: "placeholder" };
-  }
-
-  const motion = toSceneMediaMotion(media.motion);
-  const transform = {
-    x: media.positionX,
-    y: media.positionY,
-    scale: media.zoom,
-    rotation: media.rotationDeg,
-  };
-  const fitMode = media.fitMode === "fit" ? ("contain" as const) : ("cover" as const);
-
-  if (media.type === "image") {
-    return {
-      type: "image",
-      url: media.source,
-      source: "upload",
-      fitMode,
-      transform,
-      ...(motion ? { motion } : {}),
-      ...(media.visualAdjustments
-        ? { visualAdjustments: media.visualAdjustments }
-        : {}),
-      ...(media.visualEffect ? { visualEffect: media.visualEffect } : {}),
-    };
-  }
-
-  return {
-    type: "video",
-    url: media.source,
-    source: "upload",
-    durationMs: media.sourceDurationMs,
-    trimStartMs: media.trimStartMs,
-    trimEndMs: media.trimEndMs,
-    fitMode,
-    transform,
-    muted: true,
-    ...(motion ? { motion } : {}),
-    ...(media.visualAdjustments
-      ? { visualAdjustments: media.visualAdjustments }
-      : {}),
-    ...(media.visualEffect ? { visualEffect: media.visualEffect } : {}),
-  };
-}
-
-function toSceneImage(media: ExportMediaManifest): SceneImage | undefined {
-  if (media.type === "placeholder") {
-    return undefined;
-  }
-  return {
-    url: media.source,
-    scale: media.zoom,
-    x: media.positionX,
-    y: media.positionY,
-    rotation: media.rotationDeg,
-    fitMode: media.fitMode,
-  };
-}
-
-function toSceneMediaMotion(
-  motion: ExportMediaMotionManifest | null,
-): SceneMediaMotion | undefined {
-  if (!motion) {
-    return undefined;
-  }
-  return {
-    version: 1,
-    enabled: motion.enabled,
-    presetId: motion.presetId,
-    easing: normalizeEasing(motion.easing),
-    intensity: motion.intensity,
-    ...(motion.keyframes
-      ? {
-          keyframes: motion.keyframes.map((frame) => ({
-            ...frame,
-            easing: normalizeEasing(frame.easing),
-          })),
-        }
-      : {}),
-  };
-}
-
-function normalizeEasing(value: string): MediaMotionEasing {
-  const allowed: MediaMotionEasing[] = [
-    "linear",
-    "ease-in",
-    "ease-out",
-    "ease-in-out",
-  ];
-  const normalized = value.replace(/_/g, "-");
-  return (allowed.includes(normalized as MediaMotionEasing)
-    ? normalized
-    : "linear") as MediaMotionEasing;
 }

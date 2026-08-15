@@ -110,6 +110,15 @@ export function validateExportManifestV4SceneMedia(
       }
       if (
         contract.version === EXPORT_MANIFEST_VERSION &&
+        scene.media.backgroundTreatment !== undefined
+      ) {
+        issues.push({
+          code: "UNSUPPORTED_MEDIA_BACKGROUND_TREATMENT",
+          message: `scenes[${sceneIndex}].media must not include backgroundTreatment on ExportManifest v4.`,
+        });
+      }
+      if (
+        contract.version === EXPORT_MANIFEST_VERSION &&
         scene.engagementOverlays !== undefined
       ) {
         issues.push({
@@ -149,6 +158,15 @@ export function validateExportManifestV4SceneMedia(
           issues.push({
             code: "UNSUPPORTED_MEDIA_VISUAL_EFFECT",
             message: `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media must not include visualEffect on ExportManifest v4.`,
+          });
+        }
+        if (
+          contract.version === EXPORT_MANIFEST_VERSION &&
+          media.backgroundTreatment !== undefined
+        ) {
+          issues.push({
+            code: "UNSUPPORTED_MEDIA_BACKGROUND_TREATMENT",
+            message: `scenes[${sceneIndex}].mediaTimeline.items[${itemIndex}].media must not include backgroundTreatment on ExportManifest v4.`,
           });
         }
       }

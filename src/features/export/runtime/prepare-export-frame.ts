@@ -130,6 +130,7 @@ export async function prepareExportFrame(
         intraSceneTransition: null,
         branding: manifest.branding,
         storyTitle: manifest.project.storyTitle,
+        contentDurationMs: manifest.project.contentDurationMs,
         brandSting: brandStingFrame,
       },
       preparedByMediaKey: new Map(),
@@ -184,7 +185,9 @@ export async function prepareExportFrame(
         Math.min(visualTimeMs - peer.startMs, peer.durationMs),
       );
       const peerActive = resolveExportActiveSceneMediaFrame(peer, peerElapsed);
-      const peerActiveScene = buildActiveExportDrawScene(peerDraw, peerActive);
+      const peerActiveScene = buildActiveExportDrawScene(peerDraw, peerActive, {
+        fitWithBlurredBackgroundEnabled: plan.fitWithBlurredBackgroundEnabled,
+      });
       context.cancellation.throwIfCancelled();
       const prepared = await prepareExportSceneMediaFrame(
         context.mediaCache,
@@ -229,8 +232,12 @@ export async function prepareExportFrame(
         holdingFinalFrame: false,
       };
 
-      const fromDrawScene = buildActiveExportDrawScene(drawScene, fromActive);
-      const toDrawScene = buildActiveExportDrawScene(drawScene, toActive);
+      const fromDrawScene = buildActiveExportDrawScene(drawScene, fromActive, {
+        fitWithBlurredBackgroundEnabled: plan.fitWithBlurredBackgroundEnabled,
+      });
+      const toDrawScene = buildActiveExportDrawScene(drawScene, toActive, {
+        fitWithBlurredBackgroundEnabled: plan.fitWithBlurredBackgroundEnabled,
+      });
       const fromMediaKey = buildExportMediaCacheKey(
         drawScene.id,
         resolved.fromItem.id,
@@ -312,7 +319,9 @@ export async function prepareExportFrame(
   }
 
   if (!transition && !intraSceneTransition) {
-    const primaryScene = buildActiveExportDrawScene(drawScene, active);
+    const primaryScene = buildActiveExportDrawScene(drawScene, active, {
+      fitWithBlurredBackgroundEnabled: plan.fitWithBlurredBackgroundEnabled,
+    });
     context.cancellation.throwIfCancelled();
     const primary = await prepareExportSceneMediaFrame(
       context.mediaCache,
@@ -346,6 +355,7 @@ export async function prepareExportFrame(
       intraSceneTransition,
       branding: manifest.branding,
       storyTitle: manifest.project.storyTitle,
+      contentDurationMs: manifest.project.contentDurationMs,
       brandSting: null,
     },
     preparedByMediaKey,

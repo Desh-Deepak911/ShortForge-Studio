@@ -513,6 +513,9 @@ export default function VideoPreview({
           sceneDurationMs={sceneDurationMs}
           isPlaying={playbackActive}
           mixedMediaScenesEnabled={mixedMediaScenesEnabled}
+          contentTimeMs={currentTimeMs}
+          contentDurationMs={masterTimeline?.contentEndMs ?? 0}
+          watermarkEnabled={!brandStingActive}
           overlay={
             brandStingActive && script ? (
               <BrandStingPreview
@@ -549,9 +552,7 @@ export default function VideoPreview({
                       previewSceneTiming.captionTooShortForEffect
                     }
                     draggable={previewInteraction.allowCaptionDrag}
-                    allowPointerEvents={
-                      previewInteraction.allowCaptionPointerEvents
-                    }
+                    allowPointerEvents={previewInteraction.allowCaptionPointerEvents}
                     onOffsetCommit={handleCaptionOffsetCommit}
                     onResetLayout={handleCaptionLayoutReset}
                     className={captionOverlayClassName}
@@ -563,9 +564,7 @@ export default function VideoPreview({
                     script={script}
                     sceneIndex={previewFrame.sceneIndex}
                     draggable={previewInteraction.allowCaptionDrag}
-                    allowPointerEvents={
-                      previewInteraction.allowCaptionPointerEvents
-                    }
+                    allowPointerEvents={previewInteraction.allowCaptionPointerEvents}
                     onOffsetCommit={handleCaptionOffsetCommit}
                     onResetLayout={handleCaptionLayoutReset}
                     className={captionOverlayClassName}

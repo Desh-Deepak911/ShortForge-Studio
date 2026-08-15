@@ -89,6 +89,7 @@ import {
 import { resolveTimelineTransitionOverlay } from "@/features/timeline-intelligence/resolve-timeline-transition-overlay.utils";
 import type { TimelineTransitionOverlay } from "@/features/timeline-intelligence/resolve-timeline-transition-overlay.utils";
 import {
+  resolveMasterTimelineContentEndMs,
   resolveTimelineFrameCount,
   resolveTimelineFrameSampleTimeMs,
   resolveTimelineSceneFrame,
@@ -99,6 +100,15 @@ import {
   getExportSceneCaptionLines,
   normalizeCaptionMode,
 } from "@/features/story/utils";
+import { resolveExportCaptionStyle } from "@/features/caption-style";
+import {
+  applyLegibilityTextShadow,
+  clearLegibilityTextShadow,
+  drawLegibilityCaptionScrimIfNeeded,
+  drawLegibilityLocalScrim,
+  mapCaptionAnchorToLegibilityPlacement,
+  resolveLegibilityLayerPlan,
+} from "@/features/legibility-layer";
 
 function assertBrowserExportEnvironment(): void {
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -349,23 +359,70 @@ function drawSceneFrame(
     );
   }
 
-  // Gradient overlay for text legibility.
-  const overlay = ctx.createLinearGradient(0, 0, 0, height);
-  overlay.addColorStop(0, "rgba(0,0,0,0.60)");
-  overlay.addColorStop(0.35, "rgba(0,0,0,0.15)");
-  overlay.addColorStop(1, "rgba(0,0,0,0.90)");
-  ctx.fillStyle = overlay;
-  ctx.fillRect(0, 0, width, height);
+  // Local title / caption / branding treatments — never a permanent full-frame darken.
+  const suppressCaptionOverlays = Boolean(transitionOverlay);
+  const captionMode = normalizeCaptionMode(scene.captionMode);
+  const captionLines =
+    captionMode === "generated"
+      ? getExportSceneCaptionLines(scene, timing).filter(
+          (line) => !isTransitionVideoContent(line),
+        )
+      : [];
+  const hasSubtitleCaption =
+    captionMode === "subtitles" && Boolean(subtitleDisplay?.activeChunk?.trim());
+  const hasGeneratedCaption =
+    captionMode === "generated" && captionLines.length > 0;
+  const hasActiveCaption =
+    !suppressCaptionOverlays && (hasSubtitleCaption || hasGeneratedCaption);
 
-  // ── Branding ───────────────────────────────────────────────────────────────
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = `bold ${36 * scale}px Arial, Helvetica, sans-serif`;
-  ctx.fillText("FOOTIEBITZ", padX, 116 * scale);
+  const captionStyleMeta = resolveExportCaptionStyle(scene, script);
+  const captionPlacement = hasActiveCaption
+    ? mapCaptionAnchorToLegibilityPlacement(
+        scene.captionLayout?.anchor ?? "bottom_center",
+      )
+    : "none";
 
-  // ── Title ──────────────────────────────────────────────────────────────────
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `600 ${48 * scale}px Arial, Helvetica, sans-serif`;
-  wrapText(ctx, script.title, padX, titleY, width - padX * 2, 58 * scale);
+  const legibilityPlan = resolveLegibilityLayerPlan({
+    absoluteContentTimeMs: visualTimeMs,
+    contentDurationMs: resolveMasterTimelineContentEndMs(masterTimeline),
+    storyTitle: script.title,
+    hasActiveCaption,
+    captionPlacement,
+    captionStyleBackgroundEnabled:
+      captionStyleMeta.resolvedStyle.backgroundEnabled === true,
+    captionStyleBackgroundOpacity:
+      captionStyleMeta.resolvedStyle.backgroundOpacity ?? 0,
+    watermarkEnabled: true,
+    suppressCaptionOverlays,
+    frameWidth: width,
+    frameHeight: height,
+  });
+
+  drawLegibilityCaptionScrimIfNeeded(ctx, legibilityPlan);
+
+  if (legibilityPlan.branding.enabled) {
+    applyLegibilityTextShadow(ctx, scale);
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = `bold ${36 * scale}px Arial, Helvetica, sans-serif`;
+    ctx.fillText("FOOTIEBITZ", padX, 116 * scale);
+    clearLegibilityTextShadow(ctx);
+  }
+
+  if (legibilityPlan.title.visible) {
+    drawLegibilityLocalScrim(
+      ctx,
+      legibilityPlan.title.region,
+      legibilityPlan.title.opacity,
+    );
+    ctx.save();
+    ctx.globalAlpha = legibilityPlan.title.opacity;
+    applyLegibilityTextShadow(ctx, scale);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `600 ${48 * scale}px Arial, Helvetica, sans-serif`;
+    wrapText(ctx, script.title, padX, titleY, width - padX * 2, 58 * scale);
+    clearLegibilityTextShadow(ctx);
+    ctx.restore();
+  }
 
   // ── Scene type label on placeholder (no media) ─────────────────────────────
   if (
@@ -382,13 +439,11 @@ function drawSceneFrame(
 
   // ── On-screen caption (generated or timed narration subtitles) ───────────
   // Hidden during transition overlay — matches preview behavior.
-  if (transitionOverlay) {
+  if (suppressCaptionOverlays) {
     return;
   }
 
-  const captionTiming = timing;
-
-  if (normalizeCaptionMode(scene.captionMode) === "subtitles") {
+  if (captionMode === "subtitles") {
     if (subtitleDisplay) {
       drawExportSubtitlesCaption({
         ctx,
@@ -400,13 +455,8 @@ function drawSceneFrame(
         script,
       });
     }
-  } else {
-    const captionLines = getExportSceneCaptionLines(scene, captionTiming).filter(
-      (line) => !isTransitionVideoContent(line),
-    );
-    if (captionLines.length > 0) {
-      drawExportGeneratedCaption(ctx, captionLines, width, height, scale, scene, script);
-    }
+  } else if (hasGeneratedCaption) {
+    drawExportGeneratedCaption(ctx, captionLines, width, height, scale, scene, script);
   }
 }
 

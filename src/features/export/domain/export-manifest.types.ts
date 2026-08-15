@@ -26,7 +26,8 @@ export const EXPORT_RENDERER_CONTRACT_V5 = "9E";
 export type ExportRendererCapabilityId =
   | "keyframed-visual-effects-v1"
   | "engagement-overlays-v1"
-  | "shortforge-brand-sting-v1";
+  | "shortforge-brand-sting-v1"
+  | "media-background-treatment-blurred-fill-v1";
 
 export const EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS =
   "keyframed-visual-effects-v1" as const satisfies ExportRendererCapabilityId;
@@ -37,6 +38,9 @@ export const EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS =
 export const EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING =
   "shortforge-brand-sting-v1" as const satisfies ExportRendererCapabilityId;
 
+export const EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL =
+  "media-background-treatment-blurred-fill-v1" as const satisfies ExportRendererCapabilityId;
+
 /**
  * Browser renderer implementation-owned capability advertisement.
  * Independent of any manifest.requiredCapabilities — never mirror requirements.
@@ -45,6 +49,7 @@ export const EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES = Object.freeze([
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
+  EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
 ] as const satisfies readonly ExportRendererCapabilityId[]);
 
 /**
@@ -168,6 +173,11 @@ export interface ExportImageMediaManifest {
   readonly motion: ExportMediaMotionManifest | null;
   readonly visualAdjustments?: ExportMediaVisualAdjustmentsManifest;
   readonly visualEffect?: ExportMediaVisualEffectManifest;
+  /**
+   * Optional Fit presentation. Absent ≡ none (legacy Fit unchanged).
+   * Only meaningful when fitMode === "fit".
+   */
+  readonly backgroundTreatment?: "blurred_fill";
 }
 
 export interface ExportVideoMediaManifest {
@@ -186,6 +196,11 @@ export interface ExportVideoMediaManifest {
   readonly motion: ExportMediaMotionManifest | null;
   readonly visualAdjustments?: ExportMediaVisualAdjustmentsManifest;
   readonly visualEffect?: ExportMediaVisualEffectManifest;
+  /**
+   * Optional Fit presentation. Absent ≡ none (legacy Fit unchanged).
+   * Only meaningful when fitMode === "fit".
+   */
+  readonly backgroundTreatment?: "blurred_fill";
 }
 
 export interface ExportPlaceholderMediaManifest {

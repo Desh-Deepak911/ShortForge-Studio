@@ -70,6 +70,11 @@ export type SceneImageTransformPatch = Partial<
   Pick<SceneImage, "scale" | "x" | "y" | "rotation" | "fitMode">
 > & {
   imageMotion?: Partial<SceneImageMotion>;
+  /**
+   * Fit-with-background persistence.
+   * `"blurred_fill"` enables; `null` clears to legacy Fit/Fill.
+   */
+  backgroundTreatment?: "blurred_fill" | null;
 };
 
 /** Default image motion values for newly attached scene images. */
@@ -255,15 +260,20 @@ export function normalizeSceneImage(image: unknown, legacyUrl?: string): SceneIm
 
     const defaults = getDefaultImageTransform();
 
-    return {
+    const fitMode = normalizeSceneImageFitMode(record.fitMode ?? defaults.fitMode);
+    const normalized: SceneImage = {
       url,
       scale: clampSceneImageScale(normalizeNumber(record.scale, defaults.scale)),
       x: normalizeNumber(record.x, defaults.x),
       y: normalizeNumber(record.y, defaults.y),
       rotation: normalizeNumber(record.rotation, 0),
-      fitMode: normalizeSceneImageFitMode(record.fitMode ?? defaults.fitMode),
+      fitMode,
       imageMotion: normalizeSceneImageMotion(record.imageMotion),
     };
+    if (fitMode === "fit" && record.backgroundTreatment === "blurred_fill") {
+      normalized.backgroundTreatment = "blurred_fill";
+    }
+    return normalized;
   }
 
   if (typeof legacyUrl === "string") {
@@ -416,6 +426,11 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
     normalized.fitMode = fitMode;
   }
 
+  // Additive Fit presentation — absent/unknown ≡ none (legacy Fit unchanged).
+  if (record.backgroundTreatment === "blurred_fill" && fitMode !== "cover") {
+    normalized.backgroundTreatment = "blurred_fill";
+  }
+
   const transform = normalizeSceneMediaTransform(record.transform);
   if (transform) {
     normalized.transform = transform;
@@ -520,7 +535,7 @@ export function normalizeSceneMedia(media: unknown): SceneMedia | undefined {
 }
 
 function mapLegacySceneImageToSceneMedia(image: SceneImage): SceneMedia {
-  return {
+  const media: SceneMedia = {
     type: "image",
     url: image.url,
     source: "legacy",
@@ -533,6 +548,13 @@ function mapLegacySceneImageToSceneMedia(image: SceneImage): SceneMedia {
     },
     imageMotion: normalizeSceneImageMotion(image.imageMotion),
   };
+  if (
+    image.backgroundTreatment === "blurred_fill" &&
+    normalizeSceneImageFitMode(image.fitMode) === "fit"
+  ) {
+    media.backgroundTreatment = "blurred_fill";
+  }
+  return media;
 }
 
 /**
@@ -644,11 +666,15 @@ export function patchSceneImageTransform(
 
   const { imageMotion: imageMotionPatch, ...transformPatch } = patch;
 
-  return {
+  const next: SceneImage = {
     ...current,
-    ...transformPatch,
     ...(transformPatch.scale !== undefined
       ? { scale: clampSceneImageScale(transformPatch.scale) }
+      : {}),
+    ...(transformPatch.x !== undefined ? { x: transformPatch.x } : {}),
+    ...(transformPatch.y !== undefined ? { y: transformPatch.y } : {}),
+    ...(transformPatch.rotation !== undefined
+      ? { rotation: transformPatch.rotation }
       : {}),
     ...(transformPatch.fitMode !== undefined
       ? { fitMode: normalizeSceneImageFitMode(transformPatch.fitMode) }
@@ -662,6 +688,14 @@ export function patchSceneImageTransform(
         }
       : {}),
   };
+
+  if (transformPatch.backgroundTreatment === "blurred_fill") {
+    next.backgroundTreatment = "blurred_fill";
+  } else if (transformPatch.backgroundTreatment === null) {
+    delete next.backgroundTreatment;
+  }
+
+  return next;
 }
 
 /** Adds a screen-space drag delta to stored reference-space pan values. */

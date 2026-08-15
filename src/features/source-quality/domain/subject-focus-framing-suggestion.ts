@@ -279,6 +279,7 @@ function warningWorsened(
       fitMode: current.fitMode,
       zoom: current.zoom,
       rotationDeg: current.rotationDeg,
+      backgroundTreatment: "none",
     },
   });
   const after = assessSourceQuality({
@@ -287,6 +288,7 @@ function warningWorsened(
       fitMode: projected.fitMode,
       zoom: projected.zoom,
       rotationDeg: projected.rotationDeg,
+      backgroundTreatment: "none",
     },
   });
   const riskCodes = [

@@ -3,7 +3,13 @@
 import { useEffect, useRef } from "react";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
-import { resolveSceneMediaFraming } from "@/features/media-framing";
+import { resolveVideoBackgroundPaintMode } from "@/features/editor/preview/video-background-paint-loop";
+import {
+  isFitWithBlurredBackgroundActive,
+  resolveMediaFramingLayerPlan,
+  resolveSceneMediaFraming,
+  scaleFitBackgroundBlurPx,
+} from "@/features/media-framing";
 import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import {
   resolvePreviewVideoClipTime,
@@ -50,12 +56,88 @@ interface SceneFrameVideoProps {
 
 function resolveVideoObjectFit(media: SceneMedia): "cover" | "contain" {
   const framing = resolveSceneMediaFraming({ media }, { media });
+  if (isFitWithBlurredBackgroundActive(framing)) {
+    return "contain";
+  }
   return framing.fitMode === "fit" ? "contain" : "cover";
+}
+
+/**
+ * Draw blurred Fill background from the same decoded <video> element.
+ * Never creates a second video player — samples the foreground element.
+ */
+function paintVideoBackground(
+  canvas: HTMLCanvasElement,
+  video: HTMLVideoElement,
+  options: {
+    readonly blurPx: number;
+    readonly dimAlpha: number;
+    readonly edgePad: number;
+    readonly visualFilter: string;
+  },
+): void {
+  const width = canvas.width;
+  const height = canvas.height;
+  if (width <= 0 || height <= 0) {
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+
+  const sourceWidth = video.videoWidth || width;
+  const sourceHeight = video.videoHeight || height;
+  if (sourceWidth <= 0 || sourceHeight <= 0) {
+    return;
+  }
+
+  const coverScale =
+    Math.max(width / sourceWidth, height / sourceHeight) * options.edgePad;
+  const drawWidth = sourceWidth * coverScale;
+  const drawHeight = sourceHeight * coverScale;
+
+  ctx.save();
+  ctx.clearRect(0, 0, width, height);
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) {
+    ctx.imageSmoothingQuality = "high";
+  }
+
+  const blurFilter = `blur(${options.blurPx}px)`;
+  const composed =
+    options.visualFilter && options.visualFilter !== "none"
+      ? `${options.visualFilter} ${blurFilter}`
+      : blurFilter;
+
+  try {
+    ctx.filter = composed;
+    if (typeof ctx.filter === "string" && !ctx.filter.includes("blur")) {
+      ctx.filter = options.visualFilter || "none";
+    }
+  } catch {
+    ctx.filter = options.visualFilter || "none";
+  }
+
+  ctx.drawImage(
+    video,
+    (width - drawWidth) / 2,
+    (height - drawHeight) / 2,
+    drawWidth,
+    drawHeight,
+  );
+
+  ctx.filter = "none";
+  ctx.globalAlpha = options.dimAlpha;
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
 }
 
 /**
  * Renders a muted scene video clip inside the preview phone frame.
  * Framing uses the shared resolver + motion adapter; playback/seek/mute unchanged.
+ * Fit with background paints a blurred Fill canvas from the same video element.
  */
 export default function SceneFrameVideo({
   media,
@@ -73,8 +155,10 @@ export default function SceneFrameVideo({
   mediaItemId,
 }: SceneFrameVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
   const seekQueueRef = useRef(createTrimPreviewSeekQueue());
   const rafRef = useRef<number | null>(null);
+  const bgRafRef = useRef<number | null>(null);
   const { ref: containerRef, width: frameWidth, height: frameHeight } =
     useFrameSize<HTMLDivElement>();
 
@@ -83,6 +167,13 @@ export default function SceneFrameVideo({
   const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
 
   const url = media.url?.trim();
+  const framing = resolveSceneMediaFraming(
+    scene ?? { media },
+    { media },
+  );
+  const layerPlan = resolveMediaFramingLayerPlan(framing);
+  const fitWithBackground = isFitWithBlurredBackgroundActive(framing);
+
   const clipTime = resolvePreviewVideoClipTime({
     sceneElapsedMs,
     trimStartMs: media.trimStartMs,
@@ -199,6 +290,122 @@ export default function SceneFrameVideo({
     };
   }, []);
 
+  // Paint blurred Fill background from the same video element (timestamp parity).
+  // Lifecycle: one loop per active video; cancelled on unmount, inactive, hidden,
+  // mode change, or pause (paused paints once; seek triggers a fresh once-paint).
+  useEffect(() => {
+    if (!fitWithBackground) {
+      if (bgRafRef.current != null) {
+        cancelAnimationFrame(bgRafRef.current);
+        bgRafRef.current = null;
+      }
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = backgroundCanvasRef.current;
+    if (!video || !canvas || frameWidth <= 0 || frameHeight <= 0) {
+      return;
+    }
+
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    canvas.width = Math.max(1, Math.round(frameWidth * dpr));
+    canvas.height = Math.max(1, Math.round(frameHeight * dpr));
+    canvas.style.width = `${frameWidth}px`;
+    canvas.style.height = `${frameHeight}px`;
+
+    const visualFilter = buildComposedMediaVisualFilter(
+      media.visualAdjustments,
+      media.visualEffect,
+      {
+        keyframedVisualEffectsEnabled,
+        targetWidth: frameWidth || 1080,
+      },
+    );
+    const blurPx = scaleFitBackgroundBlurPx(
+      frameWidth,
+      layerPlan.backgroundBlurPxAt1080,
+    );
+
+    let stopped = false;
+    const paintOnce = () => {
+      if (stopped) {
+        return;
+      }
+      paintVideoBackground(canvas, video, {
+        blurPx: blurPx * dpr,
+        dimAlpha: layerPlan.backgroundDimAlpha,
+        edgePad: layerPlan.backgroundCoverEdgePad,
+        visualFilter,
+      });
+    };
+
+    const cancelLoop = () => {
+      if (bgRafRef.current != null) {
+        cancelAnimationFrame(bgRafRef.current);
+        bgRafRef.current = null;
+      }
+    };
+
+    const syncLoop = () => {
+      cancelLoop();
+      if (stopped) {
+        return;
+      }
+      const mode = resolveVideoBackgroundPaintMode({
+        fitWithBackground: true,
+        isActive,
+        shouldPlay,
+        documentHidden:
+          typeof document !== "undefined" ? document.visibilityState === "hidden" : false,
+      });
+      if (mode === "stop") {
+        return;
+      }
+      paintOnce();
+      if (mode === "continuous") {
+        const tick = () => {
+          if (stopped) {
+            return;
+          }
+          paintOnce();
+          bgRafRef.current = requestAnimationFrame(tick);
+        };
+        bgRafRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    syncLoop();
+
+    const onVisibility = () => {
+      syncLoop();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+
+    return () => {
+      stopped = true;
+      cancelLoop();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+    };
+  }, [
+    fitWithBackground,
+    frameWidth,
+    frameHeight,
+    isActive,
+    shouldPlay,
+    targetTimeMs,
+    keyframedVisualEffectsEnabled,
+    layerPlan.backgroundBlurPxAt1080,
+    layerPlan.backgroundCoverEdgePad,
+    layerPlan.backgroundDimAlpha,
+    media.visualAdjustments,
+    media.visualEffect,
+  ]);
+
   if (!url) {
     return null;
   }
@@ -206,7 +413,6 @@ export default function SceneFrameVideo({
   const objectFit = resolveVideoObjectFit(media);
   const motionScene = scene ?? { media };
   const hasFrameSize = frameWidth > 0 && frameHeight > 0;
-  // Shared engine + preview adapter — framing + motion; playback/seek unchanged.
   const motionStyle = hasFrameSize
     ? {
         ...resolvePreviewMediaMotionStyle({
@@ -242,9 +448,17 @@ export default function SceneFrameVideo({
       className={className}
       data-scene-frame-media="video"
       data-scene-media-item-id={mediaItemId ?? undefined}
+      data-fit-with-background={fitWithBackground ? "true" : "false"}
     >
-      {/* PersistentFramingLayer + MediaMotionLayer: CSS transform only */}
       <div className="absolute inset-0" style={motionStyle}>
+        {fitWithBackground ? (
+          <canvas
+            ref={backgroundCanvasRef}
+            className="absolute inset-0 h-full w-full max-w-none"
+            aria-hidden="true"
+            data-scene-frame-layer="background"
+          />
+        ) : null}
         <video
           ref={videoRef}
           src={url}
@@ -262,6 +476,7 @@ export default function SceneFrameVideo({
           data-preview-video-active={isActive ? "true" : "false"}
           data-preview-video-playing={shouldPlay ? "true" : "false"}
           data-preview-video-trim-scrub={trimPreviewActive ? "true" : "false"}
+          data-scene-frame-layer="foreground"
         />
       </div>
     </div>

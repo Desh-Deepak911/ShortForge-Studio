@@ -14,6 +14,10 @@ import {
   resolveSceneMediaFraming,
   resolveSceneMediaFramingAsImage,
 } from "@/features/media-framing/resolve-scene-media-framing";
+import {
+  resolveMediaFramingLayerPlan,
+  scaleFitBackgroundBlurPx,
+} from "@/features/media-framing/resolve-media-framing-layer-plan";
 import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import { resolveSceneMediaPlayback } from "@/features/media-playback/media-playback.engine";
 import type { MediaPlaybackState } from "@/features/media-playback/media-playback.types";
@@ -338,6 +342,9 @@ export function mapSceneMediaToExportDrawImage(
     rotation: framing.rotationDeg,
     fitMode: resolvedFit,
     imageMotion: media.imageMotion,
+    ...(framing.backgroundTreatment === "blurred_fill" && resolvedFit === "fit"
+      ? { backgroundTreatment: "blurred_fill" as const }
+      : {}),
   };
 }
 
@@ -413,6 +420,9 @@ function resolveSourceDimensions(
  * Shared canvas draw for any CanvasImageSource (image or video frame).
  * Geometry matches drawSceneImageInFrame.
  * Motion override is the composed export transform (scale + translate + rotation).
+ *
+ * Fit with background: same decoded source drawn twice (Fill blur+dim, then sharp Fit).
+ * Blur failure falls back to dimmed Fill + sharp Fit — never terminal.
  */
 export function drawCanvasImageSource(
   ctx: CanvasRenderingContext2D,
@@ -439,18 +449,51 @@ export function drawCanvasImageSource(
       ? Math.min(1, Math.max(0, motionState.opacity))
       : 1;
 
+  const layerPlan = resolveMediaFramingLayerPlan({
+    fitMode: normalizeSceneImageFitMode(sceneImage.fitMode),
+    backgroundTreatment: sceneImage.backgroundTreatment ?? "none",
+  });
+
+  const visualFilter = buildComposedMediaVisualFilter(visualAdjustments, visualEffect, {
+    keyframedVisualEffectsEnabled,
+    targetWidth: width,
+    effectSource: "frozen",
+  });
+
+  const drawMotion =
+    motionState
+      ? {
+          scale: motionState.scale,
+          translateX: motionState.translateX,
+          translateY: motionState.translateY,
+          rotation: motionState.rotation ?? resolvedTransform.rotation ?? 0,
+        }
+      : undefined;
+
+  if (layerPlan.mode === "fit_with_blurred_background") {
+    drawFitWithBlurredBackgroundLayers({
+      ctx,
+      source,
+      width,
+      height,
+      sceneImage,
+      sourceWidth,
+      sourceHeight,
+      opacity,
+      drawMotion,
+      visualFilter,
+      layerPlan,
+    });
+    return;
+  }
+
   ctx.save();
   if (opacity < 1) {
     ctx.globalAlpha *= opacity;
   }
 
   applyExportCanvasMediaQuality(ctx);
-  // Frozen manifest BCS only — never re-lookup the authoring preset catalog.
-  ctx.filter = buildComposedMediaVisualFilter(visualAdjustments, visualEffect, {
-    keyframedVisualEffectsEnabled,
-    targetWidth: width,
-    effectSource: "frozen",
-  });
+  ctx.filter = visualFilter;
 
   drawSceneImageInFrame(
     ctx,
@@ -461,16 +504,244 @@ export function drawCanvasImageSource(
     sourceWidth,
     sourceHeight,
     1,
-    motionState
-      ? {
-          scale: motionState.scale,
-          translateX: motionState.translateX,
-          translateY: motionState.translateY,
-          rotation: motionState.rotation ?? resolvedTransform.rotation ?? 0,
-        }
-      : undefined,
+    drawMotion,
   );
 
+  ctx.restore();
+}
+
+/**
+ * Cap blurred-background offscreen width so dual-layer 4K draws stay bounded.
+ * Foreground always stays at the full canvas resolution.
+ */
+export const FIT_BACKGROUND_OFFSCREEN_MAX_WIDTH = 1080;
+
+function resolveFitBackgroundOffscreenSize(
+  width: number,
+  height: number,
+): { width: number; height: number; scale: number } {
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= FIT_BACKGROUND_OFFSCREEN_MAX_WIDTH
+  ) {
+    return { width, height, scale: 1 };
+  }
+  const scale = FIT_BACKGROUND_OFFSCREEN_MAX_WIDTH / width;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+    scale,
+  };
+}
+
+function drawFitWithBlurredBackgroundLayers(input: {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly source: CanvasImageSource;
+  readonly width: number;
+  readonly height: number;
+  readonly sceneImage: SceneImage;
+  readonly sourceWidth: number;
+  readonly sourceHeight: number;
+  readonly opacity: number;
+  readonly drawMotion:
+    | {
+        scale: number;
+        translateX: number;
+        translateY: number;
+        rotation?: number;
+      }
+    | undefined;
+  readonly visualFilter: string;
+  readonly layerPlan: ReturnType<typeof resolveMediaFramingLayerPlan>;
+}): void {
+  const {
+    ctx,
+    source,
+    width,
+    height,
+    sceneImage,
+    sourceWidth,
+    sourceHeight,
+    opacity,
+    drawMotion,
+    visualFilter,
+    layerPlan,
+  } = input;
+
+  const fillImage: SceneImage = {
+    ...sceneImage,
+    fitMode: "fill",
+  };
+  const fitImage: SceneImage = {
+    ...sceneImage,
+    fitMode: "fit",
+  };
+
+  const offscreenSize = resolveFitBackgroundOffscreenSize(width, height);
+  const bgWidth = offscreenSize.width;
+  const bgHeight = offscreenSize.height;
+  const pad = layerPlan.backgroundCoverEdgePad;
+
+  const resolveBackgroundMotion = (
+    targetWidth: number,
+    targetHeight: number,
+    surfaceScale: number,
+  ) => {
+    const fillResolved = resolveSceneImageTransformForFrame(
+      fillImage,
+      targetWidth,
+      targetHeight,
+    );
+    return drawMotion
+      ? {
+          ...drawMotion,
+          scale: drawMotion.scale * pad,
+          translateX: drawMotion.translateX * surfaceScale,
+          translateY: drawMotion.translateY * surfaceScale,
+        }
+      : {
+          scale: fillResolved.scale * pad,
+          translateX: fillResolved.x,
+          translateY: fillResolved.y,
+          rotation: fillResolved.rotation ?? 0,
+        };
+  };
+
+  // Scale blur to the offscreen surface width so appearance matches full-res blur.
+  const blurPxForSurface = (surfaceWidth: number) =>
+    scaleFitBackgroundBlurPx(surfaceWidth, layerPlan.backgroundBlurPxAt1080);
+
+  const drawBackgroundOnto = (
+    targetCtx: CanvasRenderingContext2D,
+    targetWidth: number,
+    targetHeight: number,
+    surfaceScale: number,
+  ): boolean => {
+    const backgroundMotion = resolveBackgroundMotion(
+      targetWidth,
+      targetHeight,
+      surfaceScale,
+    );
+    const blurPx = blurPxForSurface(targetWidth);
+    const blurFilter = `blur(${blurPx}px)`;
+    const backgroundFilter =
+      visualFilter && visualFilter !== "none"
+        ? `${visualFilter} ${blurFilter}`
+        : blurFilter;
+
+    let usedBlur = false;
+    targetCtx.save();
+    applyExportCanvasMediaQuality(targetCtx);
+    try {
+      targetCtx.filter = backgroundFilter;
+      if (typeof targetCtx.filter === "string" && targetCtx.filter.includes("blur")) {
+        usedBlur = true;
+      } else {
+        targetCtx.filter = visualFilter || "none";
+      }
+    } catch {
+      targetCtx.filter = visualFilter || "none";
+      usedBlur = false;
+    }
+
+    try {
+      drawSceneImageInFrame(
+        targetCtx,
+        source,
+        targetWidth,
+        targetHeight,
+        fillImage,
+        sourceWidth,
+        sourceHeight,
+        1,
+        backgroundMotion,
+      );
+    } catch {
+      drawSceneImageInFrame(
+        targetCtx,
+        source,
+        targetWidth,
+        targetHeight,
+        fillImage,
+        sourceWidth,
+        sourceHeight,
+        1,
+        drawMotion
+          ? {
+              ...drawMotion,
+              translateX: drawMotion.translateX * surfaceScale,
+              translateY: drawMotion.translateY * surfaceScale,
+            }
+          : undefined,
+      );
+    }
+
+    targetCtx.filter = "none";
+    targetCtx.globalAlpha = layerPlan.backgroundDimAlpha;
+    targetCtx.fillStyle = "#000000";
+    targetCtx.fillRect(0, 0, targetWidth, targetHeight);
+    targetCtx.restore();
+    return usedBlur;
+  };
+
+  // Layer 1: blurred Fill on a bounded offscreen surface (or full canvas ≤1080w).
+  // Prefer HTMLCanvasElement so we keep CanvasRenderingContext2D typing/API parity.
+  ctx.save();
+  if (opacity < 1) {
+    ctx.globalAlpha *= opacity;
+  }
+  applyExportCanvasMediaQuality(ctx);
+  let usedBlur = false;
+  if (offscreenSize.scale < 1 && typeof document !== "undefined") {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = bgWidth;
+    offscreen.height = bgHeight;
+    const offCtx = offscreen.getContext("2d");
+    if (offCtx) {
+      usedBlur = drawBackgroundOnto(offCtx, bgWidth, bgHeight, offscreenSize.scale);
+      ctx.imageSmoothingEnabled = true;
+      if ("imageSmoothingQuality" in ctx) {
+        ctx.imageSmoothingQuality = "high";
+      }
+      ctx.drawImage(offscreen, 0, 0, width, height);
+    } else {
+      usedBlur = drawBackgroundOnto(ctx, width, height, 1);
+    }
+  } else {
+    usedBlur = drawBackgroundOnto(ctx, width, height, 1);
+  }
+  ctx.restore();
+
+  if (
+    !usedBlur &&
+    typeof console !== "undefined" &&
+    (process.env.SHORTFORGE_EXPORT_DEBUG === "1" ||
+      process.env.NEXT_PUBLIC_SHORTFORGE_EXPORT_DEBUG === "1")
+  ) {
+    console.debug(
+      "[export] fit-with-background: blur unavailable; used dimmed fill fallback",
+    );
+  }
+
+  // Layer 2: sharp Fit foreground — never inherits background blur/dim / never downscaled.
+  ctx.save();
+  if (opacity < 1) {
+    ctx.globalAlpha *= opacity;
+  }
+  applyExportCanvasMediaQuality(ctx);
+  ctx.filter = visualFilter || "none";
+  drawSceneImageInFrame(
+    ctx,
+    source,
+    width,
+    height,
+    fitImage,
+    sourceWidth,
+    sourceHeight,
+    1,
+    drawMotion,
+  );
   ctx.restore();
 }
 

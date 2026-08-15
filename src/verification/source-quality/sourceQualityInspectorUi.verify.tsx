@@ -88,6 +88,8 @@ function renderSummary(options: {
   readonly omitMediaProp?: boolean;
   readonly ready?: boolean;
   readonly enabled?: boolean;
+  readonly exportTarget?: "720p" | "1080p" | "4k";
+  readonly framing?: ReturnType<typeof framingFor>;
 }): string {
   const scene = options.scene ?? baseScene({ media: options.media ?? undefined });
   const resolved = options.omitMediaProp
@@ -96,6 +98,8 @@ function renderSummary(options: {
         scene,
         media: options.media === undefined ? undefined : options.media,
       });
+  const framing =
+    options.framing ?? framingFor(resolved);
   return renderToStaticMarkup(
     createElement(SourceQualitySummary, {
       scene,
@@ -104,7 +108,8 @@ function renderSummary(options: {
         : {
             media: options.media === undefined ? resolved : options.media,
           }),
-      framing: framingFor(resolved),
+      framing,
+      ...(options.exportTarget ? { exportTarget: options.exportTarget } : {}),
       readiness: {
         ready: options.ready !== false,
         enabled: options.enabled !== false,
@@ -133,6 +138,7 @@ function SelectionHarness({
   readonly media: SceneMedia;
 }): ReactElement {
   return createElement(SourceQualitySummary, {
+    key: media.url ?? "media",
     scene: baseScene({ media }),
     media,
     framing: framingFor(media),
@@ -184,8 +190,9 @@ async function main(): Promise<void> {
       const html = renderSummary({ media: null, enabled: true, ready: true });
       assert.match(html, /data-source-quality-summary/);
       assert.match(html, /Source quality/);
+      assert.match(html, /Quality cannot be estimated for 1080p/);
       assert.match(html, /Quality guidance will appear after media is attached/);
-      assert.doesNotMatch(html, /Suitable for 1080p/);
+      assert.doesNotMatch(html, /Excellent for 1080p/);
       assert.doesNotMatch(html, /Apply|Reset|coming soon/i);
     });
 
@@ -202,11 +209,8 @@ async function main(): Promise<void> {
       });
       assert.equal(scene.media, undefined);
       const html = renderSummary({ scene, omitMediaProp: true });
-      assert.match(html, /Suitable for 1080p/);
-      assert.match(
-        html,
-        /can render at 1080p without upscaling under the current framing/,
-      );
+      assert.match(html, /Excellent for 1080p/);
+      assert.match(html, /remain sharp at 1080p/i);
       assert.doesNotMatch(html, /data-source-quality-summary-key="no_media"/);
       assert.doesNotMatch(html, /cover 1080p/);
     });
@@ -215,23 +219,23 @@ async function main(): Promise<void> {
       const unknown = renderSummary({
         media: imageMedia(undefined, undefined),
       });
-      assert.match(unknown, /Source details unavailable/);
+      assert.match(unknown, /Quality cannot be estimated for 1080p/);
       assert.match(
         unknown,
-        /Preview and export can still continue\. Quality guidance will improve when dimensions are available/,
+        /Source dimensions are unavailable[\s\S]*Export is still available/,
       );
 
       const suitable = renderSummary({ media: imageMedia(1080, 1920) });
-      assert.match(suitable, /Suitable for 1080p/);
-      assert.match(
-        suitable,
-        /can render at 1080p without upscaling under the current framing/,
-      );
-      assert.match(suitable, /4K may still upscale/);
+      assert.match(suitable, /Excellent for 1080p/);
+      assert.match(suitable, /remain sharp at 1080p/i);
+      assert.match(suitable, /Export remains available/);
       assert.doesNotMatch(suitable, /can cover 1080p/);
 
       const warning = renderSummary({ media: imageMedia(900, 1600) });
-      assert.match(warning, /may look soft at 1080p/);
+      assert.match(
+        warning,
+        /Good for 1080p|May look soft at 1080p|Significant enlargement at 1080p/,
+      );
       assert.doesNotMatch(warning, /disabled|cannot export|blocked/i);
     });
 
@@ -316,8 +320,11 @@ async function main(): Promise<void> {
       const b = projection.windows.find((window) => window.itemId === "item-b")!;
       const htmlA = renderSummary({ scene, media: a.media });
       const htmlB = renderSummary({ scene, media: b.media });
-      assert.match(htmlA, /Suitable for 1080p/);
-      assert.match(htmlB, /may look soft at 1080p/);
+      assert.match(htmlA, /Excellent for 1080p/);
+      assert.match(
+        htmlB,
+        /Good for 1080p|May look soft at 1080p|Significant enlargement at 1080p/,
+      );
 
       const nearestId = resolveNearestInspectorMediaItemId(
         projection.windows,
@@ -329,6 +336,96 @@ async function main(): Promise<void> {
       );
       assert.ok(nearest?.media);
       assert.notEqual(nearest!.media.url, ignoredUrl);
+    });
+
+    test("target-aware guidance updates for export target, Fit/Fill, and zoom", () => {
+      const landscape = imageMedia(3840, 2160);
+      const at1080 = renderSummary({
+        media: landscape,
+        exportTarget: "1080p",
+        framing: framingFor(landscape),
+      });
+      const at4k = renderSummary({
+        media: landscape,
+        exportTarget: "4k",
+        framing: framingFor(landscape),
+      });
+      assert.match(at1080, /Excellent for 1080p/);
+      assert.match(at4k, /May look soft at 4K/);
+      assert.match(at1080, /data-source-quality-export-target="1080p"/);
+      assert.match(at4k, /data-source-quality-export-target="4k"/);
+      assert.match(at1080, /data-source-quality-blocks-export="false"/);
+
+      const fill = renderSummary({
+        media: imageMedia(1920, 1080),
+        framing: {
+          fitMode: "fill",
+          zoom: 1,
+          rotationDeg: 0,
+          positionX: 0,
+          positionY: 0,
+        },
+      });
+      const fit = renderSummary({
+        media: imageMedia(1920, 1080),
+        framing: {
+          fitMode: "fit",
+          zoom: 1,
+          rotationDeg: 0,
+          positionX: 0,
+          positionY: 0,
+        },
+      });
+      assert.match(fill, /May look soft at 1080p/);
+      assert.match(fit, /Excellent for 1080p/);
+      assert.match(fit, /uncovered/);
+
+      const zoomed = renderSummary({
+        media: imageMedia(1080, 1920),
+        framing: {
+          fitMode: "fill",
+          zoom: 2,
+          rotationDeg: 0,
+          positionX: 0,
+          positionY: 0,
+        },
+      });
+      assert.match(zoomed, /May look soft at 1080p|Significant enlargement at 1080p/);
+      assert.match(zoomed, /Reduce zoom/);
+    });
+
+    test("no duplicate suggestion lines in one summary context", () => {
+      const html = renderSummary({
+        media: imageMedia(3840, 2160),
+        exportTarget: "4k",
+        framing: {
+          fitMode: "fill",
+          zoom: 1.25,
+          rotationDeg: 0,
+          positionX: 0,
+          positionY: 0,
+        },
+      });
+      const matches = html.match(/Reduce zoom\./g) ?? [];
+      assert.ok(matches.length <= 1, `duplicate Reduce zoom: ${matches.length}`);
+      assert.match(html, /Export remains available/);
+      assert.doesNotMatch(html, /disabled|cannot export|blocked/i);
+    });
+
+    test("StudioSceneInspector relies on SourceQualitySummary export-target resolution", () => {
+      const inspector = readSrc(
+        "src/features/editor/components/StudioSceneInspector.tsx",
+      );
+      assert.match(inspector, /SourceQualitySummary/);
+      assert.doesNotMatch(inspector, /exportTarget=\{/);
+      const summary = readSrc(
+        "src/features/source-quality/editor/SourceQualitySummary.tsx",
+      );
+      assert.match(summary, /resolveExportTarget/);
+      assert.match(summary, /resolveSourceQualityTargetFromExportResolution/);
+      assert.match(summary, /"720p"/);
+      assert.match(summary, /"1080p"/);
+      assert.match(summary, /"4k"/);
     });
 
     test("adjustment actions only via Details controls component", () => {
@@ -412,7 +509,7 @@ async function main(): Promise<void> {
       );
       assert.match(
         unknown.host.textContent ?? "",
-        /Source details unavailable/,
+        /Quality cannot be estimated for 1080p/,
       );
       await unknown.cleanup();
 
@@ -424,11 +521,8 @@ async function main(): Promise<void> {
           readiness: { ready: true, enabled: true },
         }),
       );
-      assert.match(suitable.host.textContent ?? "", /Suitable for 1080p/);
-      assert.match(
-        suitable.host.textContent ?? "",
-        /render at 1080p without upscaling/,
-      );
+      assert.match(suitable.host.textContent ?? "", /Excellent for 1080p/);
+      assert.match(suitable.host.textContent ?? "", /remain sharp at 1080p/i);
       await suitable.cleanup();
 
       const warning = await mountSummary(
@@ -439,7 +533,10 @@ async function main(): Promise<void> {
           readiness: { ready: true, enabled: true },
         }),
       );
-      assert.match(warning.host.textContent ?? "", /may look soft at 1080p/);
+      assert.match(
+        warning.host.textContent ?? "",
+        /Good for 1080p|May look soft at 1080p|Significant enlargement at 1080p/,
+      );
       await warning.cleanup();
     });
 
@@ -498,7 +595,19 @@ async function main(): Promise<void> {
         await act(async () => {
           root.render(createElement(SelectionHarness, { media: softMedia }));
         });
-        assert.match(host.textContent ?? "", /may look soft at 1080p/);
+        const softBadge =
+          host.querySelector("[data-source-quality-rating-label]")?.textContent ??
+          "";
+        assert.match(
+          softBadge,
+          /Good for 1080p|May look soft at 1080p|Significant enlargement at 1080p/,
+        );
+        assert.equal(
+          host
+            .querySelector("[data-source-quality-summary]")
+            ?.getAttribute("data-source-quality-blocks-export"),
+          "false",
+        );
         assert.equal(document.activeElement, activeBefore);
 
         await act(async () => {

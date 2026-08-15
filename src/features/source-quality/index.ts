@@ -1,6 +1,9 @@
 export type {
   SourceQualityAssessment,
+  SourceQualityDetailClass,
   SourceQualityMetrics,
+  SourceQualityRetainedRegion,
+  SourceQualitySoftnessCause,
   SourceQualityStatus,
   SourceQualitySummaryKey,
   SourceQualityTargetId,
@@ -22,8 +25,22 @@ export {
 } from "./adapters/resolve-source-quality-export-guidance";
 export {
   assessSourceQuality,
+  classifySourceQualityDetail,
+  measureSourceQualityTargetGeometry,
   type SourceQualityFramingInput,
+  type SourceQualityTargetGeometryInput,
 } from "./domain/assess-source-quality";
+export type {
+  SourceQualityCreatorGuidance,
+  SourceQualityCreatorGuidanceDetail,
+  SourceQualityCreatorRating,
+  SourceQualityCreatorSuggestionCode,
+} from "./domain/present-source-quality-guidance";
+export {
+  describeSourceQualitySoftnessCause,
+  presentSourceQualityGuidance,
+  resolveSourceQualityTargetFromExportResolution,
+} from "./domain/present-source-quality-guidance";
 export {
   normalizeSourceQualityRotationDeg,
   normalizeSourceQualityZoom,
@@ -32,6 +49,9 @@ export {
 export {
   SOURCE_QUALITY_AGGRESSIVE_CROP_RETAINED_AREA_THRESHOLD,
   SOURCE_QUALITY_ASPECT_MISMATCH_RELATIVE_TOLERANCE,
+  SOURCE_QUALITY_DETAIL_MATERIAL_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT,
+  SOURCE_QUALITY_DETAIL_MILD_UPSCALE_MIN_SOURCE_PIXELS_PER_OUTPUT,
+  SOURCE_QUALITY_DETAIL_NATIVE_MIN_SOURCE_PIXELS_PER_OUTPUT,
   SOURCE_QUALITY_TARGET_1080P,
   SOURCE_QUALITY_TARGET_4K,
   SOURCE_QUALITY_TARGET_720P,

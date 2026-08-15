@@ -194,8 +194,8 @@ test("framing + motion composition remains separate (adapters share resolver)", 
   );
   assert.match(previewAdapter, /resolveSceneMediaFramingTransform/);
   assert.match(exportAdapter, /resolveSceneMediaFramingTransform/);
-  assert.match(previewAdapter, /resolveMediaMotionStateForSceneTiming/);
-  assert.match(exportAdapter, /resolveMediaMotionStateForSceneTiming/);
+  assert.match(previewAdapter, /resolveRenderedMediaMotion|resolveMediaMotionStateForSceneTiming/);
+  assert.match(exportAdapter, /resolveRenderedMediaMotion|resolveMediaMotionStateForSceneTiming/);
 });
 
 test("transitions remain on separate outer layer", () => {
