@@ -57,6 +57,7 @@ export interface VoiceoverAttachment {
   voiceoverUrl: string;
   voiceoverDurationMs?: number;
   voiceSettings?: Partial<StoryVoiceSettings>;
+  sourceKind?: "generated" | "uploaded";
 }
 
 /** Editor commit intent — presentation edits skip story-data sync side effects. */
@@ -173,7 +174,7 @@ function buildVoiceoverAttachmentFields(
   attachment: VoiceoverAttachment,
 ): Pick<
   FootieScript,
-  "voiceoverUrl" | "voiceoverDurationMs" | "voiceoverNarration" | "voiceoverVoiceSettings" | "voiceSettings"
+  "voiceoverUrl" | "voiceoverDurationMs" | "voiceoverNarration" | "voiceoverVoiceSettings" | "voiceoverSourceKind" | "voiceSettings"
 > {
   const voiceSettings = mergeVoiceSettings(script, attachment.voiceSettings);
 
@@ -181,6 +182,7 @@ function buildVoiceoverAttachmentFields(
     voiceoverUrl: attachment.voiceoverUrl,
     voiceoverNarration: resolveVoiceoverNarrationSnapshot(script),
     voiceoverVoiceSettings: voiceSettings,
+    ...(attachment.sourceKind ? { voiceoverSourceKind: attachment.sourceKind } : {}),
     ...(attachment.voiceoverDurationMs != null && attachment.voiceoverDurationMs > 0
       ? { voiceoverDurationMs: Math.round(attachment.voiceoverDurationMs) }
       : {}),
@@ -255,6 +257,7 @@ export function applyVoiceoverChanges(
         voiceoverUrl: attachment.voiceoverUrl,
         voiceoverNarration: resolveVoiceoverNarrationSnapshot(script),
         voiceoverVoiceSettings: voiceSettings,
+        ...(attachment.sourceKind ? { voiceoverSourceKind: attachment.sourceKind } : {}),
         voiceSettings,
       },
       script,
@@ -270,6 +273,7 @@ export function applyVoiceoverChanges(
       voiceoverDurationMs: Math.round(voiceoverDurationMs),
       voiceoverNarration: resolveVoiceoverNarrationSnapshot(script),
       voiceoverVoiceSettings: voiceSettings,
+      ...(attachment.sourceKind ? { voiceoverSourceKind: attachment.sourceKind } : {}),
       voiceSettings,
       scenes,
     },
@@ -305,6 +309,7 @@ export function applyStoryUpdate(prev: FootieScript, next: FootieScript): Footie
     voiceoverDurationMs: undefined,
     voiceoverNarration: undefined,
     voiceoverVoiceSettings: undefined,
+    voiceoverSourceKind: undefined,
   };
 }
 

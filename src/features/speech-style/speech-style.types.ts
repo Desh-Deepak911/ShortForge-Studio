@@ -22,6 +22,6 @@ export interface SpeechStyleInstructionResult {
   preset: SpeechStylePreset;
   expressiveDelivery: boolean;
   useInstructionTts: boolean;
-  model: "tts-1" | "gpt-4o-mini-tts";
+  model: "tts-1-hd" | "gpt-4o-mini-tts";
   instructions?: string;
 }

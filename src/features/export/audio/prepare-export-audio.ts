@@ -39,6 +39,7 @@ function prepareVoiceTrack(
     volume: voice.volume,
     generatedPlaybackRate: 1,
     sourceVoiceSpeed: voice.sourceVoiceSpeed,
+    ...(voice.masteringProfile ? { masteringProfile: voice.masteringProfile } : {}),
   };
 }
 

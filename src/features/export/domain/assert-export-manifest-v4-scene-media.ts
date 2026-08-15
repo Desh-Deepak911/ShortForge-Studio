@@ -78,6 +78,18 @@ export function validateExportManifestV4SceneMedia(
     return base;
   }
   const issues = [...base.issues];
+  const audio = isObject(manifest.audio) ? manifest.audio : null;
+  const voiceover = audio && isObject(audio.voiceover) ? audio.voiceover : null;
+  if (
+    contract.version === EXPORT_MANIFEST_VERSION &&
+    voiceover?.masteringProfile !== undefined
+  ) {
+    issues.push({
+      code: "UNSUPPORTED_VOICE_MASTERING",
+      message:
+        "audio.voiceover.masteringProfile is capability-gated and unsupported on ExportManifest v4.",
+    });
+  }
   for (let sceneIndex = 0; sceneIndex < manifest.scenes.length; sceneIndex += 1) {
     const scene = manifest.scenes[sceneIndex];
     if (!isObject(scene)) continue;

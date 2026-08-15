@@ -189,6 +189,7 @@ export function buildHeadlessAudioPlan(
       sourceDurationMs: voice.durationMs,
       volumeGain: voice.volume,
       padToOutputMs,
+      ...(voice.masteringProfile ? { masteringProfile: voice.masteringProfile } : {}),
     };
   } else if (manifest.audio.voiceover != null) {
     return {

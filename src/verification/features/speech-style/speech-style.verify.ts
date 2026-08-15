@@ -5,8 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import {
   hasNarrationTextVoiceoverMismatch,
@@ -35,7 +34,6 @@ require.cache[require.resolve("server-only")] = {
   exports: {},
 } as NodeModule;
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const SPEECH_STYLE_ROOT = join(process.cwd(), "src/features/speech-style");
 const VOICEOVER_SERVICE_PATH = join(
   process.cwd(),
@@ -161,31 +159,31 @@ test("style-only update does not mark narration stale", () => {
   assert.equal(hasNarrationTextVoiceoverMismatch(next), false);
 });
 
-test("neutral uses existing tts-1 path", () => {
+test("compatible voices use the clarity-first tts-1-hd path", () => {
   const serviceSource = readFileSync(VOICEOVER_SERVICE_PATH, "utf8");
   const neutral = resolveSpeechStyleInstructions("neutral", true);
-  assert.equal(neutral.model, "tts-1");
+  assert.equal(neutral.model, "tts-1-hd");
   assert.match(serviceSource, /model = options\.model \?\? TTS_MODEL/);
-  assert.match(serviceSource, /const TTS_MODEL = "tts-1"/);
+  assert.match(serviceSource, /const TTS_MODEL = "tts-1-hd"/);
   assert.match(serviceSource, /resolveSpeechStyleInstructionsForVoice/);
 });
 
 test("gpt-4o-only voices use expressive engine on neutral delivery", () => {
   for (const voice of ["ballad", "marin", "verse", "cedar"] as const) {
-    assert.equal(resolveTtsModelForVoice(voice, "neutral", false), TTS_MODEL_EXPRESSIVE);
+    assert.equal(resolveTtsModelForVoice(voice), TTS_MODEL_EXPRESSIVE);
     const resolved = resolveSpeechStyleInstructionsForVoice(voice, "neutral", false);
     assert.equal(resolved.model, TTS_MODEL_EXPRESSIVE);
     assert.equal(resolved.useInstructionTts, false);
   }
 });
 
-test("legacy voices stay on tts-1 for neutral delivery", () => {
-  assert.equal(resolveTtsModelForVoice("nova", "neutral", false), TTS_MODEL_NEUTRAL);
-  assert.equal(resolveTtsModelForVoice("alloy", "neutral", false), TTS_MODEL_NEUTRAL);
+test("legacy voices use tts-1-hd for neutral delivery", () => {
+  assert.equal(resolveTtsModelForVoice("nova"), TTS_MODEL_NEUTRAL);
+  assert.equal(resolveTtsModelForVoice("alloy"), TTS_MODEL_NEUTRAL);
 });
 
 test("cedar stays on expressive engine when delivery expressive is off", () => {
-  assert.equal(resolveTtsModelForVoice("cedar", "documentary", false), TTS_MODEL_EXPRESSIVE);
+  assert.equal(resolveTtsModelForVoice("cedar"), TTS_MODEL_EXPRESSIVE);
   const resolved = resolveSpeechStyleInstructionsForVoice("cedar", "documentary", false);
   assert.equal(resolved.model, TTS_MODEL_EXPRESSIVE);
   assert.equal(resolved.useInstructionTts, false);
@@ -196,6 +194,10 @@ test("non-neutral expressive uses instruction path", () => {
   const expressive = resolveSpeechStyleInstructions("debate", true);
   assert.equal(expressive.model, TTS_MODEL_EXPRESSIVE);
   assert.equal(expressive.useInstructionTts, true);
+  assert.equal(
+    resolveSpeechStyleInstructionsForVoice("alloy", "debate", true).model,
+    TTS_MODEL_NEUTRAL,
+  );
   assert.match(serviceSource, /instructions: style\.instructions/);
   assert.match(serviceSource, /model: style\.model/);
 });

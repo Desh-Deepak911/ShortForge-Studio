@@ -436,6 +436,8 @@
     "test:export-transition-continuity-authority": "tsx src/verification/export/exportTransitionContinuityAuthority.verify.ts",
     "test:export-decoded-audio-continuity-authority": "tsx src/verification/audio/exportDecodedAudioContinuityAuthority.verify.ts",
     "test:export-decoded-voice-volume-authority": "tsx src/verification/audio/exportDecodedVoiceVolumeAuthority.verify.ts",
+    "test:voice-export-quality-contract": "tsx src/verification/audio/voiceExportQualityContract.verify.ts",
+    "test:voice-mastering-parity": "tsx src/verification/audio/voiceMasteringParity.verify.ts",
     "test:transition-qa": "tsx src/verification/timeline/transitionQa.verify.ts",
     "test:export-settings": "tsx src/verification/export/exportSettings.verify.ts",
     "test:export-profiles": "tsx src/verification/features/export-profiles/export-profile.verify.ts",

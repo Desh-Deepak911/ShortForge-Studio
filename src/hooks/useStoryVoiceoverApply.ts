@@ -23,6 +23,7 @@ function restoreVoiceoverBaseline(
     ...current,
     voiceoverUrl: baseline.voiceoverUrl,
     voiceoverDurationMs: baseline.voiceoverDurationMs,
+    voiceoverSourceKind: baseline.voiceoverSourceKind,
     voiceSettings: baseline.voiceSettings,
   };
 
@@ -133,6 +134,7 @@ export function useStoryVoiceoverApply(
         voiceoverUrl: pendingVoiceoverUrl,
         voiceoverDurationMs,
         voiceSettings,
+        sourceKind: "generated" as const,
       };
       const applyVoiceoverCommit = hasManualSceneDuration(baseline.scenes)
         ? applyVoiceoverRegeneration

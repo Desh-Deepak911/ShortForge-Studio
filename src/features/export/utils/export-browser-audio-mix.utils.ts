@@ -13,6 +13,7 @@ import {
   sampleExportMusicEnvelopeCurve,
   toExportMusicEnvelopeInput,
 } from "./export-music-envelope.utils";
+import { resolveVoiceMasteringPlan } from "@/features/voice-quality";
 
 export const EXPORT_BROWSER_MIX_SAMPLE_RATE = 48000;
 export const EXPORT_BROWSER_MIX_CHANNELS = 2;
@@ -22,6 +23,7 @@ export interface ExportBrowserAudioMixOptions {
   voiceoverInput: ExportAudioInput;
   backgroundMusicInput: ExportAudioInput;
   mixSettings: ExportBackgroundMusicMixSettings;
+  voiceMasteringProfile?: "generated_speech_v1";
 }
 
 export interface ExportBrowserAudioMixResult {
@@ -167,7 +169,7 @@ export async function encodeAudioBufferToWebmOpusBlob(buffer: AudioBuffer): Prom
 
     const recorder = new MediaRecorder(destination.stream, {
       mimeType,
-      audioBitsPerSecond: 96_000,
+      audioBitsPerSecond: 128_000,
     });
 
     const chunks: BlobPart[] = [];
@@ -246,6 +248,28 @@ export async function mixExportVoiceoverAndBackgroundMusic(
     const voiceGain = offlineContext.createGain();
     voiceGain.gain.value = Math.max(0, options.mixSettings.voiceGain);
 
+    const mastering = resolveVoiceMasteringPlan(options.voiceMasteringProfile);
+    let voiceInput: AudioNode = voiceGain;
+    if (mastering) {
+      const preGain = offlineContext.createGain();
+      preGain.gain.value = mastering.preGain;
+      const compressor = offlineContext.createDynamicsCompressor();
+      compressor.threshold.value = 20 * Math.log10(mastering.compressor.threshold);
+      compressor.knee.value = 0;
+      compressor.ratio.value = mastering.compressor.ratio;
+      compressor.attack.value = mastering.compressor.attackMs / 1000;
+      compressor.release.value = mastering.compressor.releaseMs / 1000;
+      const makeupGain = offlineContext.createGain();
+      makeupGain.gain.value = mastering.compressor.makeupGain;
+      const outputGain = offlineContext.createGain();
+      outputGain.gain.value = mastering.outputGain;
+      preGain.connect(compressor);
+      compressor.connect(makeupGain);
+      makeupGain.connect(outputGain);
+      outputGain.connect(voiceGain);
+      voiceInput = preGain;
+    }
+
     const musicGain = offlineContext.createGain();
     applyMusicFadeEnvelope(musicGain, durationSec, options.mixSettings);
 
@@ -258,7 +282,7 @@ export async function mixExportVoiceoverAndBackgroundMusic(
         })()
       : offlineContext.destination;
 
-    voiceSource.connect(voiceGain);
+    voiceSource.connect(voiceInput);
     voiceGain.connect(outputNode);
     voiceSource.start(0);
 

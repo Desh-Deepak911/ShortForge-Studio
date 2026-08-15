@@ -24,6 +24,10 @@ import {
   formatFfmpegExecCommand,
   logFfmpegAudioMergeFailure,
 } from "./ffmpeg-export-diagnostics.utils";
+import {
+  buildVoiceMasteringFfmpegFilters,
+  resolveVoiceMasteringPlan,
+} from "@/features/voice-quality";
 
 /** Browser-only FFmpeg.wasm helpers. Import dynamically from client export code. */
 type FFmpegInstance = import("@ffmpeg/ffmpeg").FFmpeg;
@@ -191,7 +195,7 @@ function buildMuxOutputProfile(
   return {
     outputFile: MUXED_OUTPUT_WEBM,
     mimeType: "video/webm",
-    codecArgs: ["-c:v", "copy", "-c:a", "libopus", "-b:a", "96k"],
+    codecArgs: ["-c:v", "copy", "-c:a", "libopus", "-b:a", "128k"],
   };
 }
 
@@ -225,6 +229,7 @@ export interface MuxVideoWithAudioOptions {
   voiceGain?: number;
   /** Frozen peak-protection decision from ExportManifest. */
   applyPeakProtection?: boolean;
+  voiceMasteringProfile?: "generated_speech_v1";
 }
 
 export interface MuxVideoWithExportAudioOptions extends MuxVideoWithAudioOptions {
@@ -253,12 +258,17 @@ function buildVoiceFilterChain(
   durationSec: number,
   outputLabel: string,
   voiceGain = 1,
+  masteringProfile?: "generated_speech_v1",
 ): string {
   const duration = formatFfmpegDuration(durationSec);
   const filters = [
     ...EXPORT_FFMPEG_AUDIO_FORMAT_FILTERS,
     `atrim=0:${duration}`,
     `apad=whole_dur=${duration}`,
+    ...(() => {
+      const plan = resolveVoiceMasteringPlan(masteringProfile);
+      return plan ? buildVoiceMasteringFfmpegFilters(plan) : [];
+    })(),
     `volume=${voiceGain.toFixed(4)}`,
   ];
   return `[${inputIndex}:a]${filters.join(",")}[${outputLabel}]`;
@@ -300,6 +310,7 @@ export function buildMuxVideoExportAudioFilterComplex(input: {
   readonly durationSec: number;
   readonly voiceGain: number;
   readonly backgroundMusicMix?: ExportBackgroundMusicMixSettings | null;
+  readonly voiceMasteringProfile?: "generated_speech_v1";
 }): string {
   const voiceGain = normalizeExportMuxGain(input.voiceGain, 1);
   const { hasVoiceover, hasMusic, voiceInputIndex, musicInputIndex, durationSec } = input;
@@ -313,7 +324,13 @@ export function buildMuxVideoExportAudioFilterComplex(input: {
         input.backgroundMusicMix!,
         "music",
       ),
-      buildVoiceFilterChain(voiceInputIndex, durationSec, "voice", voiceGain),
+      buildVoiceFilterChain(
+        voiceInputIndex,
+        durationSec,
+        "voice",
+        voiceGain,
+        input.voiceMasteringProfile,
+      ),
       `${mixBase}[aout]`,
     ].join(";");
   }
@@ -327,7 +344,12 @@ export function buildMuxVideoExportAudioFilterComplex(input: {
   }
 
   if (hasVoiceover && voiceInputIndex != null) {
-    return buildVoiceOnlyFilterChain(voiceInputIndex, durationSec, voiceGain);
+    return buildVoiceOnlyFilterChain(
+      voiceInputIndex,
+      durationSec,
+      voiceGain,
+      input.voiceMasteringProfile,
+    );
   }
 
   return "";
@@ -337,9 +359,14 @@ function buildVoiceOnlyFilterChain(
   inputIndex: number,
   durationSec: number,
   voiceGain = 1,
+  masteringProfile?: "generated_speech_v1",
 ): string {
   const duration = formatFfmpegDuration(durationSec);
   const filters = [`atrim=0:${duration}`, `apad=whole_dur=${duration}`];
+  const mastering = resolveVoiceMasteringPlan(masteringProfile);
+  if (mastering) {
+    filters.push(...buildVoiceMasteringFfmpegFilters(mastering));
+  }
   if (voiceGain !== 1) {
     filters.push(`volume=${voiceGain.toFixed(4)}`);
   }
@@ -428,6 +455,7 @@ export async function muxVideoWithExportAudio(
     durationSec,
     voiceGain,
     backgroundMusicMix: options.backgroundMusicMix,
+    voiceMasteringProfile: options.voiceMasteringProfile,
   });
 
   if (!filterComplex) {
@@ -1035,6 +1063,4 @@ export async function normalizeSilentVisualFrameTiming(
     await cleanupFFmpegFiles(ffmpeg, writtenFiles);
   }
 }
-
-
 

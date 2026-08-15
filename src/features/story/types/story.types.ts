@@ -478,6 +478,11 @@ export interface FootieScript {
   voiceoverNarration?: string;
   /** Voice and speed used when the current voiceover audio was generated. */
   voiceoverVoiceSettings?: StoryVoiceSettings;
+  /**
+   * Provenance of the currently attached narration asset. Omitted on legacy
+   * drafts where generated and uploaded audio cannot be distinguished safely.
+   */
+  voiceoverSourceKind?: "generated" | "uploaded";
   /** Story-level narrator voice and speed preferences. */
   voiceSettings?: StoryVoiceSettings;
   /** Story-level background music preferences. Optional for legacy stories. */

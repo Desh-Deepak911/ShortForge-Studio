@@ -46,6 +46,7 @@ export const HEADLESS_WORKER_PHASE3_SUPPORTED = deepFreezeInPlace({
     "engagement-overlays-v1",
     "shortforge-brand-sting-v1",
     "media-background-treatment-blurred-fill-v1",
+    "generated-voice-mastering-v1",
   ] as const),
   containers: Object.freeze([
     "webm",
