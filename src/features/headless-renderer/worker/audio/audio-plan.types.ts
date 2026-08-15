@@ -34,6 +34,7 @@ export interface HeadlessVoiceoverPlan {
   readonly volumeGain: number;
   /** Silence pad needed after trimmed(+delayed) stem to reach output. */
   readonly padToOutputMs: number;
+  readonly masteringProfile?: "generated_speech_v1";
 }
 
 export interface HeadlessMusicPlan {

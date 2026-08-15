@@ -20,6 +20,7 @@ export interface ExportAudioMixVoicePlan {
   readonly sourceDurationMs: number;
   readonly volumeGain: number;
   readonly padToOutputMs: number;
+  readonly masteringProfile?: "generated_speech_v1";
 }
 
 export interface ExportAudioMixMusicPlan {

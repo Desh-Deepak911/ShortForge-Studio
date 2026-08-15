@@ -191,6 +191,9 @@ export default function VoiceSettingsCard({
             );
           })}
         </div>
+        <p className={`${studioSubtleText} mt-1.5 text-[10px] leading-snug`}>
+          1.0x gives the clearest voice. Faster speeds may introduce light flutter.
+        </p>
       </div>
 
       {showApplyButton ? (

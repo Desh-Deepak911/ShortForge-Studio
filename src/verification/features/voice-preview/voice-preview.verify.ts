@@ -5,8 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import {
   DEFAULT_VOICE_PREVIEW_SAMPLE_TEXT,
@@ -35,7 +34,6 @@ require.cache[require.resolve("server-only")] = {
   exports: {},
 } as NodeModule;
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const VOICE_PREVIEW_ROOT = join(process.cwd(), "src/features/voice-preview");
 const VOICE_CARD_PATH = join(process.cwd(), "src/features/voice-library/VoiceCard.tsx");
 const USE_VOICE_PREVIEW_PATH = join(process.cwd(), "src/features/voice-preview/useVoicePreview.ts");
@@ -198,13 +196,13 @@ async function runVoicePreviewTests() {
 
   test("preview model resolution routes gpt-4o-only voices correctly", () => {
     for (const voice of ["ballad", "marin", "verse", "cedar"] as const) {
-      assert.equal(resolveTtsModelForVoice(voice, "neutral", false), TTS_MODEL_EXPRESSIVE);
+      assert.equal(resolveTtsModelForVoice(voice), TTS_MODEL_EXPRESSIVE);
       const resolved = resolveSpeechStyleInstructionsForVoice(voice, "neutral", false);
       assert.equal(resolved.model, TTS_MODEL_EXPRESSIVE);
     }
 
-    assert.equal(resolveTtsModelForVoice("nova", "neutral", false), TTS_MODEL_NEUTRAL);
-    assert.equal(resolveTtsModelForVoice("cedar", "documentary", false), TTS_MODEL_EXPRESSIVE);
+    assert.equal(resolveTtsModelForVoice("nova"), TTS_MODEL_NEUTRAL);
+    assert.equal(resolveTtsModelForVoice("cedar"), TTS_MODEL_EXPRESSIVE);
   });
 
   await testAsync("only one audio element active", async () => {

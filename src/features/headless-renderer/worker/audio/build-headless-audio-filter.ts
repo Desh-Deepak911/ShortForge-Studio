@@ -8,6 +8,10 @@ import { assertExportDoesNotApplyVoiceSpeed } from "@/features/export/audio";
 import { buildExportMusicVolumeExpression } from "@/features/export/audio/build-export-music-volume-expression";
 import { EXPORT_FFMPEG_AUDIO_FORMAT_FILTERS } from "@/features/export/utils/export-background-music.utils";
 import {
+  buildVoiceMasteringFfmpegFilters,
+  resolveVoiceMasteringPlan,
+} from "@/features/voice-quality";
+import {
   resolveExportMusicEnvelopeGainAtSec,
   type ExportMusicEnvelopeInput,
 } from "@/features/export/utils/export-music-envelope.utils";
@@ -79,6 +83,10 @@ function buildVoiceFilterChain(
   }
   filters.push(`apad=whole_dur=${outDur}`);
   filters.push(`atrim=0:${outDur}`);
+  const mastering = resolveVoiceMasteringPlan(voice.masteringProfile);
+  if (mastering) {
+    filters.push(...buildVoiceMasteringFfmpegFilters(mastering));
+  }
   filters.push(`volume=${gain}`);
   return `[${inputIndex}:a]${filters.join(",")}[voice]`;
 }

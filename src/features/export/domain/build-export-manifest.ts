@@ -62,6 +62,7 @@ import {
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
+  EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_MANIFEST_VERSION,
@@ -197,6 +198,8 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
         item.media.fitMode === "fit",
     ),
   );
+  const hasGeneratedVoiceMastering =
+    audio.voiceover?.masteringProfile === "generated_speech_v1";
   const requiredCapabilities: ExportRendererCapabilityId[] = [];
   if (hasProjectedKeyframes || hasProjectedVisualEffect) {
     requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS);
@@ -210,6 +213,11 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   if (hasProjectedBackgroundTreatment) {
     requiredCapabilities.push(
       EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
+    );
+  }
+  if (hasGeneratedVoiceMastering) {
+    requiredCapabilities.push(
+      EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
     );
   }
   const hasAuthoritativeEnhancement = requiredCapabilities.length > 0;
@@ -759,6 +767,9 @@ function buildAudioManifest(
       volume: voiceStemGain,
       generatedPlaybackRate: 1,
       sourceVoiceSpeed: voiceSpeed,
+      ...(story.voiceoverSourceKind === "generated"
+        ? { masteringProfile: "generated_speech_v1" as const }
+        : {}),
     };
   }
 

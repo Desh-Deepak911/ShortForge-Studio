@@ -15,6 +15,7 @@ export interface PreparedAudioTrack {
   /** Model A: generated file already has TTS speed; never apply atempo. */
   readonly generatedPlaybackRate: 1;
   readonly sourceVoiceSpeed: number;
+  readonly masteringProfile?: "generated_speech_v1";
 }
 
 export interface PreparedExportAudio {

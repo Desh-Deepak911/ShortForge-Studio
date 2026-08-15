@@ -178,6 +178,7 @@ export async function muxMp4WithManifestAudio(options: {
       muxOutputFormat: "mp4",
       voiceGain: preparedAudio.voiceover?.volume ?? 1,
       applyPeakProtection: manifest.audio.applyPeakProtection,
+      voiceMasteringProfile: preparedAudio.voiceover?.masteringProfile,
       onProgress: () => undefined,
       reportMuxProgress: (p) => onMuxProgress?.(p),
     });
@@ -206,6 +207,7 @@ export async function muxMp4WithManifestAudio(options: {
       backgroundMusicMix: musicMix ?? undefined,
       voiceGain: preparedAudio.voiceover?.volume ?? 1,
       applyPeakProtection: manifest.audio.applyPeakProtection,
+      voiceMasteringProfile: preparedAudio.voiceover?.masteringProfile,
       h264Crf: qualityProfile.h264Crf,
       onMuxProgress,
     });

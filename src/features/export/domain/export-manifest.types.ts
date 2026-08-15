@@ -27,7 +27,8 @@ export type ExportRendererCapabilityId =
   | "keyframed-visual-effects-v1"
   | "engagement-overlays-v1"
   | "shortforge-brand-sting-v1"
-  | "media-background-treatment-blurred-fill-v1";
+  | "media-background-treatment-blurred-fill-v1"
+  | "generated-voice-mastering-v1";
 
 export const EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS =
   "keyframed-visual-effects-v1" as const satisfies ExportRendererCapabilityId;
@@ -41,6 +42,9 @@ export const EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING =
 export const EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL =
   "media-background-treatment-blurred-fill-v1" as const satisfies ExportRendererCapabilityId;
 
+export const EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING =
+  "generated-voice-mastering-v1" as const satisfies ExportRendererCapabilityId;
+
 /**
  * Browser renderer implementation-owned capability advertisement.
  * Independent of any manifest.requiredCapabilities — never mirror requirements.
@@ -50,6 +54,7 @@ export const EXPORT_BROWSER_SUPPORTED_RENDERER_CAPABILITIES = Object.freeze([
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
+  EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
 ] as const satisfies readonly ExportRendererCapabilityId[]);
 
 /**
@@ -379,6 +384,8 @@ export interface ExportAudioTrackManifest {
   /** Exported file already contains TTS speed — do not apply again. */
   readonly generatedPlaybackRate: 1;
   readonly sourceVoiceSpeed: number;
+  /** Capability-gated mastering for ShortForge-generated narration only. */
+  readonly masteringProfile?: "generated_speech_v1";
 }
 
 export interface ExportMusicTrackManifest {

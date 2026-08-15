@@ -20,6 +20,7 @@ import {
   EXPORT_RENDERER_CAPABILITY_ENGAGEMENT_OVERLAYS,
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
+  EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
 } from "./export-manifest.types";
@@ -124,17 +125,21 @@ export function validateExportManifestV5SceneMedia(
   const requiresBlurredFillBackground = required.includes(
     EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
   );
+  const requiresGeneratedVoiceMastering = required.includes(
+    EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
+  );
   if (
     required.length < 1 ||
     (!requiresKeyframed &&
       !requiresEngagement &&
       !requiresBrandSting &&
-      !requiresBlurredFillBackground)
+      !requiresBlurredFillBackground &&
+      !requiresGeneratedVoiceMastering)
   ) {
     issues.push({
       code: "MISSING_REQUIRED_CAPABILITY",
       message:
-        "ExportManifest v5 must require keyframed-visual-effects-v1, engagement-overlays-v1, shortforge-brand-sting-v1, and/or media-background-treatment-blurred-fill-v1.",
+        "ExportManifest v5 must require at least one supported renderer capability.",
     });
   }
 
@@ -143,7 +148,26 @@ export function validateExportManifestV5SceneMedia(
   let authoritativeEngagementScenes = 0;
   let authoritativeBrandSting = 0;
   let authoritativeBlurredFillItems = 0;
+  let authoritativeGeneratedVoiceMastering = 0;
   const sceneIds = new Set<string>();
+
+  const audio = isObject(manifest.audio) ? manifest.audio : null;
+  const voiceover = audio && isObject(audio.voiceover) ? audio.voiceover : null;
+  if (voiceover?.masteringProfile !== undefined) {
+    if (!requiresGeneratedVoiceMastering) {
+      issues.push({
+        code: "UNSUPPORTED_VOICE_MASTERING",
+        message: "audio.voiceover.masteringProfile requires generated-voice-mastering-v1.",
+      });
+    } else if (voiceover.masteringProfile !== "generated_speech_v1") {
+      issues.push({
+        code: "INVALID_VOICE_MASTERING",
+        message: "audio.voiceover.masteringProfile must be generated_speech_v1.",
+      });
+    } else {
+      authoritativeGeneratedVoiceMastering = 1;
+    }
+  }
 
   if (manifest.brandSting !== undefined) {
     if (!requiresBrandSting) {
@@ -528,6 +552,17 @@ export function validateExportManifestV5SceneMedia(
       code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
       message:
         "ExportManifest v5 with media-background-treatment-blurred-fill-v1 requires Fit media with backgroundTreatment blurred_fill.",
+    });
+  }
+
+  if (
+    requiresGeneratedVoiceMastering &&
+    authoritativeGeneratedVoiceMastering < 1
+  ) {
+    issues.push({
+      code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
+      message:
+        "ExportManifest v5 with generated-voice-mastering-v1 requires generated_speech_v1 on the voiceover track.",
     });
   }
 

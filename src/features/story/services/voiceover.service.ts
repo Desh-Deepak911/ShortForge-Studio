@@ -14,8 +14,13 @@ import {
 import type { StoryScript, VoiceoverResult } from "@/features/story/types";
 import { adjustVoiceoverDurationForSpeed } from "@/features/story/utils/voiceover-duration.utils";
 import { toVoiceoverResultFromMp3 } from "@/features/story/utils";
+import {
+  prepareNarrationForVoiceCadence,
+  prepareVoiceCadenceInstructions,
+} from "@/features/voice-quality";
 
-const TTS_MODEL = "tts-1";
+/** Clarity-first default; `tts-1` is latency-oriented and failed the voice A/B. */
+const TTS_MODEL = "tts-1-hd";
 const MAX_INPUT_LENGTH = 4096;
 
 export { TTS_MODEL };
@@ -93,11 +98,19 @@ export async function generateVoiceover(
     input.expressiveDelivery,
   );
 
-  const mp3 = await generateVoiceoverMp3(narration, resolvedVoice, {
+  const spokenNarration = prepareNarrationForVoiceCadence(
+    narration,
+    resolvedSpeed,
+  );
+  const mp3 = await generateVoiceoverMp3(spokenNarration, resolvedVoice, {
     speed: resolvedSpeed,
     applySpeed: speedAppliedByProvider,
     model: style.model,
-    instructions: style.instructions,
+    instructions: prepareVoiceCadenceInstructions({
+      model: style.model,
+      speed: resolvedSpeed,
+      instructions: style.instructions,
+    }),
   });
 
   const base = toVoiceoverResultFromMp3(mp3, {

@@ -894,6 +894,7 @@ async function muxExportVideoWithVoiceover(
   voiceGain: number,
   onMuxProgress?: (muxPercent: number) => void,
   applyPeakProtection?: boolean,
+  voiceMasteringProfile?: "generated_speech_v1",
 ): Promise<Blob> {
   const { muxVideoWithAudio } = await import("@/features/export/utils/ffmpeg.utils");
   return muxVideoWithAudio(silentBlob, voiceoverInput, {
@@ -901,6 +902,7 @@ async function muxExportVideoWithVoiceover(
     outputFormat,
     voiceGain,
     applyPeakProtection,
+    voiceMasteringProfile,
     onProgress: onMuxProgress,
   });
 }
@@ -914,6 +916,7 @@ export async function muxExportVideoWithAudioMix(options: {
   backgroundMusicMix?: ExportBackgroundMusicMixSettings;
   voiceGain: number;
   applyPeakProtection?: boolean;
+  voiceMasteringProfile?: "generated_speech_v1";
   h264Crf?: number;
   onMuxProgress?: (muxPercent: number) => void;
 }): Promise<Blob> {
@@ -926,6 +929,7 @@ export async function muxExportVideoWithAudioMix(options: {
     backgroundMusicMix: options.backgroundMusicMix,
     voiceGain: options.voiceGain,
     applyPeakProtection: options.applyPeakProtection,
+    voiceMasteringProfile: options.voiceMasteringProfile,
     h264Crf: options.h264Crf,
     onProgress: options.onMuxProgress,
   });
@@ -952,6 +956,7 @@ export async function muxWebmExportWithBrowserMixedAudio(options: {
   backgroundMusicInput: ExportAudioInput;
   backgroundMusicMix: ExportBackgroundMusicMixSettings;
   onMuxProgress?: (muxPercent: number) => void;
+  voiceMasteringProfile?: "generated_speech_v1";
 }): Promise<Blob> {
   const { mixExportVoiceoverAndBackgroundMusic } = await import(
     "@/features/export/utils/export-browser-audio-mix.utils"
@@ -961,6 +966,7 @@ export async function muxWebmExportWithBrowserMixedAudio(options: {
     voiceoverInput: options.voiceoverInput,
     backgroundMusicInput: options.backgroundMusicInput,
     mixSettings: options.backgroundMusicMix,
+    voiceMasteringProfile: options.voiceMasteringProfile,
   });
 
   return muxExportVideoWithStreamCopiedWebmAudio(
@@ -982,6 +988,7 @@ export async function runVoiceOnlyExportFallback(options: {
   muxOutputFormat: ExportAudioMuxOutputFormat;
   voiceGain: number;
   applyPeakProtection?: boolean;
+  voiceMasteringProfile?: "generated_speech_v1";
   onProgress: (progress: ExportProgress) => void;
   reportMuxProgress: (muxPercent: number, mixingMusic: boolean) => void;
 }): Promise<Blob> {
@@ -1003,6 +1010,7 @@ export async function runVoiceOnlyExportFallback(options: {
     options.voiceGain,
     (muxPercent) => options.reportMuxProgress(muxPercent, false),
     options.applyPeakProtection,
+    options.voiceMasteringProfile,
   );
 }
 

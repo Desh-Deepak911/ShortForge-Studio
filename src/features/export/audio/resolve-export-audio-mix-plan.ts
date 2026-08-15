@@ -128,6 +128,7 @@ export function resolveExportAudioMixPlan(
       sourceDurationMs: voice.durationMs,
       volumeGain: voice.volume,
       padToOutputMs,
+      ...(voice.masteringProfile ? { masteringProfile: voice.masteringProfile } : {}),
     };
   }
 

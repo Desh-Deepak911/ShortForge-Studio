@@ -120,6 +120,7 @@ export async function muxWebmWithManifestAudio(options: {
       muxOutputFormat: "webm",
       voiceGain: preparedAudio.voiceover?.volume ?? 1,
       applyPeakProtection: manifest.audio.applyPeakProtection,
+      voiceMasteringProfile: preparedAudio.voiceover?.masteringProfile,
       onProgress: () => undefined,
       reportMuxProgress: (p) => onMuxProgress?.(p),
     });
@@ -144,6 +145,7 @@ export async function muxWebmWithManifestAudio(options: {
         voiceoverInput,
         backgroundMusicInput,
         backgroundMusicMix: musicMix,
+        voiceMasteringProfile: preparedAudio.voiceover?.masteringProfile,
         onMuxProgress,
       });
       return {
@@ -175,6 +177,7 @@ export async function muxWebmWithManifestAudio(options: {
       backgroundMusicMix: musicMix ?? undefined,
       voiceGain: preparedAudio.voiceover?.volume ?? 1,
       applyPeakProtection: manifest.audio.applyPeakProtection,
+      voiceMasteringProfile: preparedAudio.voiceover?.masteringProfile,
       onMuxProgress,
     });
     return {

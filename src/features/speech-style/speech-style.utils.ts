@@ -6,7 +6,7 @@ import type { SpeechStyleInstructionResult, SpeechStylePreset } from "./speech-s
 
 export const DEFAULT_SPEECH_STYLE_PRESET: SpeechStylePreset = "neutral";
 
-export const TTS_MODEL_NEUTRAL = "tts-1" as const;
+export const TTS_MODEL_NEUTRAL = "tts-1-hd" as const;
 export const TTS_MODEL_EXPRESSIVE = "gpt-4o-mini-tts" as const;
 
 export { SPEECH_STYLE_PRESET_ORDER };
@@ -71,15 +71,13 @@ export function resolveSpeechStyleInstructions(
 /** Resolves TTS model for a voice + delivery style — newer voices require gpt-4o-mini-tts. */
 export function resolveTtsModelForVoice(
   voice: unknown,
-  stylePreset: unknown,
-  expressiveDelivery?: unknown,
 ): typeof TTS_MODEL_NEUTRAL | typeof TTS_MODEL_EXPRESSIVE {
   const normalizedVoice = resolveVoiceoverVoice(voice);
   if (voiceRequiresGpt4oMiniTts(normalizedVoice)) {
     return TTS_MODEL_EXPRESSIVE;
   }
 
-  return resolveSpeechStyleInstructions(stylePreset, expressiveDelivery).model;
+  return TTS_MODEL_NEUTRAL;
 }
 
 /** Resolves model, instructions, and delivery flags for a concrete voice request. */
@@ -89,7 +87,7 @@ export function resolveSpeechStyleInstructionsForVoice(
   expressiveDelivery?: unknown,
 ): SpeechStyleInstructionResult {
   const base = resolveSpeechStyleInstructions(stylePreset, expressiveDelivery);
-  const model = resolveTtsModelForVoice(voice, stylePreset, expressiveDelivery);
+  const model = resolveTtsModelForVoice(voice);
 
   return {
     ...base,

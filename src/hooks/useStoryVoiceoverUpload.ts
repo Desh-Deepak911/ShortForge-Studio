@@ -24,6 +24,7 @@ function restoreVoiceoverBaseline(
     voiceoverDurationMs: baseline.voiceoverDurationMs,
     voiceoverNarration: baseline.voiceoverNarration,
     voiceoverVoiceSettings: baseline.voiceoverVoiceSettings,
+    voiceoverSourceKind: baseline.voiceoverSourceKind,
     voiceSettings: baseline.voiceSettings,
   };
 
@@ -100,6 +101,7 @@ export function useStoryVoiceoverUpload(
             voice: voiceSettings.voice,
             speed: voiceSettings.speed,
           },
+          sourceKind: "uploaded",
         }),
       );
 
