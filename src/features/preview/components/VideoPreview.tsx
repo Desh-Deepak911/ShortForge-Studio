@@ -531,6 +531,13 @@ export default function VideoPreview({
                     overlay={getSceneEngagementOverlay(script, displayScene.id)}
                     sceneDurationMs={sceneDurationMs}
                     sceneElapsedMs={sceneElapsedMs}
+                    captionCollision={{
+                      present: showSubtitles || showGeneratedCaption,
+                      sceneLayout: displayScene.captionLayout,
+                      projectLayout: script.defaultCaptionLayout,
+                      sceneStyle: displayScene.captionStyle,
+                      projectStyle: script.defaultCaptionStyle,
+                    }}
                   />
                 ) : null}
                 {showSubtitles ? (

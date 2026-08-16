@@ -482,6 +482,17 @@ export function drawPreparedExportFrame(
       ? frame.drawScene.manifestScene.engagementOverlays
       : undefined;
   if (engagementOverlays && engagementOverlays.length > 0) {
+    const sceneCaption = frame.drawScene.sceneCaption;
+    const captionCollision =
+      captionModeAllowsDraw && sceneCaption
+        ? {
+            present: true,
+            sceneLayout: captionLayoutFromManifest(sceneCaption),
+            projectLayout: undefined,
+            sceneStyle: captionStyleFromManifest(sceneCaption),
+            projectStyle: undefined,
+          }
+        : undefined;
     for (const overlay of engagementOverlays) {
       const plan = resolveEngagementOverlayFrame({
         overlay,
@@ -489,6 +500,7 @@ export function drawPreparedExportFrame(
         sceneElapsedMs: frame.media.sceneElapsedMs,
         frameWidth: width,
         frameHeight: height,
+        captionCollision,
       });
       drawEngagementOverlay(ctx, plan);
     }

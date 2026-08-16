@@ -67,6 +67,7 @@ import {
 } from "@/features/export/services";
 import {
   prepareExportRequest,
+  resolveCanonicalExportSuccessDurationSec,
   type ExportCapabilityResult,
 } from "@/features/export/domain";
 import {
@@ -107,7 +108,6 @@ import {
   downloadBlob,
   setExportDownloadCaptureHandler,
 } from "@/features/export/utils/download.utils";
-import { prepareStoryForExport } from "@/features/export/utils/export-preflight.utils";
 import {
   applyExportProfileToSettings,
   getExportProfile,
@@ -785,17 +785,25 @@ export default function ExportPanel({
       }
 
       const exportScript = prepareStoryVoiceoverForExport(syncFootieScript(script));
-      const preflight = prepareStoryForExport(exportScript);
-      pendingExportContextRef.current = {
-        settings: attemptSettings,
-        requestedVoiceover: sessionOptions.includeNarration,
-        requestedMusic: sessionOptions.includeBackgroundMusic,
-        durationSec: preflight.exportDurationMs / 1000,
-      };
       const exportMix = buildAudioMixFromStory(exportScript);
       const resolvedExportAudioMode: ExportAudioMode = sessionOptions.includeNarration
         ? getDefaultExportAudioMode(true)
         : "silent";
+      pendingExportContextRef.current = {
+        settings: attemptSettings,
+        requestedVoiceover: sessionOptions.includeNarration,
+        requestedMusic: sessionOptions.includeBackgroundMusic,
+        durationSec: resolveCanonicalExportSuccessDurationSec({
+          story: exportScript,
+          exportSettings: attemptSettings,
+          audioMode: resolvedExportAudioMode,
+          includeBackgroundMusic: sessionOptions.includeBackgroundMusic,
+          mixedMediaScenesEnabled,
+          keyframedVisualEffectsEnabled,
+          engagementOverlaysEnabled,
+          shortForgeBrandStingEnabled,
+        }),
+      };
 
       logExportAudioDiagnostics(
         buildExportAudioDiagnostics(

@@ -152,6 +152,7 @@ export {
   type PrepareExportRequestInput,
   type PrepareExportRequestResult,
 } from "./prepare-export-request";
+export { resolveCanonicalExportSuccessDurationSec } from "./resolve-canonical-export-success-duration";
 export {
   ExportPreflightError,
   type ExportCapabilityResult,

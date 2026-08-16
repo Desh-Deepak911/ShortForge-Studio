@@ -767,11 +767,13 @@ function main(): void {
     );
     assert.match(draw, /resolveEngagementOverlayFrame/);
     assert.match(draw, /drawEngagementOverlay/);
+    assert.match(draw, /captionCollision/);
     assert.match(preview, /EngagementOverlayPreview/);
+    assert.match(preview, /captionCollision=/);
     assert.match(drawModule, /ctx\.save\(\)/);
     assert.match(drawModule, /ctx\.restore\(\)/);
     assert.match(drawModule, /shadowBlur/);
-    assert.match(drawModule, /Arial, Helvetica, sans-serif/);
+    assert.match(drawModule, /SHORTFORGE_MOTION_FONT_STACK/);
     assert.doesNotMatch(drawModule, /emoji|twemoji|youtube|instagram/i);
     assert.match(draw, /engagementOverlays/);
     const engagementAt = draw.indexOf("drawEngagementOverlay");

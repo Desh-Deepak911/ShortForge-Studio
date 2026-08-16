@@ -36,7 +36,20 @@ database mutation, deployment, or staging flag activation was performed.
 - An absent or disabled brand sting adds zero duration.
 - The brand sting contract rejects narration, captions, non-fixed playback
   speed, non-ShortForge title text, and unsupported 2–3 second durations.
+- Creator inspector, Preview SVG, and Browser/Headless canvas rendering are
+  implemented for both the combined CTA and the ShortForge Studio outro.
+- CTA labels stay `Like` / `Share` / `Subscribe`. Persistence lead-in stays
+  `Made with`; visible outro lead-in is `MADE WITH`.
+- Brand Sting commands preserve unrelated engagement overlays byte-for-byte.
 - ExportManifest v2/8D, v3/9C, and v4/9D identifiers remain unchanged.
+- Prompt 4 certification: automated suites are the authority for this slice.
+  Real Browser/Headless decoded artifacts and manual Studio smoke are recorded
+  separately and must not be claimed unless those runs actually completed.
+- Prompt 4B: caption-safe CTA placement reuses `resolveCaptionLayout`; export
+  success duration uses `resolveExportRenderEndMs`. Headless 1080p/4K were
+  re-run after the shared placement change. Browser recert of the operator QA
+  fixture was not completed in that session. Evidence:
+  `docs/evidence/export/current/ENGAGEMENT_OUTRO_MOTION_CERTIFICATION.md`.
 
 ## Commands used
 
