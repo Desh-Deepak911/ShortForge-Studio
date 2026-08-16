@@ -144,8 +144,8 @@ function planDuringIntraSceneTransition(
         composition.fromMediaItemId,
       ),
       style: composition.layerStyles.from,
-      isPlaying: false,
-      isActive: false,
+      isPlaying,
+      isActive: true,
       allowFramingDrag: false,
     },
     intraScene: {

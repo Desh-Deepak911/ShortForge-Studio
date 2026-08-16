@@ -1,6 +1,6 @@
 /**
  * Preview composition adapter for intra-scene media transitions (Sprint 9B).
- * Head-of-incoming timing + shared effect mathematics.
+ * Centered continuous timing + shared effect mathematics.
  * Does not recalculate media windows, own effect math, or import Export.
  */
 

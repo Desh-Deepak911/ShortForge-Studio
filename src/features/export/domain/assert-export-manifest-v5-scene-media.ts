@@ -21,6 +21,7 @@ import {
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
   EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
+  EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
 } from "./export-manifest.types";
@@ -102,17 +103,23 @@ function validateVisualEffect(
 export function validateExportManifestV5SceneMedia(
   manifest: unknown,
 ): ExportManifestV3IntegrityResult {
+  const required = isObject(manifest) && Array.isArray(manifest.requiredCapabilities)
+    ? manifest.requiredCapabilities
+    : [];
+  const requiresContinuousIntraSceneTransitions = required.includes(
+    EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
+  );
   const base = validateExportManifestV4SceneMedia(manifest, {
     version: EXPORT_MANIFEST_V5_VERSION,
     rendererContractVersion: EXPORT_RENDERER_CONTRACT_V5,
     label: "v5",
+    transitionTimingModel: requiresContinuousIntraSceneTransitions
+      ? "centered-continuous"
+      : "legacy",
   });
   if (!isObject(manifest) || !Array.isArray(manifest.scenes)) return base;
 
   const issues = [...base.issues];
-  const required = Array.isArray(manifest.requiredCapabilities)
-    ? manifest.requiredCapabilities
-    : [];
   const requiresKeyframed = required.includes(
     EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   );
@@ -134,7 +141,8 @@ export function validateExportManifestV5SceneMedia(
       !requiresEngagement &&
       !requiresBrandSting &&
       !requiresBlurredFillBackground &&
-      !requiresGeneratedVoiceMastering)
+      !requiresGeneratedVoiceMastering &&
+      !requiresContinuousIntraSceneTransitions)
   ) {
     issues.push({
       code: "MISSING_REQUIRED_CAPABILITY",
@@ -149,6 +157,7 @@ export function validateExportManifestV5SceneMedia(
   let authoritativeBrandSting = 0;
   let authoritativeBlurredFillItems = 0;
   let authoritativeGeneratedVoiceMastering = 0;
+  let authoritativeContinuousTransitions = 0;
   const sceneIds = new Set<string>();
 
   const audio = isObject(manifest.audio) ? manifest.audio : null;
@@ -267,6 +276,18 @@ export function validateExportManifestV5SceneMedia(
     if (scene && typeof scene.id === "string" && scene.id.trim()) {
       sceneIds.add(scene.id.trim());
     }
+
+    const transitionTrack = scene && isObject(scene.mediaTransitions)
+      ? scene.mediaTransitions
+      : null;
+    const transitionBoundaries = Array.isArray(transitionTrack?.boundaries)
+      ? transitionTrack.boundaries
+      : [];
+    authoritativeContinuousTransitions += transitionBoundaries.filter(
+      (boundary: unknown) =>
+        isObject(boundary) &&
+        boundary.timingModel === "centered-continuous-v1",
+    ).length;
 
     if (scene && scene.engagementOverlays !== undefined) {
       if (!requiresEngagement) {
@@ -563,6 +584,17 @@ export function validateExportManifestV5SceneMedia(
       code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
       message:
         "ExportManifest v5 with generated-voice-mastering-v1 requires generated_speech_v1 on the voiceover track.",
+    });
+  }
+
+  if (
+    requiresContinuousIntraSceneTransitions &&
+    authoritativeContinuousTransitions < 1
+  ) {
+    issues.push({
+      code: "MISSING_AUTHORITATIVE_ENHANCEMENT",
+      message:
+        "ExportManifest v5 with continuous-intra-scene-transitions-v1 requires at least one centered-continuous-v1 boundary.",
     });
   }
 

@@ -17,9 +17,12 @@ import {
   buildExportManifestFingerprint,
   buildExportSceneMediaTransitionTrack,
   EXPORT_MANIFEST_VERSION,
+  EXPORT_MANIFEST_V5_VERSION,
   EXPORT_MANIFEST_V3_VERSION,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_RENDERER_CONTRACT_V5,
+  EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
   EXPORT_RENDERER_CONTRACT_V3,
   EXPORT_RENDERER_CONTRACT_V2,
   isExportSceneManifestV3,
@@ -37,6 +40,8 @@ import {
 } from "@/features/export/domain";
 import { assertExportManifest } from "@/features/export/runtime/prepare-export-from-manifest";
 import { buildExportMediaCacheKey } from "@/features/export/utils/export-media-cache.utils";
+import { composeIntraSceneTransitionPreview } from "@/features/scene-media-transitions/preview";
+import { HEADLESS_WORKER_PHASE3_SUPPORTED } from "@/features/headless-renderer/worker/runtime/worker-types";
 import type { FootieScene, SceneMedia, TransitionEffect } from "@/features/story/types";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
@@ -156,7 +161,13 @@ function buildV3(scene: FootieScene): ExportManifestV3 {
     createdAt: current.createdAt,
     project: current.project,
     output: current.output,
-    scenes: current.scenes as ExportManifestV3["scenes"],
+    scenes: [{
+      ...current.scenes[0]!,
+      mediaTransitions: buildExportSceneMediaTransitionTrack(
+        scene,
+        current.scenes[0]!.mediaTimeline,
+      ),
+    }] as ExportManifestV3["scenes"],
     captions: current.captions,
     audio: current.audio,
     branding: current.branding,
@@ -238,7 +249,7 @@ function threeItemSceneWithABAndBC(): {
 
 console.log("\nintra-scene-transition-export (Sprint 9C)\n");
 
-test("Production builder emits v4 / 9D", () => {
+test("Production builder capability-gates centered continuous timing in v5 / 9E", () => {
   assert.equal(EXPORT_MANIFEST_VERSION, 4);
   assert.equal(EXPORT_RENDERER_CONTRACT_VERSION, "9D");
   const { scene, a, b } = twoItemScene(
@@ -251,12 +262,62 @@ test("Production builder emits v4 / 9D", () => {
     environment: CAPABLE_ENV,
     multiImageScenesEnabled: true,
   });
-  assert.equal(manifest.version, 4);
-  assert.equal(manifest.rendererContractVersion, "9D");
+  assert.equal(manifest.version, EXPORT_MANIFEST_V5_VERSION);
+  assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_V5);
+  assert.ok(
+    manifest.version === EXPORT_MANIFEST_V5_VERSION &&
+      manifest.requiredCapabilities.includes(
+        EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
+      ),
+  );
   const v3Scene = asV3Scene(manifest);
   assert.equal(v3Scene.mediaTransitions.version, 1);
   assert.equal(v3Scene.mediaTransitions.boundaries.length, 1);
   assert.equal(v3Scene.mediaTransitions.boundaries[0]!.effect, "fade");
+  assert.equal(
+    v3Scene.mediaTransitions.boundaries[0]!.timingModel,
+    "centered-continuous-v1",
+  );
+  const boundary = v3Scene.mediaTransitions.boundaries[0]!;
+  assert.equal(boundary.overlayStartOffsetMs, 2750);
+  assert.equal(boundary.overlayEndOffsetMs, 3250);
+  const early = resolveExportIntraSceneTransitionAtElapsed(v3Scene, 2800);
+  const mid = resolveExportIntraSceneTransitionAtElapsed(v3Scene, 3000);
+  const late = resolveExportIntraSceneTransitionAtElapsed(v3Scene, 3200);
+  assert.ok(early && mid && late);
+  assert.ok(mid.outgoingItemLocalMs > early.outgoingItemLocalMs);
+  assert.ok(late.outgoingItemLocalMs > mid.outgoingItemLocalMs);
+  assert.ok(mid.incomingItemLocalMs > early.incomingItemLocalMs);
+  assert.ok(late.incomingItemLocalMs > mid.incomingItemLocalMs);
+  assert.equal(validateExportManifest(manifest).ok, true);
+  assert.ok(
+    HEADLESS_WORKER_PHASE3_SUPPORTED.rendererCapabilities.includes(
+      EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
+    ),
+  );
+});
+
+test("Known exhausted video trims fall back to Cut in Preview and production export", () => {
+  const exhausted = {
+    ...videoMedia("https://example.com/exhausted.mp4"),
+    durationMs: 2000,
+    trimStartMs: 0,
+    trimEndMs: 2000,
+  } satisfies SceneMedia;
+  const { scene, a, b } = twoItemScene(
+    exhausted,
+    videoMedia("https://example.com/incoming.mp4"),
+  );
+  const next = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
+  assert.equal(composeIntraSceneTransitionPreview(next, 3000), null);
+  const manifest = buildExportManifest({
+    story: storyFrom(next),
+    environment: CAPABLE_ENV,
+    multiImageScenesEnabled: true,
+  });
+  assert.equal(asV3Scene(manifest).mediaTransitions.boundaries.length, 0);
+  assert.equal(manifest.version, EXPORT_MANIFEST_VERSION);
+  assert.equal(validateExportManifest(manifest).ok, true);
 });
 
 test("Frozen v2 fixture remains valid through v2 validator", () => {

@@ -38,8 +38,9 @@ import {
 import { classifyStoryPatch } from "@/features/editor/story-patches/story-patch-classifier";
 import {
   buildExportManifest,
-  EXPORT_MANIFEST_VERSION,
-  EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_MANIFEST_V5_VERSION,
+  EXPORT_RENDERER_CONTRACT_V5,
+  EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
 } from "@/features/export/domain";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
@@ -169,19 +170,19 @@ test("Requested vs effective duration and 40% clamp", () => {
 test("Exact boundary semantics: progress 0 at start; inactive at end", () => {
   const { scene, a, b } = twoItemScene();
   const next = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
-  const start = resolveIntraSceneTransitionAtElapsed(next, 3000);
+  const start = resolveIntraSceneTransitionAtElapsed(next, 2750);
   assert.equal(start.active, true);
-  assert.equal(start.overlayStartMs, 3000);
+  assert.equal(start.overlayStartMs, 2750);
   assert.equal(start.progress, 0);
-  assert.equal(start.outgoingItemLocalMs, 2999);
+  assert.equal(start.outgoingItemLocalMs, 2750);
   assert.equal(start.incomingItemLocalMs, 0);
 
-  const mid = resolveIntraSceneTransitionAtElapsed(next, 3250);
+  const mid = resolveIntraSceneTransitionAtElapsed(next, 3000);
   assert.equal(mid.active, true);
   assert.ok(mid.progress > 0 && mid.progress < 1);
-  assert.equal(mid.incomingItemLocalMs, 250);
+  assert.equal(mid.incomingItemLocalMs, 125);
 
-  const end = resolveIntraSceneTransitionAtElapsed(next, 3500);
+  const end = resolveIntraSceneTransitionAtElapsed(next, 3250);
   assert.equal(end.active, false);
 
   const sceneEnd = resolveIntraSceneTransitionAtElapsed(next, 6000);
@@ -344,8 +345,14 @@ test("current ExportManifest freezes mediaTransitions; Preview compose is not im
   });
   const withMeta = buildExportManifest({ story });
   assert.notEqual(without.fingerprint, withMeta.fingerprint);
-  assert.equal(withMeta.version, EXPORT_MANIFEST_VERSION);
-  assert.equal(withMeta.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+  assert.equal(withMeta.version, EXPORT_MANIFEST_V5_VERSION);
+  assert.equal(withMeta.rendererContractVersion, EXPORT_RENDERER_CONTRACT_V5);
+  assert.ok(
+    withMeta.version === EXPORT_MANIFEST_V5_VERSION &&
+      withMeta.requiredCapabilities.includes(
+        EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
+      ),
+  );
   assert.match(JSON.stringify(withMeta.scenes[0]), /mediaTransitions/);
   assert.equal(
     (withMeta.scenes[0] as unknown as { mediaTransitions: { boundaries: unknown[] } })

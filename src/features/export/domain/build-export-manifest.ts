@@ -63,6 +63,7 @@ import {
   EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS,
   EXPORT_RENDERER_CAPABILITY_MEDIA_BACKGROUND_TREATMENT_BLURRED_FILL,
   EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
+  EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
   EXPORT_RENDERER_CAPABILITY_SHORTFORGE_BRAND_STING,
   EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_MANIFEST_VERSION,
@@ -200,6 +201,11 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   );
   const hasGeneratedVoiceMastering =
     audio.voiceover?.masteringProfile === "generated_speech_v1";
+  const hasContinuousIntraSceneTransitions = scenes.some((scene) =>
+    scene.mediaTransitions.boundaries.some(
+      (boundary) => boundary.timingModel === "centered-continuous-v1",
+    ),
+  );
   const requiredCapabilities: ExportRendererCapabilityId[] = [];
   if (hasProjectedKeyframes || hasProjectedVisualEffect) {
     requiredCapabilities.push(EXPORT_RENDERER_CAPABILITY_KEYFRAMED_VISUAL_EFFECTS);
@@ -218,6 +224,11 @@ export function buildExportManifest(input: BuildExportManifestInput): ExportMani
   if (hasGeneratedVoiceMastering) {
     requiredCapabilities.push(
       EXPORT_RENDERER_CAPABILITY_GENERATED_VOICE_MASTERING,
+    );
+  }
+  if (hasContinuousIntraSceneTransitions) {
+    requiredCapabilities.push(
+      EXPORT_RENDERER_CAPABILITY_CONTINUOUS_INTRA_SCENE_TRANSITIONS,
     );
   }
   const hasAuthoritativeEnhancement = requiredCapabilities.length > 0;
@@ -336,6 +347,7 @@ function buildSceneManifests(
     const mediaTransitions = buildExportSceneMediaTransitionTrack(
       scene,
       mediaTimeline,
+      { continuousTimingEnabled: true },
     );
     const projectedOverlay = projectEngagementOverlayToManifest(
       getSceneEngagementOverlay(story, scene.id),

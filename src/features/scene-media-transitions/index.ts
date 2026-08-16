@@ -38,6 +38,15 @@ export {
 } from "./domain/track-signature";
 export { resolveEffectiveIntraSceneTransitionDurationMs } from "./resolution/resolve-effective-duration";
 export {
+  CONTINUOUS_INTRA_SCENE_TRANSITION_TIMING_MODEL,
+  resolveContinuousIntraSceneTransitionTiming,
+  resolveContinuousTransitionFootageAvailability,
+  type ContinuousIntraSceneTransitionTimingInput,
+  type ContinuousTransitionMediaAvailabilityInput,
+  type ContinuousTransitionFootageAvailability,
+  type ResolvedContinuousIntraSceneTransitionTiming,
+} from "./resolution/resolve-continuous-intra-scene-transition-timing";
+export {
   INTRA_SCENE_TRANSITION_EXPORT_SEAM,
   INTRA_SCENE_TRANSITION_PREVIEW_SEAM,
   resolveIntraSceneTransitionAtElapsed,

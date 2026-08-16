@@ -15,6 +15,7 @@ import {
   type ExportManifestV5,
 } from "@/features/export/domain";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
+import { setSceneMediaTransitionBoundary } from "@/features/scene-media-transitions";
 import { syncFootieScript } from "@/lib/utils/voiceover";
 
 import type { HeadlessRendererProfile } from "../../domain";
@@ -45,6 +46,7 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
   readonly positionX?: number;
   readonly positionY?: number;
   readonly sourcePattern?: "testsrc" | "smptehdbars";
+  readonly secondSourcePattern?: "testsrc" | "smptehdbars";
   readonly sourceDurationSec?: number;
   readonly trimStartMs?: number;
   /** Fit-with-background treatment — escalates frozen manifest to v5. */
@@ -53,6 +55,11 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
   readonly sourceBytes?: Uint8Array;
   /** Empty title avoids opening-title contamination in encode audits. */
   readonly storyTitle?: string;
+  /** Optional two-item moving-video transition certification fixture. */
+  readonly intraSceneTransition?: {
+    readonly effect: "fade" | "slide-left" | "slide-right" | "zoom-in" | "zoom-out" | "blur";
+    readonly durationMs: 300 | 500 | 1000;
+  };
 }): HeadlessReferenceFixture {
   const contentDurationMs = input?.contentDurationMs ?? 6000;
   const rendererProfile: HeadlessRendererProfile = {
@@ -87,9 +94,17 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
         height: sourceHeight,
         pattern: input?.sourcePattern,
       });
+  const secondMotion = input?.intraSceneTransition && input.secondSourcePattern
+    ? synthesizeMotionMp4Fixture({
+        durationSec: sourceDurationSec,
+        width: sourceWidth,
+        height: sourceHeight,
+        pattern: input.secondSourcePattern,
+      })
+    : motion;
   const urls = {
     a: "https://fixture.local/headless/motion.mp4",
-    b: "https://fixture.local/headless/motion.mp4",
+    b: "https://fixture.local/headless/motion-b.mp4",
     c: "https://fixture.local/headless/motion.mp4",
     voice: "https://fixture.local/headless/voice.wav",
     music: "https://fixture.local/headless/music.wav",
@@ -118,7 +133,11 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     },
     ...(backgroundTreatment ? { backgroundTreatment } : {}),
   };
-  const scene: FootieScene = {
+  const secondVideoMedia: SceneMedia = {
+    ...videoMedia,
+    url: urls.b,
+  };
+  let scene: FootieScene = {
     id: "video-motion-scene",
     start: 0,
     end: contentDurationMs / 1000,
@@ -131,9 +150,23 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     media: videoMedia,
     mediaTimeline: {
       version: 1,
-      items: [{ id: "video-item-1", media: videoMedia, durationWeight: 1 }],
+      items: input?.intraSceneTransition
+        ? [
+            { id: "video-item-1", media: videoMedia, durationWeight: 1 },
+            { id: "video-item-2", media: secondVideoMedia, durationWeight: 1 },
+          ]
+        : [{ id: "video-item-1", media: videoMedia, durationWeight: 1 }],
     },
   };
+  if (input?.intraSceneTransition) {
+    scene = setSceneMediaTransitionBoundary(
+      scene,
+      "video-item-1",
+      "video-item-2",
+      input.intraSceneTransition.effect,
+      input.intraSceneTransition.durationMs,
+    ).scene;
+  }
   const story = syncFootieScript({
     title: input?.storyTitle ?? "Headless Video Motion Reference",
     narration: "",
@@ -147,7 +180,7 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     environment: CAPABLE_ENV,
     audioMode: "silent",
     includeBackgroundMusic: false,
-    multiImageScenesEnabled: false,
+    multiImageScenesEnabled: Boolean(input?.intraSceneTransition),
     exportSettings: {
       resolution: exportResolution,
       format: rendererProfile.format,
@@ -157,10 +190,10 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
   if (!isExportManifestV4(manifest) && !isExportManifestV5(manifest)) {
     throw new Error("Expected v4 or v5 video motion manifest.");
   }
-  if (backgroundTreatment && !isExportManifestV5(manifest)) {
-    throw new Error("Fit-with-background must freeze as ExportManifest v5.");
+  if ((backgroundTreatment || input?.intraSceneTransition) && !isExportManifestV5(manifest)) {
+    throw new Error("Enhanced video motion fixture must freeze as ExportManifest v5.");
   }
-  if (!backgroundTreatment && !isExportManifestV4(manifest)) {
+  if (!backgroundTreatment && !input?.intraSceneTransition && !isExportManifestV4(manifest)) {
     throw new Error("Legacy Fit/Fill video motion fixture must freeze as v4.");
   }
   const appliedPrimary = applyHeadlessFormatToManifest(manifest, rendererProfile);
@@ -223,7 +256,7 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
   }
   const assetBytesByUrl = new Map<string, Uint8Array>([
     [urls.a, motion.bytes],
-    [urls.b, motion.bytes],
+    [urls.b, secondMotion.bytes],
     [urls.c, motion.bytes],
   ]);
   return {
@@ -231,7 +264,10 @@ export function buildHeadlessVideoMotionReferenceFixture(input?: {
     manifestV2: appliedV2.manifest,
     rendererProfile,
     assetBytesByUrl,
-    assetMimeByUrl: new Map([[urls.a, "video/mp4"]]),
+    assetMimeByUrl: new Map([
+      [urls.a, "video/mp4"],
+      [urls.b, "video/mp4"],
+    ]),
     voiceBytes: null,
     musicBytes: null,
     urls,

@@ -65,6 +65,7 @@ export function validateExportManifestV4SceneMedia(
     readonly version: number;
     readonly rendererContractVersion: string;
     readonly label: string;
+    readonly transitionTimingModel?: "legacy" | "centered-continuous";
   } = {
     version: EXPORT_MANIFEST_VERSION,
     rendererContractVersion: EXPORT_RENDERER_CONTRACT_VERSION,
