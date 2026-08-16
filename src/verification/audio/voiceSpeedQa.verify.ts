@@ -347,7 +347,7 @@ test("voice speed UI does not auto-regenerate on chip change", () => {
   assert.match(card, /onClick=\{\(\) => void applyVoiceoverChanges\(\)\}/);
 });
 
-test("OpenAI baked-speed voiceover preview does not double-apply playbackRate", () => {
+test("canonical speed-rendered voiceover preview does not double-apply playbackRate", () => {
   assert.equal(VOICEOVER_SPEED_BAKED_BY_TTS_PROVIDER, true);
   assert.equal(isVoiceoverSpeedAppliedByProvider(), true);
   assert.equal(
@@ -370,7 +370,7 @@ test("OpenAI baked-speed voiceover preview does not double-apply playbackRate", 
   );
 });
 
-test("non-baked provider path still applies nominal playbackRate for preview", () => {
+test("legacy non-canonical audio can still apply nominal playbackRate for preview", () => {
   assert.equal(
     resolvePreviewVoiceoverPlaybackRate({
       nominalSpeed: 1.25,
@@ -397,12 +397,12 @@ test("uploaded or non-provider audio can opt out of baked-speed preview playback
   );
 });
 
-test("export still muxes raw canonical MP3 without preview playbackRate", () => {
+test("export muxes the canonical speed-rendered MP3 without another tempo pass", () => {
   const ffmpeg = readFileSync(
     join(root, "src/features/export/utils/ffmpeg.utils.ts"),
     "utf8",
   );
-  // Voiceover is trimmed/padded to project length; speed is not re-applied via atempo.
+  // Voiceover is already pitch-preserved at generation; export only trims/pads it.
   assert.match(ffmpeg, /atrim=0:\$\{duration\}/);
   assert.doesNotMatch(ffmpeg, /atempo=/);
 });

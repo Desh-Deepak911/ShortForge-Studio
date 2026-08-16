@@ -1,13 +1,14 @@
 /**
  * Preview playback rate for canonical voiceover MP3.
  *
- * OpenAI TTS encodes story speed in the generated MP3 (`speed` on speech.create).
- * Preview must not re-apply `HTMLAudioElement.playbackRate` for those files or audio
- * will sound faster than export (which muxes the raw MP3).
- *
- * Keep aligned with `OPENAI_TTS_SUPPORTS_PLAYBACK_SPEED` in voiceover.service.ts.
+ * Story speed is encoded once in the canonical generated MP3. It may be native,
+ * pitch-preserved, or a provider fallback. Preview must never apply a second
+ * `HTMLAudioElement.playbackRate` transform.
  */
-export const VOICEOVER_SPEED_BAKED_BY_TTS_PROVIDER = true;
+export const VOICEOVER_SPEED_ENCODED_IN_CANONICAL_AUDIO = true;
+/** @deprecated Compatibility name; speed may now be locally pitch-preserved. */
+export const VOICEOVER_SPEED_BAKED_BY_TTS_PROVIDER =
+  VOICEOVER_SPEED_ENCODED_IN_CANONICAL_AUDIO;
 
 export interface ResolvePreviewVoiceoverPlaybackRateOptions {
   /** Nominal story speed from voice settings / audio track metadata (UI + stale detection). */
@@ -19,7 +20,7 @@ export interface ResolvePreviewVoiceoverPlaybackRateOptions {
   speedAppliedByProvider?: boolean;
 }
 
-/** Whether provider-encoded speed should suppress preview playbackRate adjustment. */
+/** Whether canonical-audio speed should suppress preview playbackRate adjustment. */
 export function isVoiceoverSpeedAppliedByProvider(
   speedAppliedByProvider?: boolean,
 ): boolean {

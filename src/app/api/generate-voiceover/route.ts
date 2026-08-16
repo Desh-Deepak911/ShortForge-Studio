@@ -68,6 +68,9 @@ export async function POST(request: Request) {
         ...(voiceover.metadata?.speed != null
           ? { "X-Voiceover-Speed": String(voiceover.metadata.speed) }
           : {}),
+        ...(voiceover.metadata?.speedRendering
+          ? { "X-Voiceover-Speed-Rendering": voiceover.metadata.speedRendering }
+          : {}),
       },
     });
   } catch (error) {

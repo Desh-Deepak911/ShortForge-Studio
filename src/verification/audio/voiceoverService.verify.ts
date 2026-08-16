@@ -39,15 +39,26 @@ test("generateVoiceover accepts narration, voice, and speed", () => {
   assert.match(route, /narration,/);
 });
 
-test("OpenAI path passes speed directly to speech.create when supported", () => {
+test("non-1 speeds use lossless normal-speed speech plus pitch-preserved tempo", () => {
   const servicePath = join(
     process.cwd(),
     "src/features/story/services/voiceover.service.ts",
   );
   const service = readFileSync(servicePath, "utf8");
 
-  assert.match(service, /OPENAI_TTS_SUPPORTS_PLAYBACK_SPEED = true/);
-  assert.match(service, /applySpeed \? \{ speed: resolveVoiceoverSpeed\(options\.speed\) \}/);
+  assert.match(service, /responseFormat: "wav"/);
+  assert.match(service, /speed: 1/);
+  assert.match(service, /renderPitchPreservedVoiceSpeed/);
+  assert.match(service, /speedRendering: "pitch_preserved"/);
+});
+
+test("voice generation keeps a provider-speed fallback", () => {
+  const service = readFileSync(
+    join(process.cwd(), "src/features/story/services/voiceover.service.ts"),
+    "utf8",
+  );
+  assert.match(service, /speedRendering: "provider_fallback"/);
+  assert.match(service, /responseFormat: "mp3"/);
 });
 
 console.log("\nAll voiceover service checks passed.");
