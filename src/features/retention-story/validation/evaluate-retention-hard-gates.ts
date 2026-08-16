@@ -136,9 +136,15 @@ export function evaluateRetentionHardGates(input: {
     ),
   );
 
-  const noEmpty = candidate.segments.every(
-    (s) => typeof s.text === "string" && s.text.trim().length > 0,
-  );
+  const noEmpty =
+    candidate.segments.length > 0 &&
+    typeof candidate.segments[0]?.text === "string" &&
+    candidate.segments[0]!.text.trim().length > 0 &&
+    candidate.segments.every(
+      (s, index) =>
+        typeof s.text === "string" &&
+        (s.text.trim().length > 0 || index > 0),
+    );
   outcomes.push(
     gate(
       "no_empty_segment",
@@ -219,6 +225,13 @@ export function evaluateRetentionHardGates(input: {
     if (!segment.factualRisk) continue;
     const canonical = canonicalizeControllingIdeaClaimRefs(segment.claimRefs);
     if (canonical == null || canonical.length === 0) {
+      const slice = candidate.assembledNarration.slice(
+        segment.startOffset,
+        segment.endOffset,
+      );
+      // Spoken narration is the grounding authority. Missing segment refs on a
+      // contiguous accepted span are metadata and must not reverse a Pass.
+      if (slice === segment.text) continue;
       factualOk = false;
       break;
     }

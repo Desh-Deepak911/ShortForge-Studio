@@ -195,7 +195,7 @@ export interface GenerateScriptResponse {
   voiceoverAudioBase64?: string;
   /** True when scene timings were fitted to measured voiceover duration. */
   audioFirstApplied?: boolean;
-  /** Final merged context sent to the script prompt (manual + research). */
+  /** Safe presence marker only. Never echoes creator notes or research prose. */
   generationContext?: string;
   /** True when API-Football research contributed to generationContext. */
   researchApplied?: boolean;

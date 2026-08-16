@@ -15,6 +15,7 @@ import type {
   RetentionNarrationCandidateOrigin,
 } from "./retention-narration-candidate.types";
 import { assertRetentionNarrationCandidateCoherence } from "./assert-retention-narration-candidate-coherence";
+import type { NormalizeRetentionComposerProposalExtras } from "./normalize-retention-composer-proposal";
 
 export function buildRetentionNarrationCandidateFromProposal(input: {
   readonly proposal: unknown;
@@ -23,6 +24,7 @@ export function buildRetentionNarrationCandidateFromProposal(input: {
   readonly strategySeed: RetentionStrategySeed;
   readonly origin: RetentionNarrationCandidateOrigin;
   readonly permittedHookClaimIds?: readonly string[];
+  readonly extras?: NormalizeRetentionComposerProposalExtras;
 }): {
   readonly candidate: RetentionNarrationCandidate;
   readonly title: string;
@@ -34,6 +36,8 @@ export function buildRetentionNarrationCandidateFromProposal(input: {
     input.grounding,
     input.strategySeed,
     input.permittedHookClaimIds ?? [],
+    undefined,
+    input.extras,
   );
   const orderedBeatIds = input.plan.beatPlan.beats.map((b) => b.id);
   const assembled = assembleRetentionNarrationCandidate({
@@ -41,6 +45,7 @@ export function buildRetentionNarrationCandidateFromProposal(input: {
     planFingerprint: input.plan.planFingerprint,
     orderedBeatIds,
     segments: normalized.segments,
+    assemblyGap: normalized.assemblyGap,
   });
   const candidate = assertRetentionNarrationCandidateCoherence(assembled, {
     plan: input.plan,

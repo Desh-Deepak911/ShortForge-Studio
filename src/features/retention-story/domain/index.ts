@@ -58,6 +58,18 @@ export {
 } from "./retention-story-errors";
 
 export {
+  RETENTION_PROVIDER_FAILURE_CLASSES,
+  freezeRetentionSafeProviderFailure,
+  isRetentionProviderFailureClass,
+  isUnusableProviderResponseClass,
+  type RetentionProviderFailureClass,
+  type RetentionSafeProviderFailure,
+  type RetentionProviderEndpointFamily,
+  type RetentionProviderFailurePhase,
+  type RetentionProviderTimeoutClass,
+} from "./retention-provider-failure.types";
+
+export {
   retentionStableStringify,
   retentionStableHash,
   buildRetentionSemanticIdentity,
@@ -95,3 +107,16 @@ export {
   assertRetentionCreatorContextAuthorityMatchesContract,
   type RetentionCreatorContextAuthority,
 } from "./retention-creator-context-authority";
+
+export {
+  RETENTION_CREATOR_CONTENT_CONTRACT_VERSION,
+  type RetentionContentUnitKind,
+  type RetentionContentUnitRole,
+  type RetentionContentUnitSourceField,
+  type RetentionContentUnitAuthority,
+  type RetentionContentUnitSourceSpan,
+  type RetentionCreatorContentUnit,
+  type RetentionCreatorPresentationSettings,
+  type RetentionCreatorContentContract,
+  type RetentionCreatorContentAllocation,
+} from "./retention-creator-content-contract.types";

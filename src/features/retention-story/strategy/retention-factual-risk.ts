@@ -59,6 +59,53 @@ const MATCH_RESULT_RE = new RegExp(
   "iu",
 );
 
+/**
+ * Month names except May — those forms are unambiguous even in lowercase.
+ * Modal "may" ("may struggle", "may return") is uncertainty, not a date.
+ * Month "May" is a date only with supporting date context.
+ */
+const RETENTION_UNAMBIGUOUS_MONTH_OR_YEAR_RE =
+  /\b(?:19|20)\d{2}\b|\b(?:january|february|march|april|june|july|august|september|october|november|december)\b/i;
+
+const MAY_WITH_DAY_OR_YEAR =
+  /\bMay\s+(?:\d{1,2}(?:st|nd|rd|th)?|(?:19|20)\d{2})\b/;
+const DAY_THEN_MAY = /\b\d{1,2}(?:st|nd|rd|th)?\s+May\b/;
+const IN_MAY = /\bin\s+May\b/gi;
+
+function windowHasSupportingDateStructure(window: string): boolean {
+  const withoutInMay = window.replace(/\bin\s+May\b/gi, " ");
+  return (
+    /\b(?:19|20)\d{2}\b/.test(withoutInMay) ||
+    /\b\d{1,2}(?:st|nd|rd|th)?\b/.test(withoutInMay) ||
+    RETENTION_UNAMBIGUOUS_MONTH_OR_YEAR_RE.test(withoutInMay)
+  );
+}
+
+/**
+ * True when text contains a date signal. Modal "may" is never enough.
+ * Case alone does not make "May" a month.
+ */
+export function statementHasRetentionDateSignal(statement: string): boolean {
+  if (!statement) return false;
+  if (RETENTION_UNAMBIGUOUS_MONTH_OR_YEAR_RE.test(statement)) return true;
+  if (MAY_WITH_DAY_OR_YEAR.test(statement) || DAY_THEN_MAY.test(statement)) {
+    return true;
+  }
+  IN_MAY.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = IN_MAY.exec(statement)) != null) {
+    const start = Math.max(0, match.index - 28);
+    const end = Math.min(
+      statement.length,
+      match.index + match[0].length + 28,
+    );
+    if (windowHasSupportingDateStructure(statement.slice(start, end))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const SIGNAL_PATTERNS: readonly { readonly id: string; readonly re: RegExp }[] =
   Object.freeze([
     { id: "percentage", re: /\d+(?:\.\d+)?\s*%/ },
@@ -69,7 +116,7 @@ const SIGNAL_PATTERNS: readonly { readonly id: string; readonly re: RegExp }[] =
     { id: "ranking", re: /\b(?:rank(?:ed|ing)?|top\s*\d+|#[1-9]\d*)\b/i },
     {
       id: "date",
-      re: /\b(?:19|20)\d{2}\b|\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\b/i,
+      re: RETENTION_UNAMBIGUOUS_MONTH_OR_YEAR_RE,
     },
     {
       id: "quote",
@@ -108,7 +155,22 @@ export function detectRetentionFactualRisk(
     return Object.freeze({ risky: false, signals: Object.freeze([]) });
   }
   const signals: string[] = [];
+  const interrogative =
+    /^(?:why|how|what|when|where|who|can|does|do|is|are|will|should|whether)\b/iu.test(
+      statement.trim(),
+    ) && /[?]$/u.test(statement.trim());
   for (const pattern of SIGNAL_PATTERNS) {
+    if (pattern.id === "date") {
+      if (statementHasRetentionDateSignal(statement)) signals.push(pattern.id);
+      continue;
+    }
+    // A question can mention "goals" or "ranking" without asserting a stat.
+    if (
+      interrogative &&
+      (pattern.id === "record_stat" || pattern.id === "ranking")
+    ) {
+      continue;
+    }
     if (pattern.re.test(statement)) {
       signals.push(pattern.id);
     }

@@ -6,7 +6,7 @@ export const RETENTION_VALIDATION_VERSION = 1 as const;
 export const RETENTION_VALIDATION_FINGERPRINT_PREFIX = "rv:" as const;
 export const RETENTION_THRESHOLD_REGISTRY_VERSION = "threshold-registry/1" as const;
 /** Sprint 10H.2 — curiosity credits declarative / cold-open / headline openings (not question-only). */
-export const RETENTION_HEURISTIC_REGISTRY_VERSION = "heuristic-registry/2" as const;
+export const RETENTION_HEURISTIC_REGISTRY_VERSION = "heuristic-registry/3" as const;
 
 export const RETENTION_HARD_GATE_IDS = Object.freeze([
   "one_controlling_idea_object",

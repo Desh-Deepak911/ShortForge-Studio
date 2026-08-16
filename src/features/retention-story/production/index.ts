@@ -100,6 +100,55 @@ export type {
 } from "./retention-generation-disposition.types";
 export { freezeDispositionSummary } from "./retention-generation-disposition.types";
 export { buildRetentionGenerationDisposition } from "./build-retention-generation-disposition";
+export { createRetentionGenerationAcceptanceTraceRecorder } from "./create-retention-generation-acceptance-trace";
+export type {
+  RetentionGenerationAcceptanceTrace,
+  RetentionGenerationRejectionStage,
+  RetentionGenerationFinalNarrationAuthority,
+} from "./retention-generation-acceptance-trace.types";
+
+export {
+  inspectRetentionOpenAiStrictJsonSchema,
+  assertRetentionOpenAiStrictJsonSchema,
+} from "./assert-retention-openai-strict-json-schema";
+export {
+  classifyRetentionProviderFailure,
+  retentionStoryErrorFromProviderFailure,
+  isRetentionProviderRequestError,
+  RetentionProviderRequestError,
+} from "./classify-retention-provider-failure";
+export {
+  buildRetentionComposerJsonSchema,
+  RETENTION_PROMPT5_COMPOSER_JSON_SCHEMA_WITH_OPTIONAL_PROPERTIES,
+} from "./retention-composer-json-schema";
+export {
+  buildRetentionPublicGenerationContextPresence,
+  assertRetentionPublicPayloadPrivacy,
+  RETENTION_PUBLIC_GENERATION_CONTEXT_SUPPLIED,
+} from "./build-retention-public-generation-context";
+export {
+  createRetentionCertificationCallBudget,
+  bindRetentionCertificationCallBudget,
+  noteRetentionCertificationProviderInvoke,
+  RETENTION_EXPECTED_PROVIDER_CALLS,
+  RETENTION_CERTIFICATION_CALL_BUDGET_VERSION,
+} from "./create-retention-certification-call-budget";
+export {
+  isRetentionRejectedProposalCaptureEnabled,
+  createRetentionRejectedProposalCaptureSession,
+  bindRetentionRejectedProposalCapture,
+  digestRetentionNarration,
+  recordRetentionNarrationTransform,
+  metadataOnlyStageMayChangeNarration,
+  textChangingStageRequiresProvenance,
+  RETENTION_REJECTED_PROPOSAL_CAPTURE_DIR,
+  RETENTION_REJECTED_PROPOSAL_CAPTURE_VERSION,
+} from "./create-retention-rejected-proposal-capture";
+export {
+  serializeRetentionCanonicalGenerationResult,
+  parseRetentionNdjsonComplete,
+} from "./serialize-retention-canonical-generation-result";
+export { createRetentionFrozenProductionComposer } from "./create-retention-frozen-production-composer";
 
 export { assertCommitGateLedgerAuthority } from "./assert-commit-gate-ledger-authority";
 export {

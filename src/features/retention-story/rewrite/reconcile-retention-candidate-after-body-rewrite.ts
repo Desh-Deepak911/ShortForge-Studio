@@ -11,7 +11,10 @@ import type {
 import { detectRetentionFactualRisk } from "../strategy/retention-factual-risk";
 import type { RetentionStrategySeed } from "../strategy/retention-strategy.types";
 import type { RetentionStoryPlan } from "../planning/retention-story-plan.types";
-import { assembleRetentionNarrationCandidate } from "../composition/assemble-retention-narration-candidate";
+import {
+  assembleRetentionNarrationCandidate,
+  detectRetentionNarrationAssemblyGap,
+} from "../composition/assemble-retention-narration-candidate";
 import { assertRetentionNarrationCandidateCoherence } from "../composition/assert-retention-narration-candidate-coherence";
 import type { RetentionSegmentDraft } from "../composition/assemble-retention-narration-candidate";
 import type { RetentionNarrationCandidate } from "../composition/retention-narration-candidate.types";
@@ -78,6 +81,7 @@ export function reconcileRetentionCandidateAfterBodyRewrite(input: {
   readonly permittedHookClaimIds?: readonly string[];
   readonly origin?: "after_body_rewrite" | "after_length_enforcement" | "final";
   readonly contract?: NormalizedStoryContract;
+  readonly extras?: import("../composition/normalize-retention-composer-proposal").NormalizeRetentionComposerProposalExtras;
 }): {
   readonly candidate: RetentionNarrationCandidate;
   readonly title: string;
@@ -89,6 +93,7 @@ export function reconcileRetentionCandidateAfterBodyRewrite(input: {
     input.grounding,
     input.strategySeed,
     input.permittedHookClaimIds ?? [],
+    input.extras,
   );
 
   const drafts: RetentionSegmentDraft[] = normalized.segments.map(
@@ -106,6 +111,7 @@ export function reconcileRetentionCandidateAfterBodyRewrite(input: {
     planFingerprint: input.plan.planFingerprint,
     orderedBeatIds: input.plan.beatPlan.beats.map((b) => b.id),
     segments: drafts,
+    assemblyGap: normalized.assemblyGap,
   });
 
   assertExactApprovedOpeningPreserved(
@@ -183,6 +189,7 @@ function assembleFromMutableTexts(input: {
     planFingerprint: input.plan.planFingerprint,
     orderedBeatIds: beats.map((b) => b.id),
     segments: drafts,
+    assemblyGap: detectRetentionNarrationAssemblyGap(input.previousCandidate),
   });
 
   assertExactApprovedOpeningPreserved(

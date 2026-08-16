@@ -40,6 +40,10 @@ export interface ReadyLedgerPhaseEvidence {
   readonly plannerSucceededSequence: number | null;
   readonly initialAttemptSequence: number | null;
   readonly initialSucceededSequence: number | null;
+  readonly hookRepairSucceededSequence: number | null;
+  readonly lengthCompressionSucceededSequence: number | null;
+  readonly hookRepairFailed: boolean;
+  readonly lengthCompressionFailed: boolean;
   /** Earliest compression / repair / fallback / rewrite / deterministic-marker sequence. */
   readonly earliestLaterPhaseSequence: number | null;
   readonly firstEvent: RetentionModelCallLedgerEvent | null;
@@ -135,6 +139,26 @@ export function deriveReadyLedgerPhaseEvidence(
     initialSucceededSequence:
       firstSequence(events, "initial_narration", "succeeded") ??
       firstSequence(events, "initial_narration", "skipped_deterministic"),
+    hookRepairSucceededSequence: firstSequence(events, "hook_repair", "succeeded"),
+    lengthCompressionSucceededSequence: firstSequence(
+      events,
+      "length_compression",
+      "succeeded",
+    ),
+    hookRepairFailed: events.some(
+      (event) =>
+        event.category === "hook_repair" &&
+        (event.outcome === "failed" ||
+          event.outcome === "rejected" ||
+          event.outcome === "malformed"),
+    ),
+    lengthCompressionFailed: events.some(
+      (event) =>
+        event.category === "length_compression" &&
+        (event.outcome === "failed" ||
+          event.outcome === "rejected" ||
+          event.outcome === "malformed"),
+    ),
     earliestLaterPhaseSequence,
     firstEvent: events[0] ?? null,
     secondEvent: events[1] ?? null,
@@ -161,24 +185,47 @@ export function isReadyLedgerPhaseOrderValid(
   evidence: ReadyLedgerPhaseEvidence,
   qualityMode: "cheap" | "balanced" | "best",
 ): boolean {
-  // Composition authority: model success or deterministic rescue marker.
-  if (evidence.initialSucceededSequence == null) {
+  // Composition authority: model success, one targeted repair, or deterministic rescue.
+  const compositionSequence =
+    evidence.initialSucceededSequence ??
+    evidence.hookRepairSucceededSequence ??
+    evidence.lengthCompressionSucceededSequence;
+  if (compositionSequence == null) {
     return false;
   }
 
   // When a model attempt exists, composition authority must follow it.
   if (
     evidence.initialAttemptSequence != null &&
-    evidence.initialSucceededSequence <= evidence.initialAttemptSequence
+    compositionSequence <= evidence.initialAttemptSequence
+  ) {
+    return false;
+  }
+  if (
+    evidence.initialAttemptSequence != null &&
+    evidence.earliestLaterPhaseSequence != null &&
+    evidence.earliestLaterPhaseSequence <= evidence.initialAttemptSequence
   ) {
     return false;
   }
 
   if (
     evidence.earliestLaterPhaseSequence != null &&
-    evidence.earliestLaterPhaseSequence <= evidence.initialSucceededSequence
+    evidence.earliestLaterPhaseSequence <= compositionSequence
   ) {
-    return false;
+    const repairAttempt = evidence.earliestLaterPhaseSequence;
+    const targetedRepairBecameAuthority =
+      (evidence.hookRepairSucceededSequence != null &&
+        repairAttempt < evidence.hookRepairSucceededSequence) ||
+      (evidence.lengthCompressionSucceededSequence != null &&
+        repairAttempt < evidence.lengthCompressionSucceededSequence);
+    const failedRepairThenRescue =
+      evidence.initialSucceededSequence != null &&
+      evidence.hookRepairSucceededSequence == null &&
+      (evidence.hookRepairFailed || evidence.lengthCompressionFailed);
+    if (!targetedRepairBecameAuthority && !failedRepairThenRescue) {
+      return false;
+    }
   }
 
   if (qualityMode === "cheap") {
@@ -234,7 +281,14 @@ export function isReadyLedgerPhaseOrderValid(
     ) {
       return false;
     }
-    if (evidence.initialSucceededSequence <= plannerTerminalSequence) {
+    const compositionAfterPlanner =
+      evidence.initialSucceededSequence ??
+      evidence.hookRepairSucceededSequence ??
+      evidence.lengthCompressionSucceededSequence;
+    if (
+      compositionAfterPlanner == null ||
+      compositionAfterPlanner <= plannerTerminalSequence
+    ) {
       return false;
     }
     return true;

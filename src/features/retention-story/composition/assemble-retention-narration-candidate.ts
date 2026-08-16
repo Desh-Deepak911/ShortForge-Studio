@@ -16,6 +16,29 @@ import type {
   RetentionNarrationCandidateOrigin,
   RetentionNarrationSegment,
 } from "./retention-narration-candidate.types";
+import type { RetentionNarrationAssemblyGap } from "./retention-narration-first.types";
+
+export function isPermittedRetentionNarrationAssemblyGap(
+  gap: string,
+): gap is RetentionNarrationAssemblyGap {
+  return gap === RETENTION_SEGMENT_SEPARATOR || gap === " " || gap === "";
+}
+
+export function detectRetentionNarrationAssemblyGap(candidate: {
+  readonly segments: readonly { readonly startOffset: number; readonly endOffset: number }[];
+  readonly assembledNarration: string;
+}): RetentionNarrationAssemblyGap {
+  const spoken = candidate.segments.filter(
+    (segment) => segment.endOffset > segment.startOffset,
+  );
+  if (spoken.length < 2) return "";
+  const gap = candidate.assembledNarration.slice(
+    spoken[0]!.endOffset,
+    spoken[1]!.startOffset,
+  );
+  if (isPermittedRetentionNarrationAssemblyGap(gap)) return gap;
+  return RETENTION_SEGMENT_SEPARATOR;
+}
 
 export interface RetentionSegmentDraft {
   readonly beatId: string;
@@ -42,6 +65,7 @@ export function assembleRetentionNarrationCandidate(input: {
   readonly planFingerprint: string;
   readonly orderedBeatIds: readonly string[];
   readonly segments: readonly RetentionSegmentDraft[];
+  readonly assemblyGap?: RetentionNarrationAssemblyGap;
 }): RetentionNarrationCandidate {
   const origin = assertRetentionNarrationCandidateOrigin(input.origin);
   const { planFingerprint, orderedBeatIds, segments } = input;
@@ -77,6 +101,15 @@ export function assembleRetentionNarrationCandidate(input: {
     );
   }
 
+  const assemblyGap: RetentionNarrationAssemblyGap =
+    input.assemblyGap ?? RETENTION_SEGMENT_SEPARATOR;
+  if (!isPermittedRetentionNarrationAssemblyGap(assemblyGap)) {
+    throw new RetentionStoryError(
+      "composer_segment_mismatch",
+      "Retention narration assembly gap is not permitted.",
+    );
+  }
+
   const built: RetentionNarrationSegment[] = [];
   let cursor = 0;
   let assembled = "";
@@ -90,15 +123,22 @@ export function assembleRetentionNarrationCandidate(input: {
       );
     }
     const text = draft.text;
-    if (typeof text !== "string" || text.length === 0) {
+    if (typeof text !== "string") {
       throw new RetentionStoryError(
         "composer_proposal_invalid",
-        "Retention narration segment text is empty.",
+        "Retention narration segment text is invalid.",
       );
     }
-    if (i > 0) {
-      assembled += RETENTION_SEGMENT_SEPARATOR;
-      cursor += RETENTION_SEGMENT_SEPARATOR.length;
+    const mappingOnlyEmpty = text.length === 0;
+    if (mappingOnlyEmpty && i === 0) {
+      throw new RetentionStoryError(
+        "composer_proposal_invalid",
+        "Retention narration opening segment cannot be empty.",
+      );
+    }
+    if (!mappingOnlyEmpty && i > 0 && assembled.length > 0) {
+      assembled += assemblyGap;
+      cursor += assemblyGap.length;
     }
     const startOffset = cursor;
     const endOffset = startOffset + text.length;
@@ -161,7 +201,13 @@ export function assembleRetentionNarrationCandidate(input: {
     if (i > 0) {
       const prev = built[i - 1]!;
       const gap = assembled.slice(prev.endOffset, segment.startOffset);
-      if (gap !== RETENTION_SEGMENT_SEPARATOR) {
+      const expectedGap =
+        segment.text.length === 0
+          ? ""
+          : prev.text.length === 0
+            ? assemblyGap
+            : assemblyGap;
+      if (gap !== expectedGap) {
         throw new RetentionStoryError(
           "composer_segment_mismatch",
           "Retention narration segment boundaries are not contiguous.",

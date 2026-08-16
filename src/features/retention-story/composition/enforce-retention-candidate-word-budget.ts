@@ -25,6 +25,7 @@ import { countRetentionNarrationWords } from "../validation/count-retention-narr
 import { evaluateRetentionSpokenCompleteness } from "../validation/evaluate-retention-spoken-completeness";
 import {
   assembleRetentionNarrationCandidate,
+  detectRetentionNarrationAssemblyGap,
   type RetentionSegmentDraft,
 } from "./assemble-retention-narration-candidate";
 import { assertRetentionNarrationCandidateCoherence } from "./assert-retention-narration-candidate-coherence";
@@ -114,6 +115,7 @@ function rebuildCandidate(input: {
       planFingerprint: input.plan.planFingerprint,
       orderedBeatIds: input.candidate.orderedBeatIds,
       segments: draftFromTexts(input.candidate, input.texts),
+      assemblyGap: detectRetentionNarrationAssemblyGap(input.candidate),
     });
     const coherent = assertRetentionNarrationCandidateCoherence(assembled, {
       plan: input.plan,

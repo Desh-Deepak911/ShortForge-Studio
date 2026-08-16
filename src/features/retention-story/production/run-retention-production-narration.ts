@@ -10,9 +10,11 @@ import {
   buildNeutralResearchEvidence,
 } from "@/features/hook-engine/integration";
 import {
+  reconcileHookStyleSelection,
   requestedStrategyIdFromHookStyle,
   type HookStyleSelection,
 } from "@/features/hook-engine";
+import { resolveScriptMode } from "@/types/footiebitz";
 
 import {
   isRetentionStoryError,
@@ -33,6 +35,11 @@ import { resolveAdaptiveRetentionBeatCount } from "../planning/resolve-adaptive-
 import { runRetentionHookBridge } from "../integration/run-retention-hook-bridge";
 import { reconcileRetentionHookPreferenceZeroModel } from "../integration/reconcile-retention-hook-preference-zero-model";
 import { rebuildRetentionReadyBridgeFromCandidate } from "../integration/rebuild-retention-ready-bridge-from-candidate";
+import {
+  promoteRetentionRescueWithFidelity,
+  rescuePromotionPreservesCanonical,
+} from "../integration/promote-retention-rescue-with-fidelity";
+import type { DeterministicFallbackBuildResult } from "../composition/build-retention-coherent-deterministic-rescue";
 import { reconcileRetentionParticipantCoverageZeroModel } from "../composition/reconcile-retention-participant-coverage";
 import {
   buildRetentionParticipantCoverage,
@@ -45,6 +52,9 @@ import {
 import { runRetentionTerminalValidation } from "../rewrite/run-retention-terminal-validation";
 import { buildProductionStoryContractInput } from "./build-production-story-contract-input";
 import { buildRetentionGenerationDisposition } from "./build-retention-generation-disposition";
+import type { RetentionSafeProviderFailure } from "../domain/retention-provider-failure.types";
+import { createRetentionGenerationAcceptanceTraceRecorder } from "./create-retention-generation-acceptance-trace";
+import type { RetentionGenerationRejectionStage } from "./retention-generation-acceptance-trace.types";
 import { deriveRetentionClaimAdaptations } from "./derive-retention-claim-adaptations";
 import {
   assertRetentionHookPreferenceDispositionCoherence,
@@ -52,6 +62,12 @@ import {
   deriveRetentionHookPreferenceAdaptation,
 } from "./derive-retention-hook-preference-adaptation";
 import { commitRetentionApprovedNarration } from "./commit-retention-approved-narration";
+import {
+  bindRetentionRejectedProposalCapture,
+  createRetentionRejectedProposalCaptureSession,
+  isRetentionRejectedProposalCaptureEnabled,
+  recordRetentionNarrationTransform,
+} from "./create-retention-rejected-proposal-capture";
 import type { CreationReliabilityMode } from "./retention-terminal-failure-taxonomy";
 import {
   creatorSafeErrorMessage,
@@ -88,6 +104,104 @@ function isSoftEmptyResearchGroundingReason(reason: string): boolean {
     reason === "grounding_summary_mismatch" ||
     reason === "invalid_grounding_context"
   );
+}
+
+function mapHookBridgeReasonToAcceptanceStage(
+  reason: string,
+  normalizeSeam?: string,
+): RetentionGenerationRejectionStage {
+  const parseSeams = new Set([
+    "empty_provider_response",
+    "response_extraction_failure",
+    "response_json_parse_failure",
+    "response_schema_mismatch",
+    "composer_proposal_malformed",
+  ]);
+  if (normalizeSeam && parseSeams.has(normalizeSeam)) {
+    return "malformed_composer_proposal";
+  }
+  const seamStages = new Set<RetentionGenerationRejectionStage>([
+    "malformed_composer_proposal",
+    "hook_body_relationship_rejection",
+    "unsupported_claim_or_claim_reference_rejection",
+    "duration_or_compression_rejection",
+    "narration_hard_gate_rejection",
+  ]);
+  if (
+    normalizeSeam &&
+    seamStages.has(normalizeSeam as RetentionGenerationRejectionStage)
+  ) {
+    return normalizeSeam as RetentionGenerationRejectionStage;
+  }
+  switch (reason) {
+    case "composer_unavailable":
+      return "model_call_unavailable";
+    case "composer_call_failed":
+      return "model_call_failed";
+    case "composer_proposal_invalid":
+      return "malformed_composer_proposal";
+    case "composer_segment_mismatch":
+    case "candidate_fingerprint_mismatch":
+      return "beat_segment_identity_mismatch";
+    case "composer_grounding_invalid":
+      return "unsupported_claim_or_claim_reference_rejection";
+    case "accepted_narration_mapping_failed":
+      return "accepted_narration_mapping_failed";
+    case "hook_terminal_failure":
+    case "candidate_reconciliation_failed":
+      return "hook_validation_rejection";
+    case "length_enforcement_failed":
+    case "model_call_budget_exhausted":
+      return "duration_or_compression_rejection";
+    default:
+      return "model_call_failed";
+  }
+}
+
+function providerFailureRecordExtras(hookBridge: {
+  readonly status: string;
+  readonly safeProviderFailure?: RetentionSafeProviderFailure;
+} | null): { readonly providerFailure?: RetentionSafeProviderFailure } | undefined {
+  if (
+    hookBridge != null &&
+    hookBridge.status === "failed" &&
+    hookBridge.safeProviderFailure
+  ) {
+    return { providerFailure: hookBridge.safeProviderFailure };
+  }
+  return undefined;
+}
+
+function mapTerminalMissToAcceptanceStage(input: {
+  readonly terminalStatus: string;
+  readonly failedHardGateIds: readonly string[];
+  readonly safeReasonIds: readonly string[];
+}): RetentionGenerationRejectionStage {
+  if (
+    input.terminalStatus === "length_enforcement_failed" ||
+    input.safeReasonIds.some((id) =>
+      /length|overrun|word_budget|spoken_completeness/i.test(id),
+    )
+  ) {
+    return "duration_or_compression_rejection";
+  }
+  if (
+    input.failedHardGateIds.some(
+      (id) =>
+        /hook_body|hook_relationship|opening_body/i.test(id) ||
+        id.includes("hook_body"),
+    ) ||
+    input.safeReasonIds.some((id) => /hook_body|opening_body/i.test(id))
+  ) {
+    return "hook_body_relationship_rejection";
+  }
+  if (
+    input.failedHardGateIds.length > 0 ||
+    input.safeReasonIds.some((id) => /hard_gate|authority|fingerprint/i.test(id))
+  ) {
+    return "narration_hard_gate_rejection";
+  }
+  return "acceptance_quality_rejection";
 }
 
 function ensureDeterministicNarrationEvidence(
@@ -170,6 +284,7 @@ function failResult(
     readonly hookDiagnostics?: import("@/features/hook-engine").HookDiagnostics;
     /** Creator-safe override (e.g. Write My Own opening hard-gate). */
     readonly errorMessage?: string;
+    readonly acceptanceTrace?: import("./retention-generation-acceptance-trace.types").RetentionGenerationAcceptanceTrace;
   } = {},
 ): RetentionProductionNarrationResult {
   const diagnostics: RetentionProductionSafeDiagnostics = Object.freeze({
@@ -186,6 +301,9 @@ function failResult(
     ...(extras.budget ? { budget: extras.budget } : {}),
     ...(extras.validationFailureSummary
       ? { validationFailureSummary: extras.validationFailureSummary }
+      : {}),
+    ...(extras.acceptanceTrace
+      ? { acceptanceTrace: extras.acceptanceTrace }
       : {}),
   });
   return Object.freeze({
@@ -233,6 +351,17 @@ export async function runRetentionProductionNarration(
     input.generationContext != null && input.generationContext.trim()
       ? input.generationContext
       : null;
+  const creatorSelectedHookStyle = resolveHookStyle(input);
+  const hookStyleCompatibility = creatorSelectedHookStyle
+    ? reconcileHookStyleSelection(
+        creatorSelectedHookStyle,
+        resolveScriptMode(input.scriptMode),
+      )
+    : null;
+  const effectiveHookStyle =
+    hookStyleCompatibility?.selection ?? creatorSelectedHookStyle;
+  const hookStyleReconciledBeforeContract =
+    hookStyleCompatibility?.compatibilityNotice != null;
 
   let contractInput;
   try {
@@ -252,7 +381,7 @@ export async function runRetentionProductionNarration(
       qualityMode: input.qualityMode,
       templateId: input.templateId,
       userInstructions: creatorUserInstructions,
-      hookStyle: resolveHookStyle(input),
+      hookStyle: effectiveHookStyle,
       userAuthoredHook: input.userAuthoredHook,
       formatStrategyId: input.formatStrategyId ?? "auto",
       manualContext: creatorManualContext,
@@ -322,11 +451,21 @@ export async function runRetentionProductionNarration(
     });
   }
 
+  const captureSession = isRetentionRejectedProposalCaptureEnabled(input)
+    ? createRetentionRejectedProposalCaptureSession({
+        caseId: input.rejectedProposalCaptureCaseId ?? "uncategorized",
+      })
+    : null;
+  if (captureSession) {
+    bindRetentionRejectedProposalCapture(captureSession);
+  }
+
   // Private-data-free boundary: model resolution → adapters → plan → Hook →
   // terminal validation → commit. Unknown provider/model errors never escape.
   try {
     // One path-global ledger for the entire attempt.
     const ledger = createRetentionModelCallLedger(contract.qualityMode);
+    const acceptanceTrace = createRetentionGenerationAcceptanceTraceRecorder();
     const model =
       input.model ?? (await resolveProductionScriptModel(contract.qualityMode));
 
@@ -342,12 +481,18 @@ export async function runRetentionProductionNarration(
         ? input.composer
         : await loadProductionComposer(model);
 
+    if (input.composer === null || composer == null) {
+      acceptanceTrace.record("model_call_unavailable");
+    }
+
     const rewriteComposer =
       input.rewriteComposer !== undefined
         ? input.rewriteComposer
-        : contract.qualityMode === "best"
-          ? await loadProductionRewriteComposer(model, contract.durationSec)
-          : null;
+        : input.composer !== undefined
+          ? null
+          : contract.qualityMode === "best"
+            ? await loadProductionRewriteComposer(model, contract.durationSec)
+            : null;
 
     const lengthComposer =
       input.lengthComposer !== undefined
@@ -451,8 +596,7 @@ export async function runRetentionProductionNarration(
       });
 
     const buildHookContext = (hookStyleOverride?: typeof input.hookStyle) => {
-      const resolvedHookStyle =
-        hookStyleOverride ?? resolveHookStyle(input);
+      const resolvedHookStyle = hookStyleOverride ?? effectiveHookStyle;
       // Auto / Write My Own are not selectable strategy ids for the adapter.
       const requestedStrategyId =
         hookStyleOverride === "auto" ||
@@ -482,11 +626,14 @@ export async function runRetentionProductionNarration(
       });
     };
 
+    const selectedHookStyle = effectiveHookStyle;
+
     const runBridge = async (
       activePlan: typeof plan,
       activeSeed: typeof strategySeed,
       activeComposer: typeof composer,
       hookContext: ReturnType<typeof buildHookContext>,
+      activeHookStyle: typeof selectedHookStyle,
       billingMode: "model" | "deterministic" = "model",
     ) =>
       runRetentionHookBridge({
@@ -496,6 +643,7 @@ export async function runRetentionProductionNarration(
         grounding,
         manualContext: creatorManualContext,
         userInstructions: creatorUserInstructions,
+        hookStyle: activeHookStyle,
         hookContext,
         composer: activeComposer,
         ledger,
@@ -513,7 +661,6 @@ export async function runRetentionProductionNarration(
         model,
       });
 
-    const selectedHookStyle = resolveHookStyle(input);
     const preciseMode = input.creationReliabilityMode === "precise";
     const reliabilityMode: CreationReliabilityMode = preciseMode
       ? "precise"
@@ -538,6 +685,7 @@ export async function runRetentionProductionNarration(
       initialHookContext,
     });
     let deterministicRescueUsed = false;
+    let canonicalRescueSnapshot: DeterministicFallbackBuildResult | null = null;
 
     let hookBridge: Awaited<ReturnType<typeof runRetentionHookBridge>> | null =
       null;
@@ -547,6 +695,7 @@ export async function runRetentionProductionNarration(
         strategySeed,
         composer,
         initialHookContext,
+        selectedHookStyle,
       );
     } catch {
       hookBridge = null;
@@ -594,6 +743,17 @@ export async function runRetentionProductionNarration(
     // body rescue retaining the exact user opening). At most once.
     // Precise + explicit Hook: rescue only with the same Hook context (no Auto).
     if (hookBridge == null || hookBridge.status !== "ready") {
+      if (hookBridge == null) {
+        acceptanceTrace.record("model_call_failed");
+      } else if (hookBridge.status === "failed") {
+        acceptanceTrace.record(
+          mapHookBridgeReasonToAcceptanceStage(
+            hookBridge.reason,
+            hookBridge.normalizeSeam,
+          ),
+          providerFailureRecordExtras(hookBridge),
+        );
+      }
       const reliabilityPlan = buildReliabilityDeterministicRetentionPlan({
         contract,
         grounding,
@@ -620,9 +780,24 @@ export async function runRetentionProductionNarration(
           contract,
           plan,
           grounding,
+          strategySeed,
+          hookStyle: selectedHookStyle ?? null,
           ...(preserveOpening ? { preserveOpeningText: preserveOpening } : {}),
           onBuilt: (meta) => {
             omittedAuthorizedClaimIds = [...meta.omittedClaimIds];
+            if (meta.hookReconciled && !adaptations.includes("hook_style_reconciled")) {
+              adaptations.push("hook_style_reconciled");
+            }
+            if (!canonicalRescueSnapshot) {
+              canonicalRescueSnapshot = buildDeterministicFallbackNarrationCandidate({
+                contract,
+                plan,
+                grounding,
+                strategySeed,
+                hookStyle: selectedHookStyle ?? null,
+                ...(preserveOpening ? { preserveOpeningText: preserveOpening } : {}),
+              });
+            }
           },
         });
         try {
@@ -631,15 +806,46 @@ export async function runRetentionProductionNarration(
             strategySeed,
             fallbackComposer,
             rescueHookContext,
+            selectedHookStyle === "user_written" ? "user_written" : "auto",
             "deterministic",
           );
+          acceptanceTrace.record("deterministic_rescue_entered");
           deterministicRescueUsed = true;
           if (rescued.status === "ready") {
-            hookBridge = rescued;
-            adaptations.push("reliability_rescue_used");
-            adaptations.push("deterministic_story_fallback_used");
+            const authorisedHookReplacement = selectedHookStyle !== "user_written";
+            const preserved =
+              canonicalRescueSnapshot == null ||
+              rescuePromotionPreservesCanonical(
+                canonicalRescueSnapshot,
+                rescued.approvedNarration,
+                authorisedHookReplacement,
+              );
+            if (preserved) {
+              hookBridge = rescued;
+              adaptations.push("reliability_rescue_used");
+              adaptations.push("deterministic_story_fallback_used");
+              acceptanceTrace.record("deterministic_rescue_accepted");
+            } else if (canonicalRescueSnapshot) {
+              const retried = promoteRetentionRescueWithFidelity({
+                contract,
+                plan,
+                grounding,
+                strategySeed,
+                ledger,
+                built: canonicalRescueSnapshot,
+                hookContext: rescueHookContext,
+                authorisedHookReplacement,
+              });
+              if (retried.status === "ready") {
+                hookBridge = retried;
+                adaptations.push("reliability_rescue_used");
+                adaptations.push("deterministic_story_fallback_used");
+                acceptanceTrace.record("deterministic_rescue_accepted");
+              }
+            }
           }
         } catch {
+          acceptanceTrace.record("deterministic_rescue_entered");
           deterministicRescueUsed = true;
           // continue to fail below if still not ready
         }
@@ -662,30 +868,90 @@ export async function runRetentionProductionNarration(
         if (!adaptations.includes("planner_fallback_used")) {
           adaptations.push("planner_fallback_used");
         }
-        const built = buildDeterministicFallbackNarrationCandidate({
-          contract,
-          plan,
-          grounding,
-        });
+        const built =
+          canonicalRescueSnapshot != null &&
+          (selectedHookStyle == null || selectedHookStyle === "auto")
+            ? canonicalRescueSnapshot
+            : buildDeterministicFallbackNarrationCandidate({
+                contract,
+                plan,
+                grounding,
+                strategySeed,
+                hookStyle: "auto",
+              });
+        canonicalRescueSnapshot = built;
+        if (
+          built.hookReconciled &&
+          !adaptations.includes("hook_style_reconciled")
+        ) {
+          adaptations.push("hook_style_reconciled");
+        }
         ensureDeterministicNarrationEvidence(ledger);
         omittedAuthorizedClaimIds = [...built.omittedClaimIds];
-        const promoted = rebuildRetentionReadyBridgeFromCandidate({
+        const promoted = promoteRetentionRescueWithFidelity({
           contract,
           plan,
           grounding,
           strategySeed,
           ledger,
-          sourceCandidate: built.candidate,
-          title: built.title,
+          built,
           hookContext: buildHookContext("auto"),
-          compositionAuthority: "deterministic_rescue",
+          authorisedHookReplacement: true,
         });
         if (promoted.status === "ready") {
           hookBridge = promoted;
           deterministicRescueUsed = true;
           adaptations.push("reliability_rescue_used");
           adaptations.push("deterministic_story_fallback_used");
+          if (
+            selectedHookStyle != null &&
+            selectedHookStyle !== "auto" &&
+            !adaptations.includes("hook_style_reconciled")
+          ) {
+            adaptations.push("hook_style_reconciled");
+          }
+          acceptanceTrace.record("deterministic_rescue_entered");
+          acceptanceTrace.record("deterministic_rescue_accepted");
+        } else {
+          hookBridge = promoted;
         }
+      }
+    }
+
+    if (hookBridge != null && hookBridge.status === "ready") {
+      captureSession?.recordStage(
+        "after_hook_promotion",
+        hookBridge.approvedNarration,
+      );
+      captureSession?.recordStage(
+        "after_mapping",
+        hookBridge.candidate.assembledNarration,
+      );
+      const priorModel = captureSession?.getRecordedStage("before_normalization");
+      const priorNarration =
+        typeof priorModel === "string" && priorModel.trim()
+          ? priorModel
+          : hookBridge.candidate.assembledNarration;
+      if (
+        deterministicRescueUsed ||
+        hookBridge.diagnostics.compositionAuthority === "deterministic_rescue"
+      ) {
+        recordRetentionNarrationTransform({
+          stage: "deterministic_rescue",
+          inputNarration: priorNarration,
+          outputNarration: hookBridge.approvedNarration,
+          reason: "deterministic_rescue",
+          changedRegion: "full",
+          authority: "deterministic_rescue",
+        });
+      } else {
+        recordRetentionNarrationTransform({
+          stage: "after_hook_promotion",
+          inputNarration: hookBridge.candidate.assembledNarration,
+          outputNarration: hookBridge.approvedNarration,
+          reason: "hook_bridge_ready",
+          authority: hookBridge.diagnostics.compositionAuthority ?? "model_initial",
+        });
       }
     }
 
@@ -696,12 +962,26 @@ export async function runRetentionProductionNarration(
           : hookBridge.status === "skipped"
             ? "scenes_only"
             : hookBridge.reason;
+      acceptanceTrace.record(
+        mapHookBridgeReasonToAcceptanceStage(
+          reason,
+          hookBridge != null && hookBridge.status === "failed"
+            ? hookBridge.normalizeSeam
+            : undefined,
+        ),
+        providerFailureRecordExtras(
+          hookBridge != null && hookBridge.status === "failed"
+            ? hookBridge
+            : null,
+        ),
+      );
       return failResult(mapHookBridgeFailure(reason), {
         contractFingerprint: contract.contractFingerprint,
         planFingerprint: plan.planFingerprint,
         qualityMode: contract.qualityMode,
         safeReasonIds: Object.freeze([reason]),
         budget: summarizeLedgerBudget(ledger.snapshot()),
+        acceptanceTrace: acceptanceTrace.freeze(),
         ...(hookBridge != null &&
         hookBridge.status === "failed" &&
         "hookPlanSnapshot" in hookBridge &&
@@ -863,6 +1143,13 @@ export async function runRetentionProductionNarration(
         terminalMiss &&
         (allowOrdinaryDetRescue || allowFlexibleStructural || allowWmoLengthRescue)
       ) {
+        acceptanceTrace.record(
+          mapTerminalMissToAcceptanceStage({
+            terminalStatus: terminal.status,
+            failedHardGateIds: failedGates,
+            safeReasonIds: terminal.diagnostics.safeReasonIds,
+          }),
+        );
         const lengthish =
           terminal.status === "length_enforcement_failed" ||
           terminal.diagnostics.safeReasonIds.some((id) =>
@@ -895,26 +1182,37 @@ export async function runRetentionProductionNarration(
           // Prefer zero-model promote when Hook-stage rescue already ran
           // (avoids a second full bridge round-trip that can re-fail preference).
           if (allowFlexibleStructural && deterministicRescueUsed) {
-            const built = buildDeterministicFallbackNarrationCandidate({
-              contract,
-              plan,
-              grounding,
-              ...(preserveOpening
-                ? { preserveOpeningText: preserveOpening }
-                : {}),
-            });
+            acceptanceTrace.record("deterministic_rescue_entered");
+            const built =
+              canonicalRescueSnapshot ??
+              buildDeterministicFallbackNarrationCandidate({
+                contract,
+                plan,
+                grounding,
+                strategySeed,
+                hookStyle: selectedHookStyle ?? null,
+                ...(preserveOpening
+                  ? { preserveOpeningText: preserveOpening }
+                  : {}),
+              });
+            canonicalRescueSnapshot = built;
+            if (
+              built.hookReconciled &&
+              !adaptations.includes("hook_style_reconciled")
+            ) {
+              adaptations.push("hook_style_reconciled");
+            }
             ensureDeterministicNarrationEvidence(ledger);
             omittedAuthorizedClaimIds = [...built.omittedClaimIds];
-            const promoted = rebuildRetentionReadyBridgeFromCandidate({
+            const promoted = promoteRetentionRescueWithFidelity({
               contract,
               plan,
               grounding,
               strategySeed,
               ledger,
-              sourceCandidate: built.candidate,
-              title: built.title,
+              built,
               hookContext: rescueHookContext,
-              compositionAuthority: "deterministic_rescue",
+              authorisedHookReplacement: selectedHookStyle !== "user_written",
             });
             flexibleStructuralRescueUsed = true;
             if (promoted.status === "ready") {
@@ -924,6 +1222,7 @@ export async function runRetentionProductionNarration(
               if (!adaptations.includes("deterministic_story_fallback_used")) {
                 adaptations.push("deterministic_story_fallback_used");
               }
+              acceptanceTrace.record("deterministic_rescue_accepted");
               hookBridge = promoted;
               terminal = await runRetentionTerminalValidation({
                 contract,
@@ -945,19 +1244,29 @@ export async function runRetentionProductionNarration(
               contract,
               plan,
               grounding,
+              strategySeed,
+              hookStyle: selectedHookStyle ?? null,
               ...(preserveOpening
                 ? { preserveOpeningText: preserveOpening }
                 : {}),
               onBuilt: (meta) => {
                 omittedAuthorizedClaimIds = [...meta.omittedClaimIds];
+                if (
+                  meta.hookReconciled &&
+                  !adaptations.includes("hook_style_reconciled")
+                ) {
+                  adaptations.push("hook_style_reconciled");
+                }
               },
             });
             try {
+              acceptanceTrace.record("deterministic_rescue_entered");
               const rescuedBridge = await runBridge(
                 plan,
                 strategySeed,
                 fallbackComposer,
                 rescueHookContext,
+                selectedHookStyle === "user_written" ? "user_written" : "auto",
                 "deterministic",
               );
               deterministicRescueUsed = true;
@@ -971,6 +1280,7 @@ export async function runRetentionProductionNarration(
                 if (!adaptations.includes("deterministic_story_fallback_used")) {
                   adaptations.push("deterministic_story_fallback_used");
                 }
+                acceptanceTrace.record("deterministic_rescue_accepted");
                 hookBridge = rescuedBridge;
                 terminal = await runRetentionTerminalValidation({
                   contract,
@@ -988,6 +1298,7 @@ export async function runRetentionProductionNarration(
                 });
               }
             } catch {
+              acceptanceTrace.record("deterministic_rescue_entered");
               deterministicRescueUsed = true;
               // fall through
             }
@@ -1020,6 +1331,7 @@ export async function runRetentionProductionNarration(
           rewriteUsed: terminal.diagnostics.rewriteUsed,
           safeReasonIds: terminal.diagnostics.safeReasonIds,
           budget: summarizeLedgerBudget(ledger.snapshot()),
+          acceptanceTrace: acceptanceTrace.freeze(),
           ...(terminal.diagnostics.validationFailureSummary
             ? {
                 validationFailureSummary:
@@ -1057,12 +1369,17 @@ export async function runRetentionProductionNarration(
     const adaptationsForDisposition = adaptations.filter(
       (id) => id !== "hook_style_reconciled",
     ) as RetentionGenerationAdaptationId[];
-    const hookPref = deriveRetentionHookPreferenceAdaptation({
-      reliabilityMode,
-      selectedHookStyle: selectedHookStyle ?? "auto",
-      requestedHookPlan: requestedHookAuthority,
-      finalHookPlan: finalReadyBridge.hookPlanSnapshot,
-    });
+    const hookPref = hookStyleReconciledBeforeContract
+      ? ({
+          status: "ok" as const,
+          adaptation: "hook_style_reconciled" as const,
+        })
+      : deriveRetentionHookPreferenceAdaptation({
+          reliabilityMode,
+          selectedHookStyle: creatorSelectedHookStyle ?? "auto",
+          requestedHookPlan: requestedHookAuthority,
+          finalHookPlan: finalReadyBridge.hookPlanSnapshot,
+        });
     if (hookPref.status === "fail") {
       return failResult("hook_terminal_failure", {
         contractFingerprint: contract.contractFingerprint,
@@ -1085,13 +1402,79 @@ export async function runRetentionProductionNarration(
       adaptationsForDisposition.push(hookPref.adaptation);
     }
 
+    const usedDeterministicFallback = adaptationsForDisposition.includes(
+      "deterministic_story_fallback_used",
+    );
+    if (
+      usedDeterministicFallback &&
+      !adaptationsForDisposition.includes("quality_below_target")
+    ) {
+      adaptationsForDisposition.push("quality_below_target");
+    }
+
+    const boundedRewriteType =
+      finalReadyBridge.diagnostics.boundedRewriteType === "opening_repair" ||
+      finalReadyBridge.diagnostics.boundedRewriteType === "ranking_payoff_repair" ||
+      finalReadyBridge.diagnostics.boundedRewriteType ===
+        "supported_opening_promotion" ||
+      finalReadyBridge.diagnostics.boundedRewriteType === "duration_compression"
+        ? finalReadyBridge.diagnostics.boundedRewriteType
+        : undefined;
+    const rewriteUsed =
+      terminal.status === "pass_after_rewrite" || boundedRewriteType != null;
+    if (usedDeterministicFallback) {
+      // Ensure rescue markers exist even when a later promote path accepted.
+      acceptanceTrace.record("deterministic_rescue_entered");
+      acceptanceTrace.record("deterministic_rescue_accepted");
+    } else if (rewriteUsed) {
+      acceptanceTrace.record("rewrite_accepted");
+    } else {
+      acceptanceTrace.record("model_narration_accepted");
+    }
+
+    if (
+      !usedDeterministicFallback &&
+      (terminal.validation.notes.includes("quality_below_target") ||
+        terminal.validation.notes.includes("narration_substance_below_target"))
+    ) {
+      acceptanceTrace.record("acceptance_quality_rejection");
+    }
+
+    const frozenAcceptanceTrace = acceptanceTrace.freeze({
+      finalNarrationAuthority: usedDeterministicFallback
+        ? "deterministic_rescue"
+        : rewriteUsed
+          ? "model_after_rewrite"
+          : "model_direct",
+      ...(boundedRewriteType ? { boundedRewriteType } : {}),
+    });
+
+    let dispositionWarningNotes = [...terminal.validation.notes];
+    if (usedDeterministicFallback) {
+      dispositionWarningNotes = dispositionWarningNotes.filter(
+        (note) => note !== "validation_pass",
+      );
+      if (!dispositionWarningNotes.includes("quality_below_target")) {
+        dispositionWarningNotes.push("quality_below_target");
+      }
+      if (
+        !dispositionWarningNotes.includes("validation_pass_with_quality_warning")
+      ) {
+        dispositionWarningNotes.push("validation_pass_with_quality_warning");
+      }
+      if (!dispositionWarningNotes.includes("deterministic_fallback_accepted")) {
+        dispositionWarningNotes.push("deterministic_fallback_accepted");
+      }
+    }
+
     const disposition = buildRetentionGenerationDisposition({
       contract,
       plan,
       narration: terminal.candidate.assembledNarration,
-      warningNotes: terminal.validation.notes,
+      warningNotes: dispositionWarningNotes,
       adaptations: adaptationsForDisposition,
       emptyPremiseGuidance,
+      acceptanceTrace: frozenAcceptanceTrace,
     });
 
     const dispositionCoherence =
@@ -1108,6 +1491,7 @@ export async function runRetentionProductionNarration(
         terminalState: terminal.status,
         safeReasonIds: Object.freeze([dispositionCoherence.safeReasonId]),
         budget: summarizeLedgerBudget(ledger.snapshot()),
+        acceptanceTrace: frozenAcceptanceTrace,
         hookPlanSnapshot: finalReadyBridge.hookPlanSnapshot,
         hookDiagnostics: finalReadyBridge.hookDiagnostics,
       });
@@ -1123,6 +1507,10 @@ export async function runRetentionProductionNarration(
       title: finalReadyBridge.title,
       generationDisposition: disposition,
       creatorContextAuthority,
+      acceptanceTrace: frozenAcceptanceTrace,
+      ...(usedDeterministicFallback
+        ? { validationWarningNotesOverride: dispositionWarningNotes }
+        : {}),
       ...(finalReadyBridge.lengthWarning
         ? { lengthWarning: finalReadyBridge.lengthWarning }
         : {}),
@@ -1159,6 +1547,12 @@ export async function runRetentionProductionNarration(
       qualityMode: contract.qualityMode,
       safeReasonIds: Object.freeze(["unhandled_production_exception"]),
     });
+  } finally {
+    try {
+      captureSession?.flush();
+    } finally {
+      bindRetentionRejectedProposalCapture(null);
+    }
   }
 }
 

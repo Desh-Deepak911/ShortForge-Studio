@@ -147,6 +147,8 @@ const STRATEGIES: readonly HookStrategyDefinition[] = Object.freeze([
     groundingRequirement: "none",
     requiresVerifiedFactualClaim: false,
     constraints: baseSafety({
+      maxOpeningWords: 9,
+      maxOpeningSpokenSecondsHint: 4,
       allowQuestionForm: true,
       minProvocativeness: 0.55,
       minClarity: 0.55,
@@ -159,12 +161,14 @@ const STRATEGIES: readonly HookStrategyDefinition[] = Object.freeze([
     description: "Challenge a popular assumption without inventing evidence.",
     rhetoricalIntent: "Productive disagreement that stays grounded and subject-faithful.",
     promptGuidance:
-      "Open by challenging a common assumption about the subject. Label opinion as opinion. Do not invent supporting stats or quotes.",
+      "Open with a declarative reversal supported by the creator's evidence. Do not invent what fans, critics, or the public supposedly believe. Label uncertain interpretation as opinion. Do not invent supporting stats or quotes.",
     preferredScriptModes: ["opinion_debate", "story", "player_analysis"],
     preferredTemplateIds: [],
     groundingRequirement: "none",
     requiresVerifiedFactualClaim: false,
     constraints: baseSafety({
+      maxOpeningWords: 9,
+      maxOpeningSpokenSecondsHint: 4,
       minProvocativeness: 0.6,
       minClarity: 0.5,
       allowStatisticClaim: false,
@@ -177,12 +181,17 @@ const STRATEGIES: readonly HookStrategyDefinition[] = Object.freeze([
     description: "Quote or name a popular myth, then set up the correction.",
     rhetoricalIntent: "Surface a misconception without endorsing it as fact.",
     promptGuidance:
-      "Open on the popular myth or misconception, clearly framed as contested. Do not present rumor as confirmed news. Preserve the user's subject.",
+      "Open with an expectation-versus-reality correction supported by the creator's evidence. Only attribute a popular myth or public belief when the creator supplied it. Do not present rumor as confirmed news. Preserve the user's subject.",
     preferredScriptModes: ["historical_explainer", "opinion_debate", "story"],
     preferredTemplateIds: ["myth_vs_reality"],
     groundingRequirement: "none",
     requiresVerifiedFactualClaim: false,
-    constraints: baseSafety({ minProvocativeness: 0.55, minClarity: 0.55 }),
+    constraints: baseSafety({
+      maxOpeningWords: 9,
+      maxOpeningSpokenSecondsHint: 4,
+      minProvocativeness: 0.55,
+      minClarity: 0.55,
+    }),
   }),
   freezeStrategy({
     id: "countdown_tease",

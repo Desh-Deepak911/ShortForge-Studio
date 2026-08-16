@@ -7,6 +7,12 @@
 
 import { getOpenAIClient } from "@/lib/ai";
 import { cleanJsonText } from "@/features/story/services/story-parse.service";
+import { assertRetentionOpenAiStrictJsonSchema } from "./assert-retention-openai-strict-json-schema";
+import { noteRetentionCertificationProviderInvoke } from "./create-retention-certification-call-budget";
+import {
+  classifyRetentionProviderFailure,
+  RetentionProviderRequestError,
+} from "./classify-retention-provider-failure";
 import {
   resolveRetentionProductionMaxOutputTokens,
   type RetentionProductionModelCallKind,
@@ -28,7 +34,37 @@ export async function requestRetentionStructuredJson(input: {
     readonly description?: string;
   };
 }): Promise<unknown> {
-  const openai = getOpenAIClient();
+  const classifyExtras = {
+    configuredModel: input.model,
+    endpointFamily: "responses" as const,
+    retryCount: 0,
+  };
+
+  let openai;
+  try {
+    openai = getOpenAIClient();
+  } catch (error) {
+    throw new RetentionProviderRequestError(
+      classifyRetentionProviderFailure(error, {
+        ...classifyExtras,
+        failurePhase: "client_init",
+      }),
+    );
+  }
+
+  if (input.jsonSchema) {
+    try {
+      assertRetentionOpenAiStrictJsonSchema(input.jsonSchema.schema);
+    } catch (error) {
+      throw new RetentionProviderRequestError(
+        classifyRetentionProviderFailure(error, {
+          ...classifyExtras,
+          failurePhase: "schema_construction",
+        }),
+      );
+    }
+  }
+
   const maxOutputTokens = resolveRetentionProductionMaxOutputTokens({
     kind: input.kind,
     durationSec: input.durationSec,
@@ -45,37 +81,78 @@ export async function requestRetentionStructuredJson(input: {
       ? input.temperature
       : 0.5;
 
-  const response = await openai.responses.create({
-    model: input.model,
-    input: input.prompt,
-    temperature,
-    max_output_tokens: maxOutputTokens,
-    ...(input.jsonSchema
-      ? {
-          text: {
-            format: {
-              type: "json_schema" as const,
-              name: input.jsonSchema.name,
-              schema: input.jsonSchema.schema,
-              strict: true,
-              ...(input.jsonSchema.description
-                ? { description: input.jsonSchema.description }
-                : {}),
+  noteRetentionCertificationProviderInvoke(input.kind);
+
+  let response: { output_text?: string | null };
+  try {
+    response = await openai.responses.create({
+      model: input.model,
+      input: input.prompt,
+      temperature,
+      max_output_tokens: maxOutputTokens,
+      ...(input.jsonSchema
+        ? {
+            text: {
+              format: {
+                type: "json_schema" as const,
+                name: input.jsonSchema.name,
+                schema: input.jsonSchema.schema,
+                strict: true,
+                ...(input.jsonSchema.description
+                  ? { description: input.jsonSchema.description }
+                  : {}),
+              },
             },
-          },
-        }
-      : {
-          text: {
-            format: { type: "json_object" as const },
-          },
-        }),
-  });
-  const rawText = response.output_text?.trim() ?? "";
-  if (!rawText) {
-    throw new Error("empty_model_response");
+          }
+        : {
+            text: {
+              format: { type: "json_object" as const },
+            },
+          }),
+    });
+  } catch (error) {
+    throw new RetentionProviderRequestError(
+      classifyRetentionProviderFailure(error, {
+        ...classifyExtras,
+        failurePhase: "provider_request",
+      }),
+    );
   }
-  const cleaned = cleanJsonText(rawText);
-  return JSON.parse(cleaned) as unknown;
+
+  let rawText = "";
+  try {
+    rawText = response.output_text?.trim() ?? "";
+  } catch (error) {
+    throw new RetentionProviderRequestError(
+      classifyRetentionProviderFailure(error, {
+        ...classifyExtras,
+        failurePhase: "response_extraction",
+      }),
+    );
+  }
+  if (!rawText) {
+    throw new RetentionProviderRequestError(
+      classifyRetentionProviderFailure(new Error("empty_provider_response"), {
+        ...classifyExtras,
+        failurePhase: "response_extraction",
+      }),
+    );
+  }
+
+  try {
+    const cleaned = cleanJsonText(rawText);
+    return JSON.parse(cleaned) as unknown;
+  } catch (error) {
+    throw new RetentionProviderRequestError(
+      classifyRetentionProviderFailure(
+        error instanceof SyntaxError ? error : new Error("response_json_parse_failure"),
+        {
+          ...classifyExtras,
+          failurePhase: "response_parse",
+        },
+      ),
+    );
+  }
 }
 
 /** Bound claim summaries for prompts — IDs + short text only. */

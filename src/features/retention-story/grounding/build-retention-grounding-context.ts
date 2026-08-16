@@ -15,10 +15,15 @@ import type { IntelligenceFact } from "@/features/intelligence/shared/knowledge.
 import { sanitizeRetentionText } from "../domain/normalize-story-contract";
 import { RETENTION_MAX_CLAIM_TEXT_CHARS } from "../domain/retention-story-contract.constants";
 import type { RetentionGroundingContext } from "../domain/retention-story-contract.types";
+import type { RetentionContentUnitSourceField } from "../domain/retention-creator-content-contract.types";
 import {
   finalizeRetentionGroundingClaims,
   type RetentionGroundingClaimDraft,
 } from "./retention-grounding-normalization";
+import {
+  creatorContentUnitIsClaimEligible,
+  parseRetentionCreatorContentUnits,
+} from "./parse-retention-creator-content-units";
 import { mapRetentionSourceToAuthority } from "./retention-source-trust";
 
 export interface BuildRetentionGroundingContextInput {
@@ -31,30 +36,13 @@ export interface BuildRetentionGroundingContextInput {
   readonly manualContext?: string | null;
 }
 
-const MAX_CREATOR_FACTS_PER_FIELD = 12;
-const CREATOR_INSTRUCTION_SENTENCE =
-  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make|preview|recap|review|analyze|compare|rank)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?)/iu;
-
-function splitCreatorMaterial(
-  textRaw: string | null | undefined,
-): readonly string[] {
-  const text = sanitizeRetentionText(
-    textRaw ?? "",
-    RETENTION_MAX_CLAIM_TEXT_CHARS * MAX_CREATOR_FACTS_PER_FIELD,
-  );
-  if (!text) return Object.freeze([]);
-  return Object.freeze(
-    text
-      .split(/(?:\r?\n)+|(?<=[.!?…])\s+/u)
-      .map((part) =>
-        sanitizeRetentionText(part, RETENTION_MAX_CLAIM_TEXT_CHARS),
-      )
-      // Direction belongs to the controlling idea, not the fact ledger. Keeping
-      // it as a claim makes deterministic rescue speak prompts such as
-      // "Explain the offside trap" verbatim.
-      .filter((part) => Boolean(part) && !CREATOR_INSTRUCTION_SENTENCE.test(part))
-      .slice(0, MAX_CREATOR_FACTS_PER_FIELD),
-  );
+function creatorSourceField(
+  sourceRef: string,
+): RetentionContentUnitSourceField {
+  if (sourceRef === "creator_brief") return "creator_brief";
+  if (sourceRef === "manual_notes") return "manual_notes";
+  if (sourceRef === "creative_premise") return "creative_premise";
+  return "manual_context";
 }
 
 function factRoleForId(
@@ -291,18 +279,25 @@ function pushManualCreatorMaterial(
   textRaw: string | null | undefined,
   sourceRef: string,
 ): void {
-  for (const text of splitCreatorMaterial(textRaw)) {
+  const units = parseRetentionCreatorContentUnits({
+    text: textRaw,
+    sourceField: creatorSourceField(sourceRef),
+    defaultRole: "essential",
+  });
+  for (const unit of units) {
+    if (!creatorContentUnitIsClaimEligible(unit)) continue;
+    const forbidden = unit.kind === "forbidden";
     drafts.push({
-      text,
+      text: unit.text,
       provenance: "manual_user",
-      verification: "unverified",
+      verification: forbidden ? "forbidden" : "unverified",
       // The creator is authoritative for the story they asked ShortForge to tell.
       // This never upgrades the statement to independently verified research.
-      permittedFactualUse: true,
-      forbidden: false,
+      permittedFactualUse: !forbidden,
+      forbidden,
       sourceRef,
       // Same semantic identity for identical creator text regardless of field.
-      contentIdentity: { kind: "manual_creator", text },
+      contentIdentity: { kind: "manual_creator", text: unit.text },
     });
   }
 }

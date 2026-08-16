@@ -64,5 +64,10 @@ export function resolveAuthorizedClaimIdsForBeat(
   for (const id of plan.hookHandoff.groundingRequirements.claimIds) {
     ids.add(id);
   }
+  if (beat?.payoffRelation === "deliver") {
+    for (const id of resolvePlanAuthorizedComposerClaimIds(plan, strategySeed)) {
+      ids.add(id);
+    }
+  }
   return ids;
 }

@@ -29,6 +29,19 @@ function freezeAuthority(
   return Object.freeze({ ...value });
 }
 
+function sanitizeStructuredManualContext(raw: string | null | undefined): string {
+  return String(raw ?? "")
+    .normalize("NFC")
+    .replace(/\r\n?/gu, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[\t ]+/gu, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/gu, "\n\n")
+    .trim()
+    .slice(0, RETENTION_MAX_MANUAL_CONTEXT_CHARS)
+    .trim();
+}
+
 /**
  * Build detached creator-context authority from original creator inputs.
  * Research / assembled generation prose must never be supplied here.
@@ -37,8 +50,9 @@ export function buildRetentionCreatorContextAuthority(input: {
   readonly manualContext?: string | null;
   readonly userInstructions?: string | null;
 }): RetentionCreatorContextAuthority {
-  const manualContext = sanitizeRetentionText(
-    input.manualContext ?? "",
+  const manualContext = sanitizeStructuredManualContext(input.manualContext);
+  const manualContextIdentityText = sanitizeRetentionText(
+    manualContext,
     RETENTION_MAX_MANUAL_CONTEXT_CHARS,
   );
   const userInstructions = sanitizeRetentionText(
@@ -49,10 +63,10 @@ export function buildRetentionCreatorContextAuthority(input: {
     version: 1,
     manualContext,
     userInstructions,
-    manualContextIdentity: manualContext
+    manualContextIdentity: manualContextIdentityText
       ? buildRetentionSemanticIdentity({
           kind: "manual_context",
-          text: manualContext,
+          text: manualContextIdentityText,
         })
       : null,
     userInstructionsIdentity: userInstructions

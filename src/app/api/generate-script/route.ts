@@ -36,6 +36,7 @@ import {
   type StoryStrategySelection,
 } from "@/features/retention-story/presentation";
 import { resolveQualityMode, resolveScriptModel } from "@/lib/ai";
+import { buildRetentionPublicGenerationContextPresence } from "@/features/retention-story/production/build-retention-public-generation-context";
 import type { AudioFirstGenerationResult, FootieScript } from "@/features/story/types";
 import type {
   GenerateScriptMode,
@@ -374,7 +375,9 @@ async function runGeneration(
       response: {
         success: true,
         data: buildStoryResponse(scriptOnlyResult.footieScript),
-        generationContext: resolvedContext.context,
+        generationContext: buildRetentionPublicGenerationContextPresence(
+          resolvedContext.context,
+        ),
         researchApplied: resolvedContext.researchApplied,
         researchWarning: resolvedContext.researchWarning,
         scriptLengthWarning: scriptOnlyResult.scriptLengthWarning,

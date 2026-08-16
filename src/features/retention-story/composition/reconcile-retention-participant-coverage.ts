@@ -22,6 +22,7 @@ import { detectRetentionFactualRisk } from "../strategy/retention-factual-risk";
 import type { RetentionStrategySeed } from "../strategy/retention-strategy.types";
 import {
   assembleRetentionNarrationCandidate,
+  detectRetentionNarrationAssemblyGap,
   type RetentionSegmentDraft,
 } from "./assemble-retention-narration-candidate";
 import { assertRetentionNarrationCandidateCoherence } from "./assert-retention-narration-candidate-coherence";
@@ -181,6 +182,7 @@ export function reconcileRetentionParticipantCoverageZeroModel(input: {
       planFingerprint: input.plan.planFingerprint,
       orderedBeatIds: input.candidate.orderedBeatIds,
       segments: drafts,
+      assemblyGap: detectRetentionNarrationAssemblyGap(input.candidate),
     });
     let candidate = assertRetentionNarrationCandidateCoherence(assembled, {
       plan: input.plan,

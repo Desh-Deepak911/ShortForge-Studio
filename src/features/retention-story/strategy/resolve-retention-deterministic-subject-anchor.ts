@@ -35,7 +35,18 @@ const SHORT_MEANINGFUL = new Set([
 const MAX_QUALITATIVE_ANCHOR_WORDS = 12;
 const MAX_QUALITATIVE_ANCHOR_CHARS = 96;
 const CREATOR_INSTRUCTION_PREFIX =
-  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make|preview|recap|review|analyze|compare|rank)\b(?:\s+(?:me|us))?(?:\s+(?:a|an|the))?(?:\s+story\s+(?:about|of))?\s*)/i;
+  /^(?:(?:please\s+)?(?:tell|create|write|explain|cover|show|describe|make|build|craft|generate|develop|produce|preview|recap|review|analyze|compare|rank|trace)\b(?:\s+(?:me|us))?\s*)/iu;
+const DESCRIBED_STORY_PREFIX =
+  /^(?:(?:a|an|the)\s+)?(?:[\p{L}\p{N}'’‑-]+\s+){0,5}story\s+(?:about|of)\s+/iu;
+
+function removeCreatorDirectionPrefix(text: string): string {
+  const withoutVerb = text.replace(CREATOR_INSTRUCTION_PREFIX, "").trim();
+  if (withoutVerb === text.trim()) return text.trim();
+  const withoutStoryDescription = withoutVerb
+    .replace(DESCRIBED_STORY_PREFIX, "")
+    .trim();
+  return withoutStoryDescription.replace(/^(?:a|an|the)\s+/iu, "").trim();
+}
 
 function foldToken(raw: string): string {
   return raw
@@ -47,7 +58,7 @@ function foldToken(raw: string): string {
 function buildBoundedQualitativeAnchor(topic: string): string {
   const firstThought = topic.split(/[\n.!?]+/u)[0]?.trim() || topic;
   const withoutInstruction =
-    firstThought.replace(CREATOR_INSTRUCTION_PREFIX, "").trim() || firstThought;
+    removeCreatorDirectionPrefix(firstThought) || firstThought;
   if (
     withoutInstruction.length <= MAX_QUALITATIVE_ANCHOR_CHARS &&
     withoutInstruction.split(/\s+/).filter(Boolean).length <=
@@ -110,18 +121,19 @@ export function resolveRetentionDeterministicSubjectAnchor(
   if (topic == null || typeof topic !== "string") return null;
   const normalized = topic.normalize("NFC").replace(/\s+/g, " ").trim();
   if (!normalized) return null;
+  const subjectText = removeCreatorDirectionPrefix(normalized) || normalized;
 
-  const canonicalTokens = extractRetentionSubjectTokens(normalized);
+  const canonicalTokens = extractRetentionSubjectTokens(subjectText);
   if (canonicalTokens.length === 0) return null;
 
-  const ordered = extractOrderedRetentionSubjectTokens(normalized);
+  const ordered = extractOrderedRetentionSubjectTokens(subjectText);
   if (ordered.length === 0) return null;
 
-  const risky = detectRetentionFactualRisk(normalized).risky;
+  const risky = detectRetentionFactualRisk(subjectText).risky;
   if (!risky) {
     // Preserve concise topics verbatim. A creator may also enter a full brief;
     // bound that prose before it enters the short controlling-idea contract.
-    return buildBoundedQualitativeAnchor(normalized);
+    return buildBoundedQualitativeAnchor(subjectText);
   }
 
   // Prefer meaningful tokens (≥3) that are not standalone club prefixes when a
@@ -135,6 +147,10 @@ export function resolveRetentionDeterministicSubjectAnchor(
   });
 
   const preferred =
+    candidates.find(
+      (token) =>
+        token.folded.length >= 3 && /^[\p{Lu}]/u.test(token.display),
+    ) ??
     candidates.find((token) => token.folded.length >= 3) ??
     candidates[0] ??
     ordered[0]!;

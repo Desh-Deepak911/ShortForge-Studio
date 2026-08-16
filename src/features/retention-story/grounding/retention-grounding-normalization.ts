@@ -372,17 +372,15 @@ function collapseGeneratedManualDuplicates(
   const drop = new Set<string>();
   for (const group of byText.values()) {
     if (group.length < 2) continue;
-    const sorted = [...group].sort((a, b) =>
-      a.claimId.localeCompare(b.claimId),
-    );
-    const keep = sorted[0]!;
+    // Earliest creator position wins; merge later duplicates restrictively.
+    const keep = group[0]!;
     let merged = keep;
-    for (let i = 1; i < sorted.length; i++) {
+    for (let i = 1; i < group.length; i++) {
       merged = mergeSameIdClaims(
         { ...merged, claimId: keep.claimId },
-        { ...sorted[i]!, claimId: keep.claimId },
+        { ...group[i]!, claimId: keep.claimId },
       );
-      drop.add(sorted[i]!.claimId);
+      drop.add(group[i]!.claimId);
     }
     // Replace keep with merged via map later
     byText.set(keep.text, [merged]);
@@ -464,20 +462,31 @@ function claimCapTier(claim: RetentionGroundingClaim): number {
 function boundClaimsByAuthority(
   claims: readonly RetentionGroundingClaim[],
 ): RetentionGroundingClaim[] {
+  const indexed = claims.map((claim, index) => ({ claim, index }));
   if (claims.length <= RETENTION_MAX_GROUNDING_CLAIMS) {
-    return [...claims].sort((a, b) => {
-      const byId = a.claimId.localeCompare(b.claimId);
-      return byId !== 0 ? byId : a.text.localeCompare(b.text);
-    });
+    return indexed
+      .sort((a, b) => {
+        const aManual = a.claim.provenance === "manual_user" ? 1 : 0;
+        const bManual = b.claim.provenance === "manual_user" ? 1 : 0;
+        if (aManual !== bManual) return aManual - bManual;
+        if (aManual === 0) {
+          const byId = a.claim.claimId.localeCompare(b.claim.claimId);
+          return byId !== 0 ? byId : a.claim.text.localeCompare(b.claim.text);
+        }
+        return a.index - b.index;
+      })
+      .map((entry) => entry.claim);
   }
 
-  const sorted = [...claims].sort((a, b) => {
-    const tier = claimCapTier(a) - claimCapTier(b);
-    if (tier !== 0) return tier;
-    const byId = a.claimId.localeCompare(b.claimId);
-    return byId !== 0 ? byId : a.text.localeCompare(b.text);
-  });
-  return sorted.slice(0, RETENTION_MAX_GROUNDING_CLAIMS);
+  const selected = [...indexed]
+    .sort((a, b) => {
+      const tier = claimCapTier(a.claim) - claimCapTier(b.claim);
+      if (tier !== 0) return tier;
+      return a.index - b.index;
+    })
+    .slice(0, RETENTION_MAX_GROUNDING_CLAIMS)
+    .sort((a, b) => a.index - b.index);
+  return selected.map((entry) => entry.claim);
 }
 
 /**

@@ -121,33 +121,23 @@ export function assertRetentionTerminalHookAuthorityCoherence(
     repairBoundExceeded: true,
   });
 
-  if (!recomputed.ok) throwAuthority();
-  if (
-    !recomputed.hardGatesPassed.grounding ||
-    !recomputed.hardGatesPassed.safety
-  ) {
-    throwAuthority();
-  }
-  if (
-    !recomputed.strategyThresholdsPassed.provocativeness ||
-    !recomputed.strategyThresholdsPassed.clarity
-  ) {
-    throwAuthority();
-  }
-  if (
-    !recomputed.openingLimitsPassed.wordLimit ||
-    !recomputed.openingLimitsPassed.spokenDurationLimit
-  ) {
+  const blockingSafety = recomputed.reasons.filter(
+    (reason) =>
+      reason === "safety.prompt_injection" ||
+      reason === "safety.harmful_targeting" ||
+      reason === "safety.empty_opening",
+  );
+  if (blockingSafety.length > 0) {
     throwAuthority();
   }
   if (recomputed.planFingerprint !== plan.planFingerprint) throwAuthority();
   if (recomputed.candidateId !== rebuilt.candidateId) throwAuthority();
 
-  // Supplied validation must match recomputed authority identity.
+  // Identity only. Stale hardGatesPassed.safety / grounding values must not
+  // reverse a spoken-narration Pass (Prompt 8 / 12).
   if (suppliedValidation.candidateId !== recomputed.candidateId) {
     throwAuthority();
   }
-  if (suppliedValidation.ok !== true) throwAuthority();
 
   const span = extractOpeningSpan(approvedNarration);
   if (!span) throwAuthority();

@@ -13,6 +13,7 @@ import { RETENTION_MAX_SEGMENT_TEXT_CHARS } from "./retention-narration-candidat
  */
 export function canonicalizeRetentionSegmentText(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
+  if (raw === "") return "";
   const nfcCollapsed = raw.normalize("NFC").replace(/\s+/g, " ").trim();
   if (!nfcCollapsed) return null;
   if (nfcCollapsed.length > RETENTION_MAX_SEGMENT_TEXT_CHARS) return null;

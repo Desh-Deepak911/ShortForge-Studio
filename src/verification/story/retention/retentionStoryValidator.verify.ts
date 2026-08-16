@@ -1664,6 +1664,32 @@ async function main(): Promise<void> {
       ]),
       fastCtx,
     );
+
+    const fastRejectedCompressionThenRescue = {
+      ...emptyCounts(),
+      initial_narration: 1,
+      length_compression: 1,
+      total: 2,
+    };
+    const rescuedAfterCompression = forgeBridge(
+      fastCtx,
+      "cheap",
+      fastRejectedCompressionThenRescue,
+      [
+        { category: "initial_narration", outcome: "attempted", sequence: 1 },
+        { category: "initial_narration", outcome: "rejected", sequence: 2 },
+        { category: "length_compression", outcome: "attempted", sequence: 3 },
+        { category: "length_compression", outcome: "rejected", sequence: 4 },
+        {
+          category: "initial_narration",
+          outcome: "skipped_deterministic",
+          sequence: 5,
+        },
+      ],
+    );
+    assert.doesNotThrow(() =>
+      assertRetentionHookBridgeReadyCoherence(rescuedAfterCompression, fastCtx),
+    );
   });
 
   console.log("negatives — gates / scenes-only");
@@ -2571,7 +2597,7 @@ async function main(): Promise<void> {
       fScores.curiosity < dScores.curiosity,
       "generic intro must not outscore declarative cold-open",
     );
-    assert.equal(getRetentionHeuristicRegistryVersion(), "heuristic-registry/2");
+    assert.equal(getRetentionHeuristicRegistryVersion(), "heuristic-registry/3");
   });
 
   console.log(`\n${passed} checks passed.\n`);

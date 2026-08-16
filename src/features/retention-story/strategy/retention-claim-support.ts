@@ -15,6 +15,12 @@ export function normalizeRetentionControllingIdeaStatement(
   return text.normalize("NFC").replace(/\s+/g, " ").trim();
 }
 
+function normalizeNarrationStatementForSupport(text: string): string {
+  return normalizeRetentionControllingIdeaStatement(text)
+    .replace(/[.!?…]+$/u, "")
+    .trim();
+}
+
 export function isClaimEligibleForControllingIdeaSupport(
   grounding: RetentionGroundingContext,
   claimId: string,
@@ -131,7 +137,7 @@ export function claimRefSupportsNarrationStatement(
   }
   const claim = grounding.claims.find((c) => c.claimId === claimId);
   if (!claim) return false;
-  const left = normalizeRetentionControllingIdeaStatement(statement);
-  const right = normalizeRetentionControllingIdeaStatement(claim.text);
+  const left = normalizeNarrationStatementForSupport(statement);
+  const right = normalizeNarrationStatementForSupport(claim.text);
   return left.length > 0 && left === right;
 }

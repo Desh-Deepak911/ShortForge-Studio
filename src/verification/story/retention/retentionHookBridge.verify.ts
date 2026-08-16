@@ -291,12 +291,16 @@ async function main(): Promise<void> {
         },
         snapshot: hookContext.snapshot,
         compressionRevalidated: false,
-        // Missing terminalEvidence → fail closed before reconciliation.
+        // Missing terminalEvidence used to fail closed. After Prompt 12 a
+        // canonical compose commits before the runner can forge narration.
       })) as unknown as RetentionHookRunner,
     });
-    assert.equal(result.status, "failed");
-    if (result.status === "failed") {
-      assert.equal(result.reason, "hook_terminal_failure");
+    assert.equal(result.status, "ready");
+    if (result.status === "ready") {
+      assert.notEqual(
+        result.approvedNarration,
+        "Bypass narration without any structured Retention candidate behind it.",
+      );
     }
   });
 
@@ -368,7 +372,7 @@ async function main(): Promise<void> {
           permittedClaimIds: [],
           qualityMode: "balanced",
         });
-        // Missing terminalEvidence fails closed as hook_terminal_failure.
+        // A later Hook mutation must not replace canonically accepted speech.
         return {
           ok: true as const,
           title: first.title,
@@ -398,9 +402,9 @@ async function main(): Promise<void> {
         };
       }) as unknown as RetentionHookRunner,
     });
-    assert.equal(result.status, "failed");
-    if (result.status === "failed") {
-      assert.equal(result.reason, "hook_terminal_failure");
+    assert.equal(result.status, "ready");
+    if (result.status === "ready") {
+      assert.doesNotMatch(result.approvedNarration, /Unrelated tail mutation/u);
     }
   });
 
@@ -442,7 +446,7 @@ async function main(): Promise<void> {
       tone: "dramatic",
       generationPath: "script_only",
     });
-    let modelCallInvoked = false;
+    const ledger = createRetentionModelCallLedger("balanced");
     const result = await runRetentionHookBridge({
       contract: env.contract,
       plan: env.plan,
@@ -450,18 +454,17 @@ async function main(): Promise<void> {
       grounding: env.grounding,
       hookContext,
       composer: makeComposer(env.plan),
-      ledger: createRetentionModelCallLedger("balanced"),
+      ledger,
       topic: env.contract.topic,
       tone: "dramatic",
       duration: 30,
       scriptMode: "story",
       hookRunner: async (input) => {
         assert.equal(typeof input.modelCall, "function");
-        modelCallInvoked = true;
         return generateHookedNarration(input);
       },
     });
-    assert.ok(modelCallInvoked);
+    assert.ok(ledger.snapshot().counts.initial_narration >= 1);
     assert.ok(result.status === "ready" || result.status === "failed");
   });
 

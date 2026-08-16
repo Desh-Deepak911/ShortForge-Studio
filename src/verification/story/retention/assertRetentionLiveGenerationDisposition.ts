@@ -23,6 +23,8 @@ const DISPOSITION_KEYS = Object.freeze([
   "creatorFacingNotes",
 ] as const);
 
+const DISPOSITION_OPTIONAL_KEYS = Object.freeze(["acceptanceTrace"] as const);
+
 const VALID_DISPOSITIONS = Object.freeze([
   "optimal",
   "acceptable",
@@ -68,25 +70,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function assertExactKeys(
-  record: Record<string, unknown>,
-  allowed: readonly string[],
-  label: string,
-): void {
-  for (const key of allowed) {
-    assert.ok(
-      Object.prototype.hasOwnProperty.call(record, key),
-      `${label}: missing "${key}"`,
-    );
-  }
-  for (const key of Object.keys(record)) {
-    assert.ok(
-      (allowed as readonly string[]).includes(key),
-      `${label}: unknown/private field "${key}"`,
-    );
-  }
-}
-
 function assertFiniteNonNegInt(value: unknown, label: string): number {
   assert.equal(typeof value, "number", `${label} must be number`);
   const n = value as number;
@@ -107,7 +90,19 @@ export function assertRetentionLiveGenerationDisposition(
   } = {},
 ): RetentionGenerationDispositionSummary {
   assert.ok(isRecord(raw), "generationDisposition must be an object");
-  assertExactKeys(raw, DISPOSITION_KEYS, "generationDisposition");
+  for (const key of DISPOSITION_KEYS) {
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(raw, key),
+      `generationDisposition: missing "${key}"`,
+    );
+  }
+  for (const key of Object.keys(raw)) {
+    assert.ok(
+      (DISPOSITION_KEYS as readonly string[]).includes(key) ||
+        (DISPOSITION_OPTIONAL_KEYS as readonly string[]).includes(key),
+      `generationDisposition: unknown/private field "${key}"`,
+    );
+  }
 
   assert.ok(
     (VALID_DISPOSITIONS as readonly string[]).includes(
@@ -222,6 +217,36 @@ export function assertRetentionLiveGenerationDisposition(
       "creative_premise",
       "creative_premise_used requires factHandlingMode creative_premise",
     );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(raw, "acceptanceTrace")) {
+    assert.ok(
+      isRecord(raw.acceptanceTrace),
+      "acceptanceTrace must be an object when present",
+    );
+    const trace = raw.acceptanceTrace;
+    assert.equal(trace.version, 1);
+    assert.ok(Array.isArray(trace.events), "acceptanceTrace.events must be array");
+    assert.equal(typeof trace.finalNarrationAuthority, "string");
+    assert.equal(typeof trace.deterministicRescueEntered, "boolean");
+    assert.equal(typeof trace.deterministicRescueAccepted, "boolean");
+    assert.equal(typeof trace.modelNarrationAccepted, "boolean");
+    assert.equal(typeof trace.rewriteAccepted, "boolean");
+    for (const key of Object.keys(trace)) {
+      assert.ok(
+        [
+          "version",
+          "events",
+          "earliestDecisiveRejection",
+          "finalNarrationAuthority",
+          "deterministicRescueEntered",
+          "deterministicRescueAccepted",
+          "modelNarrationAccepted",
+          "rewriteAccepted",
+        ].includes(key),
+        `acceptanceTrace unknown field: ${key}`,
+      );
+    }
   }
 
   return raw as unknown as RetentionGenerationDispositionSummary;
