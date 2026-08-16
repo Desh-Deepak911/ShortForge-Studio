@@ -1,5 +1,7 @@
 # Retention Story Intelligence — Formal Contract
 
+> **Living quality overview:** [STORY_GENERATION.md](STORY_GENERATION.md). Current release evidence: [../evidence/story-quality/current/STORY_GENERATION_RELEASE_READINESS.md](../evidence/story-quality/current/STORY_GENERATION_RELEASE_READINESS.md) (**not_ready**). This file is the frozen Sprint 10 module contract. The “Sprint 11 ready to begin” line below is historical.
+
 **Status:** **FROZEN after Sprint 10H.5C**
 **Sprint:** 10A–10H.5C — Complete and accepted
 **Architecture audit:** [RETENTION_STORY_ARCHITECTURE_AUDIT.md](./RETENTION_STORY_ARCHITECTURE_AUDIT.md) — **accepted as evidence**

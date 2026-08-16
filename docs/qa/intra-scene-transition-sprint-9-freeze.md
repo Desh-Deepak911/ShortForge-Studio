@@ -84,6 +84,6 @@ EXPORTMANIFEST V3 / RENDERER CONTRACT 9C: FROZEN
 ## Related
 
 - Local results: [`intra-scene-transition-local-results.md`](./intra-scene-transition-local-results.md)
-- Contract: [`../INTRA_SCENE_TRANSITIONS.md`](../INTRA_SCENE_TRANSITIONS.md)
+- Contract: [`../product/INTRA_SCENE_TRANSITIONS.md`](../product/INTRA_SCENE_TRANSITIONS.md)
 - Dev harness: `/dev/intra-scene-transition-qa`
 - Verify: `npm run test:intra-scene-transition-sprint`

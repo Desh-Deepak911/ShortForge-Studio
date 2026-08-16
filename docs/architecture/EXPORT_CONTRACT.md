@@ -1,5 +1,7 @@
 # ShortForge Studio Export Contract
 
+> **Current production versions** are ExportManifest **v4 / `"9D"`** and, when listed capabilities are required, **v5 / `"9E"`**. See [EXPORT_MANIFEST_AND_CAPABILITIES.md](EXPORT_MANIFEST_AND_CAPABILITIES.md) and `src/features/export/domain/export-manifest.types.ts`. The Sprint 6–9 status block below remains historical contract text for v2/v3.
+
 Status: Accepted after Sprint 6A · Sprint 6B production gate **implemented** · Sprint 8D multi-media manifest **complete and accepted** (fail-closed total v2 validation) · Sprint 8 **frozen** (ExportManifest v2 / renderer contract `"8D"`; multi-image default; `NEXT_PUBLIC_SHORTFORGE_MULTI_IMAGE_SCENES` retired in 8E.3) · Sprint 9 **frozen** — ExportManifest **v3 / `"9C"`** (intra-scene transitions) accepted and frozen (9C.1 fingerprint coherence + consecutive-boundary order; 9D.3 operator Preview/WebM/editor Pass); v2 / `"8D"` remains frozen backward-compatible
 
 Applies to: Sprint 6B and all future export work  

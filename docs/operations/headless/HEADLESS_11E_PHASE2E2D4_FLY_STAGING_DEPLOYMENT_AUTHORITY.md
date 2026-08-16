@@ -110,7 +110,7 @@ All gates default **blocked** unless explicitly authorized.
 
 ## Verify-first secret activation (Phase 2E.2D.6E)
 
-After immutable-image deploy + verify topology proof, parse `fly secrets list --json` (exact nine names, bounded status, no values). If aggregate is `staged` or `partial`, run **exactly one** `fly secrets deploy -a <app> -c <verify-first-config>` without rebuilding the image; re-read until aggregate is `deployed`. Runtime readiness requires deployed ledger **and** worker log proof — never infer from local preflight alone. See [2E.2D.6E](HEADLESS_11E_PHASE2E2D6E_FLY_STAGING_STAGED_SECRET_ACTIVATION_AUTHORITY.md).
+After immutable-image deploy + verify topology proof, parse `fly secrets list --json` (exact nine names, bounded status, no values). If aggregate is `staged` or `partial`, run **exactly one** `fly secrets deploy -a <app> -c <verify-first-config>` without rebuilding the image; re-read until aggregate is `deployed`. Runtime readiness requires deployed ledger **and** worker log proof — never infer from local preflight alone. See [2E.2D.6E](../../architecture/headless/HEADLESS_11E_PHASE2E2D6E_FLY_STAGING_STAGED_SECRET_ACTIVATION_AUTHORITY.md).
 
 ## Canonical verify-first orchestrator (Phase 2E.2D.6G)
 

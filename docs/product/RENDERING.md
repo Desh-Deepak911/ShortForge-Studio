@@ -1,6 +1,6 @@
 # Rendering
 
-> **Status:** Partially stale for export encode. Production export is manifest-only + `chunked-browser-v1` (not MediaRecorder as the primary path). Start with [MASTER_ARCHITECTURE.md](../../MASTER_ARCHITECTURE.md) and [EXPORT_RENDERER_ARCHITECTURE.md](../architecture/EXPORT_RENDERER_ARCHITECTURE.md). Preview sections remain useful supporting reference.
+> **Status:** Partially stale for export encode. Current path: [../architecture/PREVIEW_AND_EXPORT.md](../architecture/PREVIEW_AND_EXPORT.md). Production Browser encode is `chunked-browser-v1`, not MediaRecorder. Preview sections remain useful supporting reference.
 
 The Rendering layer turns `FootieScript` into visible frames. ShortForge Studio has two renderers that share timing, subtitle, transition, and image motion logic but use different output technologies:
 

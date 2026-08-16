@@ -1,93 +1,75 @@
-# ShortForge documentation map
+# ShortForge Studio documentation
 
-This directory contains two different kinds of records:
+This is the documentation landing page. The product onboarding document is the [root README](../README.md).
 
-1. **Living documentation** — product, architecture, and operations guidance that may evolve.
-2. **Immutable QA evidence** — filenames, contents, and SHA-256 values that verification authority may bind.
+Use this map to find the **current authority** for a topic. Do not treat sprint numbers, freeze ledgers, or archived indexes as the first explanation of how the product works.
 
-Evidence authority is more important than a visually flat tree. Headless renderer evidence lives under structured paths below; verification code binds canonical paths and SHA-256 values. Do not rename, move, rewrite, or deduplicate evidence without a full path-and-SHA migration audit.
+When documents disagree:
 
-## Product
+1. Production types and runtime code
+2. Provider-free verification suites
+3. Current responsibility documents in this tree
+4. Current evidence under `docs/evidence/*/current/`
+5. Historical contracts, sprint ledgers, and archives
 
-| Topic | Entry points |
+## Where information belongs
+
+| Folder | Responsibility |
 | --- | --- |
-| Features and editing | [product/FEATURES.md](product/FEATURES.md), [product/GENERATION.md](product/GENERATION.md), [product/EDITING.md](product/EDITING.md) |
-| Rendering and media | [product/RENDERING.md](product/RENDERING.md), [product/MEDIA_FRAMING.md](product/MEDIA_FRAMING.md), [product/SHARED_MEDIA_MOTION.md](product/SHARED_MEDIA_MOTION.md) |
-| Audio and transitions | [product/AUDIO_MIXER.md](product/AUDIO_MIXER.md), [product/INTRA_SCENE_TRANSITIONS.md](product/INTRA_SCENE_TRANSITIONS.md), [product/TRANSITIONS-SCOPE.md](product/TRANSITIONS-SCOPE.md) |
-| Studio Intelligence | [product/STUDIO_INTELLIGENCE.md](product/STUDIO_INTELLIGENCE.md) |
-| Export product surface | [product/EXPORT_CAPABILITIES.md](product/EXPORT_CAPABILITIES.md), [product/EXPORT_TIMING_MODEL.md](product/EXPORT_TIMING_MODEL.md), [product/EXPORT_AUDIO_AND_FORMATS.md](product/EXPORT_AUDIO_AND_FORMATS.md) |
-| Studio UX | [product/editor/](product/editor/) |
-| Planning | [product/FUTURE.md](product/FUTURE.md) |
+| [product/](product/) | Creator-facing behavior: workflow, editing, voice, framing, mixer |
+| [architecture/](architecture/) | System design and frozen contracts |
+| [development/](development/) | Local setup and day-to-day commands |
+| [verification/](verification/) | How to run tests and what they prove |
+| [operations/](operations/) | Environment flags, export forensics, Headless runbooks |
+| [evidence/](evidence/) | Measured readiness, baselines, and certification records |
+| [archive/](archive/) | Superseded indexes, sprint history, and historical audits |
+| [qa/](qa/) | Historical sprint freeze ledgers and live-model logs (kept in place for path/SHA bindings) |
 
-## Architecture
+## Canonical documents
 
-| Topic | Entry points |
+| Topic | Authority |
 | --- | --- |
-| System design | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md), [architecture/DATA_MODEL.md](architecture/DATA_MODEL.md) |
-| Export contract | [architecture/EXPORT_CONTRACT.md](architecture/EXPORT_CONTRACT.md) |
-| Export renderer | [architecture/EXPORT_RENDERER_ARCHITECTURE.md](architecture/EXPORT_RENDERER_ARCHITECTURE.md) |
-| Export audit | [architecture/EXPORT_ARCHITECTURE_AUDIT.md](architecture/EXPORT_ARCHITECTURE_AUDIT.md) |
-| Hook contract | [architecture/HOOK_CONTRACT.md](architecture/HOOK_CONTRACT.md), [architecture/HOOK_ARCHITECTURE_AUDIT.md](architecture/HOOK_ARCHITECTURE_AUDIT.md) |
-| Retention Story contract | [architecture/RETENTION_STORY_CONTRACT.md](architecture/RETENTION_STORY_CONTRACT.md), [architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md](architecture/RETENTION_STORY_ARCHITECTURE_AUDIT.md) |
-| Visual-retention capability gating | [architecture/VISUAL_RETENTION_CAPABILITY_FOUNDATION.md](architecture/VISUAL_RETENTION_CAPABILITY_FOUNDATION.md) |
-| Headless renderer authority | [architecture/headless/](architecture/headless/) |
+| Product and creator workflow | [product/CREATOR_WORKFLOW.md](product/CREATOR_WORKFLOW.md) |
+| Story generation | [architecture/STORY_GENERATION.md](architecture/STORY_GENERATION.md) |
+| Voice, speed, and mastering | [product/VOICE_GENERATION.md](product/VOICE_GENERATION.md) |
+| Preview, Browser, and Headless rendering | [architecture/PREVIEW_AND_EXPORT.md](architecture/PREVIEW_AND_EXPORT.md) |
+| Fit, Fill, zoom, Fit with background | [product/SOURCE_MEDIA_QUALITY.md](product/SOURCE_MEDIA_QUALITY.md) |
+| Export manifest and renderer capabilities | [architecture/EXPORT_MANIFEST_AND_CAPABILITIES.md](architecture/EXPORT_MANIFEST_AND_CAPABILITIES.md) |
+| Local development | [development/LOCAL_DEVELOPMENT.md](development/LOCAL_DEVELOPMENT.md) |
+| Verification | [verification/VERIFICATION.md](verification/VERIFICATION.md) |
+| Headless operations | [operations/HEADLESS_OPERATIONS.md](operations/HEADLESS_OPERATIONS.md) |
+| Release-readiness evidence policy | [evidence/RELEASE_READINESS_POLICY.md](evidence/RELEASE_READINESS_POLICY.md) |
 
-Root companions: [../MASTER_ARCHITECTURE.md](../MASTER_ARCHITECTURE.md), [../ARCHITECTURE.md](../ARCHITECTURE.md), [../ROADMAP.md](../ROADMAP.md).
+## Supporting living documents
 
-## Operations
+These remain useful and should not be copied into the canonical pages above.
 
-| Topic | Entry points |
-| --- | --- |
-| Environment and gates | [operations/ENV_AND_FEATURE_FLAGS.md](operations/ENV_AND_FEATURE_FLAGS.md) |
-| Export forensics | [operations/EXPORT_FAILURE_FORENSICS.md](operations/EXPORT_FAILURE_FORENSICS.md) |
-| Fly staging scripts | [../scripts/fly-staging/](../scripts/fly-staging/) |
+- Product details: [product/EDITING.md](product/EDITING.md), [product/AUDIO_MIXER.md](product/AUDIO_MIXER.md), [product/MEDIA_FRAMING.md](product/MEDIA_FRAMING.md), [product/RENDERING.md](product/RENDERING.md), [product/STUDIO_INTELLIGENCE.md](product/STUDIO_INTELLIGENCE.md)
+- Frozen contracts: [architecture/RETENTION_STORY_CONTRACT.md](architecture/RETENTION_STORY_CONTRACT.md), [architecture/HOOK_CONTRACT.md](architecture/HOOK_CONTRACT.md), [architecture/EXPORT_CONTRACT.md](architecture/EXPORT_CONTRACT.md)
+- Environment ledger: [operations/ENV_AND_FEATURE_FLAGS.md](operations/ENV_AND_FEATURE_FLAGS.md)
+- Headless architecture chronology: [architecture/headless/README.md](architecture/headless/README.md)
+- Verification suite ownership: [../src/verification/README.md](../src/verification/README.md)
 
-## QA
+## Evidence
 
-Local QA notes and sprint freeze ledgers: [qa/](qa/).
+Current measured records live under [evidence/](evidence/README.md):
 
-Visual-retention capabilities: [qa/visual-retention-capabilities.md](qa/visual-retention-capabilities.md).
+- Story: [evidence/story-quality/current/STORY_GENERATION_RELEASE_READINESS.md](evidence/story-quality/current/STORY_GENERATION_RELEASE_READINESS.md) — **not_ready**
+- Video: [evidence/export/current/VIDEO_QUALITY_RELEASE_READINESS.md](evidence/export/current/VIDEO_QUALITY_RELEASE_READINESS.md) — **conditionally ready**
+- Voice: [evidence/audio/current/VOICE_SPEED_CLARITY_AUDIT.md](evidence/audio/current/VOICE_SPEED_CLARITY_AUDIT.md)
+- Headless: [evidence/headless/README.md](evidence/headless/README.md) — do not move these files without a path-and-SHA audit
 
-## Headless renderer evidence
+## Historical material
 
-Structured evidence index: [evidence/headless/README.md](evidence/headless/README.md) · full registry: [evidence/headless/EVIDENCE_REGISTRY.md](evidence/headless/EVIDENCE_REGISTRY.md)
+- [archive/MASTER_ARCHITECTURE.md](archive/MASTER_ARCHITECTURE.md) — former root architecture index and sprint ledger
+- [archive/root-ARCHITECTURE.md](archive/root-ARCHITECTURE.md) — former root architecture overview
+- [archive/sprints/](archive/sprints/) — sprint reports
+- [qa/](qa/README.md) — freeze ledgers and live-model logs kept at their original paths
 
-| Kind | Location |
-| --- | --- |
-| Current official evidence | [evidence/headless/current/](evidence/headless/current/) |
-| Historical / archived evidence | [evidence/headless/archive/](evidence/headless/archive/) |
-| Architecture & authority | [architecture/headless/](architecture/headless/) |
-| Operations & runbooks | [operations/headless/](operations/headless/) |
-| Sprint / phase reports | [archive/sprints/headless/](archive/sprints/headless/) |
+## Maintenance
 
-Current evidence entry points:
-
-- [HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_EXECUTION_PROBE.md)
-- [HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_LIVE_EVIDENCE.md)
-- [HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md)
-- [HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_RENDER_4K_OPERATIONAL_CAPACITY_EVIDENCE.md)
-- [HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md)
-- [HEADLESS_11E_NEON_LIVE_EVIDENCE.md](evidence/headless/current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md)
-
-Naming conventions:
-
-- `*.pre-*` and `*.pre-run-*` are byte-preserved historical snapshots under `evidence/headless/archive/`.
-- `*EVIDENCE.md` without a historical suffix in `current/` is the active official record for that harness.
-- `*POSTMORTEM*` and `*CORRECTION*` explain a failure boundary or the correction that followed.
-- Phase documents (`HEADLESS_11E_PHASE*`) in `architecture/headless/` are implementation authorities and should be read chronologically.
-
-## Historical / refactor archive
-
-- [archive/refactor/REPOSITORY_REFACTOR_FINAL_AUDIT.md](archive/refactor/REPOSITORY_REFACTOR_FINAL_AUDIT.md)
-- [archive/refactor/REPOSITORY_STRUCTURE_FINAL_AUDIT.md](archive/refactor/REPOSITORY_STRUCTURE_FINAL_AUDIT.md)
-- Sprint history (non-headless): [archive/sprints/EXPORT_RELIABILITY_SPRINT.md](archive/sprints/EXPORT_RELIABILITY_SPRINT.md)
-- Headless sprint history: [archive/sprints/headless/](archive/sprints/headless/)
-
-## Maintenance rules
-
-- Add new living documentation to the matching topic folder when it shares the same owner.
-- Add a new root-level file only when it represents a separately versioned contract, evidence record, or audit.
-- Never commit credentials, environment files, provider logs, downloaded media, or temporary harness output.
-- Never rewrite historical evidence to make a newer run look cleaner.
-- Before relocating any evidence file, search the repository for both its filename and SHA.
-- Prefer links from this index over duplicating the same explanation in several documents.
+- Add living documentation to the folder that owns the behavior.
+- Do not create another general index that restates this page.
+- Never commit credentials, `.env` files, provider logs, downloaded media, or temporary harness output.
+- Never rewrite historical measurements to look current.
+- Before relocating Headless or QA evidence, search the repository for the filename and its SHA-256.

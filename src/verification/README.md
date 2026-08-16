@@ -1,5 +1,7 @@
 # Verification scripts
 
+Developer-facing command list: [docs/verification/VERIFICATION.md](../../docs/verification/VERIFICATION.md).
+
 Non-production regression and QA scripts for ShortForge. These files live outside the
 production build (`tsconfig.json` excludes `**/*.verify.ts`) and assert contracts between
 preview, export, timeline, research, and related subsystems.

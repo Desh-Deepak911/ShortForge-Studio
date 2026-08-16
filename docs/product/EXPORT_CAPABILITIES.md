@@ -1,5 +1,7 @@
 # Export Capabilities
 
+> **Status:** Historical Sprint 6A inventory. Current path and resolution rules: [../architecture/PREVIEW_AND_EXPORT.md](../architecture/PREVIEW_AND_EXPORT.md). Voice speed is no longer “Model A only”; see [VOICE_GENERATION.md](VOICE_GENERATION.md). Manifest versions: [../architecture/EXPORT_MANIFEST_AND_CAPABILITIES.md](../architecture/EXPORT_MANIFEST_AND_CAPABILITIES.md).
+
 Sprint 6A inventory of what ShortForge Studio Preview and Export actually support.
 
 ## Formats

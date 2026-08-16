@@ -4,11 +4,11 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Start here for architecture:** [MASTER_ARCHITECTURE.md](./MASTER_ARCHITECTURE.md) — canonical index, freeze boundaries, Export Reliability ledger (Sprint 6A–6F.1), and Sprint 7+ extension map. This roadmap remains the product milestone checklist.
+> **Status:** Product milestone checklist. Planned and in-progress items are not implemented. Current onboarding: [README.md](./README.md). Docs map: [docs/README.md](./docs/README.md). Historical sprint ledger: [docs/archive/MASTER_ARCHITECTURE.md](./docs/archive/MASTER_ARCHITECTURE.md).
 
 This roadmap outlines where **ShortForge Studio** is today and where it is heading — from research-backed script creation through timeline editing to browser-side export.
 
-Items marked complete ship in the current product. In-progress and planned work may shift as priorities change. Release notes: [CHANGELOG.md](./CHANGELOG.md).
+Items marked complete are historical product claims and must still lose to current evidence and production code. In-progress and planned work may shift. Release notes: [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 

@@ -1,5 +1,7 @@
 # Voice speed clarity audit
 
+> **Evidence status:** Current official record for the pitch-preserved multi-speed path on the recorded matrix. Not a story-generation or Headless-hosting certification.
+
 ## Outcome
 
 Generated narration now keeps the proven native `tts-1-hd` path at 1.0x. Every
