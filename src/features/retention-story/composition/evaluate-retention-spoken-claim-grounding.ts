@@ -266,6 +266,21 @@ function conservativeParaphrase(
     if (/^perform(?:ance|ed|ing)?$/u.test(token)) return "perform";
     if (/^struggl(?:e|ed|ing)$/u.test(token)) return "struggle";
     if (/^(?:badly|poor|poorly)$/u.test(token)) return "poor";
+    if (/^(?:fail|failed|failure|challenging|difficult|setback|setbacks)$/u.test(token)) {
+      return "setback";
+    }
+    if (/^(?:win|wins|won|winning|victory|victories)$/u.test(token)) {
+      return "win";
+    }
+    if (/^(?:move|moves|moved|moving|go|goes|went|join|joins|joined|transfer)$/u.test(token)) {
+      return "move";
+    }
+    if (/^(?:add|adds|added|adding|strengthen|strengthens|strengthened|bolster|bolsters|bolstered)$/u.test(token)) {
+      return "strengthen";
+    }
+    if (/^(?:arsenal|option|options|resource|resources|weapon|weapons)$/u.test(token)) {
+      return "resource";
+    }
     if (/^(?:effectively|properly)$/u.test(token)) return "proper";
     if (/^(?:touch|control|controlled|controlling)$/u.test(token)) {
       return "control";

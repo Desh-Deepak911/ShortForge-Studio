@@ -1416,6 +1416,10 @@ export async function runRetentionProductionNarration(
       finalReadyBridge.diagnostics.boundedRewriteType === "opening_repair" ||
       finalReadyBridge.diagnostics.boundedRewriteType === "ranking_payoff_repair" ||
       finalReadyBridge.diagnostics.boundedRewriteType ===
+        "grounding_payoff_repair" ||
+      finalReadyBridge.diagnostics.boundedRewriteType ===
+        "duplicate_payoff_repair" ||
+      finalReadyBridge.diagnostics.boundedRewriteType ===
         "supported_opening_promotion" ||
       finalReadyBridge.diagnostics.boundedRewriteType === "duration_compression"
         ? finalReadyBridge.diagnostics.boundedRewriteType

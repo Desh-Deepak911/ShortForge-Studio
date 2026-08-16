@@ -18,6 +18,10 @@ import {
   prepareNarrationForVoiceCadence,
   prepareVoiceCadenceInstructions,
 } from "@/features/voice-quality";
+import {
+  renderPitchPreservedVoiceSpeed,
+  shouldRenderPitchPreservedVoiceSpeed,
+} from "@/features/voice-quality/server/render-pitch-preserved-voice-speed";
 
 /** Clarity-first default; `tts-1` is latency-oriented and failed the voice A/B. */
 const TTS_MODEL = "tts-1-hd";
@@ -25,10 +29,12 @@ const MAX_INPUT_LENGTH = 4096;
 
 export { TTS_MODEL };
 
-/** OpenAI TTS accepts a `speed` parameter on speech.create. */
-const OPENAI_TTS_SUPPORTS_PLAYBACK_SPEED = true;
-
 export { resolveVoiceoverVoice } from "@/lib/utils/voiceoverOptions";
+
+export type VoiceSpeedRendering =
+  | "native"
+  | "pitch_preserved"
+  | "provider_fallback";
 
 export interface GenerateVoiceoverInput {
   narration: string;
@@ -53,6 +59,11 @@ export interface GenerateVoiceoverMp3Options {
   instructions?: string;
 }
 
+export interface GenerateVoiceoverMp3Result {
+  readonly audioBuffer: ArrayBuffer;
+  readonly speedRendering: VoiceSpeedRendering;
+}
+
 export type GenerateVoiceoverOutput = VoiceoverResult & { audioBuffer: ArrayBuffer };
 
 export async function generateVoiceoverMp3(
@@ -60,26 +71,101 @@ export async function generateVoiceoverMp3(
   voice?: string,
   options: GenerateVoiceoverMp3Options = {},
 ): Promise<ArrayBuffer> {
+  return (await generateVoiceoverMp3WithRendering(text, voice, options))
+    .audioBuffer;
+}
+
+async function requestOpenAiSpeech(input: {
+  readonly text: string;
+  readonly voice?: string;
+  readonly speed: number;
+  readonly model: string;
+  readonly instructions?: string;
+  readonly responseFormat: "mp3" | "wav";
+}): Promise<ArrayBuffer> {
   const openai = getOpenAIClient();
-  const resolvedVoice = resolveVoiceoverVoice(voice) as OpenAI.Audio.SpeechCreateParams["voice"];
-  const applySpeed = options.applySpeed ?? OPENAI_TTS_SUPPORTS_PLAYBACK_SPEED;
-  const model = options.model ?? TTS_MODEL;
+  const resolvedVoice = resolveVoiceoverVoice(input.voice) as OpenAI.Audio.SpeechCreateParams["voice"];
 
   const speech = await openai.audio.speech.create({
-    model,
+    model: input.model,
     voice: resolvedVoice,
-    input: text.slice(0, MAX_INPUT_LENGTH),
-    response_format: "mp3",
-    ...(applySpeed ? { speed: resolveVoiceoverSpeed(options.speed) } : {}),
-    ...(options.instructions ? { instructions: options.instructions } : {}),
+    input: input.text.slice(0, MAX_INPUT_LENGTH),
+    response_format: input.responseFormat,
+    speed: input.speed,
+    ...(input.instructions ? { instructions: input.instructions } : {}),
   });
 
   return speech.arrayBuffer();
 }
 
 /**
+ * Produces one canonical MP3 at the requested pace. Non-1 speeds start from a
+ * lossless normal-speed render, then use pitch-preserving tempo conversion.
+ * A provider-baked retry keeps voice creation available if local conversion
+ * is unexpectedly unavailable.
+ */
+export async function generateVoiceoverMp3WithRendering(
+  text: string,
+  voice?: string,
+  options: GenerateVoiceoverMp3Options = {},
+): Promise<GenerateVoiceoverMp3Result> {
+  const speed = resolveVoiceoverSpeed(options.speed);
+  const model = options.model ?? TTS_MODEL;
+  const applySpeed = options.applySpeed ?? true;
+
+  if (!applySpeed || !shouldRenderPitchPreservedVoiceSpeed(speed)) {
+    return {
+      audioBuffer: await requestOpenAiSpeech({
+        text,
+        voice,
+        speed: applySpeed ? speed : 1,
+        model,
+        instructions: options.instructions,
+        responseFormat: "mp3",
+      }),
+      speedRendering: "native",
+    };
+  }
+
+  try {
+    const cleanAudio = await requestOpenAiSpeech({
+      text,
+      voice,
+      speed: 1,
+      model,
+      instructions: options.instructions,
+      responseFormat: "wav",
+    });
+    return {
+      audioBuffer: await renderPitchPreservedVoiceSpeed({
+        losslessAudio: cleanAudio,
+        speed,
+      }),
+      speedRendering: "pitch_preserved",
+    };
+  } catch (error) {
+    console.warn("Pitch-preserved voice speed unavailable; using provider fallback.", {
+      speed,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return {
+      audioBuffer: await requestOpenAiSpeech({
+        text,
+        voice,
+        speed,
+        model,
+        instructions: options.instructions,
+        responseFormat: "mp3",
+      }),
+      speedRendering: "provider_fallback",
+    };
+  }
+}
+
+/**
  * Generates voiceover audio from narration text and returns structured timing metadata.
- * Passes speed to the TTS provider when supported; otherwise adjusts duration after generation.
+ * Encodes the selected pace once in the canonical MP3. Non-1 speeds use a
+ * lossless normal-speed source plus pitch-preserving tempo conversion.
  */
 export async function generateVoiceover(
   input: GenerateVoiceoverInput,
@@ -91,7 +177,6 @@ export async function generateVoiceover(
 
   const resolvedVoice = resolveVoiceoverVoice(input.voice ?? DEFAULT_VOICEOVER_VOICE);
   const resolvedSpeed = resolveVoiceoverSpeed(input.speed ?? DEFAULT_VOICEOVER_SPEED);
-  const speedAppliedByProvider = OPENAI_TTS_SUPPORTS_PLAYBACK_SPEED;
   const style = resolveSpeechStyleInstructionsForVoice(
     resolvedVoice,
     input.stylePreset,
@@ -102,9 +187,8 @@ export async function generateVoiceover(
     narration,
     resolvedSpeed,
   );
-  const mp3 = await generateVoiceoverMp3(spokenNarration, resolvedVoice, {
+  const rendered = await generateVoiceoverMp3WithRendering(spokenNarration, resolvedVoice, {
     speed: resolvedSpeed,
-    applySpeed: speedAppliedByProvider,
     model: style.model,
     instructions: prepareVoiceCadenceInstructions({
       model: style.model,
@@ -112,6 +196,7 @@ export async function generateVoiceover(
       instructions: style.instructions,
     }),
   });
+  const mp3 = rendered.audioBuffer;
 
   const base = toVoiceoverResultFromMp3(mp3, {
     voice: resolvedVoice,
@@ -121,13 +206,14 @@ export async function generateVoiceover(
       ...(style.useInstructionTts || voiceRequiresGpt4oMiniTts(resolvedVoice)
         ? { model: style.model }
         : {}),
+      speedRendering: rendered.speedRendering,
     },
   });
 
   const durationMs = adjustVoiceoverDurationForSpeed(
     base.durationMs,
     resolvedSpeed,
-    speedAppliedByProvider,
+    true,
   );
 
   return {

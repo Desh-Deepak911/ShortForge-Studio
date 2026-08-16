@@ -64,13 +64,13 @@ function buildHookStrategyNarrationRule(strategyId: string | null): string {
     case "provocative_question":
       return "- PROVOCATIVE QUESTION: ask one pointed, contract-grounded dilemma whose answer is not already contained in the question. Do not repeat the topic as a question.";
     case "contrarian_claim":
-      return "- CONTRARIAN TAKE: open with a supported declarative reversal or unexpected implication. The opening MUST NOT be a question and must identify what the supplied evidence changes.";
+      return "- CONTRARIAN TAKE: open with a supported declarative reversal or unexpected implication. The opening MUST NOT be a question and must identify what the supplied evidence changes. When the contract supplies both a setback and an achievement, contrast those supplied facts directly without inventing public opinion.";
     case "myth_challenge":
       return "- MYTH CHALLENGE: open with a supported expectation-versus-reality correction. The opening MUST NOT be a question and must not invent a public belief that the creator did not supply.";
     case "curiosity_gap":
-      return "- CURIOSITY GAP: reveal a grounded consequence while briefly withholding the supplied reason that the next sentence explains. Do not use a subject-only question.";
+      return "- CURIOSITY GAP: reveal a grounded consequence while briefly withholding the supplied reason that the next sentence explains. When the contract supplies contrasting facts, tease which supplied side will define the consequence. Do not use a subject-only question.";
     case "stakes_first":
-      return "- STAKES FIRST: open with what can be gained, lost, changed, or decided now, using only consequences supported by the creator contract.";
+      return "- STAKES FIRST: open with what can be gained, lost, changed, or decided now, using only consequences supported by the creator contract. Connect the strongest supplied evidence to that consequence instead of announcing the topic.";
     case "headline_first":
       return "- HEADLINE FIRST: state the largest supplied development directly, then use the body to explain why it matters.";
     case "countdown_tease":
@@ -223,7 +223,9 @@ function buildComposerPrompt(request: RetentionComposerRequest): string {
     "- No Markdown headings or bullet narration unless top_5 needs audible ranking numbers.",
     "- No 'central idea', 'that connection', 'next part', 'next beat', or equivalent scaffold.",
     "- No fact-by-fact checklist. No repeated conclusion. No generic call to focus on the subject.",
+    "- If creator notes arrive as separate facts, stitch them through chronology, contrast, cause/consequence, or question/answer. Never narrate them as an input-order checklist.",
     "- State each supporting reason once. Do not repeat the same evidence or conclusion using synonyms in adjacent sentences.",
+    "- Do not pad the payoff with generic hope, promise, potential, a new chapter, or a fresh start unless the creator supplied that idea.",
     "- Never invent audience consensus or skepticism such as 'many doubt', 'common belief', or 'critics say' unless the creator supplied that attribution.",
     "- Required participants and ranking membership must appear. Never merge or drop a ranking entry.",
     request.scriptMode === "top_5"

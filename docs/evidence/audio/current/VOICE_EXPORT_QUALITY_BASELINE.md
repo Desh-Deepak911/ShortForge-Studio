@@ -4,7 +4,7 @@
 
 Provider-free measurement of one real ShortForge Browser export against one creator-supplied reference Short. The media files remain local and are not committed.
 
-This evidence now covers the advisory contract, the selected clarity-first speech path, shared generated-speech mastering, and fast-cadence guidance. Export never applies an additional playback-speed transform.
+This evidence now covers the advisory contract, the selected clarity-first speech path, shared generated-speech mastering, and fast-cadence guidance. Export never applies an additional playback-speed transform. The later pitch-preserved multi-speed implementation is certified in `VOICE_SPEED_CLARITY_AUDIT.md`.
 
 ## Measured evidence
 
@@ -22,7 +22,7 @@ This evidence now covers the advisory contract, the selected clarity-first speec
 
 - The ShortForge output is materially quiet and pause-heavy.
 - Encoded packet timing remains continuous. The perceived discontinuity is present in the narration signal, not introduced by WebM mux corruption.
-- The 1.25x speed is baked into provider output; export does not apply a second speed transform.
+- In the original baseline, 1.25x speed was baked into provider output; export did not apply a second speed transform. Newly generated non-1x narration now uses the pitch-preserved canonical-audio path.
 - The reference is aggressively mastered and exceeds a safe true-peak ceiling. ShortForge should target comparable perceived loudness without copying the clipped peak.
 
 ## Initial contract
@@ -42,7 +42,7 @@ Implementation policy:
 - Compatible voices use `tts-1-hd` for clarity, including expressive presets; existing style instructions remain attached.
 - Voices that require `gpt-4o-mini-tts` remain on that model rather than creating an unsupported voice/model combination.
 - 1.0x remains the default and is identified in the UI as the clearest option.
-- Faster options remain available and never block generation, but the UI warns that they may introduce light flutter.
+- Faster options remain available and never block generation. They now use a lossless 1.0x source plus pitch-preserving tempo conversion; the old flutter warning has been retired.
 - Existing drafts must regenerate narration to receive the selected model and explicit generated-audio provenance.
 
 ## Implemented mastering result

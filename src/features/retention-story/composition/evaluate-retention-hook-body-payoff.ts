@@ -100,7 +100,8 @@ export type RetentionHookBodyPayoffReasonId =
   | "opening_meaningless"
   | "opening_result_leak"
   | "body_does_not_evidence_hook"
-  | "payoff_does_not_resolve_hook";
+  | "payoff_does_not_resolve_hook"
+  | "payoff_repeats_previous_consequence";
 
 export type RetentionHookQualityWarningId =
   | "hook_below_style_target"
@@ -190,6 +191,28 @@ function tokenize(text: string): string[] {
 
 function contentTokens(text: string): string[] {
   return tokenize(text).filter((token) => !STOPWORDS.has(token));
+}
+
+function consequenceTokens(text: string): string[] {
+  return contentTokens(text).map((token) => {
+    if (/^(?:add|adds|added|adding|strengthen|strengthens|strengthened|bolster|bolsters|bolstered)$/u.test(token)) {
+      return "strengthen";
+    }
+    if (/^(?:arsenal|option|options|resource|resources|weapon|weapons)$/u.test(token)) {
+      return "resource";
+    }
+    return token;
+  });
+}
+
+function repeatsPreviousConsequence(narration: string): boolean {
+  const sentences = narration.split(/(?<=[.!?…])\s+/u).filter(Boolean);
+  if (sentences.length < 3) return false;
+  const previous = [...new Set(consequenceTokens(sentences.at(-2)!))];
+  const closing = [...new Set(consequenceTokens(sentences.at(-1)!))];
+  if (previous.length < 3 || closing.length < 3) return false;
+  const shared = closing.filter((token) => previous.includes(token));
+  return shared.length >= 3 && shared.length / Math.min(previous.length, closing.length) >= 0.6;
 }
 
 function firstSentence(narration: string): string {
@@ -517,6 +540,9 @@ export function evaluateRetentionHookBodyPayoff(input: {
     })
   ) {
     reasonIds.push("payoff_does_not_resolve_hook");
+  }
+  if (repeatsPreviousConsequence(narration)) {
+    reasonIds.push("payoff_repeats_previous_consequence");
   }
 
   const hardReasons = reasonIds.filter(isRetentionHardHookBodyReason);

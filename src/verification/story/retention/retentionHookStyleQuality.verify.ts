@@ -252,6 +252,141 @@ async function main(): Promise<void> {
   assert.equal(centralQuestionParaphrase.ok, true);
   assert.equal(centralQuestionParaphrase.ambiguousSpokenClaim, false);
 
+  const disconnectedContext = [
+    "After two failed seasons at Vale City, Ivo Calder goes to Northport.",
+    "He is a Continental Cup hero.",
+    "He scored the winning goal for Ardin and won it for Ardin.",
+    "He will add to the arsenal of Northport.",
+  ].join(" ");
+  const disconnectedFixture = buildFixture("curiosity_gap", {
+    topic: "Ivo Calder to Northport",
+    context: disconnectedContext,
+    scriptMode: "story",
+  });
+  const safeEditorialBridge = evaluateRetentionSpokenClaimGrounding({
+    narration: [
+      "Ivo Calder to Northport raises questions about his next impact after two difficult seasons at Vale City.",
+      "Despite those setbacks, he remains a Continental Cup hero, having scored the winning goal that secured victory for Ardin.",
+      "This proven clutch performance suggests he will significantly strengthen Northport's attacking options.",
+    ].join(" "),
+    contentContract: disconnectedFixture.contentContract,
+    eligibleClaimIds: new Set(
+      disconnectedFixture.request.eligibleClaims.map((claim) => claim.claimId),
+    ),
+    grounding: disconnectedFixture.grounding,
+  });
+  assert.equal(safeEditorialBridge.ok, true);
+  const inventedEditorialBridge = evaluateRetentionSpokenClaimGrounding({
+    narration:
+      "Ivo Calder will score 30 goals for Northport after leaving Vale City.",
+    contentContract: disconnectedFixture.contentContract,
+    eligibleClaimIds: new Set(
+      disconnectedFixture.request.eligibleClaims.map((claim) => claim.claimId),
+    ),
+    grounding: disconnectedFixture.grounding,
+  });
+  assert.equal(inventedEditorialBridge.ok, false);
+
+  const supportedPrefix = [
+    "Ivo Calder's move follows two failed seasons at Vale City.",
+    "He remains a Continental Cup hero after scoring Ardin's winning goal.",
+  ].join(" ");
+  const payoffRepair = await runRetentionProductionNarration({
+    topic: "Ivo Calder to Northport",
+    manualContext: disconnectedContext,
+    durationSec: 30,
+    generationPath: "script_only",
+    qualityMode: "cheap",
+    scriptMode: "story",
+    factHandlingMode: "verified_facts_only",
+    tone: "dramatic",
+    hookStyle: "auto",
+    planner: null,
+    hookRunner: passRetentionHookRunner,
+    composer: async () => ({
+      title: "Ivo Calder to Northport",
+      narration: `${supportedPrefix} He will score 30 goals for Northport.`,
+    }),
+  });
+  assert.equal(payoffRepair.ok, true);
+  if (!payoffRepair.ok) throw new Error(payoffRepair.error);
+  assert.ok(payoffRepair.approved.narration.startsWith(supportedPrefix));
+  assert.ok(
+    payoffRepair.approved.narration.endsWith(
+      "He will add to the arsenal of Northport.",
+    ),
+  );
+  assert.equal(
+    payoffRepair.approved.generationDisposition?.acceptanceTrace
+      ?.finalNarrationAuthority,
+    "model_after_rewrite",
+  );
+  assert.equal(
+    payoffRepair.approved.generationDisposition?.acceptanceTrace
+      ?.boundedRewriteType,
+    "grounding_payoff_repair",
+  );
+
+  const consequencePrefix = `${supportedPrefix} He will significantly strengthen Northport's attacking options.`;
+  const flourishRemoval = await runRetentionProductionNarration({
+    topic: "Ivo Calder to Northport",
+    manualContext: disconnectedContext,
+    durationSec: 30,
+    generationPath: "script_only",
+    qualityMode: "cheap",
+    scriptMode: "story",
+    factHandlingMode: "verified_facts_only",
+    tone: "dramatic",
+    hookStyle: "auto",
+    planner: null,
+    hookRunner: passRetentionHookRunner,
+    composer: async () => ({
+      title: "Ivo Calder to Northport",
+      narration: `${consequencePrefix} He will score 30 goals next season.`,
+    }),
+  });
+  assert.equal(flourishRemoval.ok, true);
+  if (!flourishRemoval.ok) throw new Error(flourishRemoval.error);
+  assert.equal(flourishRemoval.approved.narration, consequencePrefix);
+  assert.equal(
+    flourishRemoval.approved.generationDisposition?.acceptanceTrace
+      ?.boundedRewriteType,
+    "grounding_payoff_repair",
+  );
+
+  const duplicatePayoffRepair = await runRetentionProductionNarration({
+    topic: "Ivo Calder to Northport",
+    manualContext: disconnectedContext,
+    durationSec: 30,
+    generationPath: "script_only",
+    qualityMode: "cheap",
+    scriptMode: "story",
+    factHandlingMode: "verified_facts_only",
+    tone: "dramatic",
+    hookStyle: "auto",
+    planner: null,
+    hookRunner: passRetentionHookRunner,
+    composer: async () => ({
+      title: "Ivo Calder to Northport",
+      narration: [
+        supportedPrefix,
+        "He is poised to significantly strengthen Northport's attacking options.",
+        "He will add to the arsenal of Northport.",
+      ].join(" "),
+    }),
+  });
+  assert.equal(duplicatePayoffRepair.ok, true);
+  if (!duplicatePayoffRepair.ok) throw new Error(duplicatePayoffRepair.error);
+  assert.equal(
+    duplicatePayoffRepair.approved.narration,
+    `${supportedPrefix} He will add to the arsenal of Northport.`,
+  );
+  assert.equal(
+    duplicatePayoffRepair.approved.generationDisposition?.acceptanceTrace
+      ?.boundedRewriteType,
+    "duplicate_payoff_repair",
+  );
+
   const initial = topicQuestion;
   const repairedOpening = "Harbor's squad isn't just stronger but better trained.";
   let initialCalls = 0;

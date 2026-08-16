@@ -23,6 +23,8 @@ export interface VoiceoverMetadata {
   model?: string;
   format?: "audio/mpeg";
   durationSource?: VoiceoverDurationSource;
+  /** How the selected pace was encoded into the canonical audio file. */
+  speedRendering?: "native" | "pitch_preserved" | "provider_fallback";
 }
 
 /**

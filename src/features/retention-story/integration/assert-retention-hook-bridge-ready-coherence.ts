@@ -341,6 +341,8 @@ export function assertRetentionHookBridgeReadyCoherence(
         | "deterministic_rescue",
       ...(diag.boundedRewriteType === "opening_repair" ||
       diag.boundedRewriteType === "ranking_payoff_repair" ||
+      diag.boundedRewriteType === "grounding_payoff_repair" ||
+      diag.boundedRewriteType === "duplicate_payoff_repair" ||
       diag.boundedRewriteType === "supported_opening_promotion" ||
       diag.boundedRewriteType === "duration_compression"
         ? { boundedRewriteType: diag.boundedRewriteType }
