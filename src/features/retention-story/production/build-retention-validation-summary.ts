@@ -12,20 +12,47 @@ import type {
 const MAX_WARNING_NOTES = 8;
 const MAX_WARNING_CHARS = 160;
 
+const PRIORITY_WARNING_NOTES = [
+  "validation_pass_with_quality_warning",
+  "quality_below_target",
+  "quality_threshold_miss",
+  "narration_substance_below_target",
+  "hook_subject_led",
+  "hook_low_tension",
+  "hook_below_style_target",
+  "duration_slightly_over_target",
+  "duration_slightly_under_target",
+  "duration_target_not_fully_met",
+  "deterministic_fallback_accepted",
+  "hard_gate_failure",
+] as const;
+
 function boundWarningNotes(notes: readonly string[]): readonly string[] {
-  return Object.freeze(
-    notes
-      .filter((n) => typeof n === "string" && n.trim().length > 0)
-      .slice(0, MAX_WARNING_NOTES)
-      .map((n) =>
-        n
-          .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, MAX_WARNING_CHARS),
-      )
-      .filter((n) => n.length > 0),
-  );
+  const cleaned = notes
+    .filter((n) => typeof n === "string" && n.trim().length > 0)
+    .map((n) =>
+      n
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, MAX_WARNING_CHARS),
+    )
+    .filter((n) => n.length > 0);
+  const prioritized: string[] = [];
+  const seen = new Set<string>();
+  for (const id of PRIORITY_WARNING_NOTES) {
+    if (cleaned.includes(id) && !seen.has(id)) {
+      prioritized.push(id);
+      seen.add(id);
+    }
+  }
+  for (const note of cleaned) {
+    if (seen.has(note)) continue;
+    prioritized.push(note);
+    seen.add(note);
+    if (prioritized.length >= MAX_WARNING_NOTES) break;
+  }
+  return Object.freeze(prioritized.slice(0, MAX_WARNING_NOTES));
 }
 
 /**
@@ -35,6 +62,9 @@ function boundWarningNotes(notes: readonly string[]): readonly string[] {
 export function buildRetentionValidationSummary(
   validation: RetentionValidationResult,
   linkage: RetentionValidationSummaryLinkage,
+  options?: {
+    readonly warningNotesOverride?: readonly string[];
+  },
 ): RetentionValidationSummary {
   if (validation.ok !== true) {
     throw new Error("validation_summary_requires_pass");
@@ -53,7 +83,9 @@ export function buildRetentionValidationSummary(
     storyQualityConfidence: validation.storyQualityConfidence,
     frameworkCompliance: validation.frameworkCompliance,
     failedHardGateIds: Object.freeze([]) as readonly [],
-    warningNotes: boundWarningNotes(validation.notes),
+    warningNotes: boundWarningNotes(
+      options?.warningNotesOverride ?? validation.notes,
+    ),
     validationFingerprint: validation.validationFingerprint,
     candidateFingerprint: validation.candidateFingerprint,
     contractFingerprint: linkage.contractFingerprint,

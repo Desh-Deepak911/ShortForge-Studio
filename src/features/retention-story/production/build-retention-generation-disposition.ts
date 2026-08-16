@@ -24,6 +24,7 @@ function creatorNotesFor(
   disposition: RetentionGenerationDisposition,
   factHandlingMode: NormalizedStoryContract["factHandlingMode"],
   emptyPremiseGuidance: boolean,
+  warningNotes: readonly string[],
 ): readonly string[] {
   const notes: string[] = [];
   if (adaptations.includes("planner_fallback_used")) {
@@ -37,6 +38,15 @@ function creatorNotesFor(
   }
   if (adaptations.includes("length_rescue_used")) {
     notes.push("Narration was shortened to fit the selected duration.");
+  }
+  if (warningNotes.includes("duration_slightly_over_target")) {
+    notes.push("Spoken duration is slightly over the selected target.");
+  }
+  if (warningNotes.includes("duration_slightly_under_target")) {
+    notes.push("Spoken duration is slightly under the selected target.");
+  }
+  if (warningNotes.includes("duration_target_not_fully_met")) {
+    notes.push("Spoken duration did not fully meet the selected target.");
   }
   if (adaptations.includes("quality_below_target")) {
     notes.push("Story is complete but below the editorial readiness target.");
@@ -59,7 +69,9 @@ function creatorNotesFor(
     );
   }
   if (adaptations.includes("deterministic_story_fallback_used")) {
-    notes.push("Used a guaranteed safe narration path after model rescue.");
+    notes.push(
+      "A basic fallback narration was used because the generated narration could not be accepted.",
+    );
   }
   if (adaptations.includes("reliability_rescue_used")) {
     notes.push("A bounded reliability rescue was used to finish the story.");
@@ -81,6 +93,7 @@ export function buildRetentionGenerationDisposition(input: {
   readonly adaptations: readonly RetentionGenerationAdaptationId[];
   /** Empty Creative Premise details — guidance note only. */
   readonly emptyPremiseGuidance?: boolean;
+  readonly acceptanceTrace?: import("./retention-generation-acceptance-trace.types").RetentionGenerationAcceptanceTrace;
 }): RetentionGenerationDispositionSummary {
   // Do not infer creative_premise_used from mode — caller must derive from
   // committed candidate claim refs (Sprint 10H.3A).
@@ -89,7 +102,18 @@ export function buildRetentionGenerationDisposition(input: {
   if (
     warningNotes.includes("quality_below_target") ||
     warningNotes.includes("quality_threshold_miss") ||
-    warningNotes.includes("validation_pass_with_quality_warning")
+    warningNotes.includes("validation_pass_with_quality_warning") ||
+    warningNotes.includes("narration_substance_below_target")
+  ) {
+    if (!adaptations.includes("quality_below_target")) {
+      adaptations.push("quality_below_target");
+    }
+  }
+
+  // Deterministic planning-language rescue is never ordinary-quality Pass.
+  if (
+    adaptations.includes("deterministic_story_fallback_used") ||
+    adaptations.includes("reliability_rescue_used")
   ) {
     if (!adaptations.includes("quality_below_target")) {
       adaptations.push("quality_below_target");
@@ -130,6 +154,10 @@ export function buildRetentionGenerationDisposition(input: {
       disposition,
       input.contract.factHandlingMode,
       input.emptyPremiseGuidance === true,
+      warningNotes,
     ),
+    ...(input.acceptanceTrace
+      ? { acceptanceTrace: input.acceptanceTrace }
+      : {}),
   });
 }

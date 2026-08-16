@@ -9,6 +9,7 @@ import {
   canonicalizeControllingIdeaClaimRefs,
   isClaimEligibleForNarrationSupport,
 } from "../strategy/retention-claim-support";
+import { claimRefsSupportLinkedNarrationStatement } from "../strategy/retention-claim-linked-support";
 import type { RetentionFactHandlingMode } from "../domain/retention-story-contract.types";
 import { detectRetentionFactualRisk } from "../strategy/retention-factual-risk";
 import type { RetentionStrategySeed } from "../strategy/retention-strategy.types";
@@ -19,15 +20,28 @@ import {
 } from "./retention-narration-candidate.constants";
 import type { RetentionSegmentDraft } from "./assemble-retention-narration-candidate";
 import { canonicalizeRetentionSegmentText } from "./canonicalize-retention-segment-text";
+import { adaptRetentionComposerProposal } from "./adapt-retention-composer-proposal";
+import type { RetentionCreatorContentContract } from "../domain/retention-creator-content-contract.types";
+import type { RetentionCompositionBrief } from "./retention-composition-brief.types";
+import type { RetentionNarrationAssemblyGap } from "./retention-narration-first.types";
 import {
   resolveAuthorizedClaimIdsForBeat,
   resolvePlanAuthorizedOpeningClaimIds,
 } from "./retention-opening-claim-authority";
+import { RETENTION_SEGMENT_SEPARATOR } from "./retention-narration-candidate.constants";
 
 export interface NormalizedRetentionComposerProposal {
   readonly title: string;
   readonly hookClaimRefs: readonly string[];
   readonly segments: readonly RetentionSegmentDraft[];
+  readonly assemblyGap: RetentionNarrationAssemblyGap;
+}
+
+export interface NormalizeRetentionComposerProposalExtras {
+  readonly contentContract?: RetentionCreatorContentContract | null;
+  readonly brief?: RetentionCompositionBrief | null;
+  readonly eligibleClaimIds?: ReadonlySet<string>;
+  readonly userWrittenHookAccepted?: boolean;
 }
 
 function throwProposalInvalid(): never {
@@ -77,6 +91,7 @@ export function normalizeRetentionComposerProposal(
   strategySeed: RetentionStrategySeed,
   permittedHookClaimIds: readonly string[] = [],
   factHandlingMode?: RetentionFactHandlingMode,
+  extras?: NormalizeRetentionComposerProposalExtras,
 ): NormalizedRetentionComposerProposal {
   const narrationMode = resolveNarrationFactHandlingMode(
     grounding,
@@ -115,8 +130,33 @@ export function normalizeRetentionComposerProposal(
       )
     : sanitizedTitle;
 
+  const adapted = adaptRetentionComposerProposal({
+    raw: record,
+    plan,
+    grounding,
+    strategySeed,
+    contentContract: extras?.contentContract,
+    brief: extras?.brief,
+    eligibleClaimIds: extras?.eligibleClaimIds,
+    userWrittenHookAccepted: extras?.userWrittenHookAccepted,
+  });
+  const working = adapted
+    ? {
+        ...record,
+        title: adapted.title,
+        segments: adapted.segments,
+        hookClaimRefs: adapted.hookClaimRefs,
+      }
+    : record;
+  const requestedGap =
+    record.assemblyGap === " " || record.assemblyGap === ""
+      ? record.assemblyGap
+      : null;
+  const assemblyGap: RetentionNarrationAssemblyGap =
+    adapted?.assemblyGap ?? requestedGap ?? RETENTION_SEGMENT_SEPARATOR;
+
   const orderedBeatIds = plan.beatPlan.beats.map((b) => b.id);
-  const segmentsRaw = record.segments;
+  const segmentsRaw = working.segments;
   if (!Array.isArray(segmentsRaw) || segmentsRaw.length === 0) {
     throwProposalInvalid();
   }
@@ -152,21 +192,81 @@ export function normalizeRetentionComposerProposal(
       plan,
       strategySeed,
     );
-    for (const ref of refs) {
+    const keepAcceptedSpeech = extras?.contentContract != null && adapted != null;
+    const metadataSafeRefs = refs.filter((ref) => {
       if (!isClaimEligibleForNarrationSupport(grounding, ref, narrationMode)) {
-        throwGroundingInvalid();
+        return false;
       }
-      if (!authorized.has(ref)) throwGroundingInvalid();
+      return authorized.has(ref);
+    });
+    if (metadataSafeRefs.length !== refs.length && !keepAcceptedSpeech) {
+      throwGroundingInvalid();
     }
 
-    const factualRisk = detectRetentionFactualRisk(text).risky;
-    if (factualRisk && refs.length === 0) throwGroundingInvalid();
+    let spoken = text;
+    let keptRefs = keepAcceptedSpeech ? metadataSafeRefs : refs;
+    if (refs.length > 0) {
+      const supported = claimRefsSupportLinkedNarrationStatement(
+        grounding,
+        refs,
+        spoken,
+        narrationMode,
+      );
+      if (!supported) {
+        if (adapted != null) {
+          const individuallySupported = refs.filter((ref) =>
+            claimRefsSupportLinkedNarrationStatement(
+              grounding,
+              [ref],
+              spoken,
+              narrationMode,
+            ),
+          );
+          keptRefs =
+            individuallySupported.length > 0 &&
+            claimRefsSupportLinkedNarrationStatement(
+              grounding,
+              individuallySupported,
+              spoken,
+              narrationMode,
+            )
+              ? individuallySupported
+              : [];
+        } else {
+          const rewritten = refs
+            .map((ref) => grounding.claims.find((claim) => claim.claimId === ref))
+            .filter((claim): claim is NonNullable<typeof claim> => claim != null)
+            .map((claim) => claim.text.trim())
+            .filter(Boolean)
+            .join(" ");
+          const canonicalRewritten = canonicalizeRetentionSegmentText(rewritten);
+          if (
+            canonicalRewritten &&
+            claimRefsSupportLinkedNarrationStatement(
+              grounding,
+              refs,
+              canonicalRewritten,
+              narrationMode,
+            )
+          ) {
+            spoken = canonicalRewritten;
+          } else if (detectRetentionFactualRisk(spoken).risky) {
+            throwGroundingInvalid();
+          }
+        }
+      }
+    }
+
+    const factualRisk = detectRetentionFactualRisk(spoken).risky;
+    if (factualRisk && keptRefs.length === 0 && !keepAcceptedSpeech) {
+      throwGroundingInvalid();
+    }
 
     drafts.push(
       Object.freeze({
         beatId: expectedBeatId,
-        text,
-        claimRefs: refs,
+        text: spoken,
+        claimRefs: Object.freeze(keptRefs),
         factualRisk,
       }),
     );
@@ -174,35 +274,55 @@ export function normalizeRetentionComposerProposal(
 
   if (seen.size !== orderedBeatIds.length) throwSegmentMismatch();
 
+  const keepAcceptedSpeech = extras?.contentContract != null && adapted != null;
   const hookClaimRefs = canonicalizeControllingIdeaClaimRefs(
-    record.hookClaimRefs ?? [],
+    working.hookClaimRefs ?? [],
   );
-  if (hookClaimRefs == null) throwGroundingInvalid();
-  if (hookClaimRefs.length > RETENTION_MAX_SEGMENT_CLAIM_REFS) {
+  if (hookClaimRefs == null && !keepAcceptedSpeech) throwGroundingInvalid();
+  if (
+    hookClaimRefs != null &&
+    hookClaimRefs.length > RETENTION_MAX_SEGMENT_CLAIM_REFS &&
+    !keepAcceptedSpeech
+  ) {
     throwGroundingInvalid();
   }
 
   const permitted = new Set(permittedHookClaimIds);
-  if (permitted.size === 0 && hookClaimRefs.length > 0) {
-    throwGroundingInvalid();
+  let safeHookClaimRefs =
+    hookClaimRefs == null ||
+    hookClaimRefs.length > RETENTION_MAX_SEGMENT_CLAIM_REFS
+      ? []
+      : [...hookClaimRefs];
+  if (permitted.size === 0 && safeHookClaimRefs.length > 0) {
+    if (!keepAcceptedSpeech) throwGroundingInvalid();
+    safeHookClaimRefs = [];
   }
 
   const planOpening = resolvePlanAuthorizedOpeningClaimIds(plan, strategySeed);
   const firstSegmentRefs = new Set(drafts[0]!.claimRefs);
 
-  for (const ref of hookClaimRefs) {
-    if (typeof ref !== "string") throwGroundingInvalid();
-    if (!permitted.has(ref)) throwGroundingInvalid();
-    if (!planOpening.has(ref)) throwGroundingInvalid();
-    if (!firstSegmentRefs.has(ref)) throwGroundingInvalid();
-    if (!isClaimEligibleForNarrationSupport(grounding, ref, narrationMode)) {
-      throwGroundingInvalid();
+  for (const ref of safeHookClaimRefs) {
+    if (typeof ref !== "string") {
+      if (!keepAcceptedSpeech) throwGroundingInvalid();
+      safeHookClaimRefs = [];
+      break;
+    }
+    if (
+      !permitted.has(ref) ||
+      !planOpening.has(ref) ||
+      !firstSegmentRefs.has(ref) ||
+      !isClaimEligibleForNarrationSupport(grounding, ref, narrationMode)
+    ) {
+      if (!keepAcceptedSpeech) throwGroundingInvalid();
+      safeHookClaimRefs = [];
+      break;
     }
   }
 
   return Object.freeze({
     title,
-    hookClaimRefs,
+    hookClaimRefs: Object.freeze(safeHookClaimRefs),
     segments: Object.freeze(drafts),
+    assemblyGap,
   });
 }

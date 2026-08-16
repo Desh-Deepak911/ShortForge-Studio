@@ -64,6 +64,7 @@ const DIAGNOSTIC_KEYS = new Set([
   "planFingerprint",
   "candidateFingerprint",
   "compositionAuthority",
+  "boundedRewriteType",
 ]);
 
 function throwBridgeCoherence(): never {
@@ -94,8 +95,10 @@ function assertPostRewritePhaseOrder(
       e.category === "retention_body_rewrite" && e.outcome === "succeeded",
   );
   if (!rewriteAttempted || !rewriteSucceeded) throwBridgeCoherence();
-  if (phase.initialSucceededSequence == null) throwBridgeCoherence();
-  if (rewriteAttempted.sequence <= phase.initialSucceededSequence) {
+  const compositionSequence =
+    phase.initialSucceededSequence ?? phase.hookRepairSucceededSequence;
+  if (compositionSequence == null) throwBridgeCoherence();
+  if (rewriteAttempted.sequence <= compositionSequence) {
     throwBridgeCoherence();
   }
   if (rewriteSucceeded.sequence <= rewriteAttempted.sequence) {
@@ -281,10 +284,19 @@ export function assertRetentionHookBridgePostRewriteCoherence(
       if (event.outcome === "skipped_deterministic") detMarkers += 1;
       if (event.outcome === "succeeded") modelSuccesses += 1;
     }
+    let repairSuccesses = 0;
+    for (const event of budget.events) {
+      if (event.category === "hook_repair" && event.outcome === "succeeded") {
+        repairSuccesses += 1;
+      }
+    }
     if (detMarkers > 1 || modelSuccesses > 1) throwBridgeCoherence();
     if (compositionAuthority === "deterministic_rescue") {
       if (detMarkers !== 1) throwBridgeCoherence();
-    } else if (detMarkers !== 0 || modelSuccesses !== 1) {
+    } else if (
+      detMarkers !== 0 ||
+      (modelSuccesses !== 1 && !(modelSuccesses === 0 && repairSuccesses === 1))
+    ) {
       throwBridgeCoherence();
     }
   }
@@ -380,6 +392,12 @@ export function assertRetentionHookBridgePostRewriteCoherence(
       compositionAuthority: compositionAuthority as
         | "model_initial"
         | "deterministic_rescue",
+      ...(diag.boundedRewriteType === "opening_repair" ||
+      diag.boundedRewriteType === "ranking_payoff_repair" ||
+      diag.boundedRewriteType === "supported_opening_promotion" ||
+      diag.boundedRewriteType === "duration_compression"
+        ? { boundedRewriteType: diag.boundedRewriteType }
+        : {}),
     }),
     hookPlanSnapshot: safeHook.hookPlanSnapshot,
     hookDiagnostics: safeHook.hookDiagnostics,

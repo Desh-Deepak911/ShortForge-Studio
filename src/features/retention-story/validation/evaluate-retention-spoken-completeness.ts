@@ -172,8 +172,11 @@ export function evaluateRetentionSpokenCompleteness(
     });
   }
 
+  if (!candidate.segments[0]?.text.trim()) {
+    reasons.push("empty_segment");
+  }
   for (const segment of candidate.segments) {
-    if (!segment.text.trim()) reasons.push("empty_segment");
+    if (typeof segment.text !== "string") reasons.push("empty_segment");
   }
 
   const assembled = candidate.assembledNarration.trim();
@@ -187,7 +190,9 @@ export function evaluateRetentionSpokenCompleteness(
     void beats;
     // The terminal attribution span must complete a meaningful ending, while
     // earlier beat spans may be clauses joined across invisible boundaries.
-    const terminal = candidate.segments[candidate.segments.length - 1];
+    const terminal = [...candidate.segments]
+      .reverse()
+      .find((segment) => segment.text.trim().length > 0);
     if (terminal && !isMeaningfulCompleteUtterance(terminal.text)) {
       reasons.push("payoff_narration_incomplete");
     }

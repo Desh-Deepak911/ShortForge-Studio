@@ -75,6 +75,8 @@ const PRIVATE_LEAK_PATTERNS: readonly RegExp[] = [
   /assembledNarration/,
   /eligibleClaims/,
   /avoidanceClaims/,
+  /contentAuthority/,
+  /orderedEssentialUnits/,
   /hookDirectiveBlock/,
   /OPENAI_API_KEY/,
   /ledgerEvents/,

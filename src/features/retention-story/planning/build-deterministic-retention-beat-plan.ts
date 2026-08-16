@@ -107,7 +107,7 @@ function selectGroundedBeatClaim(
     .sort((a, b) => {
       const byRank = groundedClaimRank(a.claim) - groundedClaimRank(b.claim);
       if (byRank !== 0) return byRank;
-      return a.claim.claimId.localeCompare(b.claim.claimId);
+      return 0;
     });
 
   const chosen = candidates[0];
@@ -248,10 +248,7 @@ export function buildRetentionBeatPlan(
                     : claim.sourceRef === "creative_premise"
                       ? 2
                       : 3;
-              const byCreatorAuthority = creatorRank(a) - creatorRank(b);
-              return byCreatorAuthority !== 0
-                ? byCreatorAuthority
-                : a.claimId.localeCompare(b.claimId);
+              return creatorRank(a) - creatorRank(b);
             }),
         )
       : Object.freeze([] as RetentionGroundingClaim[]);
@@ -277,7 +274,10 @@ export function buildRetentionBeatPlan(
       groundedIndex = 1;
     }
   }
-  // Distribute eligible creator/research facts one-per-middle-beat (exact text + one ref).
+  // Distribute eligible creator facts across middle beats in source order.
+  // One ref per beat keeps planner-proposal coherence (risky text needs
+  // exactly one supporting ref). Long units may also influence the next
+  // adjacent middle beat.
   const claimByBeatIndex = new Map<
     number,
     { readonly claimId: string; readonly text: string }
@@ -338,7 +338,10 @@ export function buildRetentionBeatPlan(
         emotionalIntent: template.emotionalIntent,
         viewerQuestion: template.viewerQuestion,
         informationContribution: distributedClaim
-          ? distributedClaim.text
+          ? sanitizeRetentionBeatText(
+              distributedClaim.text,
+              RETENTION_MAX_BEAT_INFORMATION_CONTRIBUTION_CHARS,
+            )
           : useGrounded
             ? grounded!.text
             : template.informationContribution,

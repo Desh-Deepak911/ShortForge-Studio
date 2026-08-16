@@ -61,6 +61,7 @@ const DIAGNOSTIC_KEYS = new Set([
   "planFingerprint",
   "candidateFingerprint",
   "compositionAuthority",
+  "boundedRewriteType",
 ]);
 
 function assertCompositionAuthorityBinding(
@@ -80,13 +81,25 @@ function assertCompositionAuthorityBinding(
   }
   if (detMarkers > 1) throwBridgeCoherence();
   if (modelSuccesses > 1) throwBridgeCoherence();
+  let repairSuccesses = 0;
+  for (const event of budget.events) {
+    if (
+      (event.category === "hook_repair" ||
+        event.category === "length_compression") &&
+      event.outcome === "succeeded"
+    ) {
+      repairSuccesses += 1;
+    }
+  }
   if (authority === "deterministic_rescue") {
     // Active rescued candidate must bind to exactly one deterministic marker.
     if (detMarkers !== 1) throwBridgeCoherence();
   } else {
     // Model-owned candidate cannot borrow a later deterministic marker.
     if (detMarkers !== 0) throwBridgeCoherence();
-    if (modelSuccesses !== 1) throwBridgeCoherence();
+    if (modelSuccesses !== 1 && !(modelSuccesses === 0 && repairSuccesses === 1)) {
+      throwBridgeCoherence();
+    }
   }
 }
 
@@ -326,6 +339,12 @@ export function assertRetentionHookBridgeReadyCoherence(
       compositionAuthority: diag.compositionAuthority as
         | "model_initial"
         | "deterministic_rescue",
+      ...(diag.boundedRewriteType === "opening_repair" ||
+      diag.boundedRewriteType === "ranking_payoff_repair" ||
+      diag.boundedRewriteType === "supported_opening_promotion" ||
+      diag.boundedRewriteType === "duration_compression"
+        ? { boundedRewriteType: diag.boundedRewriteType }
+        : {}),
     }),
     hookPlanSnapshot: safeHook.hookPlanSnapshot,
     hookDiagnostics: safeHook.hookDiagnostics,

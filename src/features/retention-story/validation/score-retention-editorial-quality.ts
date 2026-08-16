@@ -3,7 +3,10 @@
  * No model calls, no caller-supplied scores, no predicted-retention language.
  */
 
-import type { NormalizedStoryContract } from "../domain/retention-story-contract.types";
+import type {
+  NormalizedStoryContract,
+  RetentionGroundingContext,
+} from "../domain/retention-story-contract.types";
 import type { RetentionNarrationCandidate } from "../composition/retention-narration-candidate.types";
 import type { RetentionStoryPlan } from "../planning/retention-story-plan.types";
 import { countRetentionNarrationWords } from "./count-retention-narration-words";
@@ -185,19 +188,141 @@ function scoreCuriosity(
   return (score / early) * scoreQuestionPromisePayoff(contract, candidate);
 }
 
-function scoreEmotionalProgression(plan: RetentionStoryPlan): number {
-  const curve = plan.emotionalArc.curve;
-  if (curve.length < 2) return 0.4;
-  let rises = 0;
+function narrationLexicalNovelty(candidate: RetentionNarrationCandidate): number {
+  const texts = candidate.segments.map((s) => s.text.trim().toLowerCase());
+  if (texts.length === 0) return 0;
+  const unique = new Set(texts);
+  const stems = texts.map((text) =>
+    text
+      .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 4)
+      .join(" "),
+  );
+  const uniqueStems = new Set(stems.filter(Boolean));
+  return clamp01(
+    0.55 * (unique.size / texts.length) +
+      0.45 * (uniqueStems.size / Math.max(1, stems.length)),
+  );
+}
+
+function narrationEscalationEvidence(
+  candidate: RetentionNarrationCandidate,
+): number {
+  const segments = candidate.segments;
+  if (segments.length < 2) return 0.25;
+  let rising = 0;
   let pairs = 0;
-  for (let i = 1; i < curve.length; i++) {
+  const prev = new Set(tokenize(segments[0]!.text));
+  for (let i = 1; i < segments.length; i++) {
+    const nextTokens = tokenize(segments[i]!.text);
+    const novel = nextTokens.filter((t) => !prev.has(t)).length;
     pairs += 1;
-    if (curve[i]!.intensity >= curve[i - 1]!.intensity) rises += 1;
+    if (novel >= Math.max(2, Math.ceil(nextTokens.length * 0.35))) rising += 1;
+    for (const token of nextTokens) prev.add(token);
   }
-  const last = curve[curve.length - 1]!.intensity;
-  const first = curve[0]!.intensity;
-  const overall = last >= first ? 0.25 : 0;
-  return clamp01(rises / pairs + overall);
+  return pairs === 0 ? 0 : clamp01(rising / pairs);
+}
+
+function narrationPayoffEvidence(
+  plan: RetentionStoryPlan,
+  candidate: RetentionNarrationCandidate,
+): number {
+  const beats = plan.beatPlan.beats;
+  const deliverIdx = beats.findIndex((b) => b.payoffRelation === "deliver");
+  const last =
+    [...candidate.segments].reverse().find((segment) => segment.text.trim().length > 0)
+      ?.text ?? "";
+  const scaffoldPayoff =
+    /together,? those details|central idea into focus|central question/iu.test(
+      last,
+    );
+  if (scaffoldPayoff) return 0.15;
+  if (deliverIdx < 0) {
+    return countRetentionNarrationWords(last) >= 6 ? 0.45 : 0.25;
+  }
+  const deliverText = candidate.segments[deliverIdx]?.text ?? last;
+  const words = countRetentionNarrationWords(deliverText);
+  const distinctFromOpening =
+    deliverText.trim().toLowerCase() !==
+    (candidate.segments[0]?.text ?? "").trim().toLowerCase();
+  return clamp01(
+    (words >= 6 ? 0.55 : 0.25) + (distinctFromOpening ? 0.35 : 0.1),
+  );
+}
+
+function scoreNovelty(
+  plan: RetentionStoryPlan,
+  candidate: RetentionNarrationCandidate,
+): number {
+  const roles = new Set(plan.beatPlan.beats.map((b) => b.noveltyRole));
+  const planScore = clamp01(roles.size / 4);
+  const narrationScore = narrationLexicalNovelty(candidate);
+  // Plan labels alone cannot award strong novelty.
+  return clamp01(planScore * (0.3 + 0.7 * narrationScore));
+}
+
+function scoreEscalation(
+  plan: RetentionStoryPlan,
+  candidate: RetentionNarrationCandidate,
+): number {
+  const beats = plan.beatPlan.beats;
+  if (beats.length === 0) return 0;
+  let hits = 0;
+  for (const beat of beats) {
+    if (
+      beat.noveltyRole === "escalate" ||
+      beat.purpose === "escalation" ||
+      beat.purpose === "conflict" ||
+      beat.purpose === "twist"
+    ) {
+      hits += 1;
+    }
+  }
+  const planScore = clamp01(hits / Math.max(1, Math.ceil(beats.length / 2)));
+  const narrationScore = narrationEscalationEvidence(candidate);
+  return clamp01(planScore * (0.3 + 0.7 * narrationScore));
+}
+
+function scorePayoffStrength(
+  plan: RetentionStoryPlan,
+  candidate: RetentionNarrationCandidate,
+): number {
+  const beats = plan.beatPlan.beats;
+  const deliverIdx = beats.findIndex((b) => b.payoffRelation === "deliver");
+  let planScore = 0.35;
+  if (deliverIdx >= 0) {
+    const setupBefore = beats
+      .slice(0, deliverIdx)
+      .some((b) => b.payoffRelation === "setup");
+    const terminal = deliverIdx === beats.length - 1;
+    planScore = clamp01((setupBefore ? 0.55 : 0.25) + (terminal ? 0.4 : 0.15));
+  }
+  const narrationScore = narrationPayoffEvidence(plan, candidate);
+  return clamp01(planScore * (0.3 + 0.7 * narrationScore));
+}
+
+function scoreEmotionalProgression(
+  plan: RetentionStoryPlan,
+  candidate: RetentionNarrationCandidate,
+): number {
+  const curve = plan.emotionalArc.curve;
+  let planScore = 0.4;
+  if (curve.length >= 2) {
+    let rises = 0;
+    let pairs = 0;
+    for (let i = 1; i < curve.length; i++) {
+      pairs += 1;
+      if (curve[i]!.intensity >= curve[i - 1]!.intensity) rises += 1;
+    }
+    const last = curve[curve.length - 1]!.intensity;
+    const first = curve[0]!.intensity;
+    const overall = last >= first ? 0.25 : 0;
+    planScore = clamp01(rises / pairs + overall);
+  }
+  const narrationScore = narrationEscalationEvidence(candidate);
+  return clamp01(planScore * (0.35 + 0.65 * narrationScore));
 }
 
 function scoreCompressionQuality(
@@ -214,39 +339,6 @@ function scoreCompressionQuality(
   if (ratio > 1 && ratio <= 1.15) return 0.35;
   if (ratio < 0.5) return 0.4;
   return 0.15;
-}
-
-function scoreNovelty(plan: RetentionStoryPlan): number {
-  const roles = new Set(plan.beatPlan.beats.map((b) => b.noveltyRole));
-  return clamp01(roles.size / 4);
-}
-
-function scoreEscalation(plan: RetentionStoryPlan): number {
-  const beats = plan.beatPlan.beats;
-  if (beats.length === 0) return 0;
-  let hits = 0;
-  for (const beat of beats) {
-    if (
-      beat.noveltyRole === "escalate" ||
-      beat.purpose === "escalation" ||
-      beat.purpose === "conflict" ||
-      beat.purpose === "twist"
-    ) {
-      hits += 1;
-    }
-  }
-  return clamp01(hits / Math.max(1, Math.ceil(beats.length / 2)));
-}
-
-function scorePayoffStrength(plan: RetentionStoryPlan): number {
-  const beats = plan.beatPlan.beats;
-  const deliverIdx = beats.findIndex((b) => b.payoffRelation === "deliver");
-  if (deliverIdx < 0) return 0.35;
-  const setupBefore = beats
-    .slice(0, deliverIdx)
-    .some((b) => b.payoffRelation === "setup");
-  const terminal = deliverIdx === beats.length - 1;
-  return clamp01((setupBefore ? 0.55 : 0.25) + (terminal ? 0.4 : 0.15));
 }
 
 function scoreVisualPotential(
@@ -325,20 +417,22 @@ function scoreGenericIntroductionQuality(
 
 /**
  * Score editorial quality from asserted contract/plan/candidate only.
+ * Novelty / escalation / payoff / emotional progression require narration evidence.
  */
 export function scoreRetentionEditorialQuality(input: {
   readonly contract: NormalizedStoryContract;
   readonly plan: RetentionStoryPlan;
   readonly candidate: RetentionNarrationCandidate;
+  readonly grounding?: RetentionGroundingContext;
 }): RetentionEditorialScores {
   return freezeScores({
     clarity: scoreClarity(input.candidate),
     curiosity: scoreCuriosity(input.contract, input.plan, input.candidate),
-    emotionalProgression: scoreEmotionalProgression(input.plan),
+    emotionalProgression: scoreEmotionalProgression(input.plan, input.candidate),
     compressionQuality: scoreCompressionQuality(input.plan, input.candidate),
-    novelty: scoreNovelty(input.plan),
-    escalation: scoreEscalation(input.plan),
-    payoffStrength: scorePayoffStrength(input.plan),
+    novelty: scoreNovelty(input.plan, input.candidate),
+    escalation: scoreEscalation(input.plan, input.candidate),
+    payoffStrength: scorePayoffStrength(input.plan, input.candidate),
     visualPotential: scoreVisualPotential(input.plan, input.candidate),
     repetitionPenalty: scoreRepetitionPenalty(input.candidate),
     controllingIdeaAdherence: scoreControllingIdeaAdherence(
@@ -358,6 +452,8 @@ export function computeRetentionAggregates(input: {
   readonly editorial: RetentionEditorialScores;
   readonly hardGatesPassedCount: number;
   readonly hardGatesEvaluatedCount: number;
+  /** Optional narration-substance score (0–1). Defaults to neutral 1 when omitted. */
+  readonly narrationSubstanceScore?: number;
 }): {
   readonly retentionReadiness: number;
   readonly storyQualityConfidence: number;
@@ -379,21 +475,37 @@ export function computeRetentionAggregates(input: {
   const shortRetention = input.formatStrategyId === "short_retention";
   const coreWeight = shortRetention ? 0.28 : 0.34;
   const nepWeight = shortRetention ? 0.34 : 0.28;
+  const substance = clamp01(
+    input.narrationSubstanceScore == null ? 1 : input.narrationSubstanceScore,
+  );
 
   const retentionReadiness = clamp01(
-    coreWeight * coreEngagement +
+    (coreWeight * coreEngagement +
       nepWeight * noveltyEscalationPayoff +
       0.18 * e.controllingIdeaAdherence +
       0.1 * e.genericIntroductionQuality +
-      0.1 * (1 - e.repetitionPenalty),
+      0.1 * (1 - e.repetitionPenalty)) *
+      // Keep readiness mostly editorial; vacuous cases are blocked via qualityBelowTarget.
+      (0.92 + 0.08 * substance),
   );
 
-  const storyQualityConfidence = clamp01(
-    0.4 * e.clarity +
-      0.25 * e.controllingIdeaAdherence +
-      0.2 * e.compressionQuality +
-      0.15 * e.emotionalProgression,
+  // Story-quality confidence is narration/substance-led; framework compliance stays separate.
+  let storyQualityConfidence = clamp01(
+    0.22 * e.clarity +
+      0.12 * e.controllingIdeaAdherence +
+      0.1 * e.compressionQuality +
+      0.08 * e.emotionalProgression +
+      0.12 * noveltyEscalationPayoff +
+      0.36 * substance,
   );
+
+  // Vacuous / severely empty narration cannot report ordinary “good” story quality.
+  if (substance < 0.34) {
+    storyQualityConfidence = Math.min(
+      storyQualityConfidence,
+      clamp01(0.18 + 0.4 * substance),
+    );
+  }
 
   const frameworkCompliance = clamp01(
     input.hardGatesEvaluatedCount === 0

@@ -3,6 +3,11 @@
  * Messages never echo raw context, claim text, prompts, or secrets.
  */
 
+import {
+  freezeRetentionSafeProviderFailure,
+  type RetentionSafeProviderFailure,
+} from "./retention-provider-failure.types";
+
 export type RetentionStoryErrorReason =
   | "unsupported_contract_version"
   | "invalid_topic"
@@ -57,11 +62,15 @@ export class RetentionStoryError extends Error {
   readonly code = "RETENTION_STORY_ERROR" as const;
   /** Bounded machine seam for diagnostics (never creator-facing; never raw text). */
   readonly normalizeSeam?: string;
+  readonly safeProviderFailure?: RetentionSafeProviderFailure;
 
   constructor(
     reason: RetentionStoryErrorReason,
     message: string,
-    options?: { readonly normalizeSeam?: string },
+    options?: {
+      readonly normalizeSeam?: string;
+      readonly safeProviderFailure?: RetentionSafeProviderFailure;
+    },
   ) {
     super(message);
     this.name = "RetentionStoryError";
@@ -71,6 +80,11 @@ export class RetentionStoryError extends Error {
       /^[a-z][a-z0-9_]{0,63}$/.test(options.normalizeSeam)
     ) {
       this.normalizeSeam = options.normalizeSeam;
+    }
+    if (options?.safeProviderFailure) {
+      this.safeProviderFailure = freezeRetentionSafeProviderFailure(
+        options.safeProviderFailure,
+      );
     }
   }
 }

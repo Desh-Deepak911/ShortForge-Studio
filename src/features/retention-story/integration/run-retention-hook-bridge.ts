@@ -12,6 +12,7 @@ import {
   type HookedNarrationModelCall,
 } from "@/features/hook-engine/integration/generate-hooked-narration";
 import type { HookGenerationContext } from "@/features/hook-engine/integration/build-hook-generation-context";
+import type { HookStyleSelection } from "@/features/hook-engine/presentation/hook-style-selection";
 import { extractOpeningSpan } from "@/features/hook-engine/validation/extract-opening-span";
 
 import { isRetentionStoryError } from "../domain/retention-story-errors";
@@ -34,6 +35,7 @@ import {
   createRetentionHookedModelCall,
   type RetentionComposerBillingMode,
 } from "./create-retention-hooked-model-call";
+import { commitRetentionCanonicallyAcceptedCandidate } from "./commit-retention-canonically-accepted-candidate";
 import type {
   RetentionHookBridgeDiagnostics,
   RetentionHookBridgeFailureReason,
@@ -70,6 +72,7 @@ export interface RunRetentionHookBridgeInput {
   readonly grounding: RetentionGroundingContext;
   readonly manualContext?: string | null;
   readonly userInstructions?: string | null;
+  readonly hookStyle?: HookStyleSelection | null;
   readonly hookContext: HookGenerationContext;
   readonly composer?: RetentionComposerCallback | null;
   readonly ledger?: RetentionModelCallLedger;
@@ -93,6 +96,29 @@ function resolveCompositionAuthority(
   return billingMode === "deterministic"
     ? "deterministic_rescue"
     : "model_initial";
+}
+
+function hookFailureMayKeepCanonicalAccepted(input: {
+  readonly hookContext: HookGenerationContext;
+  readonly hookResult?: GenerateHookedNarrationResult;
+  readonly lastComposerFailureReason?: string | null;
+}): boolean {
+  if (input.lastComposerFailureReason) return false;
+  const strategyId = input.hookContext.plan.strategyId;
+  const source = input.hookContext.plan.strategySource;
+  if (strategyId === "user_directed" || source === "user_authored") {
+    return false;
+  }
+  if (input.hookResult && !input.hookResult.ok) {
+    const reason = [
+      input.hookResult.error,
+      input.hookResult.diagnostics?.fallbackReason,
+    ]
+      .filter((part): part is string => typeof part === "string")
+      .join(" ");
+    if (/prompt_injection|harmful_targeting/i.test(reason)) return false;
+  }
+  return true;
 }
 
 function baseDiagnostics(
@@ -120,6 +146,9 @@ function baseDiagnostics(
     candidateFingerprint: extras.candidateFingerprint,
     compositionAuthority:
       extras.compositionAuthority ?? resolveCompositionAuthority(billingMode),
+    ...(extras.boundedRewriteType
+      ? { boundedRewriteType: extras.boundedRewriteType }
+      : {}),
   });
 }
 
@@ -230,6 +259,7 @@ export async function runRetentionHookBridge(
     grounding: input.grounding,
     manualContext: input.manualContext,
     userInstructions: input.userInstructions,
+    hookStyle: input.hookStyle,
     composer: input.composer,
     ledger,
     state,
@@ -237,6 +267,73 @@ export async function runRetentionHookBridge(
   });
 
   const runner = input.hookRunner ?? generateHookedNarration;
+  const initialCallInput = {
+    kind: "initial" as const,
+    topic: input.topic,
+    tone: input.tone,
+    duration: input.duration,
+    scriptMode: input.scriptMode,
+    context: input.context,
+    templatePromptBlock: input.templatePromptBlock,
+    hookDirectiveBlock: input.hookContext.directive.promptBlock,
+    permittedClaimIds: input.hookContext.permittedClaimIds,
+    qualityMode: input.qualityMode ?? input.contract.qualityMode,
+    model: input.model,
+  };
+
+  let initialError: unknown = null;
+  try {
+    await modelCall(initialCallInput);
+  } catch (error) {
+    initialError = error;
+  }
+
+  const userAuthoredHook =
+    input.hookContext.plan.strategyId === "user_directed" ||
+    input.hookContext.plan.strategySource === "user_authored";
+
+  if (
+    state.canonicalCommit.status === "accepted" &&
+    state.lastCandidate &&
+    !userAuthoredHook
+  ) {
+    return commitRetentionCanonicallyAcceptedCandidate({
+      contract: input.contract,
+      plan: input.plan,
+      grounding: input.grounding,
+      strategySeed: input.strategySeed,
+      ledger,
+      sourceCandidate: state.lastCandidate,
+      title: state.lastTitle ?? "Story",
+      hookContext: input.hookContext,
+      compositionAuthority: resolveCompositionAuthority(billingMode),
+      ...(state.boundedRewriteType
+        ? { boundedRewriteType: state.boundedRewriteType }
+        : {}),
+    });
+  }
+
+  const gatedModelCall: HookedNarrationModelCall = async (callInput) => {
+    if (state.canonicalCommit.status === "accepted" && state.lastCandidate) {
+      return {
+        title: state.lastTitle ?? "Story",
+        narration: state.lastCandidate.assembledNarration,
+        hookClaimRefs: [],
+      };
+    }
+    if (callInput.kind === "initial") {
+      if (initialError) throw initialError;
+      if (state.lastCandidate) {
+        return {
+          title: state.lastTitle ?? "Story",
+          narration: state.lastCandidate.assembledNarration,
+          hookClaimRefs: [],
+        };
+      }
+      throw initialError ?? new Error("Retention initial compose already consumed.");
+    }
+    return modelCall(callInput);
+  };
 
   let hookResult: GenerateHookedNarrationResult;
   try {
@@ -250,11 +347,37 @@ export async function runRetentionHookBridge(
       templatePromptBlock: input.templatePromptBlock,
       qualityMode: input.qualityMode ?? input.contract.qualityMode,
       model: input.model,
-      modelCall,
+      modelCall: gatedModelCall,
       // Align Hook full-narration hard-cap with Retention plan budget (never looser).
       narrationHardCapWords: input.plan.compressionGoals.targetWordBudget,
     });
   } catch (error) {
+    if (
+      state.canonicalAccepted &&
+      state.lastCandidate &&
+      hookFailureMayKeepCanonicalAccepted({
+        hookContext: input.hookContext,
+        lastComposerFailureReason: state.lastComposerFailureReason,
+      })
+    ) {
+      const kept = commitRetentionCanonicallyAcceptedCandidate({
+        contract: input.contract,
+        plan: input.plan,
+        grounding: input.grounding,
+        strategySeed: input.strategySeed,
+        ledger,
+        sourceCandidate: state.lastCandidate,
+        title: state.lastTitle ?? "Story",
+        hookContext: input.hookContext,
+        compositionAuthority: resolveCompositionAuthority(billingMode),
+        ...(state.boundedRewriteType
+          ? { boundedRewriteType: state.boundedRewriteType }
+          : {}),
+      });
+      if (kept.status === "ready") {
+        return kept;
+      }
+    }
     if (
       isRetentionStoryError(error) &&
       (error.reason === "composer_unavailable" ||
@@ -272,6 +395,10 @@ export async function runRetentionHookBridge(
       return Object.freeze({
         status: "failed" as const,
         reason: error.reason as RetentionHookBridgeFailureReason,
+        ...(error.normalizeSeam ? { normalizeSeam: error.normalizeSeam } : {}),
+        ...(error.safeProviderFailure
+          ? { safeProviderFailure: error.safeProviderFailure }
+          : {}),
         diagnostics: baseDiagnostics(
           input.contract,
           ledger,
@@ -290,11 +417,44 @@ export async function runRetentionHookBridge(
   }
 
   if (!hookResult.ok) {
+    if (
+      state.canonicalAccepted &&
+      state.lastCandidate &&
+      hookFailureMayKeepCanonicalAccepted({
+        hookContext: input.hookContext,
+        hookResult,
+        lastComposerFailureReason: state.lastComposerFailureReason,
+      })
+    ) {
+      const kept = commitRetentionCanonicallyAcceptedCandidate({
+        contract: input.contract,
+        plan: input.plan,
+        grounding: input.grounding,
+        strategySeed: input.strategySeed,
+        ledger,
+        sourceCandidate: state.lastCandidate,
+        title: state.lastTitle ?? "Story",
+        hookContext: input.hookContext,
+        compositionAuthority: resolveCompositionAuthority(billingMode),
+        ...(state.boundedRewriteType
+          ? { boundedRewriteType: state.boundedRewriteType }
+          : {}),
+      });
+      if (kept.status === "ready") {
+        return kept;
+      }
+    }
     const reason =
       state.lastComposerFailureReason ?? ("hook_terminal_failure" as const);
     return Object.freeze({
       status: "failed" as const,
       reason,
+      ...(state.lastNormalizeSeam
+        ? { normalizeSeam: state.lastNormalizeSeam }
+        : {}),
+      ...(state.lastSafeProviderFailure
+        ? { safeProviderFailure: state.lastSafeProviderFailure }
+        : {}),
       diagnostics: baseDiagnostics(
         input.contract,
         ledger,
@@ -442,6 +602,9 @@ export async function runRetentionHookBridge(
           composerAttempts: state.composerAttempts,
           planFingerprint: input.plan.planFingerprint,
           candidateFingerprint: candidate.candidateFingerprint,
+          ...(state.boundedRewriteType
+            ? { boundedRewriteType: state.boundedRewriteType }
+            : {}),
         },
         billingMode,
       ),

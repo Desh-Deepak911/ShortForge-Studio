@@ -9,6 +9,7 @@ import type {
 
 import type { RetentionNarrationCandidate } from "../composition/retention-narration-candidate.types";
 import type { RetentionModelCallLedgerSnapshot } from "../budget/retention-model-call-budget.types";
+import type { RetentionSafeProviderFailure } from "../domain/retention-provider-failure.types";
 import type { RetentionStoryErrorReason } from "../domain/retention-story-errors";
 import type {
   RetentionPostRewriteHookEvidence,
@@ -33,7 +34,8 @@ export type RetentionHookBridgeFailureReason =
       | "retention_story_plan_mismatch"
       | "strategy_seed_mismatch"
     >
-  | "scenes_only";
+  | "scenes_only"
+  | "accepted_narration_mapping_failed";
 
 /**
  * Which composition event owns the active candidate — Sprint 10H.3B.
@@ -61,6 +63,12 @@ export interface RetentionHookBridgeDiagnostics {
    * composition authority (Sprint 10H.3B).
    */
   readonly compositionAuthority?: RetentionCompositionAuthority;
+  /** Prompt 10 — internal bounded rewrite type. Not a top-level authority. */
+  readonly boundedRewriteType?:
+    | "opening_repair"
+    | "ranking_payoff_repair"
+    | "supported_opening_promotion"
+    | "duration_compression";
 }
 
 export type RetentionHookBridgeResult =
@@ -94,6 +102,8 @@ export type RetentionHookBridgeResult =
   | {
       readonly status: "failed";
       readonly reason: RetentionHookBridgeFailureReason;
+      readonly normalizeSeam?: string;
+      readonly safeProviderFailure?: RetentionSafeProviderFailure;
       readonly diagnostics: RetentionHookBridgeDiagnostics;
       readonly hookPlanSnapshot?: HookPlanSnapshot;
       readonly hookDiagnostics?: HookDiagnostics;

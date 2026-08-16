@@ -397,12 +397,23 @@ export function assertRetentionModelCallLedgerSnapshotCoherence(
     }
     if (deterministicInitialRescueCount > 1) throwInvalid();
     if (initialSucceeded > 1) throwInvalid();
+    let targetedRepairSuccesses = 0;
+    for (const event of canonicalEvents) {
+      if (
+        (event.category === "hook_repair" ||
+          event.category === "length_compression") &&
+        event.outcome === "succeeded"
+      ) {
+        targetedRepairSuccesses += 1;
+      }
+    }
     if (deterministicInitialRescueCount === 1) {
       // Deterministic rescue owns the terminal candidate (optionally after
       // failed model attempts, or superseding one prior model success).
       if (reconstructed.initial_narration > 2) throwInvalid();
     } else if (
-      initialSucceeded !== 1 ||
+      (initialSucceeded !== 1 &&
+        !(initialSucceeded === 0 && targetedRepairSuccesses === 1)) ||
       reconstructed.initial_narration < 1 ||
       reconstructed.initial_narration > 2
     ) {

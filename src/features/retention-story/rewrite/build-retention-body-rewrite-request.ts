@@ -14,6 +14,7 @@ import {
   RETENTION_MAX_COMPOSER_REQUEST_CLAIMS,
   RETENTION_MAX_SEGMENT_TEXT_CHARS,
 } from "../composition/retention-narration-candidate.constants";
+import { selectRetentionAdaptiveComposerClaims } from "../composition/select-retention-adaptive-composer-claims";
 import { assertRetentionNarrationCandidateCoherence } from "../composition/assert-retention-narration-candidate-coherence";
 import { resolvePlanAuthorizedComposerClaimIds } from "../composition/retention-opening-claim-authority";
 import type {
@@ -151,7 +152,7 @@ export function buildRetentionBodyRewriteRequest(input: {
   );
   const factHandlingMode =
     input.contract.factHandlingMode ?? "verified_facts_only";
-  const eligible = grounding.claims
+  const eligibleSorted = grounding.claims
     .filter(
       (c) =>
         authorizedIds.has(c.claimId) &&
@@ -163,7 +164,6 @@ export function buildRetentionBodyRewriteRequest(input: {
     )
     .slice()
     .sort((a, b) => a.claimId.localeCompare(b.claimId))
-    .slice(0, RETENTION_MAX_COMPOSER_REQUEST_CLAIMS)
     .map((c) =>
       Object.freeze({
         claimId: c.claimId,
@@ -173,6 +173,21 @@ export function buildRetentionBodyRewriteRequest(input: {
         eligibleForFactualSupport: true as const,
       }),
     );
+  const adaptive = selectRetentionAdaptiveComposerClaims({
+    eligibleClaims: eligibleSorted,
+    requiredClaimIds: eligibleSorted.map((claim) => claim.claimId),
+    optionalClaimIds: [],
+    durationSec: input.contract.durationSec,
+  });
+  const eligible = adaptive.included.map((claim) =>
+    Object.freeze({
+      claimId: claim.claimId,
+      text: claim.text,
+      provenance: claim.provenance,
+      verification: claim.verification,
+      eligibleForFactualSupport: true as const,
+    }),
+  );
 
   const avoidance = grounding.claims
     .filter(
@@ -224,6 +239,17 @@ export function buildRetentionBodyRewriteRequest(input: {
     missedQualityComponentIds: resolveMissedQualityComponentIds(
       input.initialValidation,
     ),
+    failedSafeDimensions: Object.freeze([
+      ...resolveMissedQualityComponentIds(input.initialValidation),
+      ...input.initialValidation.notes.filter(
+        (note) =>
+          note.startsWith("substance:") ||
+          note === "narration_substance_below_target" ||
+          note === "quality_below_target" ||
+          note.includes("hook_body") ||
+          note.includes("setting_fidelity"),
+      ),
+    ]),
     eligibleClaims: Object.freeze(eligible),
     avoidanceClaims: Object.freeze(avoidance),
     targetWordBudget: assertedPlan.compressionGoals.targetWordBudget,

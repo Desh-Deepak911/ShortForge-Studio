@@ -133,6 +133,9 @@ export function mapHookBridgeFailure(
   ) {
     return "budget_ledger_failure";
   }
+  if (reason === "accepted_narration_mapping_failed") {
+    return "commit_gate_coherence_failure";
+  }
   return "hook_terminal_failure";
 }
 

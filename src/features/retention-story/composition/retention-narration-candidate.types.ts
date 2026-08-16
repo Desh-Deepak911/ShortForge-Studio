@@ -5,6 +5,13 @@
 import type { QualityMode } from "@/types/footiebitz";
 
 import type {
+  RetentionContentUnitAuthority,
+  RetentionContentUnitKind,
+  RetentionContentUnitRole,
+  RetentionCreatorContentContract,
+  RetentionCreatorPresentationSettings,
+} from "../domain/retention-creator-content-contract.types";
+import type {
   NormalizedStoryContract,
   RetentionGroundingContext,
 } from "../domain/retention-story-contract.types";
@@ -13,6 +20,7 @@ import type {
   RetentionStoryPlan,
 } from "../planning/retention-story-plan.types";
 import type { RetentionStrategySeed } from "../strategy/retention-strategy.types";
+import type { RetentionCompositionBrief } from "./retention-composition-brief.types";
 import type { RETENTION_NARRATION_CANDIDATE_VERSION } from "./retention-narration-candidate.constants";
 
 export type RetentionNarrationCandidateOrigin =
@@ -60,6 +68,32 @@ export interface RetentionComposerClaimSummary {
   readonly eligibleForFactualSupport: boolean;
 }
 
+export interface RetentionComposerContentUnitSummary {
+  readonly contentUnitId: string;
+  readonly claimId: string | null;
+  readonly creatorOrder: number;
+  readonly role: RetentionContentUnitRole;
+  readonly kind: RetentionContentUnitKind;
+  readonly authority: RetentionContentUnitAuthority;
+  readonly requiresUncertainty: boolean;
+  readonly text: string;
+}
+
+export interface RetentionComposerContentAuthority {
+  readonly centralSubject: string;
+  readonly controllingIdea: string;
+  readonly intendedConflict: string | null;
+  readonly intendedConsequence: string | null;
+  readonly orderedEssentialUnits: readonly RetentionComposerContentUnitSummary[];
+  readonly orderedOptionalUnits: readonly RetentionComposerContentUnitSummary[];
+  readonly requiredUncertaintyLanguage: readonly string[];
+  readonly forbiddenInventionIds: readonly string[];
+  readonly requestedStructuralObligations: readonly string[];
+  readonly presentationSettings: RetentionCreatorPresentationSettings;
+  readonly storyWordBudget: number;
+  readonly compositionRules: readonly string[];
+}
+
 export interface RetentionComposerRequest {
   readonly contractFingerprint: string;
   readonly planFingerprint: string;
@@ -95,14 +129,27 @@ export interface RetentionComposerRequest {
   readonly manualContext: string;
   readonly userInstructions: string;
   readonly eligibleClaims: readonly RetentionComposerClaimSummary[];
+  readonly omittedOptionalClaimIds: readonly string[];
   readonly avoidanceClaims: readonly RetentionComposerClaimSummary[];
+  readonly contentAuthority: RetentionComposerContentAuthority;
+  readonly compositionBrief: RetentionCompositionBrief;
   readonly previousCandidate: RetentionNarrationCandidate | null;
+  /**
+   * Targeted repair directive — safe stage/reason codes only.
+   * Never includes creator text, model text, or raw provider bodies.
+   */
+  readonly repairContext: {
+    readonly rejectionStage: string;
+    readonly reasonCode: string;
+    readonly sourceNarration: string;
+  } | null;
   readonly requiredOutputSchema: {
     readonly requireTitle: true;
     readonly requireSegments: true;
     readonly requireExactBeatIds: true;
     readonly requireHookClaimRefs: true;
     readonly structuredDataOnly: true;
+    readonly preferNarrationFirst: true;
   };
 }
 
@@ -116,6 +163,13 @@ export interface RetentionComposerProposal {
   readonly title?: string;
   readonly segments?: readonly RetentionComposerSegmentProposal[];
   readonly hookClaimRefs?: readonly string[];
+  readonly narration?: string;
+  readonly usedContentIds?: readonly string[];
+  readonly omittedContentIds?: readonly string[];
+  readonly hookOpening?: string;
+  readonly payoffClosing?: string;
+  readonly requiredUncertaintyMarkersUsed?: readonly string[];
+  readonly factualSupport?: readonly { readonly claimId: string }[];
 }
 
 export type RetentionComposerCallback = (
@@ -133,4 +187,10 @@ export interface BuildRetentionComposerRequestInput {
   readonly hookDirectiveBlock: string;
   readonly modelCallKind: RetentionComposerModelCallKind;
   readonly previousCandidate?: RetentionNarrationCandidate | null;
+  readonly contentContract?: RetentionCreatorContentContract | null;
+  readonly repairContext?: {
+    readonly rejectionStage: string;
+    readonly reasonCode: string;
+    readonly sourceNarration?: string;
+  } | null;
 }

@@ -51,6 +51,10 @@ export interface CommitRetentionApprovedNarrationInput {
   readonly title: string;
   readonly lengthWarning?: string;
   readonly generationDisposition?: import("./retention-generation-disposition.types").RetentionGenerationDispositionSummary;
+  /** Optional warning-note override for truthful fallback / substance reporting. */
+  readonly validationWarningNotesOverride?: readonly string[];
+  /** Safe acceptance/rejection provenance for diagnostics. */
+  readonly acceptanceTrace?: import("./retention-generation-acceptance-trace.types").RetentionGenerationAcceptanceTrace;
   /** Sprint 10H.4A — same ephemeral authority used for planning/validation. */
   readonly creatorContextAuthority?: RetentionCreatorContextAuthority | null;
 }
@@ -221,6 +225,10 @@ export function commitRetentionApprovedNarration(
       contractFingerprint: contract.contractFingerprint,
       planFingerprint: plan.planFingerprint,
       terminalState: terminal.status,
+    }, {
+      ...(input.validationWarningNotesOverride
+        ? { warningNotesOverride: input.validationWarningNotesOverride }
+        : {}),
     });
 
     const safeDiagnostics: RetentionProductionSafeDiagnostics = Object.freeze({
@@ -234,6 +242,9 @@ export function commitRetentionApprovedNarration(
       rewriteUsed: terminal.status === "pass_after_rewrite",
       safeReasonIds: Object.freeze([...terminal.diagnostics.safeReasonIds]),
       budget: summarizeLedgerBudget(ledgerSnap),
+      ...(input.acceptanceTrace
+        ? { acceptanceTrace: input.acceptanceTrace }
+        : {}),
     });
 
     const approved: RetentionApprovedNarrationResult = deepFreezeDetached({

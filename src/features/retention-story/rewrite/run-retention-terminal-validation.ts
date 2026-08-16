@@ -13,6 +13,7 @@ import {
 import { assertRetentionModelCallLedgerSnapshotCoherence } from "../budget/assert-retention-model-call-ledger-snapshot-coherence";
 import { assertRetentionHookBridgeReadyCoherence } from "../integration/assert-retention-hook-bridge-ready-coherence";
 import type { RetentionHookBridgeReadyResult } from "../integration/assert-retention-hook-bridge-ready-coherence";
+import type { RetentionCompositionAuthority } from "../integration/retention-hook-bridge.types";
 import { assertRetentionValidationResultCoherence } from "../validation/assert-retention-validation-result-coherence";
 import {
   buildRetentionCreatorContextAuthority,
@@ -190,9 +191,12 @@ function isRewriteEligible(input: {
   readonly contract: RetentionTerminalScriptPathInput["contract"];
   readonly initialValidation: RetentionValidationResult;
   readonly ledger: RetentionTerminalScriptPathInput["ledger"];
+  readonly compositionAuthority?: RetentionCompositionAuthority;
 }): boolean {
   if (input.contract.generationPath === "scenes_only") return false;
   if (input.contract.qualityMode !== "best") return false;
+  // Rescue is the last resort. Do not spend Studio rewrite after it.
+  if (input.compositionAuthority === "deterministic_rescue") return false;
   // 10H.3: quality_threshold is advisory (ok:true) but Studio may still rewrite.
   if (input.initialValidation.failureClass !== "quality_threshold") return false;
   if (!input.initialValidation.hardGates.every((g) => g.passed)) return false;
@@ -372,14 +376,46 @@ export async function runRetentionTerminalValidation(
     contract: input.contract,
     initialValidation,
     ledger: input.ledger,
+    compositionAuthority: readyBridge.diagnostics.compositionAuthority,
   });
-
   if (
     !rewriteEligible &&
     initialValidation.ok === true &&
     initialValidation.failureClass === "quality_threshold"
   ) {
     // 10H.3 — structurally complete but below editorial target: succeed with warning.
+    return deepFreezeResult({
+      status: "pass_without_rewrite",
+      candidate: input.candidate,
+      validation: initialValidation,
+      hookBridge: readyBridge,
+      diagnostics: buildRetentionRewriteDiagnostics({
+        terminalState: "pass_without_rewrite",
+        qualityMode: input.contract.qualityMode,
+        contractFingerprint: input.contract.contractFingerprint,
+        planFingerprint: input.plan.planFingerprint,
+        initialCandidateFingerprint: input.candidate.candidateFingerprint,
+        finalCandidateFingerprint: input.candidate.candidateFingerprint,
+        initialValidationFingerprint: initialValidation.validationFingerprint,
+        finalValidationFingerprint: initialValidation.validationFingerprint,
+        rewriteUsed: false,
+        budget: readyBridge.diagnostics.budget,
+        safeReasonIds: Object.freeze([
+          "pass_without_rewrite",
+          "quality_below_target",
+        ]),
+      }),
+    });
+  }
+
+  // Studio may rewrite advisory quality misses, but only when a rewrite
+  // composer is actually available. Missing composer must not terminal-fail.
+  if (
+    rewriteEligible &&
+    input.rewriteComposer == null &&
+    initialValidation.ok === true &&
+    initialValidation.failureClass === "quality_threshold"
+  ) {
     return deepFreezeResult({
       status: "pass_without_rewrite",
       candidate: input.candidate,

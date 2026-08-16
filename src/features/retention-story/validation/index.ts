@@ -71,6 +71,12 @@ export {
 } from "./score-retention-editorial-quality";
 
 export {
+  evaluateRetentionNarrationSubstance,
+  type RetentionNarrationSubstanceEvaluation,
+  type RetentionNarrationSubstanceDiagnosticId,
+} from "./evaluate-retention-narration-substance";
+
+export {
   buildRetentionValidationDiagnostics,
   buildSkippedScenesOnlyDiagnostics,
 } from "./build-retention-validation-diagnostics";

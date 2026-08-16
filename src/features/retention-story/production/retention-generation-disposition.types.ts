@@ -33,6 +33,8 @@ export interface RetentionGenerationDispositionSummary {
   readonly targetWordBudget: number;
   readonly resolvedBeatCount: number;
   readonly creatorFacingNotes: readonly string[];
+  /** Safe acceptance/rejection provenance (enums/counts only). */
+  readonly acceptanceTrace?: import("./retention-generation-acceptance-trace.types").RetentionGenerationAcceptanceTrace;
 }
 
 export function freezeDispositionSummary(
@@ -42,5 +44,8 @@ export function freezeDispositionSummary(
     ...summary,
     adaptations: Object.freeze([...summary.adaptations]),
     creatorFacingNotes: Object.freeze([...summary.creatorFacingNotes]),
+    ...(summary.acceptanceTrace
+      ? { acceptanceTrace: summary.acceptanceTrace }
+      : {}),
   });
 }

@@ -119,6 +119,7 @@ export interface RetentionBodyRewriteRequest {
   readonly immutableApprovedOpening: RetentionApprovedOpeningAuthority;
   readonly currentCandidate: RetentionNarrationCandidate;
   readonly missedQualityComponentIds: readonly RetentionEditorialComponentId[];
+  readonly failedSafeDimensions: readonly string[];
   readonly eligibleClaims: readonly {
     readonly claimId: string;
     readonly text: string;

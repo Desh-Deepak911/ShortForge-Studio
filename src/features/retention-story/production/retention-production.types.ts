@@ -87,6 +87,8 @@ export interface RetentionProductionSafeDiagnostics {
   };
   /** Present only on Retention validation failures (canonical validation authority). */
   readonly validationFailureSummary?: RetentionProductionValidationFailureSummary;
+  /** Safe acceptance/rejection provenance when generation completed or failed after attempts. */
+  readonly acceptanceTrace?: import("./retention-generation-acceptance-trace.types").RetentionGenerationAcceptanceTrace;
 }
 
 export interface RetentionApprovedNarrationResult {
@@ -178,6 +180,12 @@ export interface RunRetentionProductionNarrationInput {
   readonly rewriteComposer?: import("../rewrite/retention-rewrite.types").RetentionBodyRewriteCallback | null;
   readonly lengthComposer?: import("../composition/retention-narration-candidate.types").RetentionComposerCallback | null;
   readonly hookRunner?: import("../integration/run-retention-hook-bridge").RetentionHookRunner;
+  /**
+   * Certification/development-only. Ignored when NODE_ENV is production.
+   * Writes rejected proposals under gitignored `.tmp/` only.
+   */
+  readonly captureRejectedProposals?: boolean;
+  readonly rejectedProposalCaptureCaseId?: string;
 }
 
 export function summarizeLedgerBudget(

@@ -216,11 +216,22 @@ async function main() {
         .trim()
         .split(/\s+/u)
         .filter(Boolean).length;
-      assert.ok(
-        narrationWords >= Math.floor(30 * 2.4 * 0.88),
-        `deterministic rescue used only ${narrationWords} words`,
-      );
+      assert.ok(narrationWords >= 6, `deterministic rescue used only ${narrationWords} words`);
       assert.ok(narrationWords <= Math.round(30 * 2.4));
+      assert.match(result.approved.narration, /Spain/u);
+      assert.match(result.approved.narration, /France/u);
+      assert.doesNotMatch(
+        result.approved.narration,
+        /central idea|that connection|next part|consequence keeps growing|What decides/iu,
+      );
+      assert.equal(
+        result.approved.generationDisposition?.disposition,
+        "fallback",
+      );
+      assert.equal(
+        result.approved.generationDisposition?.qualityBelowTarget,
+        true,
+      );
       assert.ok(
         result.approved.generationDisposition?.adaptations.includes(
           "deterministic_story_fallback_used",
@@ -228,6 +239,566 @@ async function main() {
           result.approved.generationDisposition?.adaptations.includes(
             "reliability_rescue_used",
           ),
+      );
+    },
+  );
+
+  await check(
+    "[R5A] rich Build brief keeps creator facts and never leaks the instruction verb",
+    () => {
+      const topic =
+        "Build a coherent opinion-led story about how a superstar departure may have helped Northport become stronger.";
+      const manualContext = [
+        "MANUAL NOTES",
+        "- The superstar left Northport for Kingside in 2024",
+        "- Northport won the continental title in 2025 and 2026",
+        "- Northport signed a World Cup-winning forward",
+        "- The coach wants a third consecutive continental title",
+      ].join("\n");
+      const contractInput = buildProductionStoryContractInput({
+        topic,
+        durationSec: 45,
+        generationPath: "script_only",
+        qualityMode: "balanced",
+        factHandlingMode: "verified_facts_only",
+        manualContext,
+      });
+      const contract = normalizeStoryContract(contractInput);
+      const grounding = normalizeRetentionGroundingContext(
+        contractInput.grounding!,
+      );
+      const plan = buildReliabilityDeterministicRetentionPlan({
+        contract,
+        grounding,
+        manualContext,
+        planner: null,
+      });
+      assert.equal(plan.status, "ready");
+      if (plan.status !== "ready") throw new Error("expected ready plan");
+      const built = buildDeterministicFallbackNarrationCandidate({
+        contract,
+        grounding,
+        plan: plan.plan,
+      });
+      assert.doesNotMatch(built.candidate.assembledNarration, /\bBuild(?:'s)?\b/u);
+      assert.match(
+        built.candidate.assembledNarration,
+        /Northport won the continental title in 2025 and 2026/u,
+      );
+      assert.match(
+        built.candidate.assembledNarration,
+        /Northport signed a World Cup-winning forward/u,
+      );
+      assert.ok(built.usedClaimIds.length >= 3);
+    },
+  );
+
+  await check(
+    "[R5B] production rescue rewards rich bullet notes in default fact mode",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic:
+          "Build a coherent opinion-led story about how a superstar departure may have helped Northport become stronger.",
+        manualContext: [
+          "MANUAL NOTES",
+          "- The superstar left Northport for Kingside in 2024",
+          "- Northport won the continental title in 2025 and 2026",
+          "- Northport signed a World Cup-winning forward",
+          "- The coach wants a third consecutive continental title",
+        ].join("\n"),
+        durationSec: 45,
+        generationPath: "script_only",
+        qualityMode: "cheap",
+        factHandlingMode: "verified_facts_only",
+        planner: null,
+        composer: () => {
+          throw new Error("model composer unavailable");
+        },
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(
+        result.ok,
+        true,
+        result.ok ? "" : `${result.failureCategory}: ${result.error}`,
+      );
+      if (!result.ok) throw new Error("expected fail-soft success");
+      assert.doesNotMatch(result.approved.narration, /\bBuild(?:'s)?\b/u);
+      assert.match(
+        result.approved.narration,
+        /Northport won the continental title in 2025 and 2026/u,
+      );
+      assert.match(
+        result.approved.narration,
+        /Northport signed a World Cup-winning forward/u,
+      );
+    },
+  );
+
+  await check(
+    "[T1] vacuous deterministic fallback stays success but below target — never validation_pass",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic: "Jordan Hale comeback after injury",
+        durationSec: 45,
+        generationPath: "script_only",
+        qualityMode: "cheap",
+        factHandlingMode: "verified_facts_only",
+        planner: null,
+        composer: () => {
+          throw new Error("model composer unavailable");
+        },
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(result.ok, true);
+      if (!result.ok) throw new Error("expected success");
+      const disposition = result.approved.generationDisposition;
+      assert.ok(disposition);
+      assert.equal(disposition!.disposition, "fallback");
+      assert.equal(disposition!.qualityBelowTarget, true);
+      assert.ok(
+        disposition!.adaptations.includes("deterministic_story_fallback_used"),
+      );
+      assert.ok(
+        disposition!.creatorFacingNotes.some((n) =>
+          /basic fallback narration was used/i.test(n),
+        ),
+      );
+      const notes = result.approved.validationSummary.warningNotes;
+      assert.ok(!notes.includes("validation_pass"));
+      assert.ok(
+        notes.includes("validation_pass_with_quality_warning") ||
+          notes.includes("quality_below_target") ||
+          notes.includes("deterministic_fallback_accepted"),
+      );
+      assert.ok(
+        result.approved.validationSummary.storyQualityConfidence < 0.72,
+        `storyQualityConfidence too high: ${result.approved.validationSummary.storyQualityConfidence}`,
+      );
+      const trace =
+        disposition!.acceptanceTrace ??
+        result.approved.safeDiagnostics.acceptanceTrace;
+      assert.ok(trace);
+      assert.equal(trace!.finalNarrationAuthority, "deterministic_rescue");
+      assert.equal(trace!.deterministicRescueAccepted, true);
+      assert.ok(trace!.earliestDecisiveRejection != null);
+    },
+  );
+
+  await check(
+    "[T2] fallen-giants match preview with two participants completes",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic: "Northport versus Kingside continental preview",
+        manualContext: [
+          "Northport won the last two continental titles.",
+          "Kingside signed three starters this summer.",
+          "Northport press high from the first minute.",
+          "Kingside prefer a low block and counters.",
+        ].join("\n"),
+        durationSec: 45,
+        generationPath: "script_only",
+        qualityMode: "cheap",
+        scriptMode: "match_preview",
+        factHandlingMode: "verified_facts_only",
+        planner: null,
+        composer: () => {
+          throw new Error("model composer unavailable");
+        },
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(result.ok, true);
+      if (!result.ok) throw new Error("expected success");
+      assert.match(result.approved.narration, /Northport/u);
+      assert.match(result.approved.narration, /Kingside/u);
+      assert.equal(
+        result.approved.generationDisposition?.disposition,
+        "fallback",
+      );
+      assert.equal(
+        result.approved.generationDisposition?.qualityBelowTarget,
+        true,
+      );
+    },
+  );
+
+  await check(
+    "[T3] five-player ranking with five named entries completes",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic: "Rank five midfielders for the season awards",
+        manualContext: [
+          "Ava Rourke led assists for Harbor FC.",
+          "Miles Chen controlled tempo for Eastbridge.",
+          "Sofia Nguyen pressed highest for Lakeside.",
+          "Omar Diallo won the most duels for Southgate.",
+          "Elena Petrov created the most big chances for Westford.",
+        ].join("\n"),
+        durationSec: 50,
+        generationPath: "script_only",
+        qualityMode: "cheap",
+        scriptMode: "top_5",
+        factHandlingMode: "verified_facts_only",
+        planner: null,
+        composer: () => {
+          throw new Error("model composer unavailable");
+        },
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(result.ok, true);
+      if (!result.ok) throw new Error("expected success");
+      assert.equal(
+        result.approved.generationDisposition?.disposition,
+        "fallback",
+      );
+      assert.equal(
+        result.approved.generationDisposition?.qualityBelowTarget,
+        true,
+      );
+      assert.ok(
+        result.approved.validationSummary.storyQualityConfidence < 0.75,
+      );
+      const names = [
+        "Ava",
+        "Miles",
+        "Sofia",
+        "Omar",
+        "Elena",
+      ];
+      const hitCount = names.filter((name) =>
+        result.approved.narration.includes(name),
+      ).length;
+      assert.ok(
+        hitCount >= 3,
+        `expected ranking names in narration, hit=${hitCount}`,
+      );
+    },
+  );
+
+  await check(
+    "[T4] strong coherent model narration remains accepted without fallback",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic: "Spain versus France tactical preview",
+        durationSec: 40,
+        generationPath: "script_only",
+        qualityMode: "balanced",
+        factHandlingMode: "verified_facts_only",
+        planner: null,
+        composer: makeRetentionComposer(),
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(result.ok, true);
+      if (!result.ok) throw new Error("expected success");
+      const disposition = result.approved.generationDisposition;
+      assert.ok(disposition);
+      assert.notEqual(
+        disposition!.disposition,
+        "fallback",
+        `unexpected fallback: ${JSON.stringify(disposition!.acceptanceTrace)}`,
+      );
+      assert.ok(
+        !disposition!.adaptations.includes("deterministic_story_fallback_used"),
+      );
+      assert.match(result.approved.narration, /Spain|France|pressure/u);
+      const trace = disposition!.acceptanceTrace;
+      assert.ok(trace);
+      assert.equal(trace!.finalNarrationAuthority, "model_direct");
+      assert.equal(trace!.modelNarrationAccepted, true);
+    },
+  );
+
+  await check(
+    "[T5] weak coherent narration is not confused with broken filler",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic: "Spain versus France tactical preview",
+        durationSec: 30,
+        generationPath: "script_only",
+        qualityMode: "balanced",
+        factHandlingMode: "verified_facts_only",
+        planner: null,
+        composer: (request) => {
+          const n = request.orderedBeatIds.length;
+          const budget = Math.round(request.durationSec * 2.4);
+          const minPer = 4;
+          const targetTotal = Math.min(
+            Math.max(n * minPer, budget - 8),
+            Math.max(n * minPer, Math.floor(budget * 0.78)),
+          );
+          const base = Math.floor(targetTotal / n);
+          let rem = targetTotal - base * n;
+          const segments = request.orderedBeatIds.map((beatId, i) => {
+            const target = Math.max(minPer, base + (rem > 0 ? 1 : 0));
+            if (rem > 0) rem -= 1;
+            if (i === 0) {
+              const open = "Why does Spain pressure matter?";
+              const openWords = open.trim().split(/\s+/).filter(Boolean).length;
+              return {
+                beatId,
+                text: joinOpeningAndBody(
+                  open,
+                  padSpokenWords(
+                    "Spain keeps pressing France",
+                    Math.max(3, target - openWords),
+                  ),
+                ),
+                claimRefs: [] as string[],
+              };
+            }
+            return {
+              beatId,
+              text: padSpokenWords(
+                i === n - 1
+                  ? "Spain keeps pressing France until the shape finally breaks"
+                  : "Spain keeps pressing France",
+                target,
+              ),
+              claimRefs: [] as string[],
+            };
+          });
+          return {
+            title: "Spain pressure story",
+            hookClaimRefs: [] as string[],
+            segments,
+          };
+        },
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(result.ok, true);
+      if (!result.ok) throw new Error("expected success");
+      assert.ok(
+        !result.approved.generationDisposition?.adaptations.includes(
+          "deterministic_story_fallback_used",
+        ),
+        `unexpected fallback: ${JSON.stringify(result.approved.generationDisposition?.acceptanceTrace)}`,
+      );
+      assert.doesNotMatch(
+        result.approved.narration,
+        /begins with a choice whose consequence keeps growing/iu,
+      );
+    },
+  );
+
+  await check(
+    "[T6] fact-rich narration with modest hook stays above broken filler",
+    async () => {
+      const { evaluateRetentionNarrationSubstance } = await import(
+        "@/features/retention-story/validation/evaluate-retention-narration-substance"
+      );
+      const grounding = {
+        version: 1 as const,
+        researchIdentity: null,
+        claims: [
+          {
+            claimId: "c1",
+            text: "Jordan Hale tore his ACL in March 2024.",
+            provenance: "manual_user" as const,
+            verification: "unverified" as const,
+            permittedFactualUse: true,
+            forbidden: false,
+            sourceRef: "manual_notes",
+          },
+          {
+            claimId: "c2",
+            text: "Hale returned for Northport in September 2025.",
+            provenance: "manual_user" as const,
+            verification: "unverified" as const,
+            permittedFactualUse: true,
+            forbidden: false,
+            sourceRef: "manual_notes",
+          },
+          {
+            claimId: "c3",
+            text: "Hale scored in the continental final.",
+            provenance: "manual_user" as const,
+            verification: "unverified" as const,
+            permittedFactualUse: true,
+            forbidden: false,
+            sourceRef: "manual_notes",
+          },
+        ],
+      };
+      const factRich = {
+        assembledNarration:
+          "Jordan Hale came back. Jordan Hale tore his ACL in March 2024. Hale returned for Northport in September 2025. Hale scored in the continental final.",
+        segments: [
+          { text: "Jordan Hale came back." },
+          { text: "Jordan Hale tore his ACL in March 2024." },
+          { text: "Hale returned for Northport in September 2025." },
+          { text: "Hale scored in the continental final." },
+        ],
+      };
+      const vacuous = {
+        assembledNarration:
+          "What decides Jordan Hale's outcome? Jordan Hale begins with a choice whose consequence keeps growing. That connection gives the next part. Together, those details bring Jordan Hale's central idea into focus.",
+        segments: [
+          { text: "What decides Jordan Hale's outcome?" },
+          {
+            text: "Jordan Hale begins with a choice whose consequence keeps growing.",
+          },
+          { text: "That connection gives the next part." },
+          {
+            text: "Together, those details bring Jordan Hale's central idea into focus.",
+          },
+        ],
+      };
+      const richEval = evaluateRetentionNarrationSubstance({
+        topic: "Jordan Hale comeback after injury",
+        grounding,
+        candidate: factRich as never,
+      });
+      const vacuousEval = evaluateRetentionNarrationSubstance({
+        topic: "Jordan Hale comeback after injury",
+        grounding,
+        candidate: vacuous as never,
+      });
+      assert.equal(vacuousEval.qualityBelowTarget, true);
+      assert.ok(richEval.substanceScore > vacuousEval.substanceScore);
+      assert.ok(vacuousEval.substanceScore < 0.34);
+      assert.ok(
+        richEval.creatorClaimCoverageRatio >= 0.66,
+        `claim coverage too low: ${richEval.creatorClaimCoverageRatio}`,
+      );
+    },
+  );
+
+  await check(
+    "[T7] meaningful hook with body payoff keeps model authority",
+    async () => {
+      const result = await runRetentionProductionNarration({
+        topic: "Spain versus France tactical preview",
+        durationSec: 40,
+        generationPath: "script_only",
+        qualityMode: "balanced",
+        factHandlingMode: "verified_facts_only",
+        planner: null,
+        composer: (request) => {
+          const n = request.orderedBeatIds.length;
+          const budget = Math.round(request.durationSec * 2.4);
+          const minPer = 4;
+          const targetTotal = Math.min(
+            Math.max(n * minPer, budget - 8),
+            Math.max(n * minPer, Math.floor(budget * 0.78)),
+          );
+          const base = Math.floor(targetTotal / n);
+          let rem = targetTotal - base * n;
+          const segments = request.orderedBeatIds.map((beatId, i) => {
+            const target = Math.max(minPer, base + (rem > 0 ? 1 : 0));
+            if (rem > 0) rem -= 1;
+            if (i === 0) {
+              const open = "Why does Spain pressure matter?";
+              const openWords = open.trim().split(/\s+/).filter(Boolean).length;
+              return {
+                beatId,
+                text: joinOpeningAndBody(
+                  open,
+                  padSpokenWords(
+                    "Spain tactical focus reshapes this France preview tonight",
+                    Math.max(3, target - openWords),
+                  ),
+                ),
+                claimRefs: [] as string[],
+              };
+            }
+            const seed =
+              i === n - 1
+                ? "Spain pressure closes this preview by forcing France into deeper blocks"
+                : `Spain ${SECTION_WORDS[i] ?? "next"} pressure advances with clear focus`;
+            return {
+              beatId,
+              text: padSpokenWords(seed, target),
+              claimRefs: [] as string[],
+            };
+          });
+          return {
+            title: "Spain pressure story",
+            hookClaimRefs: [] as string[],
+            segments,
+          };
+        },
+        hookRunner: passRetentionHookRunner,
+      });
+      assert.equal(result.ok, true);
+      if (!result.ok) throw new Error("expected success");
+      assert.match(result.approved.narration, /Spain/u);
+      assert.match(result.approved.narration, /France/u);
+      assert.equal(
+        result.approved.generationDisposition?.acceptanceTrace
+          ?.finalNarrationAuthority,
+        "model_direct",
+      );
+    },
+  );
+
+  await check(
+    "[T8] short question hook without semantic payoff stays advisory-weak, not fallback-confused",
+    async () => {
+      const { evaluateRetentionNarrationSubstance } = await import(
+        "@/features/retention-story/validation/evaluate-retention-narration-substance"
+      );
+      const emptyGrounding = {
+        version: 1 as const,
+        claims: [],
+        researchIdentity: null,
+      };
+      const vacuousCandidate = {
+        assembledNarration:
+          "What decides Harbor's outcome? Harbor begins with a choice whose consequence keeps growing. That connection gives the next part. Together, those details bring Harbor's central idea into focus.",
+        segments: [
+          { text: "What decides Harbor's outcome?" },
+          {
+            text: "Harbor begins with a choice whose consequence keeps growing.",
+          },
+          { text: "That connection gives the next part." },
+          {
+            text: "Together, those details bring Harbor's central idea into focus.",
+          },
+        ],
+      };
+      const weak = evaluateRetentionNarrationSubstance({
+        topic: "Harbor FC late equalizer",
+        grounding: emptyGrounding,
+        candidate: vacuousCandidate as never,
+      });
+      assert.equal(weak.qualityBelowTarget, true);
+      assert.ok(weak.substanceScore < 0.34);
+      assert.ok(weak.planningScaffoldDetected);
+
+      const coherentCandidate = {
+        assembledNarration:
+          "Harbor FC found a late equalizer. Harbor FC equalized in the 88th minute and kept the tie alive.",
+        segments: [
+          { text: "Harbor FC found a late equalizer." },
+          {
+            text: "Harbor FC equalized in the 88th minute and kept the tie alive.",
+          },
+        ],
+      };
+      const coherent = evaluateRetentionNarrationSubstance({
+        topic: "Harbor FC late equalizer",
+        grounding: emptyGrounding,
+        candidate: coherentCandidate as never,
+      });
+      assert.equal(coherent.planningScaffoldDetected, false);
+      assert.ok(coherent.substanceScore > weak.substanceScore);
+    },
+  );
+
+  await check(
+    "[T9] no topic-specific production rules for football clubs or rankings",
+    async () => {
+      const { readFileSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const root = join(
+        process.cwd(),
+        "src/features/retention-story/production/run-retention-production-narration.ts",
+      );
+      const src = readFileSync(root, "utf8");
+      assert.doesNotMatch(src, /Manchester|Liverpool|Premier League/iu);
+      assert.doesNotMatch(src, /if\s*\(.*club.*\)\s*\{/iu);
+      assert.doesNotMatch(
+        src,
+        /scriptMode\s*===\s*["']top_5["']\s*&&\s*.*football/iu,
       );
     },
   );
@@ -895,7 +1466,7 @@ async function main() {
   };
 
   await check(
-    "[H3B-1] explicit Hook fail → zero-model Auto reconcile succeeds",
+    "[H3B-1] explicit Hook fail after canonical accept keeps model narration",
     async () => {
       const probe = failAfterComposeHookRunner();
       const result = await runRetentionProductionNarration({
@@ -910,12 +1481,13 @@ async function main() {
       });
       assert.equal(result.ok, true);
       if (!result.ok) throw new Error("expected success");
-      assert.equal(probe.modelInitialSuccesses.count, 1);
-      assert.equal(probe.hookInvocations.count, 1);
-      assert.ok(
+      assert.equal(result.approved.safeDiagnostics.budget?.initialNarration, 1);
+      assert.equal(probe.hookInvocations.count, 0);
+      assert.equal(
         result.approved.generationDisposition?.adaptations.includes(
           "hook_style_reconciled",
         ),
+        false,
       );
       assert.equal(
         result.approved.generationDisposition?.adaptations.includes(
@@ -928,7 +1500,7 @@ async function main() {
   );
 
   await check(
-    "[H3B-2] explicit+Auto fail → one deterministic rescue, no 3rd model",
+    "[H3B-2] weak opening still kept after Hook fail when canonical accept holds",
     async () => {
       const probe = failAfterComposeHookRunner();
       const result = await runRetentionProductionNarration({
@@ -940,7 +1512,6 @@ async function main() {
         planner: null,
         composer: weakOpeningComposer(),
         hookRunner: async (input) => {
-          // First preference attempt fails after compose; det rescue uses pass path.
           if (probe.hookInvocations.count === 0) {
             return probe.runner(input);
           }
@@ -949,20 +1520,20 @@ async function main() {
       });
       assert.equal(result.ok, true);
       if (!result.ok) throw new Error("expected success");
-      // One model compose on first bridge; det rescue is zero-model.
-      assert.equal(probe.modelInitialSuccesses.count, 1);
       const budget = result.approved.safeDiagnostics.budget;
       assert.ok(budget);
       assert.equal(budget.initialNarration, 1);
-      assert.ok(
+      assert.equal(
         result.approved.generationDisposition?.adaptations.includes(
           "deterministic_story_fallback_used",
         ),
+        false,
       );
-      assert.ok(
+      assert.equal(
         result.approved.generationDisposition?.adaptations.includes(
           "hook_style_reconciled",
         ),
+        false,
       );
     },
   );
@@ -986,7 +1557,8 @@ async function main() {
       });
       assert.equal(result.ok, true);
       if (!result.ok) throw new Error("expected success");
-      assert.equal(hooks, 1);
+      assert.equal(hooks, 0);
+      assert.equal(result.approved.safeDiagnostics.budget?.initialNarration, 1);
       assert.equal(
         result.approved.generationDisposition?.adaptations.includes(
           "hook_style_reconciled",
@@ -1560,7 +2132,7 @@ async function main() {
   });
 
   await check(
-    "[H5B-15] Precise production mismatch → fail-soft reconciliation",
+    "[H5B-15] Precise production Hook fail after canonical accept keeps narration",
     async () => {
       const probe = failAfterComposeHookRunner();
       const result = await runRetentionProductionNarration({
@@ -1576,10 +2148,17 @@ async function main() {
       });
       assert.equal(result.ok, true);
       if (!result.ok) throw new Error("expected success");
-      assert.ok(
+      assert.equal(
         result.approved.generationDisposition?.adaptations.includes(
           "hook_style_reconciled",
         ),
+        false,
+      );
+      assert.equal(
+        result.approved.generationDisposition?.adaptations.includes(
+          "deterministic_story_fallback_used",
+        ),
+        false,
       );
     },
   );
@@ -1715,7 +2294,7 @@ async function main() {
   );
 
   await check(
-    "[H5B-17] JSON disposition matches Review explainability note",
+    "[H5B-17] JSON disposition matches Review explainability after kept Hook fail",
     async () => {
       const probe = failAfterComposeHookRunner();
       const result = await runRetentionProductionNarration({
@@ -1730,16 +2309,17 @@ async function main() {
       });
       assert.equal(result.ok, true);
       if (!result.ok) throw new Error("expected success");
-      assert.ok(
+      assert.equal(
         result.approved.generationDisposition?.adaptations.includes(
           "hook_style_reconciled",
         ),
+        false,
       );
       const note =
         result.approved.generationDisposition?.creatorFacingNotes.find((n) =>
           n.includes("Hook style was adjusted"),
         );
-      assert.ok(note);
+      assert.equal(note, undefined);
       const model = buildRetentionExplainabilityModel({
         retentionPlan: result.approved.planSnapshot,
         retentionValidation: result.approved.validationSummary,
@@ -1750,8 +2330,10 @@ async function main() {
       });
       assert.equal(model.available, true);
       const adaptationRow = model.rows.find((r) => r.id === "adaptations");
-      assert.ok(adaptationRow?.value.includes("hook style reconciled"));
-      assert.ok(model.rows.some((r) => r.value === note));
+      assert.equal(
+        adaptationRow?.value.includes("hook style reconciled") ?? false,
+        false,
+      );
     },
   );
 

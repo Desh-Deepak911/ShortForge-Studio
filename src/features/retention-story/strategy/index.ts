@@ -65,6 +65,7 @@ export {
 
 export {
   detectRetentionFactualRisk,
+  statementHasRetentionDateSignal,
   type RetentionFactualRiskResult,
 } from "./retention-factual-risk";
 
@@ -82,6 +83,11 @@ export {
   claimRefSupportsControllingIdeaStatement,
   isClaimEligibleForControllingIdeaSupport,
 } from "./retention-claim-support";
+
+export {
+  claimRefsSupportLinkedNarrationStatement,
+  compressRetentionClaimLinkedNarration,
+} from "./retention-claim-linked-support";
 
 export {
   validateControllingIdea,

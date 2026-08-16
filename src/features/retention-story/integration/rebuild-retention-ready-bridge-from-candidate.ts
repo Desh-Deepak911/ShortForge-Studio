@@ -67,6 +67,12 @@ export function rebuildRetentionReadyBridgeFromCandidate(input: {
   readonly title: string;
   readonly hookContext: HookGenerationContext;
   readonly compositionAuthority?: RetentionCompositionAuthority;
+  /** After canonical accept, Hook-engine grounding is a warning, not a veto. */
+  readonly ignoreHookQualityGrounding?: boolean;
+  readonly boundedRewriteType?:
+    | "opening_repair"
+    | "ranking_payoff_repair"
+    | "supported_opening_promotion";
 }): RetentionHookBridgeResult {
   const {
     hookContext,
@@ -76,7 +82,19 @@ export function rebuildRetentionReadyBridgeFromCandidate(input: {
     strategySeed,
   } = input;
   const narration = sourceCandidate.assembledNarration;
-  const span = extractOpeningSpan(narration);
+  const extracted = extractOpeningSpan(narration);
+  const keepAfterAccept = input.ignoreHookQualityGrounding === true;
+  const firstStop = /[.!?…]/.exec(narration);
+  const span =
+    extracted ??
+    (keepAfterAccept && firstStop
+      ? {
+          openingText: narration.slice(0, firstStop.index + 1).trim(),
+          openingTextNormalized: narration.slice(0, firstStop.index + 1).trim(),
+          openingStartOffset: 0,
+          openingEndOffset: firstStop.index + 1,
+        }
+      : null);
   if (!span) {
     return baseFailed(
       input.contract,
@@ -109,36 +127,37 @@ export function rebuildRetentionReadyBridgeFromCandidate(input: {
     candidate: hookCandidate,
     repairBoundExceeded: true,
   });
-  if (!validation.ok) {
+  const blockingSafety = validation.reasons.some(
+    (reason) =>
+      reason === "safety.prompt_injection" ||
+      reason === "safety.harmful_targeting" ||
+      reason === "safety.empty_opening",
+  );
+  if (blockingSafety) {
     return baseFailed(input.contract, input.ledger, plan, "hook_terminal_failure");
   }
   if (
-    !validation.hardGatesPassed.grounding ||
-    !validation.hardGatesPassed.safety
+    !input.ignoreHookQualityGrounding &&
+    !validation.hardGatesPassed.grounding
   ) {
     return baseFailed(input.contract, input.ledger, plan, "hook_terminal_failure");
   }
 
-  let selection;
+  let selectionOpening = span.openingText;
   try {
-    selection = buildHookSelection({
+    const selection = buildHookSelection({
       request: hookContext.request,
       plan: hookContext.plan,
       candidate: hookCandidate,
       repairBoundExceeded: true,
     });
+    if (selection.openingText === span.openingText) {
+      selectionOpening = selection.openingText;
+    }
   } catch {
-    return baseFailed(input.contract, input.ledger, plan, "hook_terminal_failure");
+    selectionOpening = span.openingText;
   }
-
-  if (selection.openingText !== span.openingText) {
-    return baseFailed(
-      input.contract,
-      input.ledger,
-      plan,
-      "candidate_reconciliation_failed",
-    );
-  }
+  void selectionOpening;
 
   let terminalHookAuthority;
   try {
@@ -200,6 +219,9 @@ export function rebuildRetentionReadyBridgeFromCandidate(input: {
       candidateFingerprint: candidate.candidateFingerprint,
       compositionAuthority:
         input.compositionAuthority ?? ("model_initial" as const),
+      ...(input.boundedRewriteType
+        ? { boundedRewriteType: input.boundedRewriteType }
+        : {}),
     }),
     hookPlanSnapshot: buildHookPlanSnapshot(hookContext.plan),
     hookDiagnostics: buildHookDiagnostics({

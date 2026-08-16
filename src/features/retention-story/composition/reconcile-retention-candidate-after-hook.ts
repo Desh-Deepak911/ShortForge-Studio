@@ -12,9 +12,9 @@ import type { RetentionGroundingContext } from "../domain/retention-story-contra
 import { detectRetentionFactualRisk } from "../strategy/retention-factual-risk";
 import type { RetentionStrategySeed } from "../strategy/retention-strategy.types";
 import type { RetentionStoryPlan } from "../planning/retention-story-plan.types";
-import { RETENTION_SEGMENT_SEPARATOR } from "./retention-narration-candidate.constants";
 import {
   assembleRetentionNarrationCandidate,
+  detectRetentionNarrationAssemblyGap,
 } from "./assemble-retention-narration-candidate";
 import { assertRetentionNarrationCandidateCoherence } from "./assert-retention-narration-candidate-coherence";
 import type { RetentionNarrationCandidate } from "./retention-narration-candidate.types";
@@ -106,6 +106,7 @@ export function reconcileRetentionCandidateAfterHook(
           factualRisk: detectRetentionFactualRisk(s.text).risky,
         }),
       ),
+      assemblyGap: detectRetentionNarrationAssemblyGap(sourceCandidate),
     });
     try {
     return assertRetentionNarrationCandidateCoherence(unchanged, {
@@ -173,9 +174,8 @@ export function reconcileRetentionCandidateAfterHook(
     });
   });
 
-  const rebuiltAssembled = drafts
-    .map((d) => d.text)
-    .join(RETENTION_SEGMENT_SEPARATOR);
+  const assemblyGap = detectRetentionNarrationAssemblyGap(sourceCandidate);
+  const rebuiltAssembled = drafts.map((d) => d.text).join(assemblyGap);
   if (rebuiltAssembled !== approvedNarration) {
     failReconciliation(
       "Opening-only reconciliation could not rebuild the approved narration.",
@@ -188,6 +188,7 @@ export function reconcileRetentionCandidateAfterHook(
       planFingerprint: plan.planFingerprint,
       orderedBeatIds: sourceCandidate.orderedBeatIds,
       segments: drafts,
+      assemblyGap,
     });
     return assertRetentionNarrationCandidateCoherence(reconciled, {
       plan,

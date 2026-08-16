@@ -16,13 +16,14 @@ import type { RetentionStoryPlan } from "../planning/retention-story-plan.types"
 import {
   assembleRetentionNarrationCandidate,
   buildRetentionNarrationCandidateFingerprint,
+  detectRetentionNarrationAssemblyGap,
+  isPermittedRetentionNarrationAssemblyGap,
 } from "./assemble-retention-narration-candidate";
 import { canonicalizeRetentionSegmentText } from "./canonicalize-retention-segment-text";
 import {
   RETENTION_CANDIDATE_FINGERPRINT_PREFIX,
   RETENTION_MAX_SEGMENT_CLAIM_REFS,
   RETENTION_NARRATION_CANDIDATE_VERSION,
-  RETENTION_SEGMENT_SEPARATOR,
 } from "./retention-narration-candidate.constants";
 import { isRetentionNarrationCandidateOrigin } from "./retention-narration-candidate-origin";
 import { resolveAuthorizedClaimIdsForBeat } from "./retention-opening-claim-authority";
@@ -104,7 +105,8 @@ export function validateRetentionNarrationCandidate(
         if (!SEGMENT_KEYS.has(key)) return false;
       }
       if (seg.beatId !== candidate.orderedBeatIds[i]) return false;
-      if (typeof seg.text !== "string" || seg.text.length === 0) return false;
+      if (typeof seg.text !== "string") return false;
+      if (seg.text.length === 0 && i === 0) return false;
       if (typeof seg.startOffset !== "number") return false;
       if (typeof seg.endOffset !== "number") return false;
       if (!Number.isInteger(seg.startOffset) || !Number.isInteger(seg.endOffset)) {
@@ -160,7 +162,10 @@ export function assertRetentionNarrationCandidateCoherence(
   if (new Set(orderedBeatIds).size !== orderedBeatIds.length) throwMismatch();
 
   const drafts = raw.segments.map((segment, index) => {
-    const text = canonicalizeRetentionSegmentText(segment.text);
+    const text =
+      segment.text === "" && index > 0
+        ? ""
+        : canonicalizeRetentionSegmentText(segment.text);
     if (text == null || text !== segment.text) throwMismatch();
 
     const refs = canonicalizeControllingIdeaClaimRefs(segment.claimRefs);
@@ -200,7 +205,15 @@ export function assertRetentionNarrationCandidateCoherence(
     }
     const factualRisk = detectRetentionFactualRisk(text).risky;
     if (factualRisk !== segment.factualRisk) throwMismatch();
-    if (factualRisk && refs.length === 0) throwMismatch();
+    if (factualRisk && refs.length === 0) {
+      const slice = raw.assembledNarration.slice(
+        segment.startOffset,
+        segment.endOffset,
+      );
+      // Spoken narration is the grounding authority. Missing segment refs are
+      // metadata and must not reverse an already-accepted contiguous span.
+      if (slice !== segment.text) throwMismatch();
+    }
 
     if (
       !Number.isInteger(segment.startOffset) ||
@@ -216,7 +229,13 @@ export function assertRetentionNarrationCandidateCoherence(
         prev.endOffset,
         segment.startOffset,
       );
-      if (gap !== RETENTION_SEGMENT_SEPARATOR) throwMismatch();
+      if (segment.text.length === 0) {
+        if (gap !== "") throwMismatch();
+      } else {
+        if (!isPermittedRetentionNarrationAssemblyGap(gap)) throwMismatch();
+        const spokenGap = detectRetentionNarrationAssemblyGap(raw);
+        if (spokenGap && gap !== spokenGap) throwMismatch();
+      }
     } else if (segment.startOffset !== 0) {
       throwMismatch();
     }
@@ -234,6 +253,7 @@ export function assertRetentionNarrationCandidateCoherence(
     planFingerprint: context.plan.planFingerprint,
     orderedBeatIds,
     segments: drafts,
+    assemblyGap: detectRetentionNarrationAssemblyGap(raw),
   });
 
   const expectedFp = buildRetentionNarrationCandidateFingerprint({

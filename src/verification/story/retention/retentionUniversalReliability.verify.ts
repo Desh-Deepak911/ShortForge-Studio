@@ -179,9 +179,8 @@ async function runFlexibleDet(input: {
         ? null
         : (input.planner as never),
     composer: input.composer ?? emptyComposer(),
-    ...(input.rewriteComposer !== undefined
-      ? { rewriteComposer: input.rewriteComposer }
-      : {}),
+    rewriteComposer:
+      input.rewriteComposer !== undefined ? input.rewriteComposer : null,
     ...(input.lengthComposer !== undefined
       ? { lengthComposer: input.lengthComposer }
       : {}),
@@ -361,6 +360,7 @@ async function main() {
                 hookStyle: "user_written",
                 userAuthoredHook: opening,
                 planner: null,
+                rewriteComposer: null,
                 // Fitting body under the exact WMO opening — empty composer is
                 // covered by malformed-composer cells; WMO is creator-correctable
                 // when the opening itself cannot clear gates.
