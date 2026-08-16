@@ -3,6 +3,10 @@
  * Deterministic labels/icons only — no remote assets, SVG injection, or scripts.
  */
 
+import {
+  SHORTFORGE_MOTION_PALETTE,
+  shortforgeMotionHexToRgba,
+} from "@/features/shortforge-motion-design";
 import type {
   EngagementOverlayKind,
   EngagementOverlayPosition,
@@ -57,27 +61,97 @@ export const ENGAGEMENT_OVERLAY_SIZE_OPTIONS: readonly {
   { id: "large", label: "Large" },
 ];
 
-export type EngagementOverlayIconToken = "heart" | "share" | "bell";
+export type EngagementOverlayIconToken = "heart" | "share" | "circle-plus";
 
 /**
- * Engagement-owned visual tokens for the polished pill card.
- * Kept local to this feature — do not import brand-sting colors.
+ * Engagement-owned visual tokens for the midnight-navy glass pill.
+ * Palette is shared; geometry and clocks stay in this feature.
+ * Do not import brand-sting colors.
  */
 export const ENGAGEMENT_OVERLAY_STYLE = Object.freeze({
-  /** Semi-transparent charcoal/navy card fill. */
-  cardFill: "rgba(18, 24, 38, 0.88)",
+  /** Semi-transparent midnight-navy glass fill. */
+  cardFill: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.backgroundSecondary,
+    0.88,
+  ),
   /** Subtle inset/border highlight. */
-  cardStroke: "rgba(255, 255, 255, 0.16)",
-  cardInsetHighlight: "rgba(255, 255, 255, 0.10)",
-  /** Inactive icon/label. */
-  inactiveFill: "rgba(255, 255, 255, 0.92)",
-  settledFill: "rgba(255, 255, 255, 0.72)",
-  /** Warm forge accent for the active segment (engagement-owned). */
-  accentFill: "rgba(232, 160, 74, 0.98)",
-  /** Strongest Subscribe/confirmation accent. */
-  confirmationFill: "rgba(245, 186, 96, 1)",
-  accentGlow: "rgba(232, 160, 74, 0.35)",
+  cardStroke: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.borderSubtle,
+    0.72,
+  ),
+  cardInsetHighlight: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.softWhite,
+    0.1,
+  ),
+  /** Inactive icon/label — high-contrast soft white. */
+  inactiveFill: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.softWhite,
+    0.96,
+  ),
+  settledFill: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.softWhite,
+    0.72,
+  ),
+  /** Electric-lime active segment (engagement-owned application). */
+  accentFill: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.accentActive,
+    0.98,
+  ),
+  /** Strongest Subscribe/confirmation accent — label stays Subscribe. */
+  confirmationFill: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.accentActive,
+    1,
+  ),
+  /** Restrained accent glow only — never a large opaque bloom. */
+  accentGlow: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.accentActive,
+    0.22,
+  ),
+  /** Navy glass gradient stops — identical tokens for DOM and canvas. */
+  cardFillTop: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.backgroundSecondary,
+    0.94,
+  ),
+  cardFillBottom: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.backgroundPrimary,
+    0.9,
+  ),
+  separatorFill: shortforgeMotionHexToRgba(
+    SHORTFORGE_MOTION_PALETTE.borderSubtle,
+    0.55,
+  ),
 } as const);
+
+/** Typography and icon metrics consumed by the frame plan — not by renderers. */
+export const ENGAGEMENT_OVERLAY_TYPE = Object.freeze({
+  fontWeight: 600,
+  letterSpacingEm: 0.01,
+  fontSizeRatio: 0.22,
+  minFontSize: 12,
+  iconSizeRatio: 0.34,
+  iconLabelGapRatio: 0.1,
+  iconStrokeViewBox: 2,
+  iconViewBox: 24,
+} as const);
+
+/**
+ * Scene-local motion constants. Preview/canvas must consume the resolved
+ * frame plan rather than re-deriving these values.
+ */
+export const ENGAGEMENT_OVERLAY_MOTION = Object.freeze({
+  entranceScaleFrom: 0.94,
+  entranceScaleTo: 1,
+  exitScaleDelta: 0.04,
+  pulseScalePeak: 0.06,
+  confirmationPulseExtra: 0.02,
+  glowOpacityPeak: 0.2,
+} as const);
+
+/** Medium combined reference size in the 1080×1920 design frame. */
+export const ENGAGEMENT_OVERLAY_COMBINED_REF_WIDTH = 680;
+export const ENGAGEMENT_OVERLAY_COMBINED_REF_HEIGHT = 112;
+export const ENGAGEMENT_OVERLAY_SINGLE_REF_WIDTH = 300;
+export const ENGAGEMENT_OVERLAY_SINGLE_REF_HEIGHT = 96;
 
 export function engagementOverlayKindLabel(kind: EngagementOverlayKind): string {
   return (
@@ -112,9 +186,9 @@ export function engagementOverlayIconsForKind(
     case "share":
       return ["share"];
     case "subscribe":
-      return ["bell"];
+      return ["circle-plus"];
     case "combined":
-      return ["heart", "share", "bell"];
+      return ["heart", "share", "circle-plus"];
     default:
       return ["heart"];
   }

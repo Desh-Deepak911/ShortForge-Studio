@@ -1,20 +1,17 @@
-# Brand-sting-export baseline failure evidence
+# Brand-sting-export baseline — resolution history
 
-> **Evidence status:** Failed baseline on the recorded dirty-tree comparison. Not a Pass. Not proof that later trees are fixed unless a newer current file says so.
+> **Evidence status:** Historical failure, repaired on `staging-engagement-outro-motion`. This is no longer an active release blocker for Brand Sting command immutability. It is not proof of Browser/Headless decoded-artifact certification.
 
-## Clean staging comparison
+## Original clean-staging failure
 
 | Field | Value |
 | --- | --- |
-| Branch under test | `staging-video-quality-audit` @ `d7bdccd` (uncommitted Prompt 1–3 dirty) |
-| Clean baseline | detached worktree `.tmp/staging-baseline-wt` @ `origin/staging` = `d7bdccd28a3570e5ee51710e6c719a53c91d7be7` |
+| First recorded on | `staging-video-quality-audit` dirty tree and clean `origin/staging` |
 | Command | `npm run test:brand-sting-export` |
-| Failing file | `src/verification/brand-sting/brandStingTimeline.verify.ts` line ~186 |
+| Failing file | `src/verification/brand-sting/brandStingTimeline.verify.ts` |
 | Test name | `commands are immutable and preserve engagement overlays byte-for-byte` |
 
-## Exact assertion
-
-`enableBrandSting` is expected to leave `visualRetentionExtensions.engagementOverlaysBySceneId` byte-identical to the pre-command JSON.
+`enableBrandSting` cloned the script through `normalizeVisualRetentionProjectExtensions`, which injected default `size: "medium"` and `scale: 1` onto a legacy engagement overlay that omitted those fields.
 
 ### Expected (input fixture, no size/scale)
 
@@ -22,33 +19,32 @@
 {"scene-a":[{"version":1,"id":"keep-overlay","kind":"subscribe","startOffsetMs":500,"durationMs":1500,"position":"top-right","presetId":"compact-pill-v1"}]}
 ```
 
-### Actual (after `enableBrandSting` → `cloneScript` → `normalizeVisualRetentionProjectExtensions`)
+### Actual before the repair
 
 ```json
 {"scene-a":[{"version":1,"id":"keep-overlay","kind":"subscribe","startOffsetMs":500,"durationMs":1500,"position":"top-right","size":"medium","scale":1,"presetId":"compact-pill-v1"}]}
 ```
 
-Delta: normalizer injects default `size: "medium"` and `scale: 1`.
+The assertion was not weakened. Prompts 1–3 left the failure in place because it was pre-existing on clean staging.
 
-## Classification checks
+## Repair
 
-| Check | Dirty branch | Clean `origin/staging` |
-| --- | --- | --- |
-| Failure reproduces | Yes | Yes (identical actual/expected) |
-| Manifest version in this test | N/A (authoring command, not export freeze) | N/A |
-| requiredCapabilities | N/A | N/A |
-| backgroundTreatment present | No | No |
-| Renderer target dimensions | N/A | N/A |
-| Uncommitted edits to `normalize-engagement-overlays.ts` | None | N/A |
-| Uncommitted edits to `brand-sting.commands.ts` | None | N/A |
-| Uncommitted edits to `brandStingTimeline.verify.ts` | None | N/A |
+Brand Sting commands now structurally clone `visualRetentionExtensions` and may normalize only the Brand Sting field. They do not import or call the engagement-overlay normalizer.
 
-## Root cause
+Required behavior after the repair:
 
-**Pre-existing on clean `origin/staging`.** Not caused by Prompt 1–2 or Prompt 3 v5/capability/`backgroundTreatment` work.
+- Enable, duration change, disable, and capability refusal preserve unrelated extension JSON byte-for-byte.
+- Legacy overlays without `size`/`scale` stay legacy.
+- Modern overlays keep their authored `size`/`scale`.
+- Malformed Brand Sting fails closed without rewriting overlays.
+- `visualRetentionExtensions` is removed only when no non-Brand-Sting extension data remains.
 
-`enableBrandSting` → `cloneScript` → `normalizeVisualRetentionProjectExtensions` → `normalizeSceneEngagementOverlay` always materializes default `size`/`scale` when omitted. The timeline assertion still expects a fixture without those fields. Product comment in `brand-sting.commands.ts` claims overlays stay “byte-stable when valid,” which conflicts with default injection.
+Focused proof: `src/verification/brand-sting/brandStingCommandImmutability.verify.ts`, plus the original timeline assertion.
 
-## Disposition for Prompt 3 closeout
+## Current status
 
-Baseline failure proven on clean staging. Assertion not weakened or deleted. Dirty working tree leaves the baseline failure as-is for this closeout (no Prompt-3-caused regression to fix).
+| Check | Result |
+| --- | --- |
+| Original byte-preservation assertion | Must pass after the command repair |
+| Overlay normalizer still used for overlay authoring / project open | Unchanged and out of Brand Sting command scope |
+| Browser/Headless decoded certification | [ENGAGEMENT_OUTRO_MOTION_CERTIFICATION.md](ENGAGEMENT_OUTRO_MOTION_CERTIFICATION.md); do not infer it from this repair |

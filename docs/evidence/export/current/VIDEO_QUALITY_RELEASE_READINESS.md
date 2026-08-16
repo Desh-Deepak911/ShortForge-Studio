@@ -124,7 +124,7 @@ See `LEGIBILITY_LAYER_APPEARANCE.md`. Full-frame dark gradient retired; title wi
 
 ## Known baseline defects
 
-- `test:brand-sting-export` fails on clean `origin/staging` due to engagement-overlay default `size`/`scale` injection. Documented in `BRAND_STING_EXPORT_BASELINE_FAILURE.md`. **Out of scope** for this video-quality branch.
+- `test:brand-sting-export` failed on clean `origin/staging` due to engagement-overlay default `size`/`scale` injection. That video-quality branch left it out of scope. The later `staging-engagement-outro-motion` slice repaired Brand Sting command immutability; see `BRAND_STING_EXPORT_BASELINE_FAILURE.md`.
 
 ## Remaining risks
 
@@ -138,5 +138,5 @@ See `LEGIBILITY_LAYER_APPEARANCE.md`. Full-frame dark gradient retired; title wi
 1. Free disk (≥2 GiB) and complete Browser artifact capture into `.tmp/browser-export-cert/` then `npm run test:browser-export-artifacts`
 2. Complete manual Studio checklist; set `SHORTFORGE_MANUAL_SMOKE_COMPLETE=1` when done
 3. Re-run `npm run test:video-quality-release-readiness`
-4. Keep Brand Sting baseline failure separated; do not mix its repair into this PR
+4. Brand Sting command immutability is repaired on the engagement/outro motion branch; do not re-open that baseline on this video-quality record
 5. Only then commit / open PR (not part of this task)

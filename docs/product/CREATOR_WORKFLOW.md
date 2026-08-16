@@ -82,7 +82,7 @@ These exist in the codebase and must not be described as default production beha
 
 - Story-generation release verdict is **not_ready**
 - Video-quality release verdict is **conditionally ready** (manual Studio smoke still open)
-- Brand-sting export has a recorded baseline failure
+- Brand-sting command immutability: historical baseline repaired — [BRAND_STING_EXPORT_BASELINE_FAILURE.md](../evidence/export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md)
 - Source video audio is not muxed into export
 - Watermark cannot be turned off
 - Binary media rehydration after reload remains a draft limitation for some blob URLs

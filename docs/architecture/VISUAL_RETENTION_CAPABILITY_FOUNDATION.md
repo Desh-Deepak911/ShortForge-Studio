@@ -131,19 +131,31 @@ Allowlisted development branch for presets work: `staging-visual-retention-prese
 ### Engagement overlays
 
 Like, Share, Subscribe, or combined animations may be attached to a scene with
-scene-relative start time, duration, position, and preset. They never change the
-owning scene duration or require music. Creator UI remains unimplemented until a
-later gated slice.
+scene-relative start time, duration, position, size, and bounded fine scale.
+They never change the owning scene duration or require music. Combined hold
+beats are Like → Share → Subscribe; the label stays **Subscribe** even in the
+confirmation state. Creator inspector controls and Preview/export rendering are
+implemented and capability-gated.
+
+Shared visual authority lives in `src/features/shortforge-motion-design`
+(navy/lime palette, `Arial, Helvetica, sans-serif`). Preview consumes an
+output-space SVG `viewBox`; Browser and Headless consume the same resolved
+chrome plan on canvas. Per-instance SVG gradient ids use React `useId()`.
 
 ### ShortForge Studio brand sting
 
 The promotional segment is optional. Absence or `enabled=false` adds zero render
-duration. When enabled it is a 2, 2.5, or 3 second animation whose primary title
-is exactly **ShortForge Studio**. It has no narration or captions and uses fixed
-playback timing, independent of voice and project speed changes. Its visual
-design remains preset-driven so the later brand-sting phase can deliver the
-strongest animation without weakening the frozen behavioral rules. Export-drawer
-controls remain unimplemented until a later gated slice.
+duration. When enabled it is a 2, 2.5, or 3 second animation whose persisted
+lead-in is exactly **Made with** and whose primary title is exactly
+**ShortForge Studio**. Visible Preview/export presentation uses `MADE WITH`,
+`ShortForge`, and `Studio`. It has no narration or captions and uses fixed
+playback timing, independent of voice and project speed changes.
+
+Preview, Browser, and Headless consume one `resolveBrandStingFrame` plan and
+shared forged-mark geometry. Export-drawer duration controls are implemented
+and capability-gated. Brand Sting commands may normalize the sting field only;
+they must not rewrite engagement overlays. Historical baseline:
+[BRAND_STING_EXPORT_BASELINE_FAILURE.md](../evidence/export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md).
 
 ### Subject-aware reframing
 

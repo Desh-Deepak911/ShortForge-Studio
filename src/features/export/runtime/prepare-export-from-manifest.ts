@@ -40,6 +40,8 @@ export interface ExportDrawScene {
   readonly sceneType?: SceneType;
   readonly media: SceneMedia;
   readonly image?: SceneImage;
+  /** First frozen caption for this scene — collision uses this, not the active word. */
+  readonly sceneCaption?: ExportCaptionManifest | null;
   /** Back-reference to frozen manifest scene. */
   readonly manifestScene: ExportSceneManifest;
 }
@@ -137,6 +139,7 @@ function toExportDrawScene(
     captionMode: scene.captionMode,
     subtitle: text,
     subtitleText: text,
+    sceneCaption: sceneCaptions[0] ?? null,
     media,
     ...(image ? { image } : {}),
     manifestScene: scene,

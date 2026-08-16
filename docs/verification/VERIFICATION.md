@@ -51,7 +51,7 @@ Current evidence:
 
 - Story: **not_ready** — [STORY_GENERATION_RELEASE_READINESS.md](../evidence/story-quality/current/STORY_GENERATION_RELEASE_READINESS.md)
 - Video: **conditionally ready** — [VIDEO_QUALITY_RELEASE_READINESS.md](../evidence/export/current/VIDEO_QUALITY_RELEASE_READINESS.md)
-- Brand sting export baseline: **failed** on a recorded dirty-tree comparison — [BRAND_STING_EXPORT_BASELINE_FAILURE.md](../evidence/export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md)
+- Brand sting command immutability: **repaired** — history in [BRAND_STING_EXPORT_BASELINE_FAILURE.md](../evidence/export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md)
 
 ## Gated live runs
 

@@ -17,6 +17,12 @@ export {
   ENGAGEMENT_OVERLAY_SIZE_OPTIONS,
   ENGAGEMENT_OVERLAY_PRESET_ID,
   ENGAGEMENT_OVERLAY_STYLE,
+  ENGAGEMENT_OVERLAY_TYPE,
+  ENGAGEMENT_OVERLAY_MOTION,
+  ENGAGEMENT_OVERLAY_COMBINED_REF_HEIGHT,
+  ENGAGEMENT_OVERLAY_COMBINED_REF_WIDTH,
+  ENGAGEMENT_OVERLAY_SINGLE_REF_HEIGHT,
+  ENGAGEMENT_OVERLAY_SINGLE_REF_WIDTH,
   engagementOverlayIconsForKind,
   engagementOverlayKindLabel,
   engagementOverlayLabelsForKind,
@@ -45,14 +51,26 @@ export {
 export {
   ENGAGEMENT_OVERLAY_REFERENCE_HEIGHT,
   ENGAGEMENT_OVERLAY_REFERENCE_WIDTH,
+  resolveEngagementOverlayCenteredIconLabel,
   resolveEngagementOverlayFrame,
   shouldSuppressEngagementOverlayForInterSceneTransition,
   type EngagementOverlayLayoutBox,
   type EngagementOverlayPhase,
   type ResolveEngagementOverlayFrameInput,
+  type ResolvedEngagementOverlayChrome,
   type ResolvedEngagementOverlayFrame,
+  type ResolvedEngagementOverlayIconLabelOrigin,
   type ResolvedEngagementOverlaySegment,
 } from "./domain/resolve-engagement-overlay-frame";
+
+export {
+  ENGAGEMENT_OVERLAY_CAPTION_GAP_REF_PX,
+  resolveEngagementOverlayCaptionExclusion,
+  resolveEngagementOverlayCaptionSafePlacement,
+  type EngagementOverlayCaptionCollisionInput,
+  type EngagementOverlayCaptionSafeSlot,
+  type ResolvedEngagementOverlayCaptionSafePlacement,
+} from "./domain/resolve-engagement-overlay-caption-safe-placement";
 
 export {
   ENGAGEMENT_OVERLAY_CAPABILITY_OFF_MESSAGE,

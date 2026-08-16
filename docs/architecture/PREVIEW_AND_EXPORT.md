@@ -46,8 +46,11 @@ Preview, Browser, and Headless hydrate draw media through shared helpers (`hydra
 ## Legibility and overlays
 
 - **Local legibility layers** (title window / fade) replace a permanent whole-frame dark overlay
-- Engagement overlays and brand sting are capability-gated visual-retention features
-- Brand-sting export has a recorded baseline failure: [BRAND_STING_EXPORT_BASELINE_FAILURE.md](../evidence/export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md)
+- Engagement overlays and the ShortForge Studio outro are capability-gated visual-retention features
+- Both use the shared ShortForge motion palette and output-space frame plans
+- Studio Preview renders CTA and outro as scalable SVG; Browser and Headless draw the same resolved plans on canvas
+- The active outro suppresses watermark, captions, and engagement overlays
+- Brand Sting command immutability (overlays preserved byte-for-byte) is recorded in [BRAND_STING_EXPORT_BASELINE_FAILURE.md](../evidence/export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md)
 
 ## Release status
 

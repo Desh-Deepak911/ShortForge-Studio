@@ -10,7 +10,10 @@ export {
   BRAND_STING_DURATION_OPTIONS,
   BRAND_STING_FONT_FAMILY,
   BRAND_STING_LEAD_IN,
+  BRAND_STING_LEAD_IN_DISPLAY,
   BRAND_STING_LOCKED_TITLE,
+  BRAND_STING_LOCKUP_CENTER_Y_RATIO,
+  BRAND_STING_MARK_SIZE_REF,
   BRAND_STING_PRESET_ID,
   isBrandStingDurationMs,
   type BrandStingDurationMs,
@@ -31,6 +34,19 @@ export {
 } from "./domain/project-brand-sting-to-manifest";
 
 export {
+  BRAND_STING_MARK_DIAMOND,
+  BRAND_STING_MARK_FORGE_LINES,
+  BRAND_STING_MARK_REVEAL_DIRECTION,
+  BRAND_STING_MARK_UNIT,
+  resolveBrandStingMarkRevealClip,
+  scaleBrandStingMarkGeometry,
+  type BrandStingMarkPoint,
+  type BrandStingMarkRevealClip,
+  type BrandStingMarkSegment,
+  type ScaledBrandStingMarkGeometry,
+} from "./domain/brand-sting-mark-geometry";
+
+export {
   BRAND_STING_REFERENCE_HEIGHT,
   BRAND_STING_REFERENCE_WIDTH,
   isEnabledBrandSting,
@@ -40,8 +56,13 @@ export {
   resolveBrandStingTerminalElapsedMs,
   resolveBrandStingTimelineBounds,
   resolvePreviewPlaybackDurationMs,
+  type BrandStingAccentLinePlan,
+  type BrandStingBeamPlan,
+  type BrandStingGlowPlan,
   type BrandStingMarkGeometry,
   type BrandStingPhase,
+  type BrandStingRingMarkerPlan,
+  type BrandStingRingPlan,
   type BrandStingTimelineBounds,
   type ResolveBrandStingFrameInput,
   type ResolvedBrandStingFrame,

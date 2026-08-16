@@ -104,10 +104,15 @@ function makeCtx(): CanvasRenderingContext2D {
     fill() {},
     stroke() {},
     fillRect() {},
-    fillText() {},
+    fillText(text: string) {
+      calls.push(`fillText:${text}`);
+    },
     translate() {},
     scale() {},
     setTransform() {},
+    arc() {
+      calls.push("arc");
+    },
     createLinearGradient() {
       return { addColorStop() {} };
     },
@@ -175,10 +180,13 @@ test("preview and canvas consume the same resolveBrandStingFrame plan", () => {
   );
   assert.match(markup, /ShortForge/);
   assert.match(markup, /Studio/);
-  assert.match(markup, /Made with/);
+  assert.match(markup, /MADE WITH/);
+  assert.doesNotMatch(markup, />Made with</);
   assert.match(markup, /pointer-events:\s*none/);
+  assert.match(markup, /viewBox="0 0 1080 1920"/);
   assert.equal(plan.titlePrimary, "ShortForge");
   assert.equal(plan.leadIn, BRAND_STING_LEAD_IN);
+  assert.equal(plan.leadInDisplay, "MADE WITH");
 
   const ctx = makeCtx();
   drawBrandSting(ctx, plan, 1080, 1920);
@@ -208,8 +216,15 @@ test("promotional hierarchy: Made with lead-in under dominant ShortForge Studio"
     assert.ok(plan.titleOpacity >= plan.leadInOpacity);
   }
   const draw = readSrc("src/features/brand-sting/render/draw-brand-sting.ts");
-  assert.match(draw, /titleSize = 64/);
-  assert.match(draw, /leadInSize = 22/);
+  assert.match(draw, /plan\.titleFontSize/);
+  assert.match(draw, /plan\.leadInFontSize/);
+  assert.match(draw, /plan\.leadInY/);
+  assert.match(draw, /plan\.titleY/);
+  assert.match(draw, /plan\.leadInDisplay/);
+  assert.doesNotMatch(draw, /titleSize = 64/);
+  assert.doesNotMatch(draw, /leadInSize = 22/);
+  assert.doesNotMatch(draw, /frameWidth \/ 1080/);
+  assert.doesNotMatch(draw, /plan\.mark\.cy \+/);
   assert.match(draw, /resetIsolatedDrawState/);
 });
 
@@ -310,6 +325,7 @@ test("end and end-buffer samples omit branded tokens; terminal draw is neutral",
     assert.equal(plan.subtitleOpacity, 0);
     assert.equal(plan.accentGlowOpacity, 0);
     assert.equal(plan.mark.reveal, 0);
+    assert.equal(plan.mark.opacity, 0);
     assert.notEqual(plan.phase, "hold");
   }
 
@@ -358,14 +374,157 @@ test("deterministic local primitives: no remote assets or wall-clock", () => {
   const preview = readSrc(
     "src/features/brand-sting/preview/BrandStingPreview.tsx",
   );
+  const mark = readSrc(
+    "src/features/brand-sting/domain/brand-sting-mark-geometry.ts",
+  );
   assert.doesNotMatch(frame, /Date\.now|Math\.random|fetch\(/);
   assert.doesNotMatch(draw, /https?:\/\//);
   assert.doesNotMatch(preview, /https?:\/\/(?!example)/);
+  assert.doesNotMatch(mark, /https?:\/\/|fetch\(|Date\.now|Math\.random/);
   assert.match(draw, /BRAND_STING_FONT_FAMILY/);
   assert.match(
     readSrc("src/features/brand-sting/domain/brand-sting.presets.ts"),
     /Arial, Helvetica, sans-serif/,
   );
+});
+
+test("preview is an output-space SVG and drops the old top-heavy layout", () => {
+  const preview = readSrc(
+    "src/features/brand-sting/preview/BrandStingPreview.tsx",
+  );
+  assert.match(preview, /resolveBrandStingFrame/);
+  assert.match(preview, /viewBox=\{`0 0 \$\{plan\.frameWidth\} \$\{plan\.frameHeight\}`\}/);
+  assert.match(preview, /width="100%"/);
+  assert.match(preview, /height="100%"/);
+  assert.match(preview, /leadInDisplay/);
+  assert.match(preview, /scaleBrandStingMarkGeometry/);
+  assert.match(preview, /resolveBrandStingMarkRevealClip/);
+  assert.doesNotMatch(preview, /top:\s*["']22%["']/);
+  assert.doesNotMatch(preview, /top:\s*["']24%["']/);
+  assert.doesNotMatch(preview, /top:\s*["']36%["']/);
+  assert.doesNotMatch(preview, /0\.72rem|1\.55rem|0\.95rem/);
+  assert.doesNotMatch(preview, /width:\s*56|height:\s*56|width:\s*180|height:\s*180/);
+  assert.doesNotMatch(
+    preview,
+    /requestAnimationFrame|ResizeObserver|@keyframes|transition:|setTimeout|setInterval/,
+  );
+
+  const sting = createDefaultShortForgeBrandSting(2500);
+  const markup = renderToStaticMarkup(
+    createElement(BrandStingPreview, { sting, elapsedMs: 1200 }),
+  );
+  assert.match(markup, /viewBox="0 0 1080 1920"/);
+  assert.match(markup, /data-brand-sting-surface="output-space"/);
+  assert.match(markup, /data-brand-sting-glow/);
+  assert.match(markup, /data-brand-sting-beam="0"/);
+  assert.match(markup, /data-brand-sting-beam="1"/);
+  assert.match(markup, /data-brand-sting-ring="0"/);
+  assert.match(markup, /data-brand-sting-ring="1"/);
+  assert.match(markup, /data-brand-sting-ring="2"/);
+  assert.match(markup, /data-brand-sting-ring-marker/);
+  assert.match(markup, /data-brand-sting-mark/);
+  assert.match(markup, /data-brand-sting-lead-in/);
+  assert.match(markup, /data-brand-sting-title/);
+  assert.match(markup, /data-brand-sting-subtitle/);
+  assert.match(markup, /data-brand-sting-accent-line/);
+  assert.match(markup, /MADE WITH/);
+  assert.match(markup, /ShortForge/);
+  assert.match(markup, />Studio</);
+});
+
+test("canvas consumes the shared mark geometry and resolved lockup", () => {
+  const draw = readSrc("src/features/brand-sting/render/draw-brand-sting.ts");
+  const preview = readSrc(
+    "src/features/brand-sting/preview/BrandStingPreview.tsx",
+  );
+  assert.match(draw, /scaleBrandStingMarkGeometry/);
+  assert.match(draw, /resolveBrandStingMarkRevealClip/);
+  assert.match(draw, /plan\.glow\.(cx|radius|opacity|color)/);
+  assert.match(draw, /plan\.rings/);
+  assert.match(draw, /plan\.beams/);
+  assert.match(draw, /plan\.accentLine/);
+  assert.match(draw, /plan\.mark\.opacity/);
+  assert.match(preview, /scaleBrandStingMarkGeometry/);
+  assert.doesNotMatch(draw, /const s = size \/ 48/);
+  assert.doesNotMatch(draw, /-18 \* s/);
+
+  const sting = createDefaultShortForgeBrandSting(2500);
+  const plan = resolveBrandStingFrame({ sting, elapsedMs: 1200 });
+  const ctx = makeCtx();
+  drawBrandSting(ctx, plan, 1080, 1920);
+  const calls = (ctx as unknown as { calls: string[] }).calls;
+  assert.ok(calls.includes("arc"));
+  assert.ok(calls.includes("fillText:MADE WITH"));
+  assert.ok(calls.includes("fillText:ShortForge"));
+  assert.ok(calls.includes("fillText:Studio"));
+  assert.equal(calls.filter((call) => call === "save").length, calls.filter((call) => call === "restore").length);
+  assert.equal(calls[0], "save");
+  assert.equal(calls[calls.length - 1], "restore");
+});
+
+test("two Brand Sting previews use distinct matched SVG ids that ignore seek", () => {
+  const preview = readSrc(
+    "src/features/brand-sting/preview/BrandStingPreview.tsx",
+  );
+  assert.match(preview, /useId\(/);
+  assert.doesNotMatch(preview, /Date\.now|Math\.random|requestAnimationFrame/);
+  assert.doesNotMatch(preview, /id=["']brand-sting-background["']/);
+
+  const sting = createDefaultShortForgeBrandSting(2500);
+  const seekA = renderToStaticMarkup(
+    createElement(BrandStingPreview, { sting, elapsedMs: 400 }),
+  );
+  const seekB = renderToStaticMarkup(
+    createElement(BrandStingPreview, { sting, elapsedMs: 1200 }),
+  );
+  const attr = (markup: string, name: string): string => {
+    const match = markup.match(new RegExp(`${name}="([^"]+)"`));
+    assert.ok(match?.[1], `missing ${name}`);
+    return match[1]!;
+  };
+  assert.equal(
+    attr(seekA, "data-brand-sting-background-id"),
+    attr(seekB, "data-brand-sting-background-id"),
+  );
+
+  const dual = renderToStaticMarkup(
+    createElement(
+      "div",
+      null,
+      createElement(BrandStingPreview, { sting, elapsedMs: 1200 }),
+      createElement(BrandStingPreview, { sting, elapsedMs: 1200 }),
+    ),
+  );
+  const backgrounds = [
+    ...dual.matchAll(/data-brand-sting-background-id="([^"]+)"/g),
+  ].map((match) => match[1]!);
+  const glows = [...dual.matchAll(/data-brand-sting-glow-id="([^"]+)"/g)].map(
+    (match) => match[1]!,
+  );
+  const clips = [
+    ...dual.matchAll(/data-brand-sting-mark-clip-id="([^"]+)"/g),
+  ].map((match) => match[1]!);
+  assert.equal(backgrounds.length, 2);
+  assert.notEqual(backgrounds[0], backgrounds[1]);
+  assert.notEqual(glows[0], glows[1]);
+  assert.notEqual(clips[0], clips[1]);
+  for (const id of [...backgrounds, ...glows, ...clips]) {
+    assert.match(dual, new RegExp(`id="${id}"`));
+    assert.match(dual, new RegExp(`url\\(#${id}\\)`));
+  }
+});
+
+test("capability-off preview and canvas render no branded residue", () => {
+  const off = { ...createDefaultShortForgeBrandSting(2500), enabled: false };
+  const markup = renderToStaticMarkup(
+    createElement(BrandStingPreview, { sting: off, elapsedMs: 1200 }),
+  );
+  assert.equal(markup, "");
+  const plan = resolveBrandStingFrame({ sting: off, elapsedMs: 1200 });
+  assert.equal(plan.visible, false);
+  const ctx = makeCtx();
+  drawBrandSting(ctx, plan, 1080, 1920);
+  assert.deepEqual((ctx as unknown as { calls: string[] }).calls, []);
 });
 
 console.log(`\n${passed} passed\n`);

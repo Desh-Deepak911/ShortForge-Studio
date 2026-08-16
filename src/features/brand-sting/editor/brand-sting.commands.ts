@@ -8,7 +8,6 @@ import type {
   ShortForgeBrandStingV1,
   VisualRetentionProjectExtensionsV1,
 } from "@/features/visual-retention/domain/visual-retention-extension-contracts";
-import { normalizeVisualRetentionProjectExtensions } from "@/features/engagement-overlays/domain/normalize-engagement-overlays";
 
 import {
   BRAND_STING_DEFAULT_DURATION_MS,
@@ -18,7 +17,6 @@ import {
 import {
   createDefaultShortForgeBrandSting,
   getShortForgeBrandSting,
-  normalizeShortForgeBrandSting,
 } from "../domain/normalize-brand-sting";
 
 export type BrandStingCommandStatus = "ok" | "recoverable" | "terminal";
@@ -42,29 +40,23 @@ export const BRAND_STING_CAPABILITY_OFF_MESSAGE =
 export const BRAND_STING_DURATION_INVALID_MESSAGE =
   "Choose 2s, 2.5s, or 3s for the ShortForge Studio outro.";
 
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+/**
+ * Structural clone only. Brand Sting commands must not run the engagement
+ * overlay normalizer — that would inject size/scale onto legacy overlays.
+ */
 function cloneScript(script: FootieScript): FootieScript {
-  const normalized = normalizeVisualRetentionProjectExtensions(
-    script.visualRetentionExtensions,
-    script.scenes.map((scene) => scene.id),
-  );
-  // Re-normalize sting with the dedicated fail-closed normalizer so malformed
-  // sting never blocks open, while overlays stay byte-stable when valid.
-  let extensions = normalized;
-  if (normalized?.shortForgeBrandSting) {
-    const sting = normalizeShortForgeBrandSting(normalized.shortForgeBrandSting);
-    if (sting) {
-      extensions = { ...normalized, shortForgeBrandSting: sting };
-    } else {
-      const next = { ...normalized };
-      delete next.shortForgeBrandSting;
-      extensions =
-        next.engagementOverlaysBySceneId != null ? next : undefined;
-    }
-  }
   return {
     ...script,
     scenes: script.scenes.map((scene) => ({ ...scene })),
-    ...(extensions ? { visualRetentionExtensions: extensions } : {}),
+    ...(script.visualRetentionExtensions
+      ? {
+          visualRetentionExtensions: cloneJson(script.visualRetentionExtensions),
+        }
+      : {}),
   };
 }
 
@@ -85,27 +77,40 @@ function refuseCapability(
   return null;
 }
 
+function hasNonBrandStingExtensionData(
+  extensions: VisualRetentionProjectExtensionsV1,
+): boolean {
+  return Object.entries(extensions).some(
+    ([key, value]) =>
+      key !== "version" && key !== "shortForgeBrandSting" && value != null,
+  );
+}
+
 function withBrandSting(
   script: FootieScript,
   brandSting: ShortForgeBrandStingV1 | undefined,
 ): FootieScript {
   const base = cloneScript(script);
-  const overlays = base.visualRetentionExtensions?.engagementOverlaysBySceneId;
-  const extensions: VisualRetentionProjectExtensionsV1 | undefined =
-    brandSting || overlays
-      ? {
-          version: 1,
-          ...(overlays ? { engagementOverlaysBySceneId: overlays } : {}),
-          ...(brandSting ? { shortForgeBrandSting: brandSting } : {}),
-        }
-      : undefined;
-  const next = { ...base };
-  if (extensions) {
-    next.visualRetentionExtensions = extensions;
+  const current: {
+    version: 1;
+    engagementOverlaysBySceneId?: VisualRetentionProjectExtensionsV1["engagementOverlaysBySceneId"];
+    shortForgeBrandSting?: ShortForgeBrandStingV1;
+  } = base.visualRetentionExtensions
+    ? { ...base.visualRetentionExtensions }
+    : { version: 1 };
+
+  if (brandSting) {
+    current.shortForgeBrandSting = brandSting;
   } else {
-    delete next.visualRetentionExtensions;
+    delete current.shortForgeBrandSting;
   }
-  return next;
+
+  if (!brandSting && !hasNonBrandStingExtensionData(current)) {
+    const next = { ...base };
+    delete next.visualRetentionExtensions;
+    return next;
+  }
+  return { ...base, visualRetentionExtensions: current };
 }
 
 export function enableBrandSting(

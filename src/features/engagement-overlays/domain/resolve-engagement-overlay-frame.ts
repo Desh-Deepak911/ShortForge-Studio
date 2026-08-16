@@ -14,10 +14,21 @@ import type {
 import {
   engagementOverlayIconsForKind,
   engagementOverlayLabelsForKind,
+  ENGAGEMENT_OVERLAY_COMBINED_REF_HEIGHT,
+  ENGAGEMENT_OVERLAY_COMBINED_REF_WIDTH,
   ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
   ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
+  ENGAGEMENT_OVERLAY_MOTION,
+  ENGAGEMENT_OVERLAY_SINGLE_REF_HEIGHT,
+  ENGAGEMENT_OVERLAY_SINGLE_REF_WIDTH,
+  ENGAGEMENT_OVERLAY_TYPE,
   type EngagementOverlayIconToken,
 } from "./engagement-overlay.presets";
+import {
+  resolveEngagementOverlayCaptionSafePlacement,
+  type EngagementOverlayCaptionCollisionInput,
+  type ResolvedEngagementOverlayCaptionSafePlacement,
+} from "./resolve-engagement-overlay-caption-safe-placement";
 import {
   resolveEngagementOverlayWindow,
   type ResolvedEngagementOverlayWindow,
@@ -52,6 +63,50 @@ export interface ResolvedEngagementOverlaySegment {
   readonly emphasis: number;
   /** Subscribe confirmation — true only during the final combined beat. */
   readonly confirmation: boolean;
+  /** Deterministic active-segment scale. 1 when inactive. */
+  readonly pulseScale: number;
+  /** Deterministic restrained glow. 0 when inactive. */
+  readonly glowOpacity: number;
+}
+
+/**
+ * Equal-column chrome for Preview/canvas. Always populated, including hidden
+ * frames. Coordinates are absolute in the output frame.
+ * Icon/label X origins are not precomputed — renderers center the measured
+ * icon-plus-label group inside each columnBox.
+ */
+export interface ResolvedEngagementOverlayChrome {
+  readonly paddingX: number;
+  readonly paddingY: number;
+  readonly columnCount: number;
+  readonly columnWidth: number;
+  /** Absolute equal-width column bounds. */
+  readonly columnBoxes: readonly EngagementOverlayLayoutBox[];
+  /** Absolute X of each equal column center. */
+  readonly columnCentersX: readonly number[];
+  /** Absolute X of separators between columns (empty for single-action). */
+  readonly separatorXs: readonly number[];
+  readonly separatorHeight: number;
+  readonly separatorOpacity: number;
+  readonly iconSize: number;
+  readonly iconLabelGap: number;
+  readonly iconStrokeWidth: number;
+  /** Shared vertical center for icons and labels. */
+  readonly labelCenterY: number;
+  readonly fontSize: number;
+  readonly fontWeight: number;
+  readonly letterSpacingEm: number;
+  /** Multiply by segment.glowOpacity for a restrained blur radius. */
+  readonly glowBlurScale: number;
+  readonly cornerRadius: number;
+}
+
+export interface ResolvedEngagementOverlayIconLabelOrigin {
+  readonly iconCx: number;
+  readonly iconCy: number;
+  readonly labelX: number;
+  readonly labelY: number;
+  readonly groupWidth: number;
 }
 
 export interface ResolvedEngagementOverlayFrame {
@@ -73,7 +128,10 @@ export interface ResolvedEngagementOverlayFrame {
    * single segment that is never confirmation-active.
    */
   readonly segments: readonly ResolvedEngagementOverlaySegment[];
+  readonly chrome: ResolvedEngagementOverlayChrome;
   readonly window: ResolvedEngagementOverlayWindow;
+  /** Caption-safe placement decision. Identical for Preview/Browser/Headless. */
+  readonly captionSafePlacement: ResolvedEngagementOverlayCaptionSafePlacement;
 }
 
 export interface ResolveEngagementOverlayFrameInput {
@@ -83,6 +141,11 @@ export interface ResolveEngagementOverlayFrameInput {
   readonly sceneElapsedMs: number;
   readonly frameWidth?: number;
   readonly frameHeight?: number;
+  /**
+   * Scene-stable caption collision context. Omit when the scene has no captions.
+   * Must not be derived from the active caption word.
+   */
+  readonly captionCollision?: EngagementOverlayCaptionCollisionInput;
 }
 
 function clamp01(value: number): number {
@@ -125,8 +188,18 @@ function layoutForPosition(
   const sizeMultiplier = size === "small" ? 0.82 : size === "large" ? 1.18 : 1;
   // Medium is the larger legible default; fineScale remains bounded by normalization.
   const authorScale = sizeMultiplier * fineScale;
-  const width = (kind === "combined" ? 680 : 300) * authorScale * scale;
-  const height = (kind === "combined" ? 112 : 96) * authorScale * scale;
+  const width =
+    (kind === "combined"
+      ? ENGAGEMENT_OVERLAY_COMBINED_REF_WIDTH
+      : ENGAGEMENT_OVERLAY_SINGLE_REF_WIDTH) *
+    authorScale *
+    scale;
+  const height =
+    (kind === "combined"
+      ? ENGAGEMENT_OVERLAY_COMBINED_REF_HEIGHT
+      : ENGAGEMENT_OVERLAY_SINGLE_REF_HEIGHT) *
+    authorScale *
+    scale;
   const marginX = 40 * scale;
   const marginY = 96 * scale;
   const safeBottom = 360 * scale; // reserve the common caption band at every size
@@ -177,6 +250,98 @@ function layoutForPosition(
   };
 }
 
+/**
+ * Equal-column chrome derived only from the resolved layout box.
+ * paddingX * 2 + columnWidth * columnCount === layout.width.
+ * Does not assume label widths.
+ */
+function resolveChrome(
+  layout: EngagementOverlayLayoutBox,
+  kind: EngagementOverlayKind,
+): ResolvedEngagementOverlayChrome {
+  const columnCount = kind === "combined" ? 3 : 1;
+  const paddingX = layout.height * 0.18;
+  const paddingY = layout.height * 0.14;
+  const innerWidth = Math.max(0, layout.width - paddingX * 2);
+  const columnWidth = columnCount > 0 ? innerWidth / columnCount : 0;
+  const fontSize = Math.max(
+    ENGAGEMENT_OVERLAY_TYPE.minFontSize,
+    layout.height * ENGAGEMENT_OVERLAY_TYPE.fontSizeRatio,
+  );
+  const iconSize = Math.min(
+    layout.height * ENGAGEMENT_OVERLAY_TYPE.iconSizeRatio,
+    columnWidth * 0.22,
+  );
+  const iconLabelGap = layout.height * ENGAGEMENT_OVERLAY_TYPE.iconLabelGapRatio;
+  const columnBoxes: EngagementOverlayLayoutBox[] = [];
+  const columnCentersX: number[] = [];
+  const separatorXs: number[] = [];
+
+  for (let index = 0; index < columnCount; index += 1) {
+    const x = layout.x + paddingX + index * columnWidth;
+    columnBoxes.push({
+      x,
+      y: layout.y + paddingY,
+      width: columnWidth,
+      height: Math.max(0, layout.height - paddingY * 2),
+    });
+    columnCentersX.push(x + columnWidth / 2);
+    if (index < columnCount - 1) {
+      separatorXs.push(layout.x + paddingX + (index + 1) * columnWidth);
+    }
+  }
+
+  return {
+    paddingX,
+    paddingY,
+    columnCount,
+    columnWidth,
+    columnBoxes,
+    columnCentersX,
+    separatorXs,
+    separatorHeight: layout.height * 0.42,
+    separatorOpacity: columnCount > 1 ? 0.35 : 0,
+    iconSize,
+    iconLabelGap,
+    iconStrokeWidth:
+      iconSize *
+      (ENGAGEMENT_OVERLAY_TYPE.iconStrokeViewBox /
+        ENGAGEMENT_OVERLAY_TYPE.iconViewBox),
+    labelCenterY: layout.y + layout.height / 2,
+    fontSize,
+    fontWeight: ENGAGEMENT_OVERLAY_TYPE.fontWeight,
+    letterSpacingEm: ENGAGEMENT_OVERLAY_TYPE.letterSpacingEm,
+    glowBlurScale: iconSize * 0.9,
+    cornerRadius: layout.height / 2,
+  };
+}
+
+/**
+ * Center a measured icon-plus-label group inside a resolved column.
+ * Renderers may supply labelWidth from the fixed label text only.
+ */
+export function resolveEngagementOverlayCenteredIconLabel(input: {
+  readonly columnBox: EngagementOverlayLayoutBox;
+  readonly iconSize: number;
+  readonly iconLabelGap: number;
+  readonly labelWidth: number;
+  readonly labelCenterY: number;
+}): ResolvedEngagementOverlayIconLabelOrigin {
+  const labelWidth =
+    typeof input.labelWidth === "number" && Number.isFinite(input.labelWidth)
+      ? Math.max(0, input.labelWidth)
+      : 0;
+  const groupWidth = input.iconSize + input.iconLabelGap + labelWidth;
+  const groupLeft = input.columnBox.x + (input.columnBox.width - groupWidth) / 2;
+  return {
+    iconCx: groupLeft + input.iconSize / 2,
+    iconCy: input.labelCenterY,
+    labelX: groupLeft + input.iconSize + input.iconLabelGap,
+    labelY: input.labelCenterY,
+    groupWidth,
+  };
+}
+
 function slideDelta(
   position: EngagementOverlayPosition,
   progress: number,
@@ -222,6 +387,8 @@ function resolveSegments(input: {
       settled: false,
       emphasis: 0,
       confirmation: false,
+      pulseScale: 1,
+      glowOpacity: 0,
     }));
   }
 
@@ -251,15 +418,38 @@ function resolveSegments(input: {
     const active = index === activeIndex;
     const settled = activeIndex >= 0 && index < activeIndex;
     const confirmation = active && index === beatCount - 1;
+    const segmentEmphasis = active ? emphasis : 0;
     return {
       index,
       label,
       iconToken: icons[index] ?? icons[0] ?? "heart",
       active,
       settled,
-      emphasis: active ? emphasis : 0,
+      emphasis: segmentEmphasis,
       confirmation,
+      pulseScale: active
+        ? 1 +
+          ENGAGEMENT_OVERLAY_MOTION.pulseScalePeak * segmentEmphasis +
+          (confirmation ? ENGAGEMENT_OVERLAY_MOTION.confirmationPulseExtra : 0)
+        : 1,
+      glowOpacity: active
+        ? ENGAGEMENT_OVERLAY_MOTION.glowOpacityPeak * segmentEmphasis
+        : 0,
     };
+  });
+}
+
+function resolveCaptionSafeLayout(
+  requested: EngagementOverlayLayoutBox,
+  frameWidth: number,
+  frameHeight: number,
+  captionCollision?: EngagementOverlayCaptionCollisionInput,
+): ResolvedEngagementOverlayCaptionSafePlacement {
+  return resolveEngagementOverlayCaptionSafePlacement({
+    requested,
+    frameWidth,
+    frameHeight,
+    captionCollision,
   });
 }
 
@@ -277,6 +467,7 @@ function buildFrame(input: {
   readonly holdLocalMs: number;
   readonly holdMs: number;
   readonly window: ResolvedEngagementOverlayWindow;
+  readonly captionSafePlacement: ResolvedEngagementOverlayCaptionSafePlacement;
 }): ResolvedEngagementOverlayFrame {
   const labels = engagementOverlayLabelsForKind(input.kind);
   const iconTokens = engagementOverlayIconsForKind(input.kind);
@@ -300,7 +491,9 @@ function buildFrame(input: {
     labels,
     iconTokens,
     segments,
+    chrome: resolveChrome(input.layout, input.kind),
     window: input.window,
+    captionSafePlacement: input.captionSafePlacement,
   };
 }
 
@@ -309,9 +502,24 @@ function hiddenFrame(
   overlay: SceneEngagementOverlayV1 | undefined,
   frameWidth: number,
   frameHeight: number,
+  captionCollision?: EngagementOverlayCaptionCollisionInput,
 ): ResolvedEngagementOverlayFrame {
   const kind = overlay?.kind ?? "like";
   const position = overlay?.position ?? "top-right";
+  const requested = layoutForPosition(
+    position,
+    kind,
+    overlay?.size ?? ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
+    overlay?.scale ?? ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
+    frameWidth,
+    frameHeight,
+  );
+  const captionSafePlacement = resolveCaptionSafeLayout(
+    requested,
+    frameWidth,
+    frameHeight,
+    captionCollision,
+  );
   return buildFrame({
     visible: false,
     phase: "hidden",
@@ -320,19 +528,13 @@ function hiddenFrame(
     scale: 1,
     translateX: 0,
     translateY: 0,
-    layout: layoutForPosition(
-      position,
-      kind,
-      overlay?.size ?? ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
-      overlay?.scale ?? ENGAGEMENT_OVERLAY_DEFAULT_SCALE,
-      frameWidth,
-      frameHeight,
-    ),
+    layout: captionSafePlacement.applied,
     kind,
     position,
     holdLocalMs: 0,
     holdMs: 0,
     window,
+    captionSafePlacement,
   });
 }
 
@@ -369,7 +571,13 @@ export function resolveEngagementOverlayFrame(
   });
 
   if (!window.available || !window.overlay) {
-    return hiddenFrame(window, window.overlay, frameWidth, frameHeight);
+    return hiddenFrame(
+      window,
+      window.overlay,
+      frameWidth,
+      frameHeight,
+      input.captionCollision,
+    );
   }
 
   const elapsed =
@@ -378,12 +586,18 @@ export function resolveEngagementOverlayFrame(
       : 0;
 
   if (elapsed < window.startOffsetMs || elapsed >= window.endOffsetMs) {
-    return hiddenFrame(window, window.overlay, frameWidth, frameHeight);
+    return hiddenFrame(
+      window,
+      window.overlay,
+      frameWidth,
+      frameHeight,
+      input.captionCollision,
+    );
   }
 
   const local = elapsed - window.startOffsetMs;
   const { entranceMs, exitMs, holdMs } = resolvePhaseDurations(window.durationMs);
-  const layout = layoutForPosition(
+  const requested = layoutForPosition(
     window.overlay.position,
     window.overlay.kind,
     window.overlay.size ?? ENGAGEMENT_OVERLAY_DEFAULT_SIZE,
@@ -391,6 +605,13 @@ export function resolveEngagementOverlayFrame(
     frameWidth,
     frameHeight,
   );
+  const captionSafePlacement = resolveCaptionSafeLayout(
+    requested,
+    frameWidth,
+    frameHeight,
+    input.captionCollision,
+  );
+  const layout = captionSafePlacement.applied;
   const kind = window.overlay.kind;
   const position = window.overlay.position;
 
@@ -403,7 +624,11 @@ export function resolveEngagementOverlayFrame(
       phase: "entrance",
       progress: clamp01(progress),
       opacity: eased,
-      scale: 0.92 + 0.08 * eased,
+      scale:
+        ENGAGEMENT_OVERLAY_MOTION.entranceScaleFrom +
+        (ENGAGEMENT_OVERLAY_MOTION.entranceScaleTo -
+          ENGAGEMENT_OVERLAY_MOTION.entranceScaleFrom) *
+          eased,
       translateX: slide.x,
       translateY: slide.y,
       layout,
@@ -412,6 +637,7 @@ export function resolveEngagementOverlayFrame(
       holdLocalMs: 0,
       holdMs,
       window,
+      captionSafePlacement,
     });
   }
 
@@ -431,6 +657,7 @@ export function resolveEngagementOverlayFrame(
       holdLocalMs,
       holdMs,
       window,
+      captionSafePlacement,
     });
   }
 
@@ -443,7 +670,7 @@ export function resolveEngagementOverlayFrame(
     phase: "exit",
     progress: clamp01(progress),
     opacity: 1 - eased,
-    scale: 1 - 0.06 * eased,
+    scale: 1 - ENGAGEMENT_OVERLAY_MOTION.exitScaleDelta * eased,
     translateX: slide.x,
     translateY: slide.y,
     layout,
@@ -452,5 +679,6 @@ export function resolveEngagementOverlayFrame(
     holdLocalMs: holdMs,
     holdMs,
     window,
+    captionSafePlacement,
   });
 }
