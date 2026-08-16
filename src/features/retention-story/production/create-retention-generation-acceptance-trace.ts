@@ -34,6 +34,8 @@ export interface RetentionGenerationAcceptanceTraceRecorder {
     readonly boundedRewriteType?:
       | "opening_repair"
       | "ranking_payoff_repair"
+      | "grounding_payoff_repair"
+      | "duplicate_payoff_repair"
       | "supported_opening_promotion"
       | "duration_compression";
   }): RetentionGenerationAcceptanceTrace;

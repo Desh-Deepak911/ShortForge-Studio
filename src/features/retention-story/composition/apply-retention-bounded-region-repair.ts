@@ -13,6 +13,8 @@ import { evaluateRetentionSpokenClaimGrounding } from "./evaluate-retention-spok
 export type RetentionBoundedRewriteType =
   | "opening_repair"
   | "ranking_payoff_repair"
+  | "grounding_payoff_repair"
+  | "duplicate_payoff_repair"
   | "supported_opening_promotion"
   | "duration_compression";
 
@@ -181,6 +183,144 @@ export function applyRetentionBoundedRankingPayoffRepair(input: {
     preservedPrefix,
     replacement,
     rewriteType: "ranking_payoff_repair",
+    inventionRejected: false,
+  });
+}
+
+export function applyRetentionBoundedGroundingPayoffRepair(input: {
+  readonly title: string;
+  readonly narration: string;
+  readonly replacementClosing: string;
+  readonly contentContract: RetentionCreatorContentContract;
+  readonly brief: RetentionCompositionBrief;
+  readonly eligibleClaimIds: ReadonlySet<string>;
+  readonly grounding?: RetentionGroundingContext | null;
+}): RetentionBoundedRegionRepairResult {
+  const source = input.narration.trim();
+  const payoff = lastSentence(source);
+  const payoffStart = source.lastIndexOf(payoff);
+  const preservedPrefix = source.slice(0, Math.max(0, payoffStart)).trimEnd();
+  const withoutUnsupportedClosing = evaluateRetentionCanonicalNarrationAcceptance({
+    raw: { title: input.title, narration: preservedPrefix },
+    contentContract: input.contentContract,
+    brief: input.brief,
+    eligibleClaimIds: input.eligibleClaimIds,
+    grounding: input.grounding,
+  });
+  const consequenceUnit = input.brief.intendedConsequence
+    ? input.contentContract.orderedUnits.find(
+        (unit) =>
+          unit.text.trim() === input.brief.intendedConsequence?.trim(),
+      )
+    : null;
+  const consequenceRetained =
+    consequenceUnit == null ||
+    (withoutUnsupportedClosing.proposal != null &&
+      [consequenceUnit.contentUnitId, consequenceUnit.claimId]
+        .filter((id): id is string => id != null)
+        .some((id) =>
+          withoutUnsupportedClosing.proposal!.usedContentIds.includes(id),
+        ));
+  if (
+    preservedPrefix &&
+    withoutUnsupportedClosing.decision === "accept" &&
+    consequenceRetained
+  ) {
+    return Object.freeze({
+      ok: true,
+      narration: preservedPrefix,
+      preservedBody: preservedPrefix,
+      preservedPayoff: payoff,
+      preservedPrefix,
+      replacement: "",
+      rewriteType: "grounding_payoff_repair",
+      inventionRejected: false,
+    });
+  }
+  const replacementRaw = input.replacementClosing.trim();
+  const replacement = replacementRaw
+    ? /[.!?…]$/u.test(replacementRaw)
+      ? replacementRaw
+      : `${replacementRaw}.`
+    : "";
+  const inventionRejected = introducesInvention(
+    replacement,
+    input.contentContract,
+    input.eligibleClaimIds,
+    input.grounding,
+  );
+  if (!preservedPrefix || !replacement || inventionRejected) {
+    return Object.freeze({
+      ok: false,
+      narration: source,
+      preservedBody: preservedPrefix,
+      preservedPayoff: payoff,
+      preservedPrefix,
+      replacement,
+      rewriteType: "grounding_payoff_repair",
+      inventionRejected,
+    });
+  }
+  const narration = `${preservedPrefix} ${replacement}`.replace(/\s+/g, " ").trim();
+  const accepted = evaluateRetentionCanonicalNarrationAcceptance({
+    raw: { title: input.title, narration },
+    contentContract: input.contentContract,
+    brief: input.brief,
+    eligibleClaimIds: input.eligibleClaimIds,
+    grounding: input.grounding,
+  });
+  return Object.freeze({
+    ok: accepted.decision === "accept" && narration.startsWith(preservedPrefix),
+    narration,
+    preservedBody: preservedPrefix,
+    preservedPayoff: payoff,
+    preservedPrefix,
+    replacement,
+    rewriteType: "grounding_payoff_repair",
+    inventionRejected: false,
+  });
+}
+
+export function applyRetentionDuplicatePayoffRepair(input: {
+  readonly title: string;
+  readonly narration: string;
+  readonly contentContract: RetentionCreatorContentContract;
+  readonly brief: RetentionCompositionBrief;
+  readonly eligibleClaimIds: ReadonlySet<string>;
+  readonly grounding?: RetentionGroundingContext | null;
+}): RetentionBoundedRegionRepairResult {
+  const source = input.narration.trim();
+  const sentences = source.split(/(?<=[.!?…])\s+/u).filter(Boolean);
+  const payoff = sentences.at(-1)?.trim() ?? "";
+  if (sentences.length < 3 || !payoff) {
+    return Object.freeze({
+      ok: false,
+      narration: source,
+      preservedBody: source,
+      preservedPayoff: payoff,
+      preservedPrefix: source,
+      replacement: "",
+      rewriteType: "duplicate_payoff_repair",
+      inventionRejected: false,
+    });
+  }
+  const preserved = [...sentences.slice(0, -2), payoff];
+  const narration = preserved.join(" ").trim();
+  const accepted = evaluateRetentionCanonicalNarrationAcceptance({
+    raw: { title: input.title, narration },
+    contentContract: input.contentContract,
+    brief: input.brief,
+    eligibleClaimIds: input.eligibleClaimIds,
+    grounding: input.grounding,
+  });
+  return Object.freeze({
+    ok: accepted.decision === "accept",
+    narration,
+    preservedBody: sentences.slice(0, -2).join(" "),
+    preservedPayoff: payoff,
+    preservedPrefix: sentences.slice(0, -2).join(" "),
+    replacement: payoff,
+    rewriteType: "duplicate_payoff_repair",
     inventionRejected: false,
   });
 }

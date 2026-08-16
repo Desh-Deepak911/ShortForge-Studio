@@ -53,7 +53,9 @@ import { evaluateRetentionSpokenClaimGrounding } from "../composition/evaluate-r
 import { evaluateRetentionHookBodyPayoff } from "../composition/evaluate-retention-hook-body-payoff";
 import {
   applyRetentionBoundedOpeningRepair,
+  applyRetentionBoundedGroundingPayoffRepair,
   applyRetentionBoundedRankingPayoffRepair,
+  applyRetentionDuplicatePayoffRepair,
   buildDeterministicRankingNumberOneCloser,
   extractReplacementClosing,
   extractReplacementOpening,
@@ -371,7 +373,9 @@ function acceptSplicedNarration(input: {
       outputNarration: candidate.assembledNarration,
       reason: input.rewriteType,
       changedRegion:
-        input.rewriteType === "ranking_payoff_repair"
+        input.rewriteType === "ranking_payoff_repair" ||
+        input.rewriteType === "grounding_payoff_repair" ||
+        input.rewriteType === "duplicate_payoff_repair"
           ? "payoff"
           : "opening",
       authority: "targeted_rewrite",
@@ -856,6 +860,14 @@ export function createRetentionHookedModelCall(
           ) &&
           relationship.payoff.includes(numberOneToken) &&
           /\b(?:number one|no\.?\s*1|#1)\b/iu.test(relationship.payoff);
+        const finalUnsupportedPayoff =
+          error.normalizeSeam === "unsupported_claim_or_claim_reference_rejection" &&
+          request.scriptMode !== "top_5" &&
+          spokenGrounding.sentenceProvenance.length >= 2 &&
+          spokenGrounding.sentenceProvenance.at(-1) === "unsupported" &&
+          spokenGrounding.sentenceProvenance
+            .slice(0, -1)
+            .every((provenance) => provenance !== "unsupported");
         const rankingPayoffOnly =
           error.normalizeSeam === "hook_body_relationship_rejection" &&
           request.scriptMode === "top_5" &&
@@ -977,6 +989,86 @@ export function createRetentionHookedModelCall(
                   // The ledger may already be closed if consume failed.
                 }
               }
+            }
+          }
+        }
+
+        if (finalUnsupportedPayoff) {
+          const replacementClosing =
+            request.compositionBrief.intendedConsequence?.trim() ||
+            [...contentContract.orderedUnits]
+              .reverse()
+              .find(
+                (unit) =>
+                  unit.kind !== "instruction" && unit.kind !== "forbidden",
+              )
+              ?.text.trim() ||
+            "";
+          const spliced = applyRetentionBoundedGroundingPayoffRepair({
+            title: typeof proposal.title === "string" ? proposal.title : "Story",
+            narration: proposal.narration,
+            replacementClosing,
+            contentContract,
+            brief: request.compositionBrief,
+            eligibleClaimIds,
+            grounding: input.grounding,
+          });
+          if (spliced.ok) {
+            const accepted = acceptSplicedNarration({
+              title: typeof proposal.title === "string" ? proposal.title : "Story",
+              narration: spliced.narration,
+              rewriteType: "grounding_payoff_repair",
+              sourceNarration: proposal.narration,
+              plan: input.plan,
+              grounding: input.grounding,
+              strategySeed: input.strategySeed,
+              ledger: input.ledger,
+              contract: input.contract,
+              state: input.state,
+              contentContract,
+              brief: request.compositionBrief,
+              eligibleClaimIds,
+              permittedHookClaimIds: hookInput.permittedClaimIds,
+            });
+            if (accepted) {
+              recordInitialOutcome("succeeded");
+              return accepted;
+            }
+          }
+        }
+
+        if (
+          error.normalizeSeam === "hook_body_relationship_rejection" &&
+          relationship.reasonIds.includes("payoff_repeats_previous_consequence")
+        ) {
+          const spliced = applyRetentionDuplicatePayoffRepair({
+            title: typeof proposal.title === "string" ? proposal.title : "Story",
+            narration: proposal.narration,
+            contentContract,
+            brief: request.compositionBrief,
+            eligibleClaimIds,
+            grounding: input.grounding,
+          });
+          if (spliced.ok) {
+            const accepted = acceptSplicedNarration({
+              title: typeof proposal.title === "string" ? proposal.title : "Story",
+              narration: spliced.narration,
+              rewriteType: "duplicate_payoff_repair",
+              sourceNarration: proposal.narration,
+              plan: input.plan,
+              grounding: input.grounding,
+              strategySeed: input.strategySeed,
+              ledger: input.ledger,
+              contract: input.contract,
+              state: input.state,
+              contentContract,
+              brief: request.compositionBrief,
+              eligibleClaimIds,
+              permittedHookClaimIds: hookInput.permittedClaimIds,
+            });
+            if (accepted) {
+              recordInitialOutcome("succeeded");
+              return accepted;
             }
           }
         }

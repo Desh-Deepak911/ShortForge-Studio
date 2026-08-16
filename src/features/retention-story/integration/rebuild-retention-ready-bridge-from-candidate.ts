@@ -72,6 +72,8 @@ export function rebuildRetentionReadyBridgeFromCandidate(input: {
   readonly boundedRewriteType?:
     | "opening_repair"
     | "ranking_payoff_repair"
+    | "grounding_payoff_repair"
+    | "duplicate_payoff_repair"
     | "supported_opening_promotion";
 }): RetentionHookBridgeResult {
   const {

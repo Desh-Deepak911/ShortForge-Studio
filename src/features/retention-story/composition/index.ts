@@ -47,6 +47,8 @@ export { evaluateRetentionCanonicalNarrationAcceptance } from "./evaluate-retent
 export {
   applyRetentionBoundedOpeningRepair,
   applyRetentionBoundedRankingPayoffRepair,
+  applyRetentionBoundedGroundingPayoffRepair,
+  applyRetentionDuplicatePayoffRepair,
   buildDeterministicRankingNumberOneCloser,
   extractReplacementOpening,
   extractReplacementClosing,
