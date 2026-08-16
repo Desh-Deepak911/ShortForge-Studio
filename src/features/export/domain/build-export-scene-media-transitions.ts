@@ -10,6 +10,10 @@ import {
 } from "@/features/scene-media-transitions/domain/effect-support";
 import { normalizeSceneMediaTransitionTrack } from "@/features/scene-media-transitions/domain/normalize-track";
 import { resolveEffectiveIntraSceneTransitionDurationMs } from "@/features/scene-media-transitions/resolution/resolve-effective-duration";
+import {
+  CONTINUOUS_INTRA_SCENE_TRANSITION_TIMING_MODEL,
+  resolveContinuousTransitionFootageAvailability,
+} from "@/features/scene-media-transitions/resolution/resolve-continuous-intra-scene-transition-timing";
 
 import type {
   ExportSceneMediaTimelineManifest,
@@ -32,6 +36,7 @@ function isDrawableMediaManifest(media: ExportMediaManifest): boolean {
 export function buildExportSceneMediaTransitionTrack(
   scene: FootieScene,
   mediaTimeline: ExportSceneMediaTimelineManifest,
+  options: { readonly continuousTimingEnabled?: boolean } = {},
 ): ExportSceneMediaTransitionTrackManifest {
   const items = mediaTimeline.items;
   if (items.length < 2) {
@@ -86,9 +91,26 @@ export function buildExportSceneMediaTransitionTrack(
       continue;
     }
 
-    const overlayStartOffsetMs = toFrozen.startOffsetMs;
+    const continuousTimingEnabled = options.continuousTimingEnabled === true;
+    if (
+      continuousTimingEnabled &&
+      !resolveContinuousTransitionFootageAvailability({
+        fromMedia: fromFrozen.media,
+        toMedia: toFrozen.media,
+        fromWindowDurationMs: fromFrozen.durationMs,
+        effectiveDurationMs,
+      }).allowed
+    ) {
+      continue;
+    }
+    const overlayStartOffsetMs = continuousTimingEnabled
+      ? toFrozen.startOffsetMs - Math.floor(effectiveDurationMs / 2)
+      : toFrozen.startOffsetMs;
     const overlayEndOffsetMs = overlayStartOffsetMs + effectiveDurationMs;
-    if (overlayEndOffsetMs > toFrozen.endOffsetMs) {
+    if (
+      overlayStartOffsetMs < fromFrozen.startOffsetMs ||
+      overlayEndOffsetMs > toFrozen.endOffsetMs
+    ) {
       continue;
     }
 
@@ -102,6 +124,9 @@ export function buildExportSceneMediaTransitionTrack(
       effectiveDurationMs,
       overlayStartOffsetMs,
       overlayEndOffsetMs,
+      ...(continuousTimingEnabled
+        ? { timingModel: CONTINUOUS_INTRA_SCENE_TRANSITION_TIMING_MODEL }
+        : {}),
     });
   }
 

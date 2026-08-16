@@ -15,6 +15,7 @@ import {
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_V2,
   isExportManifestV4,
+  isExportManifestV5,
   type ExportEnvironmentSnapshot,
   type ExportManifestV2,
   type ExportManifestV4,
@@ -288,8 +289,8 @@ export function buildHeadlessReferenceFixture(input?: {
       quality: rendererProfile.quality,
     },
   });
-  if (!isExportManifestV4(manifest)) {
-    throw new Error("Expected v4 reference manifest.");
+  if (!isExportManifestV4(manifest) && !isExportManifestV5(manifest)) {
+    throw new Error("Expected v4 or v5 reference manifest.");
   }
   if (withMusic && manifest.audio.mode !== "voice-with-music") {
     throw new Error("Expected voice-with-music manifest mode.");
@@ -324,6 +325,8 @@ export function buildHeadlessReferenceFixture(input?: {
     rendererContractVersion: EXPORT_RENDERER_CONTRACT_V2,
     scenes: v2Scenes,
   } as unknown as Omit<ExportManifestV2, "fingerprint">;
+  delete (v2Draft as { requiredCapabilities?: unknown }).requiredCapabilities;
+  delete (v2Draft as { brandSting?: unknown }).brandSting;
   const appliedV2 = applyHeadlessFormatToManifest(
     {
       ...v2Draft,

@@ -44,6 +44,7 @@ function issue(
 function validateMediaTransitions(
   scene: Record<string, unknown>,
   sceneId: string,
+  timingAuthority: "legacy" | "centered-continuous",
 ): ExportManifestV3IntegrityIssue[] {
   const issues: ExportManifestV3IntegrityIssue[] = [];
   const track = scene.mediaTransitions;
@@ -317,15 +318,45 @@ function validateMediaTransitions(
       }
     }
 
+    const usesContinuousTiming = timingAuthority === "centered-continuous";
     if (
+      usesContinuousTiming &&
+      boundary.timingModel !== "centered-continuous-v1"
+    ) {
+      issues.push(
+        issue(
+          "INVALID_MEDIA_TRANSITION_TIMING_MODEL",
+          `Scene "${sceneId}" boundary[${bi}] must use centered-continuous-v1 timing.`,
+          sceneId,
+        ),
+      );
+    }
+    if (!usesContinuousTiming && boundary.timingModel !== undefined) {
+      issues.push(
+        issue(
+          "UNSUPPORTED_MEDIA_TRANSITION_TIMING_MODEL",
+          `Scene "${sceneId}" boundary[${bi}] timingModel requires the continuous transition capability.`,
+          sceneId,
+        ),
+      );
+    }
+
+    const expectedOverlayStart =
       isFiniteInteger(toItem.startOffsetMs) &&
+      isFiniteInteger(boundary.effectiveDurationMs)
+        ? usesContinuousTiming
+          ? toItem.startOffsetMs - Math.floor(boundary.effectiveDurationMs / 2)
+          : toItem.startOffsetMs
+        : null;
+    if (
+      expectedOverlayStart !== null &&
       isFiniteInteger(boundary.overlayStartOffsetMs) &&
-      boundary.overlayStartOffsetMs !== toItem.startOffsetMs
+      boundary.overlayStartOffsetMs !== expectedOverlayStart
     ) {
       issues.push(
         issue(
           "MEDIA_TRANSITION_OVERLAY_START_MISMATCH",
-          `Scene "${sceneId}" boundary[${bi}] overlayStartOffsetMs must equal the incoming item start.`,
+          `Scene "${sceneId}" boundary[${bi}] overlayStartOffsetMs does not match its timing model.`,
           sceneId,
         ),
       );
@@ -350,15 +381,17 @@ function validateMediaTransitions(
     if (
       isFiniteInteger(boundary.overlayStartOffsetMs) &&
       isFiniteInteger(boundary.overlayEndOffsetMs) &&
+      isFiniteInteger(fromItem.startOffsetMs) &&
       isFiniteInteger(toItem.startOffsetMs) &&
       isFiniteInteger(toItem.endOffsetMs) &&
-      (boundary.overlayStartOffsetMs < toItem.startOffsetMs ||
+      (boundary.overlayStartOffsetMs <
+          (usesContinuousTiming ? fromItem.startOffsetMs : toItem.startOffsetMs) ||
         boundary.overlayEndOffsetMs > toItem.endOffsetMs)
     ) {
       issues.push(
         issue(
           "MEDIA_TRANSITION_OVERLAY_OUT_OF_WINDOW",
-          `Scene "${sceneId}" boundary[${bi}] overlay must remain inside the incoming item window.`,
+          `Scene "${sceneId}" boundary[${bi}] overlay exceeds its adjacent media windows.`,
           sceneId,
         ),
       );
@@ -423,6 +456,7 @@ function validateExportManifestV3SceneMediaInner(
     version: number;
     rendererContractVersion: string;
     label: string;
+    transitionTimingModel?: "legacy" | "centered-continuous";
   },
 ): ExportManifestV3IntegrityResult {
   if (manifest === null || manifest === undefined || !isObject(manifest)) {
@@ -468,7 +502,13 @@ function validateExportManifestV3SceneMediaInner(
         typeof scene.id === "string" && scene.id.trim()
           ? scene.id
           : `index:${index}`;
-      issues.push(...validateMediaTransitions(scene, sceneId));
+      issues.push(
+        ...validateMediaTransitions(
+          scene,
+          sceneId,
+          authority.transitionTimingModel ?? "legacy",
+        ),
+      );
     }
   }
 
@@ -514,6 +554,7 @@ export function validateExportManifestTransitionSceneMedia(
     version: number;
     rendererContractVersion: string;
     label: string;
+    transitionTimingModel?: "legacy" | "centered-continuous";
   },
 ): ExportManifestV3IntegrityResult {
   try {

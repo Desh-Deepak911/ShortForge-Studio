@@ -1,6 +1,6 @@
 /**
  * Pure semantic resolver for intra-scene media transitions (Sprint 9A).
- * Head-of-incoming overlay. Does not import Preview or Export.
+ * Centered continuous overlay. Does not import Preview or Export.
  */
 
 import type { FootieScene, TransitionEffect } from "@/features/story/types";
@@ -14,6 +14,10 @@ import { resolveCanonicalIntraSceneTransitionProgress } from "@/features/timelin
 
 import { normalizeSceneMediaTransitionTrack } from "../domain/normalize-track";
 import { resolveEffectiveIntraSceneTransitionDurationMs } from "./resolve-effective-duration";
+import {
+  resolveContinuousIntraSceneTransitionTiming,
+  resolveContinuousTransitionFootageAvailability,
+} from "./resolve-continuous-intra-scene-transition-timing";
 
 export interface ResolvedIntraSceneTransition {
   readonly sceneId: string;
@@ -28,7 +32,7 @@ export interface ResolvedIntraSceneTransition {
   readonly overlayEndMs: number;
   /** Progress in [0, 1) while active; 0 when inactive/at start. */
   readonly progress: number;
-  /** Outgoing item-local time fixed at its final visual frame. */
+  /** Outgoing item-local time advancing through the overlap. */
   readonly outgoingItemLocalMs: number;
   /** Incoming item-local elapsed advancing from 0. */
   readonly incomingItemLocalMs: number;
@@ -109,13 +113,29 @@ export function resolveIntraSceneTransitionAtElapsed(
       continue;
     }
 
-    // Head-of-incoming: overlay begins at the existing internal media boundary.
-    const overlayStartMs = toWindow.startMs;
-    const overlayEndMs = overlayStartMs + effectiveDurationMs;
-
-    if (elapsed < overlayStartMs || elapsed >= overlayEndMs) {
+    const footage = resolveContinuousTransitionFootageAvailability({
+      fromMedia: projected.items[fromIndex]?.media,
+      toMedia: projected.items[toIndex]?.media,
+      fromWindowDurationMs: fromWindow.durationMs,
+      effectiveDurationMs,
+    });
+    if (!footage.allowed) {
       continue;
     }
+
+    const continuousTiming = resolveContinuousIntraSceneTransitionTiming({
+      boundaryMs: toWindow.startMs,
+      effectiveDurationMs,
+      fromWindowDurationMs: fromWindow.durationMs,
+      toWindowDurationMs: toWindow.durationMs,
+      sceneElapsedMs: elapsed,
+    });
+    if (!continuousTiming) {
+      continue;
+    }
+
+    const overlayStartMs = continuousTiming.overlayStartMs;
+    const overlayEndMs = continuousTiming.overlayEndMs;
 
     const progress = resolveCanonicalIntraSceneTransitionProgress({
       sceneElapsedMs: elapsed,
@@ -140,8 +160,8 @@ export function resolveIntraSceneTransitionAtElapsed(
       overlayStartMs,
       overlayEndMs,
       progress,
-      outgoingItemLocalMs: Math.max(0, fromWindow.durationMs - 1),
-      incomingItemLocalMs: Math.max(0, elapsed - toWindow.startMs),
+      outgoingItemLocalMs: continuousTiming.outgoingItemLocalMs,
+      incomingItemLocalMs: continuousTiming.incomingItemLocalMs,
       active: true,
     };
   }

@@ -4,6 +4,7 @@
  */
 
 import { resolveCanonicalIntraSceneTransitionProgress } from "@/features/timeline-intelligence/resolve-canonical-transition-frame.utils";
+import { resolveContinuousIntraSceneTransitionTiming } from "@/features/scene-media-transitions/resolution/resolve-continuous-intra-scene-transition-timing";
 
 import type {
   ExportSceneManifestV3,
@@ -22,7 +23,7 @@ export interface ResolvedExportIntraSceneTransition {
   readonly effectiveDurationMs: number;
   readonly overlayStartOffsetMs: number;
   readonly overlayEndOffsetMs: number;
-  /** Outgoing item-local final visual frame. */
+  /** Outgoing item-local time (continuous on capable v5 manifests). */
   readonly outgoingItemLocalMs: number;
   /** Incoming item-local elapsed (advances during overlay). */
   readonly incomingItemLocalMs: number;
@@ -93,6 +94,23 @@ export function resolveExportIntraSceneTransitionAtElapsed(
       continue;
     }
 
+    const continuousTiming =
+      boundary.timingModel === "centered-continuous-v1"
+        ? resolveContinuousIntraSceneTransitionTiming({
+            boundaryMs: toItem.startOffsetMs,
+            effectiveDurationMs,
+            fromWindowDurationMs: fromItem.durationMs,
+            toWindowDurationMs: toItem.durationMs,
+            sceneElapsedMs: elapsed,
+          })
+        : null;
+    if (
+      boundary.timingModel === "centered-continuous-v1" &&
+      !continuousTiming
+    ) {
+      continue;
+    }
+
     return {
       sceneId: scene.id,
       boundary,
@@ -104,8 +122,12 @@ export function resolveExportIntraSceneTransitionAtElapsed(
       effectiveDurationMs,
       overlayStartOffsetMs: boundary.overlayStartOffsetMs,
       overlayEndOffsetMs: boundary.overlayEndOffsetMs,
-      outgoingItemLocalMs: Math.max(0, fromItem.durationMs - 1),
-      incomingItemLocalMs: Math.max(0, elapsed - toItem.startOffsetMs),
+      outgoingItemLocalMs: continuousTiming
+        ? continuousTiming.outgoingItemLocalMs
+        : Math.max(0, fromItem.durationMs - 1),
+      incomingItemLocalMs: continuousTiming
+        ? continuousTiming.incomingItemLocalMs
+        : Math.max(0, elapsed - toItem.startOffsetMs),
     };
   }
 

@@ -27,8 +27,8 @@ import {
 import { resolvePreviewVideoClipTime } from "@/features/preview/utils/preview-video-clip.utils";
 import {
   buildExportManifest,
-  EXPORT_MANIFEST_VERSION,
-  EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_MANIFEST_V5_VERSION,
+  EXPORT_RENDERER_CONTRACT_V5,
 } from "@/features/export/domain";
 import type { FootieScene, SceneMedia, TransitionEffect } from "@/features/story/types";
 import { getSceneDurationMs } from "@/features/story/utils/scene.utils";
@@ -132,29 +132,29 @@ function threeItemScene(): { scene: FootieScene; a: string; b: string; c: string
 
 console.log("\nintra-scene-transition-preview (Sprint 9B)\n");
 
-test("Before boundary: ordinary outgoing media; composition null", () => {
+test("Before centered overlap: ordinary outgoing media; composition null", () => {
   const { scene, a, b } = twoItemScene(
     imageMedia("https://example.com/a.jpg"),
     imageMedia("https://example.com/b.jpg"),
   );
   const withFade = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
-  assert.equal(composeIntraSceneTransitionPreview(withFade, 2999), null);
-  const ordinary = resolveActiveSceneMediaRenderView(withFade, 2999);
+  assert.equal(composeIntraSceneTransitionPreview(withFade, 2749), null);
+  const ordinary = resolveActiveSceneMediaRenderView(withFade, 2749);
   assert.equal(ordinary.mediaItemId, a);
 });
 
-test("Exact boundary: transition active, progress 0, outgoing final frame", () => {
+test("Centered overlap start: transition active and both peers join ordinary timing", () => {
   const { scene, a, b } = twoItemScene(
     imageMedia("https://example.com/a.jpg"),
     imageMedia("https://example.com/b.jpg"),
   );
   const withFade = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
-  const composition = composeIntraSceneTransitionPreview(withFade, 3000);
+  const composition = composeIntraSceneTransitionPreview(withFade, 2750);
   assert.ok(composition);
   assert.equal(composition!.progress, 0);
   assert.equal(composition!.fromMediaItemId, a);
   assert.equal(composition!.toMediaItemId, b);
-  assert.equal(composition!.fromView.itemElapsedMs, 2999);
+  assert.equal(composition!.fromView.itemElapsedMs, 2750);
   assert.equal(composition!.toView.itemElapsedMs, 0);
   assert.equal(resolveIntraSceneTransitionProgressCheckpoint(0), "start");
 });
@@ -165,7 +165,7 @@ test("Midpoint: shared effect styles match resolveTransitionEffectLayers", () =>
     imageMedia("https://example.com/b.jpg"),
   );
   const withFade = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
-  const composition = composeIntraSceneTransitionPreview(withFade, 3250);
+  const composition = composeIntraSceneTransitionPreview(withFade, 3000);
   assert.ok(composition);
   const layers = resolveTransitionEffectLayers("fade", composition!.progress);
   assert.equal(composition!.layerStyles.from.opacity, layers.opacityFrom);
@@ -173,7 +173,7 @@ test("Midpoint: shared effect styles match resolveTransitionEffectLayers", () =>
   assert.ok(composition!.progress > 0 && composition!.progress < 1);
 });
 
-test("Overlay end: inactive; incoming continues at effectiveDurationMs", () => {
+test("Overlay end: inactive; incoming joins ordinary playback without a jump", () => {
   const { scene, a, b } = twoItemScene(
     imageMedia("https://example.com/a.jpg"),
     imageMedia("https://example.com/b.jpg"),
@@ -184,7 +184,7 @@ test("Overlay end: inactive; incoming continues at effectiveDurationMs", () => {
   assert.equal(composeIntraSceneTransitionPreview(withFade, endMs), null);
   const after = resolveActiveSceneMediaRenderView(withFade, endMs);
   assert.equal(after.mediaItemId, b);
-  assert.equal(after.itemElapsedMs, semantic.effectiveDurationMs);
+  assert.equal(after.itemElapsedMs, endMs - 3000);
 });
 
 test("All supported effects compose; Cut/absence do not", () => {
@@ -270,7 +270,7 @@ test("Image→image, image→video, video→image, video→video peers", () => {
   }
 });
 
-test("Outgoing final-frame hold; incoming video-only playback contract", () => {
+test("Both video peers advance during a continuous overlap", () => {
   const { scene, a, b } = twoItemScene(
     videoMedia("https://example.com/a.mp4"),
     videoMedia("https://example.com/b.mp4"),
@@ -282,12 +282,14 @@ test("Outgoing final-frame hold; incoming video-only playback contract", () => {
     isPlaying: true,
   });
   assert.ok(plan.outgoing);
-  assert.equal(plan.outgoing!.view.itemElapsedMs, 2999);
-  assert.equal(plan.primary.view.itemElapsedMs, 200);
+  assert.ok(plan.outgoing!.view.itemElapsedMs > 2750);
+  assert.ok(plan.outgoing!.view.itemElapsedMs < 3000);
+  assert.ok(plan.primary.view.itemElapsedMs > 0);
+  assert.ok(plan.primary.view.itemElapsedMs < 250);
   assert.equal(plan.primary.isPlaying, true);
   assert.equal(plan.primary.isActive, true);
-  assert.equal(plan.outgoing!.isPlaying, false);
-  assert.equal(plan.outgoing!.isActive, false);
+  assert.equal(plan.outgoing!.isPlaying, true);
+  assert.equal(plan.outgoing!.isActive, true);
 
   const previewSrc = readSrc("src/features/preview/components/PreviewFrame.tsx");
   assert.match(previewSrc, /planPreviewMediaLayers/);
@@ -296,7 +298,7 @@ test("Outgoing final-frame hold; incoming video-only playback contract", () => {
   assert.match(previewSrc, /activeMediaView=\{mediaLayerPlan\.primary\.view\}/);
   assert.match(previewSrc, /activeMediaView=\{mediaLayerPlan\.outgoing\.view\}/);
   assert.match(previewSrc, /data-preview-stable-media-stack="true"/);
-  assert.match(previewSrc, /data-intra-scene-transition-outgoing-paused": "true"/);
+  assert.match(previewSrc, /data-intra-scene-transition-outgoing-active/);
 });
 
 test("Trimmed video source-time correctness for peers", () => {
@@ -319,8 +321,10 @@ test("Trimmed video source-time correctness for peers", () => {
     trimEndMs: composition!.toView.media!.trimEndMs,
     durationMs: composition!.toView.media!.durationMs,
   });
-  assert.equal(outgoingClip.clipTimeMs, 2000 + 2999);
-  assert.equal(incomingClip.clipTimeMs, 500);
+  assert.ok(outgoingClip.clipTimeMs > 2000 + 2750);
+  assert.ok(outgoingClip.clipTimeMs < 2000 + 3000);
+  assert.ok(incomingClip.clipTimeMs > 500);
+  assert.ok(incomingClip.clipTimeMs < 500 + 250);
 });
 
 test("Item-local framing and motion use peer renderScene media", () => {
@@ -384,10 +388,10 @@ test("Scrubbing forward/backward and loop replay semantics", () => {
     imageMedia("https://example.com/b.jpg"),
   );
   const next = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
-  assert.equal(composeIntraSceneTransitionPreview(next, 2800), null);
+  assert.equal(composeIntraSceneTransitionPreview(next, 2700), null);
   assert.ok(composeIntraSceneTransitionPreview(next, 3000));
-  assert.ok(composeIntraSceneTransitionPreview(next, 3400));
-  assert.equal(composeIntraSceneTransitionPreview(next, 3500), null);
+  assert.ok(composeIntraSceneTransitionPreview(next, 3200));
+  assert.equal(composeIntraSceneTransitionPreview(next, 3250), null);
   // Scrub back into overlay
   assert.ok(composeIntraSceneTransitionPreview(next, 3100));
   // Loop restart at scene start
@@ -451,12 +455,12 @@ test("Incoming key/seek continuity across overlay end", () => {
   const next = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
   const mid = planPreviewMediaLayers({
     scene: next,
-    sceneElapsedMs: 3250,
+    sceneElapsedMs: 3249,
     isPlaying: true,
   });
   const after = planPreviewMediaLayers({
     scene: next,
-    sceneElapsedMs: 3500,
+    sceneElapsedMs: 3250,
     isPlaying: true,
   });
   assert.ok(mid.intraScene);
@@ -465,7 +469,7 @@ test("Incoming key/seek continuity across overlay end", () => {
   assert.equal(mid.primary.view.mediaItemId, b);
   assert.equal(after.primary.view.mediaItemId, b);
   // Continuous item-local time — no seek-back to 0 at overlay end.
-  assert.equal(after.primary.view.itemElapsedMs, mid.intraScene!.effectiveDurationMs);
+  assert.ok(after.primary.view.itemElapsedMs >= mid.primary.view.itemElapsedMs);
   assert.ok(after.primary.view.itemElapsedMs > 0);
   assert.equal(after.outgoing, null);
 });
@@ -490,8 +494,8 @@ test("current ExportManifest freezes Preview-configured transitions; draw does n
     },
   });
   assert.notEqual(withMeta.fingerprint, without.fingerprint);
-  assert.equal(withMeta.version, EXPORT_MANIFEST_VERSION);
-  assert.equal(withMeta.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+  assert.equal(withMeta.version, EXPORT_MANIFEST_V5_VERSION);
+  assert.equal(withMeta.rendererContractVersion, EXPORT_RENDERER_CONTRACT_V5);
   assert.match(JSON.stringify(withMeta), /mediaTransitions/);
 
   const exportDraw = readSrc("src/features/export/runtime/draw-prepared-export-frame.ts");
@@ -547,7 +551,7 @@ test("9B.1 Stable layer plan — primary key A→B at start; B continuous after 
 
   const before = planPreviewMediaLayers({
     scene: next,
-    sceneElapsedMs: 2999,
+    sceneElapsedMs: 2749,
     isPlaying: true,
   });
   assert.equal(before.intraScene, null);
@@ -560,7 +564,7 @@ test("9B.1 Stable layer plan — primary key A→B at start; B continuous after 
 
   const atStart = planPreviewMediaLayers({
     scene: next,
-    sceneElapsedMs: 3000,
+    sceneElapsedMs: 2750,
     isPlaying: true,
   });
   assert.ok(atStart.intraScene);
@@ -579,7 +583,7 @@ test("9B.1 Stable layer plan — primary key A→B at start; B continuous after 
 
   const mid = planPreviewMediaLayers({
     scene: next,
-    sceneElapsedMs: 3250,
+    sceneElapsedMs: 3000,
     isPlaying: true,
   });
   assert.equal(mid.primary.stableKey, atStart.primary.stableKey);
@@ -587,7 +591,7 @@ test("9B.1 Stable layer plan — primary key A→B at start; B continuous after 
 
   const after = planPreviewMediaLayers({
     scene: next,
-    sceneElapsedMs: 3500,
+    sceneElapsedMs: 3250,
     isPlaying: true,
   });
   assert.equal(after.intraScene, null);
@@ -602,7 +606,7 @@ test("9B.1 Video→video incoming target time non-decreasing; only outgoing remo
     videoMedia("https://example.com/b.mp4"),
   );
   const next = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
-  const samples = [3000, 3100, 3250, 3400, 3499, 3500];
+  const samples = [2750, 2850, 3000, 3150, 3249, 3250];
   let previousIncomingLocal = -1;
   let previousPrimaryKey: string | null = null;
   for (const elapsed of samples) {
@@ -615,9 +619,10 @@ test("9B.1 Video→video incoming target time non-decreasing; only outgoing remo
     assert.ok(plan.primary.view.itemElapsedMs >= previousIncomingLocal);
     previousIncomingLocal = plan.primary.view.itemElapsedMs;
 
-    if (elapsed < 3500) {
+    if (elapsed < 3250) {
       assert.ok(plan.outgoing);
-      assert.equal(plan.outgoing!.isPlaying, false);
+      assert.equal(plan.outgoing!.isPlaying, true);
+      assert.equal(plan.outgoing!.isActive, true);
       assert.equal(plan.primary.isPlaying, true);
       previousPrimaryKey = plan.primary.stableKey;
     } else {
@@ -631,11 +636,11 @@ test("9B.1 Video→video incoming target time non-decreasing; only outgoing remo
       trimEndMs: plan.primary.view.media!.trimEndMs,
       durationMs: plan.primary.view.media!.durationMs,
     });
-    if (elapsed === 3000) {
+    if (elapsed === 2750) {
       assert.equal(clip.clipTimeMs, 1000);
     }
-    if (elapsed === 3500) {
-      assert.equal(clip.clipTimeMs, 1000 + 500);
+    if (elapsed === 3250) {
+      assert.equal(clip.clipTimeMs, 1000 + 250);
     }
   }
 });
@@ -727,7 +732,7 @@ test("9B.1 Scrub backwards remains deterministic", () => {
   const next = setSceneMediaTransitionBoundary(scene, a, b, "fade", 500).scene;
   const forward = planPreviewMediaLayers({
     scene: next,
-    sceneElapsedMs: 3400,
+    sceneElapsedMs: 3200,
     isPlaying: true,
   });
   const back = planPreviewMediaLayers({

@@ -64,6 +64,8 @@
     "test:scene-media-local-evidence": "tsx src/verification/scene-media-timeline/sceneMediaLocalEvidenceHarness.verify.ts",
     "test:scene-media-sprint": "node scripts/run-scene-media-sprint.mjs",
     "test:intra-scene-transition-domain": "tsx src/verification/scene-media-transitions/intraSceneTransitionDomain.verify.ts",
+    "test:continuous-intra-scene-transition-timing": "tsx src/verification/scene-media-transitions/continuousIntraSceneTransitionTiming.verify.ts",
+    "test:smooth-media-transition-cert": "tsx src/verification/scene-media-transitions/smoothMediaTransitionDecodedCertification.verify.ts",
     "test:intra-scene-transition-editor": "tsx src/verification/scene-media-transitions/intraSceneTransitionEditor.verify.ts",
     "test:intra-scene-transition-preview": "tsx src/verification/scene-media-transitions/intraSceneTransitionPreview.verify.ts",
     "test:intra-scene-transition-export": "tsx src/verification/scene-media-transitions/intraSceneTransitionExport.verify.ts",

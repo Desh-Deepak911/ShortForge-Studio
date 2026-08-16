@@ -48,6 +48,7 @@ function sceneFingerprintPayload(scene: ExportSceneManifest) {
           effectiveDurationMs: boundary.effectiveDurationMs,
           overlayStartOffsetMs: boundary.overlayStartOffsetMs,
           overlayEndOffsetMs: boundary.overlayEndOffsetMs,
+          ...(boundary.timingModel ? { timingModel: boundary.timingModel } : {}),
         })),
       },
       ...(scene.engagementOverlays && scene.engagementOverlays.length > 0

@@ -11,10 +11,13 @@ import {
   buildExportManifestFingerprint,
   EXPORT_INVALID_MANIFEST_COST_SENTINEL,
   EXPORT_MANIFEST_VERSION,
+  EXPORT_MANIFEST_V5_VERSION,
   EXPORT_MANIFEST_V2_VERSION,
   EXPORT_RENDERER_CONTRACT_VERSION,
+  EXPORT_RENDERER_CONTRACT_V5,
   EXPORT_RENDERER_CONTRACT_V2,
   isExportManifestV4,
+  isExportManifestV5,
   isExportSceneManifestV3,
   resolveExportIntraSceneTransitionAtElapsed,
   runExportCapabilityPreflight,
@@ -23,7 +26,6 @@ import {
   validateExportManifestV3SceneMedia,
   type ExportManifest,
   type ExportManifestV2,
-  type ExportManifestV4,
   type ExportSceneManifestV3,
 } from "@/features/export/domain";
 import { buildExportMediaCacheKey } from "@/features/export/utils/export-media-cache.utils";
@@ -82,18 +84,17 @@ const CAPABLE_ENV = {
   mp4EncoderAvailable: true,
 } as const;
 
-function buildV3(fixture: IntraSceneTransitionGoldenFixture): ExportManifestV4 {
+function buildV3(fixture: IntraSceneTransitionGoldenFixture): ExportManifest {
   const manifest = buildExportManifest({
     story: fixture.story,
     environment: CAPABLE_ENV,
     multiImageScenesEnabled: true,
   });
-  assert.ok(isExportManifestV4(manifest));
   return manifest;
 }
 
 function primaryV3Scene(
-  manifest: ExportManifestV4,
+  manifest: ExportManifest,
   fixture: IntraSceneTransitionGoldenFixture,
 ): ExportSceneManifestV3 {
   const scene = manifest.scenes.find((s) => s.id === fixture.primarySceneId) ??
@@ -102,7 +103,7 @@ function primaryV3Scene(
   return scene;
 }
 
-function freezeAsV2(manifest: ExportManifestV4): ExportManifestV2 {
+function freezeAsV2(manifest: ExportManifest): ExportManifestV2 {
   const scenes = manifest.scenes.map((scene) => {
     const rest = { ...scene };
     delete (rest as { mediaTransitions?: unknown }).mediaTransitions;
@@ -182,8 +183,20 @@ test("Production manifests use current authority with v3-shaped mediaTransitions
     }
     const fixture = buildIntraSceneTransitionGoldenFixture(id);
     const manifest = buildV3(fixture);
-    assert.equal(manifest.version, EXPORT_MANIFEST_VERSION);
-    assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+    const hasTransitions = manifest.scenes.some(
+      (scene) =>
+        isExportSceneManifestV3(scene) &&
+        scene.mediaTransitions.boundaries.length > 0,
+    );
+    if (hasTransitions) {
+      assert.ok(isExportManifestV5(manifest));
+      assert.equal(manifest.version, EXPORT_MANIFEST_V5_VERSION);
+      assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_V5);
+    } else {
+      assert.ok(isExportManifestV4(manifest));
+      assert.equal(manifest.version, EXPORT_MANIFEST_VERSION);
+      assert.equal(manifest.rendererContractVersion, EXPORT_RENDERER_CONTRACT_VERSION);
+    }
     for (const scene of manifest.scenes) {
       assert.ok(isExportSceneManifestV3(scene));
       assert.equal(scene.mediaTransitions.version, 1);
@@ -281,10 +294,18 @@ test("Effect goldens: Preview/Export parity at checkpoints", () => {
     assert.match(planMid.primary.stableKey, /^primary:/);
     assert.match(planMid.outgoing.stableKey, /^outgoing:/);
 
-    // Outgoing final-frame freeze; incoming advances.
-    assert.equal(
-      exportMid.outgoingItemLocalMs,
-      Math.max(0, exportMid.fromItem.durationMs - 1),
+    // Both peers advance under the same centered timing authority.
+    assert.ok(exportMid.outgoingItemLocalMs < exportMid.fromItem.durationMs);
+    assert.ok(exportMid.outgoingItemLocalMs > 0);
+    assert.ok(
+      Math.abs(
+        exportMid.outgoingItemLocalMs - previewMid.fromView.itemElapsedMs,
+      ) < 1,
+    );
+    assert.ok(
+      Math.abs(
+        exportMid.incomingItemLocalMs - previewMid.toView.itemElapsedMs,
+      ) < 1,
     );
     assert.ok(exportMid.incomingItemLocalMs >= 0);
     assert.ok(exportMid.incomingItemLocalMs < boundary.effectiveDurationMs);

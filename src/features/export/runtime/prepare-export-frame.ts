@@ -9,9 +9,8 @@ import type {
   ExportSceneManifestV3,
 } from "@/features/export/domain/export-manifest.types";
 import {
-  isExportManifestV3,
-  isExportManifestV4,
   isExportManifestV5,
+  isExportSceneManifestV3,
 } from "@/features/export/domain/export-manifest.types";
 import {
   resolveBrandStingLocalElapsedMs,
@@ -204,7 +203,7 @@ export async function prepareExportFrame(
       context.cancellation.throwIfCancelled();
       storePrepared(peer.id, peerActive?.item.id, prepared);
     }
-  } else if (isExportManifestV3(manifest) || isExportManifestV4(manifest)) {
+  } else if (isExportSceneManifestV3(scene.scene)) {
     const manifestScene = scene.scene as ExportSceneManifestV3;
     const resolved = resolveExportIntraSceneTransitionAtElapsed(
       manifestScene,
@@ -220,7 +219,8 @@ export async function prepareExportFrame(
         itemDurationMs: resolved.fromItem.durationMs,
         sceneElapsedMs: scene.sceneElapsedMs,
         sceneDurationMs: scene.sceneDurationMs,
-        holdingFinalFrame: true,
+        holdingFinalFrame:
+          resolved.boundary.timingModel !== "centered-continuous-v1",
       };
       const toActive = {
         item: resolved.toItem,

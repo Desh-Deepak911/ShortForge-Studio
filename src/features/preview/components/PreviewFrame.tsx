@@ -299,7 +299,9 @@ export default function PreviewFrame({
                   mediaLayerPlan.intraScene.progress.toFixed(4),
                 "data-intra-scene-transition-checkpoint":
                   mediaLayerPlan.intraScene.checkpoint,
-                "data-intra-scene-transition-outgoing-paused": "true",
+                "data-intra-scene-transition-outgoing-active": isPlaying
+                  ? "true"
+                  : "false",
                 "data-intra-scene-transition-incoming-active": isPlaying
                   ? "true"
                   : "false",

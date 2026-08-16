@@ -24,7 +24,7 @@ import { resolveSystemChromeExecutable } from "@/features/headless-renderer/work
 import { createHeadlessWorkerWorkspace } from "@/features/headless-renderer/worker/assets/workspace";
 import { WorkspaceByteBudget } from "@/features/headless-renderer/worker/assets/workspace-quota";
 import { buildHeadlessReferenceFixture } from "@/features/headless-renderer/worker/testing/build-reference-fixture";
-import { isExportManifestV4 } from "@/features/export/domain";
+import { isExportManifestV5 } from "@/features/export/domain";
 import {
   buildHeadlessChromeLaunchArgs,
   chromeLaunchArgsContainNoSandbox,
@@ -106,7 +106,7 @@ async function main() {
 
   test("frame plan: frame-zero and final-frame boundaries", () => {
     const fixture = buildHeadlessReferenceFixture({ durationMs: 2000 });
-    assert.equal(isExportManifestV4(fixture.manifestV3), true);
+    assert.equal(isExportManifestV5(fixture.manifestV3), true);
     const plan = buildHeadlessFramePlan(
       fixture.manifestV3,
       10_000,
