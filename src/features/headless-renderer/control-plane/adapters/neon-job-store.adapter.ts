@@ -5,6 +5,7 @@
 
 import { applyHeadlessJobTransition } from "../../domain/headless-job-lifecycle";
 import { isHeadlessTerminalState } from "../../domain/headless-render-constants";
+import { applyClaimedProgressWrite } from "../services/apply-claimed-progress";
 import { isLegalHeadlessJobTransition } from "../../domain/headless-job-lifecycle";
 import { validateHeadlessRenderJobCoherence } from "../../domain/validate-headless-coherence";
 import {
@@ -1179,6 +1180,294 @@ RETURNING ${HEADLESS_JOB_SELECT_SQL}
           return cpOk({ kind: "rejected" as const });
         }
         return cpOk({ kind: "claimed" as const, record: mapped.record });
+      });
+    } catch (error) {
+      return mapHeadlessDatabaseFailure(error);
+    }
+  }
+
+  async claimNextQueuedJob(input: {
+    claimToken: string;
+    nowMs: number;
+    maxActiveRendersPerOwner?: number;
+  }) {
+    if (
+      typeof input.claimToken !== "string" ||
+      input.claimToken.trim().length === 0 ||
+      input.claimToken.length > 128
+    ) {
+      return cpFail("INVALID_TRANSPORT", "claimToken is invalid.");
+    }
+    if (
+      typeof input.nowMs !== "number" ||
+      !Number.isSafeInteger(input.nowMs) ||
+      input.nowMs < 0
+    ) {
+      return cpFail("INVALID_TRANSPORT", "nowMs is invalid.");
+    }
+    const cap = input.maxActiveRendersPerOwner;
+    if (
+      cap !== undefined &&
+      (typeof cap !== "number" || !Number.isInteger(cap) || cap < 1 || cap > 64)
+    ) {
+      return cpFail("INVALID_TRANSPORT", "maxActiveRendersPerOwner is invalid.");
+    }
+    try {
+      return await this.sql.withTransaction(async (client) => {
+        const updated = await client.query(
+          `
+UPDATE public.headless_jobs
+SET
+  store_version = store_version + 1,
+  claim_token = $1,
+  claimed_at_ms = $2
+WHERE job_id = (
+  SELECT j.job_id
+  FROM public.headless_jobs j
+  WHERE j.stage = 'canonical'
+    AND j.state = 'queued'
+    AND j.claim_token IS NULL
+    AND (
+      $3::bigint IS NULL
+      OR (
+        SELECT COUNT(*)
+        FROM public.headless_jobs a
+        WHERE a.owner_id = j.owner_id
+          AND a.stage = 'canonical'
+          AND a.claim_token IS NOT NULL
+          AND a.state NOT IN ('succeeded', 'failed', 'cancelled', 'expired')
+      ) < $3
+    )
+  ORDER BY j.created_at_ms ASC, j.job_id ASC
+  LIMIT 1
+  FOR UPDATE SKIP LOCKED
+)
+AND stage = 'canonical'
+AND state = 'queued'
+AND claim_token IS NULL
+RETURNING ${HEADLESS_JOB_SELECT_SQL}
+`,
+          [input.claimToken, input.nowMs, cap ?? null],
+        );
+        if (updated.rows.length === 0) {
+          return cpOk({ kind: "empty" as const });
+        }
+        const mapped = mapHeadlessJobSqlRow(updated.rows[0]);
+        if (!mapped.ok || mapped.record.stage !== "canonical") {
+          return cpOk({ kind: "empty" as const });
+        }
+        return cpOk({ kind: "claimed" as const, record: mapped.record });
+      });
+    } catch (error) {
+      return mapHeadlessDatabaseFailure(error);
+    }
+  }
+
+  async renewRenderClaim(input: {
+    jobId: string;
+    ownerId: string;
+    claimToken: string;
+    nowMs: number;
+  }) {
+    if (
+      typeof input.nowMs !== "number" ||
+      !Number.isSafeInteger(input.nowMs) ||
+      input.nowMs < 0
+    ) {
+      return cpFail("INVALID_TRANSPORT", "nowMs is invalid.");
+    }
+    try {
+      return await this.sql.withTransaction(async (client) => {
+        const updated = await client.query(
+          `
+UPDATE public.headless_jobs
+SET claimed_at_ms = $1
+WHERE job_id = $2
+  AND owner_id = $3
+  AND claim_token = $4
+  AND stage = 'canonical'
+  AND claim_token IS NOT NULL
+  AND state NOT IN ('succeeded', 'failed', 'cancelled', 'expired')
+RETURNING claimed_at_ms
+`,
+          [input.nowMs, input.jobId, input.ownerId, input.claimToken],
+        );
+        if (updated.rows.length === 0) {
+          return cpOk({ kind: "rejected" as const });
+        }
+        const claimedAtMs = parseHeadlessPgSafeInteger(
+          (updated.rows[0] as { claimed_at_ms?: unknown }).claimed_at_ms,
+          { min: 0 },
+        );
+        if (!claimedAtMs.ok) {
+          return cpFail("JOB_STORE_COHERENCE_REJECTED", "Renewed lease clock unsafe.");
+        }
+        return cpOk({
+          kind: "renewed" as const,
+          claimedAtMs: claimedAtMs.value,
+        });
+      });
+    } catch (error) {
+      return mapHeadlessDatabaseFailure(error);
+    }
+  }
+
+  async updateClaimedProgress(input: {
+    jobId: string;
+    ownerId: string;
+    claimToken: string;
+    expectedStoreVersion: number;
+    nowMs: number;
+    progress: import("../../domain/headless-render.types").HeadlessAdvisoryProgress;
+  }) {
+    try {
+      return await this.sql.withTransaction(async (client) => {
+        const locked = await readMapped(
+          client,
+          SELECT_BY_JOB_OWNER_FOR_UPDATE,
+          [input.jobId, input.ownerId],
+        );
+        if (!locked.ok) return cpOk({ kind: "rejected" as const });
+        const current = locked.record;
+        if (current.stage !== "canonical") {
+          return cpOk({ kind: "rejected" as const });
+        }
+        if (isHeadlessTerminalState(current.canonicalJob.state)) {
+          return cpOk({ kind: "terminal_locked" as const });
+        }
+        if (current.storeVersion !== input.expectedStoreVersion) {
+          return cpOk({ kind: "stale" as const });
+        }
+        if (current.claimToken !== input.claimToken) {
+          return cpOk({ kind: "rejected" as const });
+        }
+
+        const next = applyClaimedProgressWrite({
+          current,
+          progress: input.progress,
+          nowMs: input.nowMs,
+        });
+        if (!next.ok) {
+          return coherenceRejected(next.message);
+        }
+
+        const updated = await client.query(
+          `
+UPDATE public.headless_jobs
+SET
+  state = $1,
+  store_version = store_version + 1,
+  updated_at_ms = $2,
+  canonical_job = $3::jsonb
+WHERE job_id = $4
+  AND owner_id = $5
+  AND stage = 'canonical'
+  AND store_version = $6
+  AND claim_token = $7
+  AND state NOT IN ('succeeded', 'failed', 'cancelled', 'expired')
+RETURNING ${HEADLESS_JOB_SELECT_SQL}
+`,
+          [
+            next.record.canonicalJob.state,
+            next.record.updatedAtMs,
+            toJson(next.record.canonicalJob),
+            input.jobId,
+            input.ownerId,
+            input.expectedStoreVersion,
+            input.claimToken,
+          ],
+        );
+        if (updated.rows.length === 0) {
+          return cpOk({ kind: "stale" as const });
+        }
+        const mapped = mapHeadlessJobSqlRow(updated.rows[0]);
+        if (!mapped.ok || mapped.record.stage !== "canonical") {
+          return cpOk({ kind: "rejected" as const });
+        }
+        return cpOk({ kind: "updated" as const, record: mapped.record });
+      });
+    } catch (error) {
+      return mapHeadlessDatabaseFailure(error);
+    }
+  }
+
+  async listExpiredRenderClaims(input: {
+    nowMs: number;
+    leaseMs: number;
+    limit: number;
+  }) {
+    if (
+      typeof input.limit !== "number" ||
+      !Number.isInteger(input.limit) ||
+      input.limit < 1 ||
+      input.limit > 1000
+    ) {
+      return cpFail("INVALID_TRANSPORT", "Expired-claim list limit is invalid.");
+    }
+    if (
+      typeof input.nowMs !== "number" ||
+      !Number.isSafeInteger(input.nowMs) ||
+      input.nowMs < 0
+    ) {
+      return cpFail("INVALID_TRANSPORT", "nowMs is invalid.");
+    }
+    if (
+      typeof input.leaseMs !== "number" ||
+      !Number.isSafeInteger(input.leaseMs) ||
+      input.leaseMs < 1
+    ) {
+      return cpFail("INVALID_TRANSPORT", "leaseMs is invalid.");
+    }
+    try {
+      return await this.sql.withClient(async (client) => {
+        const result = await client.query(
+          `
+SELECT job_id, owner_id, claim_token, claimed_at_ms
+FROM public.headless_jobs
+WHERE stage = 'canonical'
+  AND claim_token IS NOT NULL
+  AND claimed_at_ms IS NOT NULL
+  AND state NOT IN ('succeeded', 'failed', 'cancelled', 'expired')
+  AND claimed_at_ms + $1 < $2
+ORDER BY claimed_at_ms ASC, job_id ASC
+LIMIT $3
+`,
+          [input.leaseMs, input.nowMs, input.limit],
+        );
+        const rows: {
+          readonly jobId: string;
+          readonly ownerId: string;
+          readonly claimToken: string;
+          readonly claimedAtMs: number;
+        }[] = [];
+        for (const row of result.rows as Record<string, unknown>[]) {
+          const claimedAtMs = parseHeadlessPgSafeInteger(row.claimed_at_ms, {
+            min: 0,
+          });
+          if (
+            typeof row.job_id !== "string" ||
+            row.job_id.trim().length === 0 ||
+            typeof row.owner_id !== "string" ||
+            row.owner_id.trim().length === 0 ||
+            typeof row.claim_token !== "string" ||
+            row.claim_token.trim().length === 0 ||
+            !claimedAtMs.ok
+          ) {
+            return cpFail(
+              "JOB_STORE_COHERENCE_REJECTED",
+              "Malformed expired-claim row.",
+            );
+          }
+          rows.push(
+            Object.freeze({
+              jobId: row.job_id,
+              ownerId: row.owner_id,
+              claimToken: row.claim_token,
+              claimedAtMs: claimedAtMs.value,
+            }),
+          );
+        }
+        return cpOk(rows);
       });
     } catch (error) {
       return mapHeadlessDatabaseFailure(error);

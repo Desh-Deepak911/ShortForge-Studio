@@ -133,7 +133,7 @@ async function main() {
     );
   });
 
-  await test("catalog order: 000,001,002,004,005,006,007 — no phantom 003", () => {
+  await test("catalog order: 000,001,002,004,005,006,007,008,009 — no phantom 003", () => {
     assert.deepEqual(
       sources.map((s) => s.migrationId),
       [
@@ -144,13 +144,15 @@ async function main() {
         "005_headless_cleanup_intents",
         "006_headless_render_dispatch_outbox",
         MIGRATION_007_ID,
+        "008_headless_export_maintenance_lease",
+        "009_headless_verify_queued_unclaimed",
       ],
     );
     assert.equal(sources.some((s) => s.migrationId.startsWith("003_")), false);
   });
 
-  await test("seven-migration embedded fingerprint includes 007 checksum", () => {
-    assert.equal(HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT.migrations.length, 7);
+  await test("embedded fingerprint includes 007 checksum", () => {
+    assert.equal(HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT.migrations.length, 9);
     const m007Emb = HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT.migrations.find(
       (m) => m.migrationId === MIGRATION_007_ID,
     );

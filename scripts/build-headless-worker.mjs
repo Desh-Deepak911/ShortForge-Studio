@@ -228,6 +228,7 @@ function assertEmbeddedFingerprintMatchesRepo() {
     "006_headless_render_dispatch_outbox",
     "007_headless_owned_object_slot_key_capacity",
     "008_headless_export_maintenance_lease",
+    "009_headless_verify_queued_unclaimed",
   ];
   const embeddedIds = embedded.map((e) => e.migrationId);
   if (JSON.stringify(embeddedIds) !== JSON.stringify(required)) {

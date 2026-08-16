@@ -928,6 +928,184 @@ export class InMemoryHeadlessSqlFixture implements HeadlessSqlExecutor {
       return { rows: [this.cloneJob(next)], rowCount: 1 };
     }
 
+    // Claim-next (FOR UPDATE SKIP LOCKED subquery)
+    if (
+      (norm.startsWith("UPDATE PUBLIC.HEADLESS_JOBS") ||
+        norm.startsWith("UPDATE HEADLESS_JOBS")) &&
+      norm.includes("FOR UPDATE SKIP LOCKED") &&
+      norm.includes("CLAIM_TOKEN = $1")
+    ) {
+      const capRaw = params[2];
+      const cap =
+        capRaw == null || capRaw === undefined ? null : Number(capRaw);
+      const activeByOwner = new Map<string, number>();
+      if (cap != null && Number.isFinite(cap)) {
+        for (const row of this.jobsById.values()) {
+          const state = String(row.state);
+          if (
+            row.stage === "canonical" &&
+            row.claim_token != null &&
+            state !== "succeeded" &&
+            state !== "failed" &&
+            state !== "cancelled" &&
+            state !== "expired"
+          ) {
+            const owner = String(row.owner_id);
+            activeByOwner.set(owner, (activeByOwner.get(owner) ?? 0) + 1);
+          }
+        }
+      }
+      const sorted = [...this.jobsById.values()].sort((a, b) => {
+        const created = Number(a.created_at_ms) - Number(b.created_at_ms);
+        if (created !== 0) return created;
+        return String(a.job_id).localeCompare(String(b.job_id));
+      });
+      let picked: JobRow | null = null;
+      for (const row of sorted) {
+        if (
+          row.stage !== "canonical" ||
+          row.state !== "queued" ||
+          row.claim_token != null
+        ) {
+          continue;
+        }
+        if (
+          cap != null &&
+          Number.isFinite(cap) &&
+          (activeByOwner.get(String(row.owner_id)) ?? 0) >= cap
+        ) {
+          continue;
+        }
+        picked = row;
+        break;
+      }
+      if (!picked || typeof picked.job_id !== "string") {
+        return { rows: [], rowCount: 0 };
+      }
+      const next: JobRow = {
+        ...picked,
+        store_version: Number(picked.store_version) + 1,
+        claim_token: params[0],
+        claimed_at_ms: params[1],
+      };
+      this.jobsById.set(picked.job_id, next);
+      return { rows: [this.cloneJob(next)], rowCount: 1 };
+    }
+
+    // Renew render lease clock (no store_version bump)
+    if (
+      (norm.startsWith("UPDATE PUBLIC.HEADLESS_JOBS") ||
+        norm.startsWith("UPDATE HEADLESS_JOBS")) &&
+      norm.includes("SET CLAIMED_AT_MS = $1") &&
+      norm.includes("CLAIM_TOKEN = $4") &&
+      !norm.includes("STORE_VERSION")
+    ) {
+      const jobId = String(params[1]);
+      const ownerId = String(params[2]);
+      const claimToken = String(params[3]);
+      const row = this.jobsById.get(jobId);
+      const state = row ? String(row.state) : "";
+      if (
+        !row ||
+        row.owner_id !== ownerId ||
+        row.stage !== "canonical" ||
+        row.claim_token !== claimToken ||
+        row.claim_token == null ||
+        state === "succeeded" ||
+        state === "failed" ||
+        state === "cancelled" ||
+        state === "expired"
+      ) {
+        return { rows: [], rowCount: 0 };
+      }
+      const next: JobRow = {
+        ...row,
+        claimed_at_ms: params[0],
+      };
+      this.jobsById.set(jobId, next);
+      return {
+        rows: [{ claimed_at_ms: params[0] }],
+        rowCount: 1,
+      };
+    }
+
+    // Claim-token-gated progress (no claim_token / request rewrite)
+    if (
+      (norm.startsWith("UPDATE PUBLIC.HEADLESS_JOBS") ||
+        norm.startsWith("UPDATE HEADLESS_JOBS")) &&
+      norm.includes("CANONICAL_JOB =") &&
+      norm.includes("CLAIM_TOKEN = $7") &&
+      !norm.includes("CANONICAL_REQUEST =")
+    ) {
+      const jobId = String(params[3]);
+      const ownerId = String(params[4]);
+      const expectedVersion = Number(params[5]);
+      const claimToken = String(params[6]);
+      const row = this.jobsById.get(jobId);
+      const state = row ? String(row.state) : "";
+      if (
+        !row ||
+        row.owner_id !== ownerId ||
+        row.stage !== "canonical" ||
+        Number(row.store_version) !== expectedVersion ||
+        row.claim_token !== claimToken ||
+        state === "succeeded" ||
+        state === "failed" ||
+        state === "cancelled" ||
+        state === "expired"
+      ) {
+        return { rows: [], rowCount: 0 };
+      }
+      const next: JobRow = {
+        ...row,
+        state: params[0],
+        store_version: Number(row.store_version) + 1,
+        updated_at_ms: params[1],
+        canonical_job: this.parseJsonParam(params[2]),
+      };
+      this.jobsById.set(jobId, next);
+      return { rows: [this.cloneJob(next)], rowCount: 1 };
+    }
+
+    // Expired live-claim listing
+    if (
+      (norm.includes("FROM PUBLIC.HEADLESS_JOBS") ||
+        norm.includes("FROM HEADLESS_JOBS")) &&
+      norm.includes("CLAIM_TOKEN IS NOT NULL") &&
+      norm.includes("CLAIMED_AT_MS + $1")
+    ) {
+      const leaseMs = Number(params[0]);
+      const nowMs = Number(params[1]);
+      const limit = Number(params[2] ?? 0);
+      const rows: Record<string, unknown>[] = [];
+      const sorted = [...this.jobsById.values()].sort(
+        (a, b) => Number(a.claimed_at_ms) - Number(b.claimed_at_ms),
+      );
+      for (const row of sorted) {
+        const state = String(row.state);
+        if (
+          row.stage !== "canonical" ||
+          row.claim_token == null ||
+          row.claimed_at_ms == null ||
+          state === "succeeded" ||
+          state === "failed" ||
+          state === "cancelled" ||
+          state === "expired"
+        ) {
+          continue;
+        }
+        if (Number(row.claimed_at_ms) + leaseMs >= nowMs) continue;
+        rows.push({
+          job_id: row.job_id,
+          owner_id: row.owner_id,
+          claim_token: row.claim_token,
+          claimed_at_ms: row.claimed_at_ms,
+        });
+        if (rows.length >= limit) break;
+      }
+      return { rows, rowCount: rows.length };
+    }
+
     // Claim queued
     if (
       norm.startsWith("UPDATE HEADLESS_JOBS") &&
@@ -1128,6 +1306,76 @@ export class InMemoryHeadlessSqlFixture implements HeadlessSqlExecutor {
 
       // UPDATE owned objects
       if (norm.startsWith("UPDATE PUBLIC.HEADLESS_OWNED_OBJECTS")) {
+        if (norm.includes("FOR UPDATE SKIP LOCKED")) {
+          const leaseMs = Number(params[2] ?? 120_000);
+          const nowMs = Number(params[1]);
+          const sorted = [...this.ownedObjectsById.values()].sort((a, b) => {
+            const observed =
+              Number(a.uploaded_observed_at_ms ?? 0) -
+              Number(b.uploaded_observed_at_ms ?? 0);
+            if (observed !== 0) return observed;
+            return String(a.object_id).localeCompare(String(b.object_id));
+          });
+          let picked: OwnedObjectRow | null = null;
+          for (const row of sorted) {
+            if (row.stage !== "staging" || row.uploaded_observed_at_ms == null) {
+              continue;
+            }
+            if (
+              row.verification_state === "unclaimed" &&
+              row.verification_claim_token == null
+            ) {
+              picked = row;
+              break;
+            }
+            if (
+              row.verification_state === "claimed" &&
+              row.verification_claimed_at_ms != null &&
+              nowMs - Number(row.verification_claimed_at_ms) >= leaseMs
+            ) {
+              picked = row;
+              break;
+            }
+          }
+          if (!picked || typeof picked.object_id !== "string") {
+            return { rows: [], rowCount: 0 };
+          }
+          const next: OwnedObjectRow = {
+            ...picked,
+            store_version: Number(picked.store_version) + 1,
+            verification_state: "claimed",
+            verification_claim_token: params[0],
+            verification_claimed_at_ms: params[1],
+            updated_at_ms: params[1],
+          };
+          this.ownedObjectsById.set(picked.object_id, next);
+          return { rows: [this.cloneOwnedObject(next)], rowCount: 1 };
+        }
+        if (
+          norm.includes("SET VERIFICATION_CLAIMED_AT_MS = $1") &&
+          !norm.includes("STORE_VERSION")
+        ) {
+          const objectId = String(params[1]);
+          const ownerId = String(params[2]);
+          const token = params[3];
+          const row = this.ownedObjectsById.get(objectId);
+          if (
+            !row ||
+            row.owner_id !== ownerId ||
+            row.verification_claim_token !== token ||
+            row.stage !== "staging" ||
+            row.verification_state !== "claimed"
+          ) {
+            return { rows: [], rowCount: 0 };
+          }
+          const next: OwnedObjectRow = {
+            ...row,
+            verification_claimed_at_ms: params[0],
+            updated_at_ms: params[0],
+          };
+          this.ownedObjectsById.set(objectId, next);
+          return { rows: [this.cloneOwnedObject(next)], rowCount: 1 };
+        }
         const isFinalize = norm.includes("STAGE = 'FINALIZED'");
         const isReject = norm.includes("STAGE = 'REJECTED'");
         const isCleanup = norm.includes("STAGE = 'CLEANUP_PENDING'");

@@ -24,6 +24,8 @@ export {
 } from "./fake-redis-streams";
 export { MemoryHeadlessArtifactCleanupAdapter } from "../adapters/memory-artifact-cleanup.adapter";
 export { MemoryHeadlessRenderDispatchOutboxAdapter } from "../adapters/memory-render-dispatch-outbox.adapter";
+export { MemoryHeadlessWorkerWakeAdapter } from "../adapters/memory-worker-wake.adapter";
+export { FlyMachineWakeAdapter } from "../adapters/fly-machine-wake.adapter";
 export { TestHeadlessPrincipalAdapter } from "../adapters/test-principal.adapter";
 export { TestHeadlessProjectAuthorizationAdapter } from "../adapters/test-project-authorization.adapter";
 export { MemoryHeadlessProjectOwnershipAdapter } from "../adapters/memory-project-ownership.adapter";

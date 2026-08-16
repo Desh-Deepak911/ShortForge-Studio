@@ -16,6 +16,7 @@ Operator overview: [../../operations/HEADLESS_OPERATIONS.md](../../operations/HE
 | 4K capacity | [current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md](./current/HEADLESS_11E_FLY_RENDER_4K_CAPACITY_EVIDENCE.md) |
 | Verify live | [current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md](./current/HEADLESS_11E_FLY_VERIFY_LIVE_EVIDENCE.md) |
 | Neon live | [current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md](./current/HEADLESS_11E_NEON_LIVE_EVIDENCE.md) |
+| Neon queue staging (template, `NOT_RUN`) | [current/HEADLESS_NEON_QUEUE_STAGING_EVIDENCE.md](./current/HEADLESS_NEON_QUEUE_STAGING_EVIDENCE.md) |
 
 See [EVIDENCE_REGISTRY.md](./EVIDENCE_REGISTRY.md) for the full move map and retired duplicate aliases.
 

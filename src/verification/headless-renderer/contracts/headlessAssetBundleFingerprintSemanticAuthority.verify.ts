@@ -190,6 +190,34 @@ async function main() {
     assert.notEqual(fpBase.fingerprint, fpChanged.fingerprint);
   });
 
+  await test("MIME casing normalizes before fingerprint validation", async () => {
+    const runId = randomUUID();
+    const draftCtx = await buildLiveDraft({
+      runId,
+      ownerId: `owner-${runId.slice(0, 8)}`,
+    });
+    const assets = draftCtx.seeded.bundle.assets.map((asset, index) =>
+      index === 0
+        ? { ...asset, mimeType: asset.mimeType.toUpperCase() }
+        : asset,
+    );
+    const fingerprint = buildHeadlessAssetBundleFingerprint(
+      draftCtx.seeded.bundle.bundleId,
+      assets,
+    );
+    assert.equal(fingerprint.ok, true);
+    if (!fingerprint.ok) throw new Error("fingerprint failed");
+    const validated = validateHeadlessAssetBundle(
+      {
+        ...draftCtx.seeded.bundle,
+        assets,
+        fingerprint: fingerprint.fingerprint,
+      },
+      draftCtx.manifest,
+    );
+    assert.equal(validated.ok, true);
+  });
+
   await test("canonical asset ordering is stable regardless of input order", () => {
     const one = descriptor({
       assetId: "asset-1",

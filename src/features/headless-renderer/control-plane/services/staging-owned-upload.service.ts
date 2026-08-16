@@ -22,6 +22,7 @@ import { createProvisionalMaterializingRecord } from "./provisional-job-lifecycl
 import { deriveHeadlessR2ObjectKey } from "./r2-object-key-authority";
 import { stableHeadlessVerifyDeliveryId } from "./stable-delivery-id";
 import { toHeadlessProductJobViewFromStore } from "./safe-job-view";
+import { dispatchVerifyWakeAfterObservedUpload } from "./dispatch-verify-wake";
 import { cpFail, cpOk } from "../types/control-plane.types";
 
 const UPLOAD_LEASE_MS = 10 * 60 * 1000;
@@ -328,11 +329,14 @@ export async function completeStagingOwnedUpload(input: {
   readonly body: unknown;
 }) {
   const { composition, principal } = input;
+  const neonVerify =
+    composition.queueProvider.provider === "neon" &&
+    composition.queueProvider.status === "configured";
   if (
     !composition.productionAvailable ||
     composition.jobStore == null ||
     composition.ownedObjectStore == null ||
-    composition.upstashRestProducer == null
+    (!neonVerify && composition.upstashRestProducer == null)
   ) {
     return cpFail("CONFIGURATION_UNAVAILABLE", "Server rendering is unavailable.");
   }
@@ -389,15 +393,26 @@ export async function completeStagingOwnedUpload(input: {
       nowMs,
     });
     if (!marked.ok) return marked;
-    const queued = await composition.upstashRestProducer.enqueueVerify({
-      deliveryId: stableHeadlessVerifyDeliveryId(object.record.objectId, 1),
-      ownedObjectId: object.record.objectId,
+    if (!neonVerify) {
+      const queued = await composition.upstashRestProducer!.enqueueVerify({
+        deliveryId: stableHeadlessVerifyDeliveryId(object.record.objectId, 1),
+        ownedObjectId: object.record.objectId,
+        ownerId: principal.ownerId,
+        attempt: 1,
+        enqueuedAtMs: nowMs,
+        deliveryKind: "verify",
+      });
+      if (!queued.ok) return queued;
+    }
+  }
+  if (neonVerify && composition.verifyWake != null) {
+    const woken = await dispatchVerifyWakeAfterObservedUpload({
+      ownedObjectStore: composition.ownedObjectStore,
+      wake: composition.verifyWake,
       ownerId: principal.ownerId,
-      attempt: 1,
-      enqueuedAtMs: nowMs,
-      deliveryKind: "verify",
+      nowMs,
     });
-    if (!queued.ok) return queued;
+    if (!woken.ok) return woken;
   }
   const reread = await composition.jobStore.getByJobIdAndOwner(
     input.jobId,

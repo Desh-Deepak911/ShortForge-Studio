@@ -18,6 +18,9 @@ import { UnavailableHeadlessPrincipalAdapter } from "../adapters/unavailable-pri
 import { UnavailableHeadlessProjectAuthorizationAdapter } from "../adapters/unavailable-project-authorization.adapter";
 import { UnavailableUpstashRestQueueProducerAdapter } from "../adapters/unavailable-upstash-rest-queue-producer.adapter";
 import { UpstashRestQueueProducerAdapter } from "../adapters/upstash-rest-queue-producer.adapter";
+import { FlyMachineWakeAdapter } from "../adapters/fly-machine-wake.adapter";
+import type { HeadlessWorkerWakePort } from "../ports/worker-wake.port";
+import { readConfiguredHeadlessFlyVerifyWakeConfig } from "./fly-wake-environment";
 import type { HeadlessJobStorePort } from "../ports/job-store.port";
 import type { HeadlessOwnedObjectStorePort } from "../ports/owned-object-store.port";
 import type { HeadlessPrincipalPort } from "../ports/principal.port";
@@ -47,6 +50,11 @@ import {
   type HeadlessUpstashProducerEnvironmentStatus,
 } from "./upstash-environment";
 import {
+  classifyHeadlessQueueProvider,
+  shouldConstructUpstashRestProducer,
+  type HeadlessQueueProviderClassification,
+} from "./queue-provider";
+import {
   classifyStagingHeadlessControlPlaneActivation,
   type StagingHeadlessControlPlaneActivationStatus,
 } from "./staging-control-plane-activation";
@@ -70,6 +78,8 @@ export type ProductionHeadlessControlPlaneComposition = {
   readonly upstashProducerEnvironmentStatus: HeadlessUpstashProducerEnvironmentStatus;
   /** True only when Upstash REST producer classification is `configured`. */
   readonly upstashProducerConfigured: boolean;
+  /** Safe queue-provider diagnostic — never includes credentials. */
+  readonly queueProvider: HeadlessQueueProviderClassification;
   /**
    * Optional REST producer when staging session + Neon + Upstash are configured.
    * Never a TCP consumer. Null when not fully configured.
@@ -93,6 +103,8 @@ export type ProductionHeadlessControlPlaneComposition = {
   readonly ownedObjectStore: HeadlessOwnedObjectStorePort | null;
   readonly uploadCapability: HeadlessUploadCapabilityPort;
   readonly downloadCapability: HeadlessDownloadCapabilityPort;
+  /** Neon verify wake only. Never constructed for Upstash. Never logs tokens. */
+  readonly verifyWake: HeadlessWorkerWakePort | null;
 };
 
 export function composeProductionHeadlessControlPlane(): ProductionHeadlessControlPlaneComposition {
@@ -111,6 +123,7 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
     classifyHeadlessUpstashProducerEnvironment();
   const upstashProducerConfigured =
     upstashProducerEnvironmentStatus === "configured";
+  const queueProvider = classifyHeadlessQueueProvider();
 
   const principal: HeadlessPrincipalPort = stagingSessionConfigured
     ? new StagingSessionPrincipalAdapter(stagingSessionConfiguration!)
@@ -131,6 +144,7 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
     | UpstashRestQueueProducerAdapter
     | UnavailableUpstashRestQueueProducerAdapter
     | null = null;
+  let verifyWake: HeadlessWorkerWakePort | null = null;
 
   if (stagingSessionConfigured && neonDatabaseConfigured) {
     const connectionString = readConfiguredHeadlessDatabaseUrl();
@@ -155,7 +169,8 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
   if (
     stagingSessionConfigured &&
     neonDatabaseConfigured &&
-    upstashProducerConfigured
+    upstashProducerConfigured &&
+    shouldConstructUpstashRestProducer(queueProvider)
   ) {
     const config = readConfiguredHeadlessUpstashProducerConfig();
     if (config != null) {
@@ -167,15 +182,30 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
     }
   }
 
+  if (queueProvider.provider === "neon" && queueProvider.status === "configured") {
+    const flyVerify = readConfiguredHeadlessFlyVerifyWakeConfig();
+    if (flyVerify != null) {
+      verifyWake = new FlyMachineWakeAdapter({ config: flyVerify });
+    }
+  }
+
+  const neonQueueReady =
+    queueProvider.status === "configured" &&
+    queueProvider.provider === "neon" &&
+    verifyWake != null;
+  const upstashQueueReady =
+    queueProvider.provider !== "neon" &&
+    upstashProducerConfigured &&
+    upstashRestProducer instanceof UpstashRestQueueProducerAdapter;
   const productionAvailable =
     activationStatus === "active" &&
     stagingSessionConfigured &&
     neonDatabaseConfigured &&
     r2Configured &&
-    upstashProducerConfigured &&
     jobStore != null &&
     ownedObjectStore != null &&
-    upstashRestProducer instanceof UpstashRestQueueProducerAdapter;
+    queueProvider.status !== "invalid" &&
+    (neonQueueReady || upstashQueueReady);
 
   return {
     productionAvailable,
@@ -190,6 +220,7 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
     r2Configured,
     upstashProducerEnvironmentStatus,
     upstashProducerConfigured,
+    queueProvider,
     upstashRestProducer,
     principal,
     projectAuthorization,
@@ -197,5 +228,6 @@ export function composeProductionHeadlessControlPlane(): ProductionHeadlessContr
     ownedObjectStore,
     uploadCapability,
     downloadCapability,
+    verifyWake,
   };
 }

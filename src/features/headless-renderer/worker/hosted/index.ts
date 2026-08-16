@@ -50,6 +50,16 @@ export {
   type HostedClaimedRenderHookInput,
 } from "./hosted-worker-loop";
 export {
+  createNeonWorkerLoop,
+  type NeonWorkerLoopDeps,
+  type NeonWorkerLoopHandle,
+} from "./neon-worker-loop";
+export {
+  createNeonVerifyWorkerLoop,
+  type NeonVerifyWorkerLoopDeps,
+  type NeonVerifyWorkerLoopHandle,
+} from "./neon-verify-worker-loop";
+export {
   createHostedShutdownLifecycle,
   type HostedShutdownLifecycle,
 } from "./hosted-shutdown-lifecycle";

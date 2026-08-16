@@ -15,6 +15,10 @@
 import { createRenderDispatchOutboxScheduler } from "../../control-plane/services/dispatch-render-outbox";
 import { createHeadlessExportMaintenanceScheduler } from "../../control-plane/services/headless-export-maintenance-scheduler";
 import { createR2ArtifactObjectIO } from "../../control-plane/adapters/r2-artifact-object-io.adapter";
+import { classifyHeadlessQueueProvider } from "../../control-plane/runtime/queue-provider";
+import { readHeadlessQueueFairnessSettings } from "../../control-plane/runtime/queue-fairness";
+import { createNeonWorkerLoop } from "./neon-worker-loop";
+import { createNeonVerifyWorkerLoop } from "./neon-verify-worker-loop";
 import { HEADLESS_EXPORT_MAINTENANCE_ENABLE_ENV } from "../../domain/headless-export-maintenance-enablement";
 import { embeddedSchemaFingerprintAsPreflightSources } from "../../control-plane/migrations/embedded-schema-fingerprint";
 import {
@@ -423,19 +427,65 @@ export async function runHostedWorkerEntrypoint(
         }
       : undefined;
 
-  const loop = createHostedWorkerLoop({
-    mode: config.mode,
-    streamQueue: adapters.streamQueue,
-    jobStore: adapters.jobStore,
-    ownedObjectStore:
-      config.mode === "verify" ? adapters.ownedObjectStore : undefined,
-    leaseSettings: adapters.leaseSettings,
-    concurrency: config.concurrency,
-    eventSink,
-    nowMs,
-    onClaimedRender,
-    onClaimedVerify,
-  });
+  const queueProvider = classifyHeadlessQueueProvider(env);
+  const fairness = readHeadlessQueueFairnessSettings(env);
+  if (queueProvider.provider === "neon" && !fairness.ok) {
+    const closed = await closeAdaptersSafely();
+    emitHostedWorkerEvent(eventSink, {
+      name: "hosted.process.exit",
+      atMs: nowMs(),
+      mode: config.mode,
+      reasonId: closed.ok ? "queue_fairness_invalid" : "adapter_close_failed",
+      status: "failed",
+    });
+    return {
+      exitCode: 1,
+      reasonId: closed.ok ? "queue_fairness_invalid" : "adapter_close_failed",
+    };
+  }
+
+  const useNeonRenderLoop =
+    queueProvider.provider === "neon" &&
+    config.mode === "render" &&
+    onClaimedRender != null;
+  const useNeonVerifyLoop =
+    queueProvider.provider === "neon" &&
+    config.mode === "verify" &&
+    onClaimedVerify != null;
+
+  const workerWake = adapters.workerWake ?? undefined;
+  const renderWake = adapters.renderWake ?? workerWake;
+
+  const loop = useNeonRenderLoop
+    ? createNeonWorkerLoop({
+        jobStore: adapters.jobStore,
+        wake: workerWake,
+        nowMs,
+        maxActiveRendersPerOwner: fairness.ok
+          ? fairness.settings.maxActiveRendersPerOwner
+          : undefined,
+        onClaimedRender,
+      })
+    : useNeonVerifyLoop
+      ? createNeonVerifyWorkerLoop({
+          ownedObjectStore: adapters.ownedObjectStore,
+          wake: workerWake,
+          nowMs,
+          onClaimedVerify,
+        })
+      : createHostedWorkerLoop({
+          mode: config.mode,
+          streamQueue: adapters.streamQueue,
+          jobStore: adapters.jobStore,
+          ownedObjectStore:
+            config.mode === "verify" ? adapters.ownedObjectStore : undefined,
+          leaseSettings: adapters.leaseSettings,
+          concurrency: config.concurrency,
+          eventSink,
+          nowMs,
+          onClaimedRender,
+          onClaimedVerify,
+        });
 
   let startupDispatchActive = false;
   const dispatch = createRenderDispatchOutboxScheduler({
@@ -443,6 +493,8 @@ export async function runHostedWorkerEntrypoint(
     jobStore: adapters.jobStore,
     streamQueue: adapters.streamQueue,
     nowMs,
+    queueProvider: queueProvider.provider ?? undefined,
+    wake: renderWake,
     onSweep: (result) => {
       emitHostedWorkerEvent(eventSink, {
         name: "hosted.loop.delivery",

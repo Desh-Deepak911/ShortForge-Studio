@@ -9,6 +9,8 @@ import { randomUUID } from "node:crypto";
 import type { HeadlessJobStorePort } from "../ports/job-store.port";
 import type { HeadlessRenderDispatchOutboxPort } from "../ports/render-dispatch-outbox.port";
 import type { HeadlessStreamQueuePort } from "../ports/stream-queue.port";
+import type { HeadlessWorkerWakePort } from "../ports/worker-wake.port";
+import type { HeadlessQueueProviderId } from "../runtime/queue-provider";
 import {
   isCanonicalStoredJobRecord,
   type HeadlessCanonicalStoredJobRecord,
@@ -186,6 +188,20 @@ function isCoherentLiveRenderClaim(
   );
 }
 
+async function deliverNeonWakeOrFailClosed(input: {
+  readonly wake?: HeadlessWorkerWakePort;
+  readonly nowMs: number;
+}): Promise<{ readonly ok: boolean }> {
+  if (input.wake == null) {
+    return { ok: false };
+  }
+  const woken = await input.wake.wake({ nowMs: input.nowMs });
+  if (!woken.ok || woken.value.kind === "failed") {
+    return { ok: false };
+  }
+  return { ok: true };
+}
+
 /**
  * Dispatch one claimed (or claimable) outbox intent.
  */
@@ -203,6 +219,12 @@ export async function dispatchRenderOutboxIntentOnce(input: {
     readonly claimToken: string;
     readonly expectedStoreVersion: number;
   };
+  /**
+   * Neon path wakes the worker instead of XADD. Missing wake fails closed
+   * (backoff, job stays queued). Never dual-enqueues.
+   */
+  readonly queueProvider?: HeadlessQueueProviderId;
+  readonly wake?: HeadlessWorkerWakePort;
 }): Promise<HeadlessControlPlaneResult<DispatchSingleOutboxResult>> {
   // Pre-claim abort with no injected claim — nothing held to release.
   if (input.signal?.aborted && input.existingClaim == null) {
@@ -472,16 +494,19 @@ export async function dispatchRenderOutboxIntentOnce(input: {
     return okResult(interpretRejectCas(rejected, "JOB_CLAIMED", deliveryId));
   }
 
-  const enqueued = await input.streamQueue.enqueueRender({
-    deliveryKind: "render",
-    jobId: intent.jobId,
-    ownerId: intent.ownerId,
-    attempt: intent.attempt,
-    deliveryId: intent.deliveryId,
-    enqueuedAtMs: input.nowMs,
-  });
+  const delivered =
+    input.queueProvider === "neon"
+      ? await deliverNeonWakeOrFailClosed(input)
+      : await input.streamQueue.enqueueRender({
+          deliveryKind: "render",
+          jobId: intent.jobId,
+          ownerId: intent.ownerId,
+          attempt: intent.attempt,
+          deliveryId: intent.deliveryId,
+          enqueuedAtMs: input.nowMs,
+        });
 
-  if (!enqueued.ok) {
+  if (!delivered.ok) {
     const released = await input.outbox.releaseWithBackoff({
       dispatchId: input.dispatchId,
       ownerId: input.ownerId,
@@ -617,6 +642,8 @@ export async function dispatchRenderOutboxOnce(input: {
   readonly limit?: number;
   readonly nowMs: number;
   readonly signal?: AbortSignal;
+  readonly queueProvider?: HeadlessQueueProviderId;
+  readonly wake?: HeadlessWorkerWakePort;
 }): Promise<HeadlessControlPlaneResult<DispatchRenderOutboxOnceSuccess>> {
   if (input.signal?.aborted) {
     return cpFail("OPERATION_ABORTED", "Dispatch outbox sweep aborted.");
@@ -643,6 +670,8 @@ export async function dispatchRenderOutboxOnce(input: {
       outbox: input.outbox,
       jobStore: input.jobStore,
       streamQueue: input.streamQueue,
+      queueProvider: input.queueProvider,
+      wake: input.wake,
       dispatchId: row.intent.dispatchId,
       ownerId: row.intent.ownerId,
       nowMs: input.nowMs,
@@ -702,6 +731,8 @@ export function createRenderDispatchOutboxScheduler(input: {
   readonly nowMs?: () => number;
   readonly intervalMs?: number;
   readonly batchLimit?: number;
+  readonly queueProvider?: HeadlessQueueProviderId;
+  readonly wake?: HeadlessWorkerWakePort;
   readonly onSweep?: (
     result: HeadlessControlPlaneResult<DispatchRenderOutboxOnceSuccess>,
   ) => void;
@@ -755,6 +786,8 @@ export function createRenderDispatchOutboxScheduler(input: {
         limit: batchLimit,
         nowMs: nowMs(),
         signal: abort.signal,
+        queueProvider: input.queueProvider,
+        wake: input.wake,
       });
       input.onSweep?.(result);
       return result;

@@ -10,4 +10,6 @@ Start here instead:
 
 Read phase documents chronologically when investigating a specific seam (audio authority, streaming 4K, owned objects, Fly staging). Later files supersede earlier “NOT STARTED” lines only where they explicitly say so.
 
+Neon queue migration (Upstash → Neon control plane): [HEADLESS_NEON_QUEUE_MIGRATION.md](HEADLESS_NEON_QUEUE_MIGRATION.md).
+
 Do not promote a phase filename to a product capability claim.

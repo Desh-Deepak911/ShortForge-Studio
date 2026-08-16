@@ -14,6 +14,8 @@ Phase **2B.2B** ships an explicit, operator-triggered migration runner and a gat
 | `005_headless_cleanup_intents.sql` | Durable orphan-artifact cleanup intents bound to `object_id` (claim/CAS; no capability URL columns) |
 | `006_headless_render_dispatch_outbox.sql` | Durable render-dispatch outbox intents (pending/claimed/dispatched; stable delivery_id; no URL/secret columns) |
 | `007_headless_owned_object_slot_key_capacity.sql` | Widens `public.headless_owned_objects.slot_key` to `VARCHAR(1024)` — additive alignment with TypeScript canonical max |
+| `008_headless_export_maintenance_lease.sql` | Export maintenance lease + state tables |
+| `009_headless_verify_queued_unclaimed.sql` | Partial index for Neon verify claim-next (uploaded, unclaimed staging objects) |
 | `migration-catalog.ts` | Deterministic discovery + repository checksums |
 | `run-headless-migrations.ts` | Gated migration runner (Client + BEGIN/COMMIT + advisory lock) |
 | `cli-migrate.ts` | Operator CLI entrypoint |
@@ -22,7 +24,7 @@ Phase **2B.2B** ships an explicit, operator-triggered migration runner and a gat
 
 The catalog discovers **only** executable files matching `NNN_*.sql` (see `EXECUTABLE_HEADLESS_MIGRATION_ID_PATTERN` / `isExecutableHeadlessMigrationFile`). Companion markdown such as `003_headless_cas_transaction_spec.md` is **never** treated as a migration.
 
-Therefore the executable ID sequence is intentionally **non-contiguous**: `000`, `001`, `002`, `004`, `005`, `006`, `007`. There is **no** phantom executable `003`. Contiguous numeric IDs are **not** required by catalog policy. Migration `004` is retained as-is (not renamed). Phase **2E.2A** adds `005_headless_cleanup_intents.sql`, Phase **2E.2B.2** adds `006_headless_render_dispatch_outbox.sql`, and Phase **2E.2D.8C.2** adds `007_headless_owned_object_slot_key_capacity.sql` locally — remote apply of `007` is a separate authorized operator action.
+Therefore the executable ID sequence is intentionally **non-contiguous**: `000`, `001`, `002`, `004`, `005`, `006`, `007`, `008`, `009`. There is **no** phantom executable `003`. Contiguous numeric IDs are **not** required by catalog policy. Migration `004` is retained as-is (not renamed). Phase **2E.2A** adds `005_headless_cleanup_intents.sql`, Phase **2E.2B.2** adds `006_headless_render_dispatch_outbox.sql`, and Phase **2E.2D.8C.2** adds `007_headless_owned_object_slot_key_capacity.sql` locally. Prompt 5.5 adds `009_headless_verify_queued_unclaimed.sql` (additive partial index). Remote apply remains a separate authorized operator action.
 
 SQL migration files intentionally **do not** wrap themselves in `BEGIN`/`COMMIT`. The runner owns the transaction boundary.
 

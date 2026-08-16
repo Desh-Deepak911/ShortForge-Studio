@@ -5,6 +5,7 @@
 
 import { applyHeadlessJobTransition } from "../../domain/headless-job-lifecycle";
 import { isHeadlessTerminalState } from "../../domain/headless-render-constants";
+import { applyClaimedProgressWrite } from "../services/apply-claimed-progress";
 import { deepFreezeHeadlessValue } from "../../domain/headless-deep-freeze";
 import { isLegalHeadlessJobTransition } from "../../domain/headless-job-lifecycle";
 import { validateHeadlessRenderJobCoherence } from "../../domain/validate-headless-coherence";
@@ -565,6 +566,191 @@ export class MemoryHeadlessJobStoreAdapter implements HeadlessJobStorePort {
     });
     this.byId.set(input.jobId, record);
     return cpOk({ kind: "claimed" as const, record: detachCanonical(record) });
+  }
+
+  async claimNextQueuedJob(input: {
+    claimToken: string;
+    nowMs: number;
+    maxActiveRendersPerOwner?: number;
+  }) {
+    if (
+      typeof input.claimToken !== "string" ||
+      input.claimToken.trim().length === 0 ||
+      input.claimToken.length > 128
+    ) {
+      return cpFail("INVALID_TRANSPORT", "claimToken is invalid.");
+    }
+    if (
+      typeof input.nowMs !== "number" ||
+      !Number.isSafeInteger(input.nowMs) ||
+      input.nowMs < 0
+    ) {
+      return cpFail("INVALID_TRANSPORT", "nowMs is invalid.");
+    }
+    const cap = input.maxActiveRendersPerOwner;
+    if (
+      cap !== undefined &&
+      (typeof cap !== "number" || !Number.isInteger(cap) || cap < 1 || cap > 64)
+    ) {
+      return cpFail("INVALID_TRANSPORT", "maxActiveRendersPerOwner is invalid.");
+    }
+
+    const activeByOwner = new Map<string, number>();
+    if (cap != null) {
+      for (const record of this.byId.values()) {
+        if (
+          record.stage === "canonical" &&
+          record.claimToken != null &&
+          !isHeadlessTerminalState(record.canonicalJob.state)
+        ) {
+          activeByOwner.set(
+            record.ownerId,
+            (activeByOwner.get(record.ownerId) ?? 0) + 1,
+          );
+        }
+      }
+    }
+
+    const candidates = [...this.byId.values()]
+      .filter((record) => {
+        if (record.stage !== "canonical") return false;
+        if (record.canonicalJob.state !== "queued") return false;
+        if (record.claimToken != null) return false;
+        if (cap != null && (activeByOwner.get(record.ownerId) ?? 0) >= cap) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.createdAtMs !== b.createdAtMs) return a.createdAtMs - b.createdAtMs;
+        return a.jobId.localeCompare(b.jobId);
+      });
+
+    const picked = candidates[0];
+    if (!picked || picked.stage !== "canonical") {
+      return cpOk({ kind: "empty" as const });
+    }
+    const record = detachCanonical({
+      ...picked,
+      storeVersion: picked.storeVersion + 1,
+      claimToken: input.claimToken,
+      claimedAtMs: input.nowMs,
+      artifactObjectBinding: null,
+    });
+    this.byId.set(picked.jobId, record);
+    return cpOk({ kind: "claimed" as const, record: detachCanonical(record) });
+  }
+
+  async renewRenderClaim(input: {
+    jobId: string;
+    ownerId: string;
+    claimToken: string;
+    nowMs: number;
+  }) {
+    const current = this.byId.get(input.jobId);
+    if (!current || current.ownerId !== input.ownerId) {
+      return cpOk({ kind: "rejected" as const });
+    }
+    if (current.stage !== "canonical") {
+      return cpOk({ kind: "rejected" as const });
+    }
+    if (isHeadlessTerminalState(current.canonicalJob.state)) {
+      return cpOk({ kind: "rejected" as const });
+    }
+    if (current.claimToken == null || current.claimToken !== input.claimToken) {
+      return cpOk({ kind: "rejected" as const });
+    }
+    if (
+      typeof input.nowMs !== "number" ||
+      !Number.isSafeInteger(input.nowMs) ||
+      input.nowMs < 0
+    ) {
+      return cpFail("INVALID_TRANSPORT", "nowMs is invalid.");
+    }
+    const record = detachCanonical({
+      ...current,
+      claimedAtMs: input.nowMs,
+    });
+    this.byId.set(input.jobId, record);
+    return cpOk({ kind: "renewed" as const, claimedAtMs: input.nowMs });
+  }
+
+  async updateClaimedProgress(input: {
+    jobId: string;
+    ownerId: string;
+    claimToken: string;
+    expectedStoreVersion: number;
+    nowMs: number;
+    progress: import("../../domain/headless-render.types").HeadlessAdvisoryProgress;
+  }) {
+    const current = this.byId.get(input.jobId);
+    if (!current || current.ownerId !== input.ownerId) {
+      return cpOk({ kind: "rejected" as const });
+    }
+    if (current.stage !== "canonical") {
+      return cpOk({ kind: "rejected" as const });
+    }
+    if (isHeadlessTerminalState(current.canonicalJob.state)) {
+      return cpOk({ kind: "terminal_locked" as const });
+    }
+    if (current.storeVersion !== input.expectedStoreVersion) {
+      return cpOk({ kind: "stale" as const });
+    }
+    if (current.claimToken !== input.claimToken) {
+      return cpOk({ kind: "rejected" as const });
+    }
+    const next = applyClaimedProgressWrite({
+      current,
+      progress: input.progress,
+      nowMs: input.nowMs,
+    });
+    if (!next.ok) {
+      return cpFail("JOB_STORE_COHERENCE_REJECTED", next.message);
+    }
+    const record = detachCanonical({
+      ...next.record,
+      claimToken: current.claimToken,
+      claimedAtMs: current.claimedAtMs,
+    });
+    this.byId.set(input.jobId, record);
+    return cpOk({ kind: "updated" as const, record: detachCanonical(record) });
+  }
+
+  async listExpiredRenderClaims(input: {
+    nowMs: number;
+    leaseMs: number;
+    limit: number;
+  }) {
+    if (
+      typeof input.limit !== "number" ||
+      !Number.isInteger(input.limit) ||
+      input.limit < 1 ||
+      input.limit > 1000
+    ) {
+      return cpFail("INVALID_TRANSPORT", "Expired-claim list limit is invalid.");
+    }
+    const rows: {
+      readonly jobId: string;
+      readonly ownerId: string;
+      readonly claimToken: string;
+      readonly claimedAtMs: number;
+    }[] = [];
+    for (const record of this.byId.values()) {
+      if (record.stage !== "canonical") continue;
+      if (record.claimToken == null || record.claimedAtMs == null) continue;
+      if (isHeadlessTerminalState(record.canonicalJob.state)) continue;
+      if (record.claimedAtMs + input.leaseMs >= input.nowMs) continue;
+      rows.push(
+        Object.freeze({
+          jobId: record.jobId,
+          ownerId: record.ownerId,
+          claimToken: record.claimToken,
+          claimedAtMs: record.claimedAtMs,
+        }),
+      );
+      if (rows.length >= input.limit) break;
+    }
+    return cpOk(rows);
   }
 
   async recoverExpiredClaim(input: {

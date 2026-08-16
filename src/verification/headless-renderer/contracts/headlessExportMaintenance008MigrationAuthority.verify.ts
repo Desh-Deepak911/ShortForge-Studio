@@ -70,7 +70,8 @@ async function main() {
     const ids = HEADLESS_EMBEDDED_SCHEMA_FINGERPRINT.migrations.map((m) => m.migrationId);
     assert.equal(ids.includes("001_headless_project_ownership"), true);
     assert.equal(ids.includes("008_headless_export_maintenance_lease"), true);
-    assert.equal(ids.length, 8);
+    assert.equal(ids.includes("009_headless_verify_queued_unclaimed"), true);
+    assert.equal(ids.length, 9);
   });
 
   console.log(`\n${passed} passed\n`);

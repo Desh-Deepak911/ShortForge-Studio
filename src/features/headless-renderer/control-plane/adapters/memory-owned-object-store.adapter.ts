@@ -604,4 +604,93 @@ export class MemoryHeadlessOwnedObjectStoreAdapter
     entry.storeVersion += 1;
     return cpOk(detach(entry));
   }
+
+  async claimNextVerification(input: {
+    claimToken: string;
+    nowMs: number;
+    claimLeaseMs?: number;
+  }) {
+    if (
+      typeof input.claimToken !== "string" ||
+      input.claimToken.trim().length === 0 ||
+      input.claimToken.length > 128
+    ) {
+      return cpFail("INVALID_TRANSPORT", "claimToken is invalid.");
+    }
+    if (
+      typeof input.nowMs !== "number" ||
+      !Number.isSafeInteger(input.nowMs) ||
+      input.nowMs < 0
+    ) {
+      return cpFail("INVALID_TRANSPORT", "nowMs is invalid.");
+    }
+    const leaseMs = input.claimLeaseMs ?? 120_000;
+    const candidates = [...this.byId.values()]
+      .filter((entry) => {
+        if (entry.record.stage !== "staging") return false;
+        if (entry.record.uploadedObservedAtMs == null) return false;
+        if (entry.record.verificationState === "unclaimed") {
+          return entry.record.verificationClaimToken == null;
+        }
+        if (entry.record.verificationState === "claimed") {
+          const claimedAt = entry.record.verificationClaimedAtMs;
+          return (
+            typeof claimedAt === "number" &&
+            input.nowMs - claimedAt >= leaseMs
+          );
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        const observed =
+          (a.record.uploadedObservedAtMs ?? 0) -
+          (b.record.uploadedObservedAtMs ?? 0);
+        if (observed !== 0) return observed;
+        return a.record.objectId.localeCompare(b.record.objectId);
+      });
+    const picked = candidates[0];
+    if (!picked || picked.record.stage !== "staging") {
+      return cpOk({ kind: "empty" as const });
+    }
+    const next: HeadlessStagingOwnedObjectRecordV1 = {
+      ...picked.record,
+      verificationState: "claimed",
+      verificationClaimToken: input.claimToken,
+      verificationClaimedAtMs: input.nowMs,
+      updatedAtMs: input.nowMs,
+    };
+    const validated = validateHeadlessOwnedObjectRecord(next);
+    if (!validated.ok) return cpFail("HOSTILE_INPUT", validated.message);
+    picked.record = validated.record;
+    picked.storeVersion += 1;
+    return cpOk({ kind: "claimed" as const, stored: detach(picked) });
+  }
+
+  async renewVerificationClaim(input: {
+    objectId: string;
+    ownerId: string;
+    claimToken: string;
+    nowMs: number;
+  }) {
+    const entry = this.byId.get(input.objectId);
+    if (!entry || entry.record.ownerId !== input.ownerId) {
+      return cpOk(null);
+    }
+    if (
+      entry.record.stage !== "staging" ||
+      entry.record.verificationState !== "claimed" ||
+      entry.record.verificationClaimToken !== input.claimToken
+    ) {
+      return cpOk(null);
+    }
+    const next: HeadlessStagingOwnedObjectRecordV1 = {
+      ...entry.record,
+      verificationClaimedAtMs: input.nowMs,
+      updatedAtMs: input.nowMs,
+    };
+    const validated = validateHeadlessOwnedObjectRecord(next);
+    if (!validated.ok) return cpFail("HOSTILE_INPUT", validated.message);
+    entry.record = validated.record;
+    return cpOk(detach(entry));
+  }
 }
