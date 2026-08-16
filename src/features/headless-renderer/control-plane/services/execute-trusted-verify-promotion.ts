@@ -22,6 +22,8 @@ import type { HeadlessR2ObjectIOPort } from "../ports/r2-object-io.port";
 import type { HeadlessStreamQueuePort } from "../ports/stream-queue.port";
 import type { HeadlessStoredOwnedObject } from "../ports/owned-object-store.port";
 import type { HeadlessRenderDispatchOutboxPort } from "../ports/render-dispatch-outbox.port";
+import type { HeadlessWorkerWakePort } from "../ports/worker-wake.port";
+import type { HeadlessQueueProviderId } from "../runtime/queue-provider";
 import {
   isProvisionalStoredJobRecord,
   isCanonicalStoredJobRecord,
@@ -79,6 +81,8 @@ export type ExecuteTrustedVerifyPromotionInput = {
   /** Durable render-dispatch outbox — required for promotion dispatch. */
   readonly dispatchOutbox: HeadlessRenderDispatchOutboxPort;
   readonly deleteOnReject?: boolean;
+  readonly queueProvider?: HeadlessQueueProviderId;
+  readonly wake?: HeadlessWorkerWakePort;
 };
 
 async function dispatchAfterPromotion(input: {
@@ -93,6 +97,8 @@ async function dispatchAfterPromotion(input: {
   readonly jobStore: HeadlessJobStorePort;
   readonly streamQueue: Pick<HeadlessStreamQueuePort, "enqueueRender">;
   readonly dispatchOutbox: HeadlessRenderDispatchOutboxPort;
+  readonly queueProvider?: HeadlessQueueProviderId;
+  readonly wake?: HeadlessWorkerWakePort;
 }): Promise<HeadlessControlPlaneResult<TrustedVerifyPromotionOutcome>> {
   const pendingPrefix = input.alreadyPromoted
     ? "already_promoted_dispatch_pending"
@@ -150,6 +156,8 @@ async function dispatchAfterPromotion(input: {
     ownerId: input.ownerId,
     nowMs: input.nowMs,
     signal: input.signal,
+    queueProvider: input.queueProvider,
+    wake: input.wake,
   });
   if (!dispatched.ok) {
     return outcome({
@@ -453,6 +461,8 @@ export async function executeTrustedVerifyPromotion(
       ownerId: input.ownerId,
       nowMs: input.nowMs,
       signal: input.signal,
+      queueProvider: input.queueProvider,
+      wake: input.wake,
     });
   }
 
@@ -499,6 +509,8 @@ export async function executeTrustedVerifyPromotion(
     jobStore: input.jobStore,
     streamQueue: input.streamQueue,
     dispatchOutbox: input.dispatchOutbox,
+    queueProvider: input.queueProvider,
+    wake: input.wake,
   });
 }
 
@@ -515,6 +527,8 @@ async function convergeAfterRace(input: {
   readonly ownerId: string;
   readonly nowMs: number;
   readonly signal?: AbortSignal;
+  readonly queueProvider?: HeadlessQueueProviderId;
+  readonly wake?: HeadlessWorkerWakePort;
 }): Promise<HeadlessControlPlaneResult<TrustedVerifyPromotionOutcome>> {
   const loaded = await input.jobStore.getByJobIdAndOwner(
     input.jobId,
@@ -590,5 +604,7 @@ async function convergeAfterRace(input: {
     jobStore: input.jobStore,
     streamQueue: input.streamQueue,
     dispatchOutbox: input.dispatchOutbox,
+    queueProvider: input.queueProvider,
+    wake: input.wake,
   });
 }

@@ -244,6 +244,18 @@ const REQUIRED_INDEXES: readonly RequiredIndex[] = [
     predicateIncludes: ["verification_claim_token", "staging"],
   },
   {
+    name: "idx_headless_owned_objects_verify_queued_unclaimed",
+    table: "headless_owned_objects",
+    unique: false,
+    columns: ["uploaded_observed_at_ms", "object_id"],
+    predicateIncludes: [
+      "staging",
+      "uploaded_observed_at_ms",
+      "unclaimed",
+      "verification_claim_token",
+    ],
+  },
+  {
     name: "idx_headless_cleanup_intents_owner_retryable",
     table: "headless_cleanup_intents",
     unique: false,

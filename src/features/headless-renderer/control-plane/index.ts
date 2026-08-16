@@ -363,6 +363,8 @@ export {
 } from "./runtime/headless-clerk-proxy";
 
 export { HeadlessControlPlaneService } from "./services/control-plane.service";
+export { recoverExpiredRenderClaimsOnce } from "./services/durable-neon-queue";
+export { applyClaimedProgressWrite } from "./services/apply-claimed-progress";
 export {
   toHeadlessPublicJobView,
   toHeadlessPublicJobViewFromStore,
@@ -425,6 +427,29 @@ export {
 } from "./services/headless-export-cleanup-metrics";
 
 export { composeProductionHeadlessControlPlane } from "./runtime/compose-production-control-plane";
+export {
+  classifyHeadlessQueueProvider,
+  headlessQueueProviderDiagnostic,
+  shouldConstructUpstashRestProducer,
+  type HeadlessQueueProviderId,
+  type HeadlessQueueProviderStatus,
+  type HeadlessQueueProviderClassification,
+} from "./runtime/queue-provider";
+export {
+  readHeadlessQueueFairnessSettings,
+  shouldPersistHeadlessProgress,
+  HEADLESS_DEFAULT_MAX_ACTIVE_RENDERS_PER_OWNER,
+  HEADLESS_HEARTBEAT_MS,
+  HEADLESS_IDLE_GRACE_MS,
+} from "./runtime/queue-fairness";
+export {
+  classifyHeadlessFlyWakeEnvironment,
+  readConfiguredHeadlessFlyWakeConfig,
+  readConfiguredHeadlessFlyVerifyWakeConfig,
+} from "./runtime/fly-wake-environment";
+export { dispatchWorkerWakeAfterQueuedCommit } from "./services/dispatch-worker-wake";
+export { dispatchVerifyWakeAfterObservedUpload } from "./services/dispatch-verify-wake";
+export type { HeadlessWorkerWakePort } from "./ports/worker-wake.port";
 export {
   interpretExactXpendingResponse,
   pendingProbeToDeprecatedBoolean,

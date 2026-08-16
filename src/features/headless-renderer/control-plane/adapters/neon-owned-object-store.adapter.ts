@@ -963,4 +963,100 @@ RETURNING ${HEADLESS_OWNED_OBJECT_SELECT_SQL}
       return mapHeadlessDatabaseFailure(error);
     }
   }
+
+  async claimNextVerification(input: {
+    claimToken: string;
+    nowMs: number;
+    claimLeaseMs?: number;
+  }) {
+    if (
+      typeof input.claimToken !== "string" ||
+      input.claimToken.trim().length === 0 ||
+      input.claimToken.length > 128
+    ) {
+      return cpFail("INVALID_TRANSPORT", "claimToken is invalid.");
+    }
+    if (
+      typeof input.nowMs !== "number" ||
+      !Number.isSafeInteger(input.nowMs) ||
+      input.nowMs < 0
+    ) {
+      return cpFail("INVALID_TRANSPORT", "nowMs is invalid.");
+    }
+    const leaseMs = input.claimLeaseMs ?? 120_000;
+    try {
+      return await this.sql.withTransaction(async (client) => {
+        const updated = await client.query(
+          `
+UPDATE public.headless_owned_objects
+SET verification_state = 'claimed',
+    verification_claim_token = $1,
+    verification_claimed_at_ms = $2,
+    updated_at_ms = $2,
+    store_version = store_version + 1
+WHERE object_id = (
+  SELECT object_id
+  FROM public.headless_owned_objects
+  WHERE stage = 'staging'
+    AND uploaded_observed_at_ms IS NOT NULL
+    AND (
+      (verification_state = 'unclaimed' AND verification_claim_token IS NULL)
+      OR (
+        verification_state = 'claimed'
+        AND verification_claimed_at_ms IS NOT NULL
+        AND verification_claimed_at_ms + $3 <= $2
+      )
+    )
+  ORDER BY uploaded_observed_at_ms ASC, object_id ASC
+  LIMIT 1
+  FOR UPDATE SKIP LOCKED
+)
+AND stage = 'staging'
+RETURNING ${HEADLESS_OWNED_OBJECT_SELECT_SQL}
+`,
+          [input.claimToken, input.nowMs, leaseMs],
+        );
+        if (updated.rows.length === 0) {
+          return cpOk({ kind: "empty" as const });
+        }
+        const mapped = await mapRow(updated.rows[0]);
+        if (!mapped.ok) return mapped.fail;
+        return cpOk({ kind: "claimed" as const, stored: mapped.stored });
+      });
+    } catch (error) {
+      return mapHeadlessDatabaseFailure(error);
+    }
+  }
+
+  async renewVerificationClaim(input: {
+    objectId: string;
+    ownerId: string;
+    claimToken: string;
+    nowMs: number;
+  }) {
+    try {
+      return await this.sql.withClient(async (client) => {
+        const updated = await client.query(
+          `
+UPDATE public.headless_owned_objects
+SET verification_claimed_at_ms = $1,
+    updated_at_ms = $1
+WHERE object_id = $2
+  AND owner_id = $3
+  AND verification_claim_token = $4
+  AND stage = 'staging'
+  AND verification_state = 'claimed'
+RETURNING ${HEADLESS_OWNED_OBJECT_SELECT_SQL}
+`,
+          [input.nowMs, input.objectId, input.ownerId, input.claimToken],
+        );
+        if (updated.rows.length === 0) return cpOk(null);
+        const mapped = await mapRow(updated.rows[0]);
+        if (!mapped.ok) return mapped.fail;
+        return cpOk(mapped.stored);
+      });
+    } catch (error) {
+      return mapHeadlessDatabaseFailure(error);
+    }
+  }
 }

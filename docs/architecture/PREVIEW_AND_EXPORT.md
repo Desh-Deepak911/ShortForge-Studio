@@ -34,6 +34,7 @@ Headless is a separate renderer: Chromium + native ffmpeg, a control plane, and 
 - Local isolated worker can use system Chrome and native ffmpeg
 - Production routes stay **configuration-blocked** until environment classification says otherwise
 - Fly / Neon / R2 / Upstash evidence is recorded under [../evidence/headless/](../evidence/headless/README.md)
+- Neon queue migration (Upstash Streams → Neon claim-next + on-demand Fly wake for **verify and render**): [headless/HEADLESS_NEON_QUEUE_MIGRATION.md](headless/HEADLESS_NEON_QUEUE_MIGRATION.md). `HEADLESS_QUEUE_PROVIDER=neon` has no Upstash runtime dependency. Staging flag only — do not cut over production without explicit approval. Prompt 6 is not authorized.
 - Do not claim a hosted production certification unless that current evidence file says Pass for the relevant harness
 
 Operations: [HEADLESS_OPERATIONS.md](../operations/HEADLESS_OPERATIONS.md).

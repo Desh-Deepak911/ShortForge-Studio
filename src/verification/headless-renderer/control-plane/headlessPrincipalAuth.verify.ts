@@ -83,6 +83,12 @@ function mockCompose(input: {
       upstashProducerEnvironmentStatus: "unconfigured" as const,
       upstashProducerConfigured: false as const,
       upstashRestProducer: null,
+      queueProvider: {
+        status: "unconfigured" as const,
+        provider: "upstash" as const,
+        envName: "local" as const,
+      },
+      verifyWake: null,
       principal,
       projectAuthorization: new UnavailableHeadlessProjectAuthorizationAdapter(),
       jobStore: null,

@@ -192,6 +192,24 @@ do not share provider credentials.
 
 **`.env.local` action:** not edited in Phase 2D.1H. Official LIVE_EVIDENCE preserved unmodified (`f2f38dc…`). Progressive FAIL preserved (`482dfb11…`); claim/ACK PASS (`74fc6c23…`); DLQ PASS (`c448d9e2…`); concurrency probe / progressive / official not rerun. Browser Export does not require Upstash keys.
 
+### Neon queue provider (staging cutover flag)
+
+Server-only. Never put these in `NEXT_PUBLIC_*`. Do not record secret values.
+
+| Variable | Role | Fail-closed rule |
+| --- | --- | --- |
+| `HEADLESS_QUEUE_PROVIDER` | Exact `upstash` or `neon` | Staging/production: missing or any other value is `invalid` (no queue attach). Local may omit (defaults to `upstash`). |
+| `HEADLESS_MAX_ACTIVE_RENDERS_PER_OWNER` | Per-owner active render cap | Default `1`. Invalid non-integer / out of `1..8` fails closed. |
+| `HEADLESS_MAX_GLOBAL_RENDER_WORKERS` | Global worker concurrency hint | Default `2`. Invalid non-integer / out of `1..16` fails closed. |
+| `FLY_API_TOKEN` | Machines start/stop (web wake + worker idle stop) | Server-only. Never logged or returned. |
+| `HEADLESS_FLY_WAKE_APP_NAME` | Fly app name for on-demand wake | Required with token + machine id when provider is `neon` on staging/production. |
+| `HEADLESS_FLY_WAKE_MACHINE_ID` | Fly Machine id to start/stop | Same trio as above. Partial set is `invalid`. |
+| `HEADLESS_FLY_WAKE_VERIFY_MACHINE_ID` | Optional verify Machine id | When unset, verify wake uses `HEADLESS_FLY_WAKE_MACHINE_ID`. |
+
+`HEADLESS_QUEUE_PROVIDER=neon` means **no Upstash runtime dependency**: upload-complete records verification-required in Neon, the verify worker claims Neon rows, and render dispatch wakes Fly. `HEADLESS_QUEUE_PROVIDER=upstash` keeps REST `enqueueVerify` / `enqueueRender` and TCP consume. Never enqueue the same verify or render dispatch into both providers. Keep Upstash secrets in place for rollback; do not delete them. Do not set this flag on production without explicit cutover approval. Do not deploy from this documentation. Prompt 6 (remove Upstash) remains unauthorized until staging **and** production observation pass.
+
+Staging evidence template (NOT_RUN until a gated run): [HEADLESS_NEON_QUEUE_STAGING_EVIDENCE.md](../evidence/headless/current/HEADLESS_NEON_QUEUE_STAGING_EVIDENCE.md). Design: [HEADLESS_NEON_QUEUE_MIGRATION.md](../architecture/headless/HEADLESS_NEON_QUEUE_MIGRATION.md).
+
 ## Sprint 10E / 10E.1 — Retention Narrative Composer + Hook Bridge
 
 No new environment variable or feature flag. No temporary public gate.

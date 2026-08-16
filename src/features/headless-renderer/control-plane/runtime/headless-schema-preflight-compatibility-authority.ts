@@ -23,6 +23,9 @@ export const HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE =
 export const HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID =
   "008_headless_export_maintenance_lease" as const;
 
+export const HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_009_ID =
+  "009_headless_verify_queued_unclaimed" as const;
+
 /** Exact checksum for the additive maintenance lease migration (008). */
 export const HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_CHECKSUM_SHA256 =
   "5ed409d7e0bc42b44c38d74ee99f6f94de541c6cce5b31e39c39bd6d2b99f3de" as const;
@@ -31,7 +34,9 @@ export { HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID };
 
 const CORE_MIGRATION_SOURCES = Object.freeze(
   embeddedSchemaFingerprintAsPreflightSources().filter(
-    (entry) => entry.migrationId !== HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID,
+    (entry) =>
+      entry.migrationId !== HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_008_ID &&
+      entry.migrationId !== HEADLESS_SCHEMA_PREFLIGHT_MIGRATION_009_ID,
   ),
 );
 

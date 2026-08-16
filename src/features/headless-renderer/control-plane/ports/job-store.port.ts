@@ -4,6 +4,7 @@
  */
 
 import type {
+  HeadlessAdvisoryProgress,
   HeadlessRenderJobRequestV1,
   HeadlessRenderJobV1,
 } from "../../domain/headless-render.types";
@@ -146,6 +147,88 @@ export interface HeadlessJobStorePort {
           readonly record: HeadlessCanonicalStoredJobRecord;
         }
       | { readonly kind: "rejected" }
+    >
+  >;
+
+  /**
+   * Atomically claim the next eligible canonical queued job.
+   * Neon: `FOR UPDATE SKIP LOCKED`. Two workers cannot win the same job.
+   * Empty queue → `{ kind: "empty" }` (not an error).
+   */
+  claimNextQueuedJob(input: {
+    claimToken: string;
+    nowMs: number;
+    /**
+     * When set, skip owners who already have this many live (claimed,
+     * non-terminal) render claims. Omit for FIFO-only claim-next.
+     */
+    maxActiveRendersPerOwner?: number;
+  }): Promise<
+    HeadlessControlPlaneResult<
+      | {
+          readonly kind: "claimed";
+          readonly record: HeadlessCanonicalStoredJobRecord;
+        }
+      | { readonly kind: "empty" }
+    >
+  >;
+
+  /**
+   * Slide the render lease clock (`claimed_at_ms`) without bumping
+   * `store_version`. Rejects token mismatch, missing claim, and terminals.
+   */
+  renewRenderClaim(input: {
+    jobId: string;
+    ownerId: string;
+    claimToken: string;
+    nowMs: number;
+  }): Promise<
+    HeadlessControlPlaneResult<
+      | { readonly kind: "renewed"; readonly claimedAtMs: number }
+      | { readonly kind: "rejected" }
+    >
+  >;
+
+  /**
+   * Claim-token-gated advisory progress. Does not overwrite `claimed_at_ms`.
+   * Queued → rendering on first persist; later updates stay in the current
+   * non-terminal state.
+   */
+  updateClaimedProgress(input: {
+    jobId: string;
+    ownerId: string;
+    claimToken: string;
+    expectedStoreVersion: number;
+    nowMs: number;
+    progress: HeadlessAdvisoryProgress;
+  }): Promise<
+    HeadlessControlPlaneResult<
+      | {
+          readonly kind: "updated";
+          readonly record: HeadlessCanonicalStoredJobRecord;
+        }
+      | { readonly kind: "stale" }
+      | { readonly kind: "rejected" }
+      | { readonly kind: "terminal_locked" }
+    >
+  >;
+
+  /**
+   * Bounded live claims whose lease clock has expired.
+   * Database unavailable → fail (never silent empty).
+   */
+  listExpiredRenderClaims(input: {
+    nowMs: number;
+    leaseMs: number;
+    limit: number;
+  }): Promise<
+    HeadlessControlPlaneResult<
+      readonly {
+        readonly jobId: string;
+        readonly ownerId: string;
+        readonly claimToken: string;
+        readonly claimedAtMs: number;
+      }[]
     >
   >;
 

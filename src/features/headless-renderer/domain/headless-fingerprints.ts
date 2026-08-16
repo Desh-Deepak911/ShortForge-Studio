@@ -32,7 +32,9 @@ function assetDescriptorFingerprintPayload(asset: HeadlessAssetDescriptorV1) {
     },
     contentDigest: asset.contentDigest,
     byteLength: asset.byteLength,
-    mimeType: asset.mimeType,
+    // Validation accepts case-insensitive MIME syntax and stores lowercase.
+    // Fingerprints must use the same canonical form on both sides of JSON.
+    mimeType: asset.mimeType.toLowerCase(),
     mediaKind: asset.mediaKind,
     // storageLocator excluded — durable owned-object identity is not semantic content.
     // expiresAtMs excluded — mutable retention policy, not semantic content identity

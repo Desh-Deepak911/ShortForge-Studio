@@ -20,6 +20,7 @@ import {
   type HeadlessQueueLeaseSettings,
   type HeadlessUpstashConsumerEnvironmentStatus,
 } from "../../control-plane/runtime/upstash-environment";
+import { classifyHeadlessQueueProvider } from "../../control-plane/runtime/queue-provider";
 import {
   classifyHeadlessSchemaPreflightCompatibilityBinding,
   assertHeadlessExportMaintenanceDisabledForBridge,
@@ -319,6 +320,10 @@ export function classifyHeadlessHostedWorkerEnvironment(
     const neonStatus = classifyHeadlessNeonEnvironment(env);
     const r2Status = classifyHeadlessR2Environment(env);
     const upstashConsumerStatus = classifyHeadlessUpstashConsumerEnvironment(env);
+    const queueProvider = classifyHeadlessQueueProvider(env);
+    const neonQueue =
+      queueProvider.status === "configured" &&
+      queueProvider.provider === "neon";
 
     const requiredPresent = [
       envNameRead.kind === "present",
@@ -328,7 +333,7 @@ export function classifyHeadlessHostedWorkerEnvironment(
       buildIdRead.kind === "present",
       neonStatus === "configured",
       r2Status === "configured",
-      upstashConsumerStatus === "configured",
+      neonQueue || upstashConsumerStatus === "configured",
     ];
     if (requiredPresent.some((v) => !v)) {
       return result("invalid", "partial_configuration");
@@ -348,7 +353,7 @@ export function classifyHeadlessHostedWorkerEnvironment(
     if (r2Status !== "configured") {
       return result("invalid", "invalid_r2");
     }
-    if (upstashConsumerStatus !== "configured") {
+    if (!neonQueue && upstashConsumerStatus !== "configured") {
       return result("invalid", "invalid_upstash_tcp");
     }
 
@@ -547,6 +552,8 @@ export const HEADLESS_HOSTED_FLY_NONSECRET_ENV_NAMES = Object.freeze([
   "HEADLESS_RENDER_CLAIM_LEASE_MS",
   "HEADLESS_VERIFY_DELIVERY_IDLE_MS",
   "HEADLESS_VERIFY_CLAIM_LEASE_MS",
+  "HEADLESS_QUEUE_PROVIDER",
+  "HEADLESS_FLY_WAKE_VERIFY_MACHINE_ID",
   HEADLESS_SCHEMA_PREFLIGHT_COMPATIBILITY_MODE_ENV,
   "HEADLESS_EXPORT_MAINTENANCE_ENABLED",
 ] as const);

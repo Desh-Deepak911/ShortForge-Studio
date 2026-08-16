@@ -28,10 +28,18 @@ import type { HeadlessOwnedObjectStorePort } from "../../control-plane/ports/own
 import type { HeadlessR2ObjectIOPort } from "../../control-plane/ports/r2-object-io.port";
 import type { HeadlessStoragePort } from "../../control-plane/ports/storage.port";
 import type { HeadlessStreamQueuePort } from "../../control-plane/ports/stream-queue.port";
+import { FlyMachineWakeAdapter } from "../../control-plane/adapters/fly-machine-wake.adapter";
 import { readConfiguredHeadlessDatabaseUrl } from "../../control-plane/runtime/neon-environment";
 import { createNeonSqlExecutor } from "../../control-plane/runtime/neon-sql-executor";
 import type { HeadlessSqlExecutor } from "../../control-plane/runtime/sql-client";
 import { readConfiguredHeadlessR2Config } from "../../control-plane/runtime/r2-environment";
+import { classifyHeadlessQueueProvider } from "../../control-plane/runtime/queue-provider";
+import {
+  readConfiguredHeadlessFlyVerifyWakeConfig,
+  readConfiguredHeadlessFlyWakeConfig,
+} from "../../control-plane/runtime/fly-wake-environment";
+import { cpFail } from "../../control-plane/types/control-plane.types";
+import type { HeadlessWorkerWakePort } from "../../control-plane/ports/worker-wake.port";
 import {
   readConfiguredHeadlessUpstashConsumerConfig,
   type HeadlessQueueLeaseSettings,
@@ -97,16 +105,25 @@ export function materializeHostedWorkerAdapters(input: {
     readonly signal: AbortSignal;
   }) => Promise<{ readonly kind: string; readonly reasonId: string }>;
   readonly leaseSettings: HeadlessQueueLeaseSettings;
+  /** This process's own Machine; used only for idle shutdown. */
+  readonly workerWake: HeadlessWorkerWakePort | null;
+  /** Render Machine; used after verify promotion and by outbox dispatch. */
+  readonly renderWake?: HeadlessWorkerWakePort | null;
   readonly close: () => Promise<void>;
 } {
   const env = input.env ?? process.env;
   const databaseUrl = readConfiguredHeadlessDatabaseUrl(env);
   const r2Config = readConfiguredHeadlessR2Config(env);
-  const upstashConfig = readConfiguredHeadlessUpstashConsumerConfig(env);
-  if (databaseUrl == null || r2Config == null || upstashConfig == null) {
+  const queueProvider = classifyHeadlessQueueProvider(env);
+  const neonQueue =
+    queueProvider.status === "configured" && queueProvider.provider === "neon";
+  const upstashConfig = neonQueue
+    ? null
+    : readConfiguredHeadlessUpstashConsumerConfig(env);
+  if (databaseUrl == null || r2Config == null || (!neonQueue && upstashConfig == null)) {
     throw new Error("HOSTED_ADAPTER_CONFIG_INVALID");
   }
-  if (upstashConfig.envName !== input.config.envName) {
+  if (upstashConfig != null && upstashConfig.envName !== input.config.envName) {
     throw new Error("HOSTED_ADAPTER_ENV_MISMATCH");
   }
 
@@ -117,13 +134,29 @@ export function materializeHostedWorkerAdapters(input: {
   const maintenanceLease = new NeonHeadlessMaintenanceLeaseAdapter(sql);
   const maintenanceState = new NeonHeadlessMaintenanceStateAdapter(sql);
   const dispatchOutbox = new NeonHeadlessRenderDispatchOutboxAdapter(sql);
-  const streamQueue = new UpstashTcpStreamConsumerAdapter({
-    config: upstashConfig,
-  });
+  const streamQueue =
+    neonQueue || upstashConfig == null
+      ? createNeonUnavailableStreamQueue()
+      : new UpstashTcpStreamConsumerAdapter({
+          config: upstashConfig,
+        });
   const r2ObjectIo = new R2StorageAdapter({
     env,
     configOverride: r2Config,
   });
+  const renderWakeConfig = readConfiguredHeadlessFlyWakeConfig(env);
+  const workerWakeConfig =
+    input.config.mode === "verify"
+      ? readConfiguredHeadlessFlyVerifyWakeConfig(env)
+      : renderWakeConfig;
+  const workerWake =
+    queueProvider.provider === "neon" && workerWakeConfig != null
+      ? new FlyMachineWakeAdapter({ config: workerWakeConfig })
+      : null;
+  const renderWake =
+    queueProvider.provider === "neon" && renderWakeConfig != null
+      ? new FlyMachineWakeAdapter({ config: renderWakeConfig })
+      : null;
 
   return {
     sql,
@@ -210,6 +243,8 @@ export function materializeHostedWorkerAdapters(input: {
           io: r2ObjectIo,
           streamQueue,
           dispatchOutbox,
+          queueProvider: queueProvider.provider ?? undefined,
+          wake: renderWake ?? undefined,
         });
         if (!result.ok) {
           return {
@@ -224,8 +259,30 @@ export function materializeHostedWorkerAdapters(input: {
       };
     },
     leaseSettings: input.config.leaseSettings,
+    workerWake,
+    renderWake,
     close: async () => {
-      await streamQueue.close();
+      await streamQueue.close?.();
     },
+  };
+}
+
+function createNeonUnavailableStreamQueue(): HeadlessStreamQueuePort & {
+  close?: () => Promise<void>;
+} {
+  const refuse = async () =>
+    cpFail(
+      "CONFIGURATION_UNAVAILABLE",
+      "Upstash stream queue is not attached in Neon mode.",
+    );
+  return {
+    enqueueRender: refuse,
+    enqueueVerify: refuse,
+    ensureConsumerGroups: refuse,
+    readGroup: refuse,
+    ack: refuse,
+    autoClaimIdle: refuse,
+    moveToDlq: refuse,
+    close: async () => undefined,
   };
 }

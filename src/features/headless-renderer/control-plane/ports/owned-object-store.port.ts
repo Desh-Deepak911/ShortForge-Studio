@@ -162,4 +162,27 @@ export interface HeadlessOwnedObjectStorePort {
     uploadedObservedAtMs: number;
     nowMs: number;
   }): Promise<HeadlessControlPlaneResult<HeadlessStoredOwnedObject>>;
+
+  /**
+   * Atomic Neon verify dequeue. At most one winner across workers.
+   * Reclaims expired live claims. Empty is a valid idle drain.
+   */
+  claimNextVerification?(input: {
+    claimToken: string;
+    nowMs: number;
+    claimLeaseMs?: number;
+  }): Promise<
+    HeadlessControlPlaneResult<
+      | { readonly kind: "claimed"; readonly stored: HeadlessStoredOwnedObject }
+      | { readonly kind: "empty" }
+    >
+  >;
+
+  /** Slide the verification lease clock. Does not bump store_version. */
+  renewVerificationClaim?(input: {
+    objectId: string;
+    ownerId: string;
+    claimToken: string;
+    nowMs: number;
+  }): Promise<HeadlessControlPlaneResult<HeadlessStoredOwnedObject | null>>;
 }
