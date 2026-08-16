@@ -178,7 +178,7 @@ fly deploy --image-label <prior> -a REPLACE_WITH_STAGING_APP_NAME -c deploy/head
 fly scale count verify=0 render=0 -a REPLACE_WITH_STAGING_APP_NAME
 ```
 
-See also [HEADLESS_11E_PHASE2E1A_CORRECTION.md](HEADLESS_11E_PHASE2E1A_CORRECTION.md).
+See also [HEADLESS_11E_PHASE2E1A_CORRECTION.md](../../archive/sprints/headless/HEADLESS_11E_PHASE2E1A_CORRECTION.md).
 
 ## Shutdown / recovery
 

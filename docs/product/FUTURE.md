@@ -1,5 +1,7 @@
 # Future Vision
 
+> **Status:** Vision and planned direction only. Nothing in this file is an implementation or certification claim.
+
 Long-term product direction for ShortForge Studio. This document describes **where the product is going** — not how to build it.
 
 ShortForge Studio today is a browser studio that turns a football topic into a narrated vertical short. The vision is to become the default **story-first short-form production tool** for football creators — from solo TikTok editors to club media teams.

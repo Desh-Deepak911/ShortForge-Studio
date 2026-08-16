@@ -1,5 +1,7 @@
 # Headless renderer evidence
 
+Operator overview: [../../operations/HEADLESS_OPERATIONS.md](../../operations/HEADLESS_OPERATIONS.md). Policy: [../RELEASE_READINESS_POLICY.md](../RELEASE_READINESS_POLICY.md). Do not move these files without a path-and-SHA audit.
+
 - `current/` — active official evidence harnesses may update these files.
 - `archive/` — immutable historical snapshots (`pre-*`, `pre-run-*`, FAIL/PASS archives). Provider runs must never overwrite archive files.
 - Byte-identical duplicates may be represented by registry aliases in [EVIDENCE_REGISTRY.md](./EVIDENCE_REGISTRY.md).

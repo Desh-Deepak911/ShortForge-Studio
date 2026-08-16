@@ -1,5 +1,7 @@
 # Brand-sting-export baseline failure evidence
 
+> **Evidence status:** Failed baseline on the recorded dirty-tree comparison. Not a Pass. Not proof that later trees are fixed unless a newer current file says so.
+
 ## Clean staging comparison
 
 | Field | Value |

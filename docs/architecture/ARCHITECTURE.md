@@ -1,10 +1,12 @@
 # Architecture
 
-> **Status:** Partially stale on the export production path. Prefer [MASTER_ARCHITECTURE.md](../../MASTER_ARCHITECTURE.md), [EXPORT_CONTRACT.md](EXPORT_CONTRACT.md), and [EXPORT_RENDERER_ARCHITECTURE.md](EXPORT_RENDERER_ARCHITECTURE.md) for Export Reliability (Sprint 6B–6F.1 / `chunked-browser-v1`). Route-level and generation/editing sections remain useful supporting reference.
+> **Status:** Supporting system overview. Prefer [../README.md](../README.md) for navigation, [STORY_GENERATION.md](STORY_GENERATION.md) for narration, and [PREVIEW_AND_EXPORT.md](PREVIEW_AND_EXPORT.md) for rendering. Clerk and Headless storage exist in the repo and are configuration-gated; do not read the “no database and no authentication” sentence below as current platform truth.
+
+> Historical note: export production path details may predate ExportManifest v4/v5.
 
 ShortForge Studio is a multi-route Next.js application for creating vertical football documentary shorts. The product shell exposes four main pages — landing, create, editor, and drafts — while the technical core remains three layers: **Generation**, **Editing**, and **Rendering**, all operating on a shared story model (`FootieScript`).
 
-AI work runs on server API routes. Editing, preview, export, and **draft persistence (MVP)** run in the browser. There is no database and no authentication today. Draft JSON is stored in **localStorage** under a single app key; opening `/editor/[draftId]` hydrates React state from that store without calling generation again.
+AI work runs on server API routes. Editing, preview, export, and **draft persistence (MVP)** run in the browser. Ordinary Studio drafts still use **localStorage**. Headless control-plane storage and Clerk auth are optional, classified, and not required for local Browser export.
 
 **Planned (not shipped):** cloud-backed drafts and user accounts — see [ROADMAP.md](../../ROADMAP.md) Phase 5.
 

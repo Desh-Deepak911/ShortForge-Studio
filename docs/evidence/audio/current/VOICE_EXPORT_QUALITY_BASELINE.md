@@ -1,5 +1,7 @@
 # Voice export quality baseline
 
+> **Evidence status:** Baseline-only loudness/pause measurements plus later contract notes. Speed-path certification is [VOICE_SPEED_CLARITY_AUDIT.md](VOICE_SPEED_CLARITY_AUDIT.md). Do not treat the original LUFS table as a current export guarantee.
+
 ## Scope
 
 Provider-free measurement of one real ShortForge Browser export against one creator-supplied reference Short. The media files remain local and are not committed.

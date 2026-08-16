@@ -1,5 +1,7 @@
 # Export Renderer Architecture (Sprint 6C–6D / 8D / 9C)
 
+> Current Browser encode: **`chunked-browser-v1`**. Current manifest pair: **v4 / `"9D"`** (v5 / `"9E"` when capabilities require it). See [EXPORT_MANIFEST_AND_CAPABILITIES.md](EXPORT_MANIFEST_AND_CAPABILITIES.md) and [PREVIEW_AND_EXPORT.md](PREVIEW_AND_EXPORT.md). Sprint version lines below are historical.
+
 > Production browser export consumes **ExportManifest** (semantic) + **ExportRenderContext** (runtime) only.
 
 ## Sprint 9C — Intra-scene transition export *(frozen with Sprint 9)*

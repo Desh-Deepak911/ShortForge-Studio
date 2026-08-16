@@ -1,5 +1,7 @@
 # Video quality release readiness
 
+> **Evidence status:** Current official video-quality record. Verdict in this file is **CONDITIONALLY READY**. Manual Studio smoke remains open. Policy: [../../RELEASE_READINESS_POLICY.md](../../RELEASE_READINESS_POLICY.md).
+
 Generated: 2026-08-15T10:08:50.452Z
 
 ## Verdict: **CONDITIONALLY READY**

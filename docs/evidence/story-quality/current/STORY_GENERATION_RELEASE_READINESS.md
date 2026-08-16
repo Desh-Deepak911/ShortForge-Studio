@@ -1,5 +1,7 @@
 # Story generation release readiness
 
+> **Evidence status:** Current official story-readiness record for this tree. Verdict in this file is **not_ready**. Do not summarize it as certified. Policy: [../../RELEASE_READINESS_POLICY.md](../../RELEASE_READINESS_POLICY.md).
+
 Generated: 2026-08-16
 
 ## Verdict: **not_ready**
