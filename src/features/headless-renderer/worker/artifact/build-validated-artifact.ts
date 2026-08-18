@@ -21,10 +21,8 @@ import {
 } from "../runtime/output-profiles";
 import type { HeadlessRenderTarget } from "../runtime/render-target";
 import { buildHeadlessRunMetrics } from "../runtime/run-metrics";
-import {
-  HEADLESS_WORKER_RENDERER_BUILD_ID,
-  type HeadlessWorkerArtifactEvidence,
-} from "../runtime/worker-types";
+import { isAcceptedHeadlessWorkerRendererBuildId } from "../runtime/renderer-build-id";
+import { type HeadlessWorkerArtifactEvidence } from "../runtime/worker-types";
 
 const CONTENT_DIGEST_RE = /^sha256:[a-f0-9]{64}$/;
 
@@ -69,7 +67,7 @@ export function buildValidatedHeadlessArtifact(input: {
     return { ok: false, message: "Invalid content digest." };
   }
 
-  if (input.request.rendererBuildId !== HEADLESS_WORKER_RENDERER_BUILD_ID) {
+  if (!isAcceptedHeadlessWorkerRendererBuildId(input.request.rendererBuildId)) {
     return { ok: false, message: "rendererBuildId mismatch." };
   }
 
@@ -205,7 +203,7 @@ export function buildValidatedHeadlessArtifact(input: {
       height,
       fps: acceptedFps,
     },
-    rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
+    rendererBuildId: input.request.rendererBuildId,
     manifestFingerprint: input.request.manifestFingerprint,
     assetBundleFingerprint: input.request.assetBundle.fingerprint,
     renderJobFingerprint: input.job.renderJobFingerprint,
@@ -244,7 +242,7 @@ export function buildValidatedHeadlessArtifact(input: {
     audioCodec,
     audioChannels,
     audioSampleRateHz,
-    rendererBuildId: HEADLESS_WORKER_RENDERER_BUILD_ID,
+    rendererBuildId: input.request.rendererBuildId,
     chromeVersion: input.evidenceBase.chromeVersion ?? "unknown",
     ffmpegVersion: input.evidenceBase.ffmpegVersion ?? "unknown",
     ffprobeVersion: input.evidenceBase.ffprobeVersion ?? "unknown",

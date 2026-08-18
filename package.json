@@ -186,6 +186,7 @@
     "test:headless-upstash-live-matrix-authority": "tsx src/verification/headless-renderer/platform/headlessUpstashLiveMatrixAuthority.verify.ts",
     "test:headless-upstash-live": "tsx src/verification/headless-renderer/platform/headlessUpstashLive.verify.ts",
     "test:headless-hosted-worker-environment": "tsx src/verification/headless-renderer/platform/headlessHostedWorkerEnvironment.verify.ts",
+    "test:headless-caption-trim-parity-rollout-authority": "tsx src/verification/headless-renderer/platform/headlessCaptionTrimParityRolloutAuthority.verify.ts",
     "test:headless-hosted-worker-composition": "tsx src/verification/headless-renderer/platform/headlessHostedWorkerComposition.verify.ts",
     "test:headless-hosted-worker-loop": "tsx src/verification/headless-renderer/platform/headlessHostedWorkerLoop.verify.ts",
     "test:headless-hosted-worker-import-boundary": "tsx src/verification/headless-renderer/platform/headlessHostedWorkerImportBoundary.verify.ts",

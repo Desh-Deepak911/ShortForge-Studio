@@ -418,6 +418,33 @@ export {
 } from "./fly-staging-render-activation-authority";
 
 export {
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_AUTHORITY_VERSION,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_APP_NAME,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_REGION,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_VERIFY_MACHINE_ID,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_RENDER_MACHINE_ID,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_RENDERER_BUILD_ID,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_PLACEHOLDER_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_ROLLBACK_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_CANDIDATE_IMAGE_DIGEST,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_FORWARD_PAIR,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_PARITY_ROLLBACK_PAIR,
+  isHeadlessFlyStagingCaptionTrimPlaceholderDigest,
+  isHeadlessFlyStagingCaptionTrimCandidateSealed,
+  classifyHeadlessFlyStagingCaptionTrimForwardDigest,
+  classifyHeadlessFlyStagingCaptionTrimRollbackDigest,
+  classifyHeadlessFlyStagingCaptionTrimAttemptBudget,
+  classifyHeadlessFlyStagingCaptionTrimTopology,
+  validateHeadlessFlyStagingCaptionTrimParityPairs,
+  classifyHeadlessFlyStagingCaptionTrimRolloutGate,
+  classifyHeadlessFlyStagingCaptionTrimPageBundle,
+  classifyHeadlessFlyStagingCaptionTrimBuildOnlyTransition,
+  HEADLESS_FLY_STAGING_CAPTION_TRIM_BUILD_ONLY_PHASES,
+  materializeHeadlessFlyStagingCaptionTrimToml,
+  redactHeadlessFlyStagingCaptionTrimSecrets,
+} from "./fly-staging-caption-trim-parity-authority";
+
+export {
   HEADLESS_FLY_STAGING_RENDER_FIRST_ORCHESTRATOR_CONTRACT,
   HEADLESS_FLY_STAGING_RENDER_FIRST_ENTRYPOINT_RELATIVE_PATH,
   HEADLESS_FLY_STAGING_RENDER_FIRST_DEPLOY_STEP_RELATIVE_PATH,

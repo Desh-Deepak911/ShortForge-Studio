@@ -46,6 +46,8 @@ yarn-error.log*
 # ephemeral Fly staging materialization (operator scripts; never commit)
 /fly.staging.materialized.toml
 /fly.staging.verify-first.materialized.toml
+/fly.staging.caption-trim-build-only.materialized.toml
+/fly.staging.caption-trim-rollout.materialized.toml
 
 # generated worker/diagnostic bundle output (not source authority)
 /dist/
