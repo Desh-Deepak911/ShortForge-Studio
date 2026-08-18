@@ -60,6 +60,7 @@ export interface TimelineResizeState {
 /** Local-only video clip trim session — never persisted; does not affect scene duration. */
 export interface TimelineVideoTrimState {
   sceneId: string;
+  mediaItemId?: string | null;
   activeHandle: "start" | "end";
   pointerId: number;
   sourceDurationMs: number;

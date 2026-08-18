@@ -16,6 +16,7 @@ export {
   resolveTrimPreviewScrubTimeMs,
   shouldApplyVideoTrimPreviewOverride,
   shouldClearTrimPreviewOnMediaChange,
+  shouldClearTrimPreviewOnMediaItemChange,
   shouldClearTrimPreviewOnSceneChange,
   shouldSeekVideoToTimeMs,
   takePendingTrimPreviewSeek,

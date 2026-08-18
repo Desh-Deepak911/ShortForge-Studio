@@ -17,7 +17,7 @@ import {
   mergeCaptionLayoutSettings,
 } from "@/features/caption-layout";
 import {
-  isDefaultCaptionStyleStorage,
+  resolveCaptionBackgroundAuthority,
   resolveCaptionStyle,
 } from "@/features/caption-style";
 import { normalizeCaptionOpacityPercent } from "./normalize-caption-opacity";
@@ -639,40 +639,27 @@ function buildCaptionManifests(
   return captions;
 }
 
+function resolveEffectiveCaptionBackgroundAuthority(
+  story: FootieScript,
+  sceneId: string,
+) {
+  const scene = story.scenes.find((entry) => entry.id === sceneId);
+  return resolveCaptionBackgroundAuthority({
+    sceneStyle: scene?.captionStyle,
+    projectStyle: story.defaultCaptionStyle,
+    sceneLayout: scene?.captionLayout,
+    projectLayout: story.defaultCaptionLayout,
+  });
+}
+
 function resolveEffectiveCaptionBackgroundOpacityPercent(
   story: FootieScript,
   sceneId: string,
 ): number {
-  const scene = story.scenes.find((entry) => entry.id === sceneId);
-  const usesStoredStyle = !isDefaultCaptionStyleStorage(
-    scene?.captionStyle,
-    story.defaultCaptionStyle,
+  return normalizeCaptionOpacityPercent(
+    resolveEffectiveCaptionBackgroundAuthority(story, sceneId).effectiveOpacityPercent,
+    DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
   );
-  if (usesStoredStyle) {
-    return normalizeCaptionOpacityPercent(
-      resolveCaptionStyle({
-        sceneStyle: scene?.captionStyle,
-        projectStyle: story.defaultCaptionStyle,
-      }).resolvedStyle.backgroundOpacity,
-      DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
-    );
-  }
-
-  const layout = mergeCaptionLayoutSettings(
-    scene?.captionLayout,
-    story.defaultCaptionLayout,
-  );
-  if (
-    typeof layout.backgroundOpacity === "number" &&
-    Number.isFinite(layout.backgroundOpacity)
-  ) {
-    return normalizeCaptionOpacityPercent(
-      layout.backgroundOpacity,
-      DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY,
-    );
-  }
-
-  return DEFAULT_EXPORT_CAPTION_BACKGROUND_OPACITY;
 }
 
 function buildCaptionStyle(
@@ -688,15 +675,16 @@ function buildCaptionStyle(
     sceneStyle: scene?.captionStyle,
     projectStyle: story.defaultCaptionStyle,
   });
+  const background = resolveEffectiveCaptionBackgroundAuthority(story, sceneId);
   return {
     fontFamily: resolvedStyle.fontFamily,
     fontSize: resolvedStyle.fontSize,
     fontWeight: String(resolvedStyle.fontWeight),
     color: resolvedStyle.textColor,
-    backgroundColor: resolvedStyle.backgroundColor,
+    backgroundColor: background.backgroundColor,
     textAlign: layout.textAlign ?? "center",
     backgroundOpacity: resolveEffectiveCaptionBackgroundOpacityPercent(story, sceneId),
-    backgroundEnabled: resolvedStyle.backgroundEnabled,
+    backgroundEnabled: background.backgroundEnabled,
     paddingX: resolvedStyle.paddingX,
     paddingY: resolvedStyle.paddingY,
     cornerRadius: resolvedStyle.cornerRadius,

@@ -123,14 +123,18 @@ export function resolvePreviewPresentationAuthority(
 }
 
 /**
- * Production Preview presentation: idle inspection becomes the presented media.
- * Playback and trim-scrub stay on the canonical timeline.
+ * Production Preview presentation: idle inspection and per-item trim-scrub
+ * become the presented media. Playback stays on the canonical timeline.
  */
 export function resolveCurrentPreviewPlaybackPresentation(
   input: ResolvePreviewPresentationAuthorityInput,
 ): PreviewRuntimeParityPresentationState {
   const desired = resolvePreviewPresentationAuthority(input);
-  if (desired.playbackAuthority === "inspection" && desired.inspectionMedia.mediaItemId) {
+  if (
+    (desired.playbackAuthority === "inspection" ||
+      desired.playbackAuthority === "trim-scrub") &&
+    desired.inspectionMedia.mediaItemId
+  ) {
     return {
       ...desired,
       playbackMedia: desired.inspectionMedia,

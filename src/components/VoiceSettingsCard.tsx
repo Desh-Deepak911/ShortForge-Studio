@@ -9,7 +9,7 @@ import {
   resolveVoiceLibraryDisplayName,
   VoiceLibraryPanel,
 } from "@/features/voice-library";
-import { SpeechStylePanel } from "@/features/speech-style";
+import { SpeechStylePanel } from "@/features/speech-style/ui";
 import { getStoryVoiceSettings } from "@/features/story/utils";
 import type { FootieScript } from "@/features/story/types";
 import { useStoryVoiceoverApply } from "@/hooks/useStoryVoiceoverApply";

@@ -4,7 +4,6 @@ import {
   drawExportCaptionStyledLine,
   formatExportCaptionLineText,
   isDefaultCaptionStyleStorage,
-  LEGACY_EXPORT_CAPTION_BOX_BORDER,
   resetExportCaptionTextDrawState,
   resolveExportCaptionBackgroundFill,
   resolveExportCaptionStyleForDisplay,
@@ -136,19 +135,16 @@ function drawSubtitleBox(
   backgroundAlpha?: number,
 ): void {
   const styleMetrics = resolveExportCaptionStyleMetrics(exportStyle, scale);
-  if (!styleMetrics.backgroundEnabled) {
-    return;
-  }
-
   // Prefer resolved style alpha (frozen effective opacity). Fall back to layout placement.
   // Use nullish coalescing so explicit 0 is preserved (never `|| 1`).
   const alpha = styleMetrics.backgroundAlpha ?? backgroundAlpha ?? 0;
+  if (!styleMetrics.drawsFill || alpha <= 0) {
+    return;
+  }
 
   ctx.save();
   ctx.globalAlpha = opacity;
   ctx.fillStyle = resolveExportCaptionBackgroundFill(styleMetrics, alpha);
-  ctx.strokeStyle = styleMetrics.boxBorderColor || LEGACY_EXPORT_CAPTION_BOX_BORDER;
-  ctx.lineWidth = Math.max(1, scale);
   roundRectPath(
     ctx,
     boxLeft,
@@ -158,7 +154,6 @@ function drawSubtitleBox(
     styleMetrics.cornerRadius,
   );
   ctx.fill();
-  ctx.stroke();
   ctx.restore();
 }
 

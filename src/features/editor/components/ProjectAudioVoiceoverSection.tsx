@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 
 import { resolveEditorVoiceoverStatus } from "@/features/audio/utils/voiceover-status.utils";
 import { VoiceLibraryPanel } from "@/features/voice-library";
-import { SpeechStylePanel } from "@/features/speech-style";
+import { SpeechStylePanel } from "@/features/speech-style/ui";
 import { formatDisplayDurationMs } from "@/lib/utils/formatDisplayDuration.utils";
 import { StudioStatus } from "@/components/studio-status";
 import {

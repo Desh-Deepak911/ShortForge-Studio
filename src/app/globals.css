@@ -157,10 +157,11 @@ html {
   padding: 0.75rem 1rem;
   text-align: center;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(0, 0, 0, 0.65);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(12px);
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .preview-narration-subtitle-pill--placed {
@@ -199,7 +200,7 @@ html {
   padding: var(--preview-caption-pad-y, calc(10 * 100cqw / 1080))
     var(--preview-caption-pad-x, calc(18 * 100cqw / 1080));
   border-radius: var(--preview-caption-radius, calc(12 * 100cqw / 1080));
-  border-width: var(--preview-caption-border-width, max(1px, calc(100cqw / 1080)));
+  border-width: var(--preview-caption-border-width, 0px);
 }
 
 .preview-caption-output-space .subtitle-effect-highlight-bar {

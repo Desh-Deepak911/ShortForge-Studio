@@ -7,6 +7,8 @@ import {
   framingToSceneImageFields,
   resolveSceneMediaFraming,
 } from "@/features/media-framing";
+import { buildVideoTrimForMedia } from "@/features/media-playback/media-trim-patch.utils";
+import type { VideoTrimRequest } from "@/features/media-playback/media-trim.types";
 import type {
   FootieScene,
   SceneImage,
@@ -681,4 +683,25 @@ export function updateSceneMediaItemMedia(
     selectedMediaItemId: trimmedId,
     convertedFromLegacy: ensured.convertedFromLegacy,
   };
+}
+
+/**
+ * Applies a trim window to one timeline media item by stable id.
+ * Does not change scene duration, narration, or other items.
+ */
+export function applyVideoTrimToMediaItem(
+  scene: FootieScene,
+  mediaItemId: string,
+  nextTrim: VideoTrimRequest,
+): SceneMediaTimelineCommandResult | null {
+  const projected = projectSceneMediaTimeline(scene);
+  const item = projected.items.find((entry) => entry.id === mediaItemId);
+  if (!item) {
+    return null;
+  }
+  const result = buildVideoTrimForMedia(item.media, nextTrim);
+  if (!result) {
+    return null;
+  }
+  return updateSceneMediaItemMedia(scene, mediaItemId, result.media);
 }

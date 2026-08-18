@@ -9,6 +9,7 @@ export {
   type GenerateMediaItemId,
 } from "./generate-media-item-id";
 export {
+  applyVideoTrimToMediaItem,
   appendSceneMediaImageItem,
   buildTemporarySceneForMediaItemEdit,
   canAddSceneMediaItem,

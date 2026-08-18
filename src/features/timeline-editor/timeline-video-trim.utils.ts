@@ -16,6 +16,7 @@ import {
   type VideoTrimRangeDraft,
 } from "@/features/editor/components/media/video-trim-range-slider.utils";
 import { clampSceneMediaTrim, MIN_VIDEO_TRIM_DURATION_MS } from "@/features/media-playback";
+import { projectSceneMediaTimeline } from "@/features/scene-media-timeline";
 import type { FootieScene, SceneMedia } from "@/features/story/types";
 import { getSceneMedia, getSceneMediaType } from "@/features/story/utils";
 
@@ -63,12 +64,17 @@ export interface TimelineVideoTrimEligibility {
 /** Resolves committed trim window from scene media (source-duration authority). */
 export function resolveTimelineVideoTrimWindow(
   scene: FootieScene | null | undefined,
+  mediaItemId?: string | null,
 ): TimelineVideoTrimWindow | null {
   if (!scene) {
     return null;
   }
 
-  const media = getSceneMedia(scene);
+  const itemId = typeof mediaItemId === "string" ? mediaItemId.trim() : "";
+  const itemMedia = itemId
+    ? projectSceneMediaTimeline(scene).items.find((item) => item.id === itemId)?.media
+    : undefined;
+  const media = itemMedia ?? getSceneMedia(scene);
   if (!media || media.type !== "video") {
     return null;
   }

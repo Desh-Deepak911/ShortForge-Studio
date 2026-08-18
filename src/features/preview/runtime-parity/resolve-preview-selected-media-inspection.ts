@@ -175,15 +175,6 @@ export function resolvePreviewSelectedMediaInspection(
     });
   }
 
-  if (input.trimScrubActive === true) {
-    return inactive("trim-scrub-active", {
-      selectedSceneId,
-      selectedMediaItemId,
-      itemCount,
-      inspectionSceneElapsedMs: sceneElapsedMs,
-    });
-  }
-
   if (input.brandStingActive === true) {
     return inactive("brand-sting-active", {
       selectedSceneId,
@@ -248,6 +239,6 @@ export function resolvePreviewSelectedMediaInspection(
     inspectionItemElapsedMs,
     view,
     layerPlan: planInspectedPreviewMediaLayer(view),
-    presentationAuthority: "inspection",
+    presentationAuthority: input.trimScrubActive === true ? "trim-scrub" : "inspection",
   };
 }

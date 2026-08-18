@@ -10,6 +10,7 @@ import {
   useVideoTrimPreviewOptional,
 } from "@/features/preview/video-trim-preview";
 import { SCENE_MEDIA_TIMELINE_EXPERIMENTAL_NOTICE } from "@/features/scene-media-timeline/editor";
+import { projectSceneMediaTimeline } from "@/features/scene-media-timeline";
 import { usePreviewMasterTimelineContext } from "@/features/timeline-intelligence/master-timeline";
 import type { FootieScript } from "@/features/story/types";
 import { getSceneMedia } from "@/features/story/utils";
@@ -103,6 +104,7 @@ export interface StudioTimelineProps {
   onApplyVideoTrim?: (
     sceneId: string,
     trim: { trimStartMs: number; trimEndMs: number },
+    mediaItemId?: string | null,
   ) => boolean;
   className?: string;
   id?: string;
@@ -220,20 +222,11 @@ export default function StudioTimeline({
     mediaBoundaryOwnerSceneId,
   );
   const reorderDisabled =
-    playbackLocked ||
-    resizeState != null ||
-    trimState != null ||
-    mediaInteractionActive;
+    playbackLocked || resizeState != null || trimState != null || mediaInteractionActive;
   const resizeDisabled =
-    playbackLocked ||
-    dragState != null ||
-    trimState != null ||
-    mediaInteractionActive;
+    playbackLocked || dragState != null || trimState != null || mediaInteractionActive;
   const trimDisabled =
-    playbackLocked ||
-    dragState != null ||
-    resizeState != null ||
-    mediaInteractionActive;
+    playbackLocked || dragState != null || resizeState != null || mediaInteractionActive;
   const contextMenuDisabled = trimState != null || mediaInteractionActive;
   const sceneMediaLaneBaseLocked =
     playbackLocked ||
@@ -569,6 +562,7 @@ export default function StudioTimeline({
       trimPreview?.setOverride(
         buildVideoTrimPreviewOverride({
           sceneId: state.sceneId,
+          mediaItemId: state.mediaItemId,
           trimStartMs: state.previewTrimStartMs,
           trimEndMs: state.previewTrimEndMs,
           activeHandle: state.activeHandle,
@@ -633,8 +627,12 @@ export default function StudioTimeline({
         return;
       }
 
-      const window = resolveTimelineVideoTrimWindow(scene);
-      const media = getSceneMedia(scene);
+      const mediaItemId = selection.selectedMediaItemId;
+      const window = resolveTimelineVideoTrimWindow(scene, mediaItemId);
+      const media = mediaItemId
+        ? projectSceneMediaTimeline(scene).items.find((item) => item.id === mediaItemId)
+            ?.media ?? getSceneMedia(scene)
+        : getSceneMedia(scene);
       if (!window || !media?.url?.trim()) {
         return;
       }
@@ -655,6 +653,7 @@ export default function StudioTimeline({
 
       const nextTrimState: TimelineVideoTrimState = {
         sceneId,
+        mediaItemId,
         activeHandle: handle,
         pointerId: event.pointerId,
         sourceDurationMs: window.sourceDurationMs,
@@ -731,7 +730,8 @@ export default function StudioTimeline({
       const scene = scriptRef.current.scenes.find(
         (entry) => entry.id === sceneId,
       );
-      const window = resolveTimelineVideoTrimWindow(scene);
+      const mediaItemId = selection.selectedMediaItemId;
+      const window = resolveTimelineVideoTrimWindow(scene, mediaItemId);
       if (!window) {
         return;
       }
@@ -754,6 +754,7 @@ export default function StudioTimeline({
       trimPreview?.setOverride(
         buildVideoTrimPreviewOverride({
           sceneId,
+          mediaItemId,
           trimStartMs: next.trimStartMs,
           trimEndMs: next.trimEndMs,
           activeHandle: handle,
@@ -763,7 +764,7 @@ export default function StudioTimeline({
         }),
       );
 
-      onApplyVideoTrim(sceneId, next);
+      onApplyVideoTrim(sceneId, next, mediaItemId);
       trimPreview?.clearOverride();
     },
     [onApplyVideoTrim, playbackLocked, selection, trimPreview],
@@ -993,7 +994,7 @@ export default function StudioTimeline({
         onApplyVideoTrim(current.sceneId, {
           trimStartMs: current.previewTrimStartMs,
           trimEndMs: current.previewTrimEndMs,
-        });
+        }, current.mediaItemId);
       }
 
       clearTimelineTrimSession({ clearOverride: true });
@@ -1327,10 +1328,7 @@ export default function StudioTimeline({
                       selection.selectScene(segment.block.sceneId)
                     }
                     onMenuOpen={({ x, y }) => {
-                      if (
-                        trimStateRef.current ||
-                        mediaBoundaryOwnerRef.current
-                      ) {
+                      if (trimStateRef.current || mediaBoundaryOwnerRef.current) {
                         return;
                       }
                       setMenu({

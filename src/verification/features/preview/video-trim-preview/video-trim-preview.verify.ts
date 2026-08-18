@@ -19,6 +19,7 @@ import {
   resolveTrimPreviewScrubTimeMs,
   shouldApplyVideoTrimPreviewOverride,
   shouldClearTrimPreviewOnMediaChange,
+  shouldClearTrimPreviewOnMediaItemChange,
   shouldClearTrimPreviewOnSceneChange,
   shouldSeekVideoToTimeMs,
   takePendingTrimPreviewSeek,
@@ -115,6 +116,27 @@ test("Temporary override applies only to the selected scene", () => {
   assert.equal(shouldApplyVideoTrimPreviewOverride(override, "scene-2"), false);
   assert.equal(
     shouldApplyVideoTrimPreviewOverride({ ...override, isActive: false }, "scene-1"),
+    false,
+  );
+});
+
+test("Temporary override applies only to the selected media item", () => {
+  const override = buildVideoTrimPreviewOverride({
+    sceneId: "scene-1",
+    mediaItemId: "item-b",
+    trimStartMs: 2000,
+    trimEndMs: 5000,
+    activeHandle: "start",
+  });
+  assert.equal(override.mediaItemId, "item-b");
+  assert.equal(shouldApplyVideoTrimPreviewOverride(override, "scene-1", "item-b"), true);
+  assert.equal(shouldApplyVideoTrimPreviewOverride(override, "scene-1", "item-a"), false);
+  assert.equal(
+    shouldClearTrimPreviewOnMediaItemChange(override, "scene-1", "item-a"),
+    true,
+  );
+  assert.equal(
+    shouldClearTrimPreviewOnMediaItemChange(override, "scene-1", "item-b"),
     false,
   );
 });

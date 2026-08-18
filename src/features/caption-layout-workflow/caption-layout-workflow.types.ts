@@ -9,7 +9,6 @@ export type CopyableCaptionLayout = Pick<
   | "offsetX"
   | "offsetY"
   | "maxWidthPercent"
-  | "backgroundOpacity"
   | "safeAreaEnabled"
 >;
 

@@ -69,11 +69,23 @@ export function resolveLegibilityLayerPlan(
   const suppressCaptionOverlays = input.suppressCaptionOverlays === true;
   const hasActiveCaption = input.hasActiveCaption && !suppressCaptionOverlays;
   const placement = hasActiveCaption ? input.captionPlacement : "none";
+  const explicitTransparent =
+    hasActiveCaption &&
+    (input.captionStyleBackgroundEnabled !== true ||
+      !Number.isFinite(input.captionStyleBackgroundOpacity) ||
+      input.captionStyleBackgroundOpacity <= 0);
   const styleProvidesBackground =
+    hasActiveCaption &&
     input.captionStyleBackgroundEnabled === true &&
     Number.isFinite(input.captionStyleBackgroundOpacity) &&
-    input.captionStyleBackgroundOpacity >=
-      LEGIBILITY_CAPTION_BACKGROUND_SUFFICIENT_OPACITY;
+    input.captionStyleBackgroundOpacity > 0;
+  const backgroundIntent = suppressCaptionOverlays
+    ? ("suppressed" as const)
+    : !input.hasActiveCaption
+      ? ("absent" as const)
+      : explicitTransparent
+        ? ("explicit-transparent" as const)
+        : ("enabled" as const);
 
   const captionRegionRef =
     placement === "top"
@@ -107,7 +119,8 @@ export function resolveLegibilityLayerPlan(
       active: hasActiveCaption,
       placement,
       styleProvidesBackground,
-      needsLocalScrim: hasActiveCaption && !styleProvidesBackground,
+      needsLocalScrim: false as const,
+      backgroundIntent,
       region: captionRegion ? Object.freeze(captionRegion) : null,
     }),
     branding: Object.freeze({

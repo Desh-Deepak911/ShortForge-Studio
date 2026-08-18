@@ -28,6 +28,7 @@ import {
 } from "@/features/editor/inspector/inspector-tab-shell.session";
 import { useSceneImageUpload } from "@/features/editor/hooks/useSceneImageUpload";
 import {
+  useMixedMediaScenesEnabled,
   useSourceQualityIntelligenceEnabled,
   useVisualRetentionCapabilitiesReady,
   VisualRetentionCapabilitiesProvider,
@@ -48,6 +49,11 @@ import TimelineDeveloperView from "@/features/timeline-intelligence/TimelineDeve
 import { VideoPreview } from "@/features/preview/components";
 import { VideoTrimPreviewProvider } from "@/features/preview/video-trim-preview";
 import { buildVideoTrimPatch } from "@/features/media-playback";
+import { applyVideoTrimToMediaItem } from "@/features/scene-media-timeline";
+import {
+  readMixedMediaSequenceItems,
+  writeMixedMediaSequenceItems,
+} from "@/features/mixed-media-scenes/editor/mixed-media-scene.commands";
 import { buildCaptionLayoutOffsetCommitPatch } from "@/features/caption-layout-drag";
 import { buildResetCaptionLayoutPatch } from "@/features/caption-layout";
 import {
@@ -161,7 +167,8 @@ function StoryWorkspaceContent({
     script,
     scriptMode,
   );
-  const { selectedSceneId } = useEditorSelection();
+  const { selectedSceneId, selectedMediaItemId } = useEditorSelection();
+  const mixedMediaScenesEnabled = useMixedMediaScenesEnabled();
   const missingMediaScenes = useMemo(
     () => script.scenes.filter((scene) => !sceneHasMedia(scene)),
     [script.scenes],
@@ -258,10 +265,58 @@ function StoryWorkspaceContent({
     (
       sceneId: string,
       trim: { trimStartMs: number; trimEndMs: number },
+      mediaItemId?: string | null,
     ): boolean => {
       const target = script.scenes.find((entry) => entry.id === sceneId);
       if (!target) {
         return false;
+      }
+
+      const itemId = (mediaItemId ?? selectedMediaItemId)?.trim() || null;
+      if (itemId) {
+        const sequenceItems = readMixedMediaSequenceItems(target);
+        if (
+          mixedMediaScenesEnabled &&
+          sequenceItems.some((item) => item.id === itemId)
+        ) {
+          const current = sequenceItems.find((item) => item.id === itemId);
+          const trimmed = current
+            ? buildVideoTrimPatch({ ...target, media: current.media }, trim)
+            : null;
+          if (!trimmed) {
+            return false;
+          }
+          const nextItems = sequenceItems.map((item) =>
+            item.id === itemId ? { ...item, media: trimmed.media } : item,
+          );
+          const written = writeMixedMediaSequenceItems(target, nextItems, {
+            mixedMediaScenesEnabled: true,
+          });
+          onScriptChange(
+            {
+              ...script,
+              scenes: script.scenes.map((entry) =>
+                entry.id === sceneId ? written.scene : entry,
+              ),
+            },
+            { intent: "media" },
+          );
+          return true;
+        }
+
+        const updated = applyVideoTrimToMediaItem(target, itemId, trim);
+        if (updated) {
+          onScriptChange(
+            applySceneUpdate(script, sceneId, {
+              media: updated.scene.media,
+              mediaTimeline: updated.scene.mediaTimeline,
+              image: updated.scene.image,
+              uploadedImage: updated.scene.uploadedImage,
+            }),
+            { intent: "media" },
+          );
+          return true;
+        }
       }
 
       const result = buildVideoTrimPatch(target, trim);
@@ -269,12 +324,10 @@ function StoryWorkspaceContent({
         return false;
       }
 
-      onScriptChange(applySceneUpdate(script, sceneId, result.patch), {
-        intent: "media",
-      });
+      onScriptChange(applySceneUpdate(script, sceneId, result.patch), { intent: "media" });
       return true;
     },
-    [onScriptChange, script],
+    [mixedMediaScenesEnabled, onScriptChange, script, selectedMediaItemId],
   );
 
   const handleCaptionLayoutOffsetCommit = useCallback(

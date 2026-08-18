@@ -9,6 +9,8 @@ export type VideoTrimPreviewSurface = "inspector" | "timeline";
 
 export interface VideoTrimPreviewOverride {
   sceneId: string;
+  /** Stable media-item identity. Required for multi-item scenes. */
+  mediaItemId?: string | null;
   trimStartMs: number;
   trimEndMs: number;
   scrubTimeMs: number;
@@ -28,6 +30,7 @@ export interface ResolveTrimPreviewScrubTimeInput {
 
 export interface BuildVideoTrimPreviewOverrideInput {
   sceneId: string;
+  mediaItemId?: string | null;
   trimStartMs: number;
   trimEndMs: number;
   activeHandle: VideoTrimPreviewActiveHandle;

@@ -4,7 +4,7 @@
  * Does not modify scene duration, narration, voice, or timeline.
  */
 import type { FootieScene, SceneMedia } from "@/features/story/types";
-import { getSceneMedia } from "@/features/story/utils";
+import { getSceneMedia } from "@/features/story/utils/scene.utils";
 
 import {
   clampNonNegativeMs,
@@ -249,19 +249,14 @@ function applyTrimToMedia(
 }
 
 /**
- * Builds a scene.media-only patch for a new trim window.
- * Returns null for non-video media or missing source duration.
+ * Builds a trim result for an explicit SceneMedia record.
+ * Callers persist the returned media onto the owning media item.
  */
-export function buildVideoTrimPatch(
-  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+export function buildVideoTrimForMedia(
+  media: SceneMedia | null | undefined,
   nextTrim: VideoTrimRequest,
 ): VideoTrimPatchResult | null {
-  const media = resolveVideoMedia(scene);
-  if (!media) {
-    return null;
-  }
-
-  if (!isPositiveDurationMs(media.durationMs)) {
+  if (!media || media.type !== "video" || !isPositiveDurationMs(media.durationMs)) {
     return null;
   }
 
@@ -271,6 +266,17 @@ export function buildVideoTrimPatch(
   }
 
   return applyTrimToMedia(media, window);
+}
+
+/**
+ * Builds a scene.media-only patch for a new trim window.
+ * Returns null for non-video media or missing source duration.
+ */
+export function buildVideoTrimPatch(
+  scene: Pick<FootieScene, "image" | "uploadedImage" | "media">,
+  nextTrim: VideoTrimRequest,
+): VideoTrimPatchResult | null {
+  return buildVideoTrimForMedia(resolveVideoMedia(scene), nextTrim);
 }
 
 /**

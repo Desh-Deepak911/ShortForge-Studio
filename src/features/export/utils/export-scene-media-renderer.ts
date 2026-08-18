@@ -20,6 +20,7 @@ import {
 } from "@/features/media-framing/resolve-media-framing-layer-plan";
 import { buildComposedMediaVisualFilter } from "@/features/media-motion";
 import { resolveSceneMediaPlayback } from "@/features/media-playback/media-playback.engine";
+import { resolveDisplayableVideoSourceTimeMs } from "@/features/media-playback/media-playback.utils";
 import type { MediaPlaybackState } from "@/features/media-playback/media-playback.types";
 import type { FootieScene, SceneImage, SceneMedia, SceneType } from "@/features/story/types";
 import {
@@ -1173,6 +1174,17 @@ export function resolveExportSceneMediaPlaybackState(
   });
 }
 
+function resolveExportVideoSeekTimeSec(playback: MediaPlaybackState): number {
+  return (
+    resolveDisplayableVideoSourceTimeMs({
+      clipTimeMs: playback.clipTimeMs,
+      trimStartMs: playback.trimStartMs,
+      trimEndMs: playback.trimEndMs,
+      holdingLastFrame: playback.holdLastFrame,
+    }) / 1000
+  );
+}
+
 /**
  * Video background path — seeks via Media Playback Engine clipTime, then draws.
  * Caller should prefer prepareExportSceneVideoFrame + draw for the render loop;
@@ -1188,7 +1200,7 @@ export async function drawSceneVideoFrame(
   sceneDurationMs: number,
 ): Promise<boolean> {
   const playback = resolveExportSceneMediaPlaybackState(scene, sceneElapsedMs, sceneDurationMs);
-  const seekTimeSec = playback.clipTimeMs / 1000;
+  const seekTimeSec = resolveExportVideoSeekTimeSec(playback);
   const seeked = await seekVideoFrame(asset.element, seekTimeSec, {
     epsilonSec: resolveExportSeekEpsilonSec(30),
   });
@@ -1337,7 +1349,7 @@ export async function prepareExportSceneMediaFrame(
   }
 
   const playback = resolveExportSceneMediaPlaybackState(scene, itemElapsedMs, itemDurationMs);
-  const seekTimeSec = playback.clipTimeMs / 1000;
+  const seekTimeSec = resolveExportVideoSeekTimeSec(playback);
   const seekRequestId = beginExportVideoSeekRequest(seekIdentity);
   const seeked = await seekVideoFrame(asset.element, seekTimeSec, {
     epsilonSec: resolveExportSeekEpsilonSec(options.exportFps ?? 30),
@@ -1513,7 +1525,7 @@ export function drawSceneMediaFrame(options: DrawSceneMediaFrameOptions): Export
     return finish("image", drew);
   }
 
-  const seekTimeSec = playback.clipTimeMs / 1000;
+  const seekTimeSec = resolveExportVideoSeekTimeSec(playback);
   const drew = drawPreparedSceneVideoFrame(
     ctx,
     width,
