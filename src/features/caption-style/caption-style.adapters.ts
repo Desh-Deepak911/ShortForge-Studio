@@ -315,9 +315,9 @@ export function resolvePreviewCaptionTextEffectStyle(
 /** Preview inline typography from resolved caption style. */
 export function resolvePreviewCaptionTypographyStyle(
   style: PreviewCaptionStyleMetadata,
+  scale = PREVIEW_CAPTION_STYLE_UI_SCALE,
 ): CSSProperties {
   const resolved = style.resolvedStyle;
-  const scale = PREVIEW_CAPTION_STYLE_UI_SCALE;
 
   return {
     color: resolved.textColor,
@@ -335,12 +335,13 @@ export function resolvePreviewCaptionTypographyStyle(
 export function resolvePreviewCaptionTypographyStyleForScene(
   scene: CaptionStyleSceneInput,
   script?: CaptionStyleScriptInput,
+  scale = PREVIEW_CAPTION_STYLE_UI_SCALE,
 ): CSSProperties | null {
   if (isDefaultCaptionStyleStorage(scene.captionStyle, script?.defaultCaptionStyle)) {
     return null;
   }
 
-  return resolvePreviewCaptionTypographyStyle(resolvePreviewCaptionStyle(scene, script));
+  return resolvePreviewCaptionTypographyStyle(resolvePreviewCaptionStyle(scene, script), scale);
 }
 
 /** Formats export caption line text using resolved text transform. */
@@ -366,10 +367,10 @@ export function resolveCaptionStyleMaxLines(
 export function resolvePreviewCaptionContainerStyle(
   scene: CaptionStyleSceneInput,
   script?: CaptionStyleScriptInput,
+  scale = PREVIEW_CAPTION_STYLE_UI_SCALE,
 ): CSSProperties {
   const previewStyle = resolvePreviewCaptionStyle(scene, script);
   const resolved = previewStyle.resolvedStyle;
-  const scale = PREVIEW_CAPTION_STYLE_UI_SCALE;
   const containerStyle: CSSProperties = {
     padding: `${resolved.paddingY * scale}px ${resolved.paddingX * scale}px`,
     borderRadius: `${resolved.cornerRadius * scale}px`,
@@ -399,8 +400,9 @@ export function resolvePreviewCaptionPillCombinedStyle(
   scene: CaptionStyleSceneInput,
   script: CaptionStyleScriptInput | undefined,
   layoutPillStyle: CSSProperties,
+  scale = PREVIEW_CAPTION_STYLE_UI_SCALE,
 ): CSSProperties {
-  const styleContainer = resolvePreviewCaptionContainerStyle(scene, script);
+  const styleContainer = resolvePreviewCaptionContainerStyle(scene, script, scale);
   const usesStoredStyle = !isDefaultCaptionStyleStorage(
     scene.captionStyle,
     script?.defaultCaptionStyle,

@@ -50,6 +50,13 @@ import { logPreviewMasterTimelineDiagnostics } from "@/features/timeline-intelli
 import { isTimelineDevDiagnosticsEnabled } from "@/features/timeline-intelligence/timeline-diagnostics.dev.types";
 import type { FootieScript } from "@/features/story/types";
 import { getStoryVoiceoverDurationSec } from "@/lib/utils/voiceover";
+import type { PreviewClockKind } from "@/features/preview/runtime-parity/preview-runtime-parity-states";
+import {
+  buildPreviewMediaPlanSignature,
+  resolvePlaySceneStartMs,
+  resolvePreviewClockAfterMediaMutation,
+  resolvePreviewClockAfterSceneSelection,
+} from "@/features/preview/runtime-parity/reconcile-preview-playback-clock";
 
 export type PlaybackMode = "browser" | "narration";
 
@@ -210,6 +217,11 @@ export function usePreviewPlayback({
   const [browserSceneStartedAtMs, setBrowserSceneStartedAtMs] = useState<number | null>(null);
   const voiceInitializedRef = useRef(false);
   const voiceSettingsRef = useRef({ rate: 1, pitch: 1, volume: 1, voiceURI: "" });
+  const clockKindRef = useRef<PreviewClockKind>("idle");
+  const previousSelectedSceneIndexRef = useRef(safeIndex);
+  const previousMediaSignatureRef = useRef(
+    buildPreviewMediaPlanSignature(scenes, safeIndex),
+  );
 
   const displayIndex = isPlaying ? currentSceneIndex : safeIndex;
   const scene = scenes[displayIndex];
@@ -351,6 +363,27 @@ export function usePreviewPlayback({
     onSelectedSceneChange(0);
   }, [onSelectedSceneChange]);
 
+  const applyResolvedClock = useCallback(
+    (
+      resolved: {
+        readonly kind: PreviewClockKind;
+        readonly timelineMs: number;
+        readonly sceneIndex: number;
+      },
+      options?: { readonly updateSelection?: boolean },
+    ) => {
+      clockKindRef.current = resolved.kind;
+      timelineClockMsRef.current = resolved.timelineMs;
+      setCurrentTimeMs(resolved.timelineMs);
+      setElapsedSec(resolved.timelineMs / 1000);
+      setCurrentSceneIndex(resolved.sceneIndex);
+      if (options?.updateSelection !== false) {
+        onSelectedSceneChange(resolved.sceneIndex);
+      }
+    },
+    [onSelectedSceneChange],
+  );
+
   const stopVoice = useCallback(() => {
     clearAdvanceTimeout();
     stopNarrationAudio();
@@ -364,6 +397,7 @@ export function usePreviewPlayback({
     playbackScopeRef.current = null;
     loopSceneEnabledRef.current = false;
     scenePlaybackIndexRef.current = 0;
+    clockKindRef.current = "idle";
     setIsPlaying(false);
     setIsSpeaking(false);
     setPlaybackMode(null);
@@ -391,6 +425,9 @@ export function usePreviewPlayback({
     }
     pauseBackgroundMusic();
     isPlayingRef.current = false;
+    if (clockKindRef.current === "playing") {
+      clockKindRef.current = "paused";
+    }
     setIsPlaying(false);
     setIsSpeaking(false);
   }, [clearAdvanceTimeout, pauseBackgroundMusic]);
@@ -424,6 +461,7 @@ export function usePreviewPlayback({
 
   const pauseScenePlaybackAtBoundary = useCallback(() => {
     isPlayingRef.current = false;
+    clockKindRef.current = "completed-scene";
     setIsPlaying(false);
     setIsSpeaking(false);
     pauseBackgroundMusic();
@@ -804,6 +842,7 @@ export function usePreviewPlayback({
     setCurrentSceneId(null);
     setPlaybackMode("browser");
     isPlayingRef.current = true;
+    clockKindRef.current = "playing";
     setIsPlaying(true);
     narrationEndedRef.current = false;
     lastTailTickWallMsRef.current = null;
@@ -901,6 +940,7 @@ export function usePreviewPlayback({
       (options.scope === "story" || canResumeWithinScene)
     ) {
       isPlayingRef.current = true;
+      clockKindRef.current = "playing";
       setIsPlaying(true);
       setIsSpeaking(false);
 
@@ -925,6 +965,7 @@ export function usePreviewPlayback({
     playbackModeRef.current = "narration";
     setPlaybackMode("narration");
     isPlayingRef.current = true;
+    clockKindRef.current = "playing";
     setIsPlaying(true);
     setIsSpeaking(false);
 
@@ -968,10 +1009,21 @@ export function usePreviewPlayback({
       return;
     }
 
+    const start = resolvePlaySceneStartMs({
+      clockKind: clockKindRef.current,
+      playbackScope: playbackScopeRef.current,
+      sceneIndex: safeIndex,
+      scopedSceneIndex: scenePlaybackIndexRef.current,
+      timelineMs: timelineClockMsRef.current,
+      startMs: bounds.startMs,
+      endMs: bounds.endMs,
+    });
+
     await beginNarrationPlayback({
       scope: "scene",
       sceneIndex: safeIndex,
-      startMs: bounds.startMs,
+      startMs: start.startMs,
+      allowResume: start.resume,
     });
   };
 
@@ -1099,6 +1151,51 @@ export function usePreviewPlayback({
 
     seekSceneDuringPlayback(safeIndex);
   }, [isPlaying, safeIndex, seekSceneDuringPlayback]);
+
+  useEffect(() => {
+    const indexChanged = previousSelectedSceneIndexRef.current !== safeIndex;
+    previousSelectedSceneIndexRef.current = safeIndex;
+    if (!indexChanged || isPlaying) {
+      return;
+    }
+    const next = resolvePreviewClockAfterSceneSelection({
+      scenes,
+      sceneIndex: safeIndex,
+      timelineMs: timelineClockMsRef.current,
+      clockKind: clockKindRef.current,
+      isPlaying: false,
+    });
+    if (!next) {
+      return;
+    }
+    applyResolvedClock(next, { updateSelection: false });
+    if (next.kind === "idle") {
+      playbackModeRef.current = null;
+      setPlaybackMode(null);
+      playbackScopeRef.current = null;
+      setPlaybackScope(null);
+      narrationEndedRef.current = false;
+      setNarrationEnded(false);
+    }
+  }, [applyResolvedClock, isPlaying, safeIndex, scenes]);
+
+  useEffect(() => {
+    const signature = buildPreviewMediaPlanSignature(scenes, safeIndex);
+    if (previousMediaSignatureRef.current === signature) {
+      return;
+    }
+    previousMediaSignatureRef.current = signature;
+    if (isPlaying) {
+      return;
+    }
+    const next = resolvePreviewClockAfterMediaMutation({
+      scenes,
+      sceneIndex: safeIndex,
+      timelineMs: timelineClockMsRef.current,
+      clockKind: clockKindRef.current,
+    });
+    applyResolvedClock(next, { updateSelection: false });
+  }, [applyResolvedClock, isPlaying, safeIndex, scenes]);
 
   // Sting removed / capability-off may shorten duration — clamp without restart.
   useEffect(() => {

@@ -186,6 +186,26 @@ html {
   color: #fff;
 }
 
+.preview-caption-output-space {
+  container-type: inline-size;
+  container-name: preview-caption;
+}
+
+.preview-caption-output-space .preview-narration-subtitle-text {
+  font-size: var(--preview-caption-font-size, calc(64 * 100cqw / 1080));
+}
+
+.preview-caption-output-space .preview-narration-subtitle-pill {
+  padding: var(--preview-caption-pad-y, calc(10 * 100cqw / 1080))
+    var(--preview-caption-pad-x, calc(18 * 100cqw / 1080));
+  border-radius: var(--preview-caption-radius, calc(12 * 100cqw / 1080));
+  border-width: var(--preview-caption-border-width, max(1px, calc(100cqw / 1080)));
+}
+
+.preview-caption-output-space .subtitle-effect-highlight-bar {
+  width: var(--preview-caption-highlight-bar, calc(3 * 100cqw / 1080));
+}
+
 .preview-narration-subtitle-text p {
   margin: 0;
   white-space: normal;
@@ -196,6 +216,10 @@ html {
 @media (min-width: 640px) {
   .preview-narration-subtitle-text {
     font-size: 14px;
+  }
+
+  .preview-caption-output-space .preview-narration-subtitle-text {
+    font-size: var(--preview-caption-font-size, calc(64 * 100cqw / 1080));
   }
 }
 

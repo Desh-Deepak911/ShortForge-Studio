@@ -1,17 +1,7 @@
 "use client";
 
-import {
-  resolvePreviewCaptionLayoutForScene,
-  resolvePreviewCaptionLayoutScene,
-  resolvePreviewCaptionOverlayStyle,
-  resolvePreviewCaptionPillStyle,
-} from "@/features/caption-engine/caption-layout.utils";
-import {
-  resolveCaptionStyleMaxLines,
-  resolvePreviewCaptionPillCombinedStyle,
-  resolvePreviewCaptionTypographyStyleForScene,
-} from "@/features/caption-style";
 import { CaptionPreviewOverlay } from "@/features/caption-layout-drag";
+import { resolveCaptionStyleMaxLines } from "@/features/caption-style";
 import { getPreviewDisplayCaption, normalizeCaptionMode } from "@/features/story/utils";
 import type { DisplayCaptionScene } from "@/features/story/utils";
 import type { FootieScript } from "@/features/story/types";
@@ -30,7 +20,7 @@ interface CaptionOverlayProps {
   onResetLayout?: () => void;
 }
 
-/** Generated-caption overlay for phone preview (inline layout at bottom). */
+/** Generated-caption overlay for phone preview (shared placement surface). */
 export default function CaptionOverlay({
   scene,
   script,
@@ -41,18 +31,15 @@ export default function CaptionOverlay({
   onOffsetCommit,
   onResetLayout,
 }: CaptionOverlayProps) {
-  const layoutScene = resolvePreviewCaptionLayoutScene(script, scene, sceneIndex);
-
-  const isSubtitlesMode = normalizeCaptionMode(layoutScene.captionMode) === "subtitles";
+  const isSubtitlesMode = normalizeCaptionMode(scene.captionMode) === "subtitles";
   if (isSubtitlesMode) {
     return null;
   }
 
-  const visibleCaption = getPreviewDisplayCaption(layoutScene);
-  const maxLines = resolveCaptionStyleMaxLines(layoutScene, script);
-  const typographyStyle = resolvePreviewCaptionTypographyStyleForScene(layoutScene, script);
+  const visibleCaption = getPreviewDisplayCaption(scene);
+  const maxLines = resolveCaptionStyleMaxLines(scene, script);
   const caption = renderSceneCaptionContent(
-    layoutScene,
+    scene,
     studioPreviewCaption,
     `${scene.id ?? "preview"}-${visibleCaption}`,
     { maxLines },
@@ -62,69 +49,20 @@ export default function CaptionOverlay({
     return null;
   }
 
-  const styledCaption = typographyStyle ? (
-    <div style={typographyStyle}>{caption}</div>
-  ) : (
-    caption
-  );
-
-  if (draggable) {
-    return (
-      <CaptionPreviewOverlay
-        scene={layoutScene}
-        script={script}
-        sceneIndex={sceneIndex}
-        draggable
-        allowPointerEvents={allowPointerEvents}
-        overlayClassName={className}
-        pillClassName="preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
-        onOffsetCommit={onOffsetCommit}
-        onResetLayout={onResetLayout}
-      >
-        {styledCaption}
-      </CaptionPreviewOverlay>
-    );
-  }
-
-  const resolvedLayout = resolvePreviewCaptionLayoutForScene(
-    layoutScene,
-    script,
-    sceneIndex,
-  );
-  const overlayStyle = resolvePreviewCaptionOverlayStyle(resolvedLayout);
-  const pillStyle = resolvePreviewCaptionPillCombinedStyle(
-    layoutScene,
-    script,
-    resolvePreviewCaptionPillStyle(resolvedLayout),
-  );
-  const useLegacyClass = resolvedLayout.usesLegacyBottomCenter;
-
-  if (useLegacyClass) {
-    return (
-      <div
-        className={`preview-narration-subtitle-overlay ${className}`.trim()}
-        style={{ pointerEvents: "none" }}
-        aria-hidden
-      >
-        <div className="preview-narration-subtitle-pill" style={pillStyle}>
-          {styledCaption}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className={className.trim()}
-      style={{ ...overlayStyle, pointerEvents: "none" }}
-      aria-hidden
+    <CaptionPreviewOverlay
+      scene={scene}
+      script={script}
+      sceneIndex={sceneIndex}
+      draggable={draggable}
+      allowPointerEvents={allowPointerEvents}
+      overlayClassName={className}
+      pillClassName="preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
+      onOffsetCommit={onOffsetCommit}
+      onResetLayout={onResetLayout}
+      measurementKey={`generated:${scene.id ?? "preview"}:${visibleCaption}`}
     >
-      <div
-        className="preview-narration-subtitle-pill preview-narration-subtitle-pill--placed"
-        style={pillStyle}
-      >
-        {styledCaption}
-      </div>
-    </div>
+      {caption}
+    </CaptionPreviewOverlay>
   );
 }

@@ -447,8 +447,10 @@ test("typography edits do not dirty narration or voice", () => {
 test("preview typography adapter wired in preview overlays", () => {
   const subtitleOverlay = readSrc("src/features/preview/components/SubtitleOverlay.tsx");
   const captionOverlay = readSrc("src/features/preview/components/CaptionOverlay.tsx");
-  assert.match(subtitleOverlay, /resolvePreviewCaptionTypographyStyleForScene/);
-  assert.match(captionOverlay, /resolvePreviewCaptionTypographyStyleForScene/);
+  const placementSurface = readSrc("src/features/caption-layout-drag/CaptionPreviewOverlay.tsx");
+  assert.match(subtitleOverlay, /CaptionPreviewOverlay/);
+  assert.match(captionOverlay, /CaptionPreviewOverlay/);
+  assert.match(placementSurface, /resolvePreviewCaptionTypographyStyleForScene/);
 });
 
 test("export typography uses caption style adapters without duplication", () => {

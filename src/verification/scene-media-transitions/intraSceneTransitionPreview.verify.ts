@@ -293,8 +293,9 @@ test("Both video peers advance during a continuous overlap", () => {
 
   const previewSrc = readSrc("src/features/preview/components/PreviewFrame.tsx");
   assert.match(previewSrc, /planPreviewMediaLayers/);
-  assert.match(previewSrc, /key=\{mediaLayerPlan\.primary\.stableKey\}/);
-  assert.match(previewSrc, /key=\{mediaLayerPlan\.outgoing\.stableKey\}/);
+  assert.match(previewSrc, /buildPreviewMediaLayerLifecycleKey/);
+  assert.match(previewSrc, /mediaLayerPlan\.primary\.view\.mediaItemId/);
+  assert.match(previewSrc, /mediaLayerPlan\.outgoing\.view\.mediaItemId/);
   assert.match(previewSrc, /activeMediaView=\{mediaLayerPlan\.primary\.view\}/);
   assert.match(previewSrc, /activeMediaView=\{mediaLayerPlan\.outgoing\.view\}/);
   assert.match(previewSrc, /data-preview-stable-media-stack="true"/);
@@ -404,10 +405,10 @@ test("Scene-to-scene overlay priority in PreviewFrame", () => {
   const preview = readSrc("src/features/preview/components/PreviewFrame.tsx");
   assert.match(
     preview,
-    /transitionOverlay && transitionStyles \?[\s\S]*mediaLayerPlan \?/,
+    /(?:activeTransitionOverlay|transitionOverlay) && transitionStyles \?[\s\S]*mediaLayerPlan \?/,
   );
   assert.match(preview, /planPreviewMediaLayers/);
-  assert.match(preview, /!transitionOverlay[\s\S]*planPreviewMediaLayers/);
+  assert.match(preview, /!activeTransitionOverlay[\s\S]*reconcilePreviewMediaLayerPlan/);
 });
 
 test("Invalid/stale metadata hard-cut fallback", () => {

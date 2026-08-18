@@ -116,8 +116,20 @@ test("scene preview controls stay disabled during image edit mode", () => {
   const preview = readSrc("src/features/preview/components/VideoPreview.tsx");
 
   assert.match(preview, /scenePreviewControlsDisabled = isFrameEditing/);
-  assert.match(preview, /disabled=\{isPlaying \|\| !hasPlayableVoiceover \|\| scenePreviewControlsDisabled\}/);
-  assert.match(preview, /disabled=\{scenePreviewControlsDisabled\}/);
+
+  const playSceneLabel = preview.indexOf('aria-label="Play selected scene with voiceover"');
+  assert.ok(playSceneLabel > 0);
+  const playSceneBlock = preview.slice(Math.max(0, playSceneLabel - 400), playSceneLabel);
+  const playSceneDisabled = playSceneBlock.replace(/\s+/g, " ");
+  assert.match(playSceneDisabled, /disabled=\{/);
+  assert.match(playSceneDisabled, /isPlaying/);
+  assert.match(playSceneDisabled, /!hasPlayableVoiceover/);
+  assert.match(playSceneDisabled, /scenePreviewControlsDisabled/);
+
+  const loopSceneLabel = preview.indexOf('aria-label="Loop selected scene during scene preview"');
+  assert.ok(loopSceneLabel > 0);
+  const loopSceneBlock = preview.slice(Math.max(0, loopSceneLabel - 350), loopSceneLabel);
+  assert.match(loopSceneBlock.replace(/\s+/g, ""), /disabled=\{scenePreviewControlsDisabled\}/);
 });
 
 console.log(`\nAll preview scene playback checks passed (${passed}).`);

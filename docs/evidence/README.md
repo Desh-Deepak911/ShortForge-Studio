@@ -15,6 +15,7 @@ Policy: [RELEASE_READINESS_POLICY.md](RELEASE_READINESS_POLICY.md).
 | Fit with background | [export/current/FIT_WITH_BACKGROUND_HEADLESS_CERTIFICATION.md](export/current/FIT_WITH_BACKGROUND_HEADLESS_CERTIFICATION.md) | Headless decoded cases recorded |
 | Brand sting | [export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md](export/current/BRAND_STING_EXPORT_BASELINE_FAILURE.md) | historical failure **repaired**; not decoded-artifact certification |
 | Engagement / outro motion | [export/current/ENGAGEMENT_OUTRO_MOTION_CERTIFICATION.md](export/current/ENGAGEMENT_OUTRO_MOTION_CERTIFICATION.md) | **conditionally_ready** |
+| Preview runtime parity | [preview/current/PREVIEW_RUNTIME_PARITY_RELEASE_READINESS.md](preview/current/PREVIEW_RUNTIME_PARITY_RELEASE_READINESS.md) | **ready** |
 | Headless hosted | [headless/README.md](headless/README.md) | per-harness; do not summarize as a single Pass |
 
 ## Folders

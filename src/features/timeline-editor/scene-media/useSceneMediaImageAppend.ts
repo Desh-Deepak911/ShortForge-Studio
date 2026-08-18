@@ -32,6 +32,8 @@ import {
 import { createSceneImageFromUrl } from "@/features/story/utils/scene.utils";
 import { applySceneUpdate } from "@/lib/utils/voiceover";
 
+import { scheduleOwnedPreviewBlobRevocation } from "@/features/preview/runtime-parity/schedule-owned-preview-blob-revocation";
+
 import { revokeOwnedBlobUrlIfPresent } from "./blob-url-ownership";
 
 export const SCENE_MEDIA_IMAGE_ACCEPT = "image/*";
@@ -165,7 +167,10 @@ export function useSceneMediaImageAppend(input: {
   );
 
   const revokeOwnedUrlIfPresent = useCallback((url: string | undefined) => {
-    revokeOwnedBlobUrlIfPresent(url, ownedBlobUrls.current);
+    scheduleOwnedPreviewBlobRevocation({
+      url,
+      owned: ownedBlobUrls.current,
+    });
   }, []);
 
   return {

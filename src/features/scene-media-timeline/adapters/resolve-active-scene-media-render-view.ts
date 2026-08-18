@@ -214,8 +214,12 @@ export function resolveSceneMediaItemRenderView(
   }
 
   const multiImageScenesEnabled = options.multiImageScenesEnabled !== false;
+  const mixedMediaScenesEnabled = options.mixedMediaScenesEnabled === true;
   const sceneDurationMs = getSceneDurationMs(scene as FootieScene);
-  const windows = resolvePreviewSceneMediaWindows(scene, { multiImageScenesEnabled });
+  const windows = resolvePreviewSceneMediaWindows(scene, {
+    multiImageScenesEnabled,
+    mixedMediaScenesEnabled,
+  });
   const window = windows.find((entry) => entry.itemId === id);
   if (!window || window.durationMs <= 0) {
     return null;
