@@ -10,9 +10,9 @@ import { assertFfmpegEncodersPresent } from "../ffmpeg/list-ffmpeg-encoders";
 import { resolveNativeFfmpegBinaries } from "../ffmpeg/resolve-ffmpeg-binaries";
 import type { HeadlessOutputProfile } from "./output-profiles";
 import { assertHeadlessManifestTargetCompatibility } from "./render-target";
+import { isAcceptedHeadlessWorkerRendererBuildId } from "./renderer-build-id";
 import {
   HEADLESS_WORKER_PHASE3_SUPPORTED,
-  HEADLESS_WORKER_RENDERER_BUILD_ID,
   type HeadlessWorkerRunFailure,
 } from "./worker-types";
 
@@ -24,7 +24,7 @@ export function assertPhase3WorkerCapability(input: {
   const profile = input.request.rendererProfile;
   const manifest = input.request.manifest;
 
-  if (input.request.rendererBuildId !== HEADLESS_WORKER_RENDERER_BUILD_ID) {
+  if (!isAcceptedHeadlessWorkerRendererBuildId(input.request.rendererBuildId)) {
     return {
       ok: false,
       reasonId: "UNSUPPORTED_CAPABILITY",

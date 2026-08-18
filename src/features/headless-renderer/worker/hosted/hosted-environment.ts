@@ -28,13 +28,10 @@ import {
   HEADLESS_SCHEMA_PREFLIGHT_ROLLBACK_BRIDGE_007_008_MODE,
 } from "../../control-plane/runtime/headless-schema-preflight-compatibility-authority";
 import {
+  HEADLESS_CAPTION_TRIM_PARITY_RENDERER_BUILD_ID,
   HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
-  HEADLESS_PHASE3_RENDERER_BUILD_ID,
-  HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
+  HEADLESS_HOSTED_ACCEPTED_RENDERER_BUILD_IDS,
 } from "../runtime/renderer-build-id";
-
-/** Hosted workers require the Phase 3.2 renderer build id (strict mode). */
-const HEADLESS_WORKER_RENDERER_BUILD_ID = HEADLESS_PHASE3_RENDERER_BUILD_ID;
 
 export type HeadlessHostedWorkerMode = "verify" | "render";
 
@@ -387,11 +384,9 @@ export function classifyHeadlessHostedWorkerEnvironment(
       return result("invalid", "invalid_schema_compatibility_mode");
     }
 
-    const acceptedBuildIds = new Set<string>([
-      HEADLESS_WORKER_RENDERER_BUILD_ID,
-      HEADLESS_ROLLBACK_BRIDGE_RENDERER_BUILD_ID,
-      HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID,
-    ]);
+    const acceptedBuildIds = new Set<string>(
+      HEADLESS_HOSTED_ACCEPTED_RENDERER_BUILD_IDS,
+    );
     if (!acceptedBuildIds.has(buildIdRead.value)) {
       return result("invalid", "invalid_renderer_build_id");
     }
@@ -412,14 +407,16 @@ export function classifyHeadlessHostedWorkerEnvironment(
     }
 
     if (
-      buildIdRead.value === HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID &&
+      (buildIdRead.value === HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID ||
+        buildIdRead.value === HEADLESS_CAPTION_TRIM_PARITY_RENDERER_BUILD_ID) &&
       compatibilityBinding.mode !== "strict"
     ) {
       return result("invalid", "invalid_schema_compatibility_mode");
     }
 
     if (
-      buildIdRead.value === HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID &&
+      (buildIdRead.value === HEADLESS_CLEANUP_RUNTIME_RENDERER_BUILD_ID ||
+        buildIdRead.value === HEADLESS_CAPTION_TRIM_PARITY_RENDERER_BUILD_ID) &&
       !maintenanceDisabled
     ) {
       return result("invalid", "maintenance_enabled_forbidden");

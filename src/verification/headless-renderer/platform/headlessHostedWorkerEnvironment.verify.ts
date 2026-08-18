@@ -133,6 +133,16 @@ function main() {
     assert.equal(c.reasonId, "invalid_renderer_build_id");
   });
 
+  test("caption/trim parity build id is accepted additively", () => {
+    const c = classifyHeadlessHostedWorkerEnvironment(
+      validHostedEnv({
+        HEADLESS_RENDERER_BUILD_ID:
+          "headless-local-chromium-ffmpeg-11e-phase2g.26-caption-trim-parity",
+      }),
+    );
+    assert.equal(c.status, "configured");
+  });
+
   test("Clerk / Vercel / REST token presence → invalid", () => {
     assert.equal(
       classifyHeadlessHostedWorkerEnvironment(

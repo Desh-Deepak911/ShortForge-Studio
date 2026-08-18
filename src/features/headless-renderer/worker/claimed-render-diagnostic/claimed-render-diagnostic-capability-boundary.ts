@@ -16,10 +16,10 @@ import { resolveNativeFfmpegBinaries } from "../ffmpeg/resolve-ffmpeg-binaries";
 import { assertHeadlessManifestTargetCompatibility } from "../runtime/render-target";
 import { resolveEffectiveWorkerLimits } from "../runtime/resolve-worker-limits";
 import { resolveSystemChromeExecutable } from "../chromium/chrome-executable";
+import { isAcceptedHeadlessWorkerRendererBuildId } from "../runtime/renderer-build-id";
 import {
   DEFAULT_HEADLESS_WORKER_LIMITS,
   HEADLESS_WORKER_PHASE3_SUPPORTED,
-  HEADLESS_WORKER_RENDERER_BUILD_ID,
   type HeadlessWorkerLimits,
 } from "../runtime/worker-types";
 
@@ -286,7 +286,7 @@ export function evaluateClaimedRenderDiagnosticCapabilityBoundary(input: {
   const profileForAttribution = (): HeadlessOutputProfile =>
     targetResolved.ok ? targetResolved.target.profile : fallbackProfile;
 
-  if (input.request.rendererBuildId !== HEADLESS_WORKER_RENDERER_BUILD_ID) {
+  if (!isAcceptedHeadlessWorkerRendererBuildId(input.request.rendererBuildId)) {
     return {
       ok: false,
       reasonId: "UNSUPPORTED_CAPABILITY",
