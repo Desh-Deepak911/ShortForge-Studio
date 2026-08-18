@@ -66,8 +66,14 @@ export function buildVideoTrimPreviewOverride(
     sourceDurationMs: input.sourceDurationMs,
   });
 
+  const mediaItemId =
+    typeof input.mediaItemId === "string" && input.mediaItemId.trim()
+      ? input.mediaItemId.trim()
+      : undefined;
+
   return {
     sceneId: input.sceneId,
+    ...(mediaItemId ? { mediaItemId } : {}),
     trimStartMs,
     trimEndMs,
     scrubTimeMs,
@@ -77,15 +83,36 @@ export function buildVideoTrimPreviewOverride(
   };
 }
 
-/** True when the override should drive the given scene's preview video. */
+function trimMediaItemId(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+/**
+ * True when the override should drive the given scene video.
+ * Item-scoped overrides apply only to that mediaItemId.
+ * Legacy scene-only overrides still apply to any video in the scene.
+ */
 export function shouldApplyVideoTrimPreviewOverride(
   override: VideoTrimPreviewOverride | null | undefined,
   sceneId: string | null | undefined,
+  mediaItemId?: string | null,
 ): boolean {
   if (!override?.isActive || !sceneId) {
     return false;
   }
-  return override.sceneId === sceneId;
+  if (override.sceneId !== sceneId) {
+    return false;
+  }
+  const overrideItemId = trimMediaItemId(override.mediaItemId);
+  const mountedItemId = trimMediaItemId(mediaItemId);
+  if (overrideItemId && mountedItemId && overrideItemId !== mountedItemId) {
+    return false;
+  }
+  return true;
 }
 
 /** True when a seek would materially change the displayed frame. */
@@ -192,6 +219,25 @@ export function shouldClearTrimPreviewOnSceneChange(
     return false;
   }
   return !selectedSceneId || override.sceneId !== selectedSceneId;
+}
+
+/** Clears an override when its media item is removed or no longer selected. */
+export function shouldClearTrimPreviewOnMediaItemChange(
+  override: VideoTrimPreviewOverride | null | undefined,
+  sceneId: string | null | undefined,
+  mediaItemId: string | null | undefined,
+): boolean {
+  if (!override?.isActive) {
+    return false;
+  }
+  if (!sceneId || override.sceneId !== sceneId) {
+    return false;
+  }
+  const overrideItemId = trimMediaItemId(override.mediaItemId);
+  if (!overrideItemId) {
+    return false;
+  }
+  return trimMediaItemId(mediaItemId) !== overrideItemId;
 }
 
 /** Clears an override when media URL is replaced or removed. */

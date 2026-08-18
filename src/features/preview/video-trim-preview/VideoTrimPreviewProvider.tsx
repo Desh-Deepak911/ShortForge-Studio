@@ -75,10 +75,11 @@ export function useVideoTrimPreviewOptional(): VideoTrimPreviewContextValue | nu
 
 export function useActiveVideoTrimPreviewOverride(
   sceneId: string | null | undefined,
+  mediaItemId?: string | null,
 ): VideoTrimPreviewOverride | null {
   const ctx = useVideoTrimPreviewOptional();
   const override = ctx?.override ?? null;
-  if (!shouldApplyVideoTrimPreviewOverride(override, sceneId)) {
+  if (!shouldApplyVideoTrimPreviewOverride(override, sceneId, mediaItemId)) {
     return null;
   }
   return override;

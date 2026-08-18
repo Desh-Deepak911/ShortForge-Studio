@@ -87,6 +87,18 @@ export {
 } from "./caption-style.engine";
 
 export {
+  applyCaptionBackgroundAuthorityToStyle,
+  resolveCaptionBackgroundAuthority,
+} from "./resolve-caption-background-authority";
+export type {
+  CaptionBackgroundAuthority,
+  CaptionBackgroundEnabledSource,
+  CaptionBackgroundIntent,
+  CaptionBackgroundOpacitySource,
+  ResolveCaptionBackgroundAuthorityInput,
+} from "./resolve-caption-background-authority";
+
+export {
   PREVIEW_CAPTION_STYLE_UI_SCALE,
   PREVIEW_FADE_SAFE_CAPTION_PRESET_IDS,
   LEGACY_EXPORT_CAPTION_STYLE_TOKENS,

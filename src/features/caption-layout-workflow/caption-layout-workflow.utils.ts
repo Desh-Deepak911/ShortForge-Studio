@@ -39,14 +39,33 @@ export function extractCopyableCaptionLayout(
     offsetY: effective.offsetY,
     maxWidthPercent: effective.maxWidthPercent,
     safeAreaEnabled: effective.safeAreaEnabled,
-    ...(effective.backgroundOpacity != null ? { backgroundOpacity: effective.backgroundOpacity } : {}),
   };
+}
+
+function preserveLegacyLayoutBackgroundOpacity(
+  nextLayout: CaptionLayout,
+  existing?: Partial<CaptionLayout> | null,
+): CaptionLayout {
+  if (
+    nextLayout.backgroundOpacity == null &&
+    typeof existing?.backgroundOpacity === "number" &&
+    Number.isFinite(existing.backgroundOpacity)
+  ) {
+    return { ...nextLayout, backgroundOpacity: existing.backgroundOpacity };
+  }
+  return nextLayout;
 }
 
 export function buildCaptionLayoutPastePatch(
   layout: CopyableCaptionLayout,
+  existing?: Partial<CaptionLayout> | null,
 ): { captionLayout: CaptionLayout } {
-  return buildSceneCaptionLayoutPatch({ ...layout, version: layout.version ?? 2 });
+  return buildSceneCaptionLayoutPatch(
+    preserveLegacyLayoutBackgroundOpacity(
+      { ...layout, version: layout.version ?? 2 },
+      existing,
+    ),
+  );
 }
 
 export function buildProjectDefaultCaptionLayoutPatch(
@@ -87,8 +106,12 @@ export function buildCopyPreviousSceneLayoutPatch(
     return null;
   }
 
+  const currentScene = script.scenes[sceneIndex];
   return buildSceneCaptionLayoutPatch(
-    extractCopyableCaptionLayout(previousScene.captionLayout, script.defaultCaptionLayout),
+    preserveLegacyLayoutBackgroundOpacity(
+      extractCopyableCaptionLayout(previousScene.captionLayout, script.defaultCaptionLayout),
+      currentScene?.captionLayout,
+    ),
   );
 }
 
@@ -118,7 +141,13 @@ export function applyCaptionLayoutToAllScenes(
   const patch = buildSceneCaptionLayoutPatch(layout);
 
   const scenes = script.scenes.map((scene) =>
-    normalizeSceneCaptionSettings({ ...scene, ...patch }),
+    normalizeSceneCaptionSettings({
+      ...scene,
+      captionLayout: preserveLegacyLayoutBackgroundOpacity(
+        patch.captionLayout,
+        scene.captionLayout,
+      ),
+    }),
   );
 
   return syncPresentationScenes(script, scenes);

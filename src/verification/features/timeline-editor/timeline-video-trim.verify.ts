@@ -533,7 +533,7 @@ test("Keyboard commit uses media intent", () => {
     timeline.indexOf("const handleTrimHandleKeyDown"),
     timeline.indexOf("useEffect(() => {\n    if (!draggedSceneId)"),
   );
-  assert.match(keyHandler, /onApplyVideoTrim\(sceneId, next\)/);
+  assert.match(keyHandler, /onApplyVideoTrim\(sceneId, next, mediaItemId\)/);
   const workspace = readSrc("src/components/StoryWorkspace.tsx");
   assert.match(
     workspace,

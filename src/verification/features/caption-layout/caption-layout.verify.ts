@@ -220,7 +220,9 @@ test("caption layout inspector exposes grouped controls", () => {
   const workflow = readSrc("src/features/caption-layout-workflow/CaptionLayoutWorkflow.tsx");
   assert.match(control, /Placement/);
   assert.match(control, /Sizing/);
-  assert.match(control, /Appearance/);
+  assert.match(control, /Safe Area Enabled/);
+  assert.doesNotMatch(control, /Background Opacity/);
+  assert.doesNotMatch(control, /Appearance/);
   assert.match(control, /Text Alignment/);
   assert.match(control, /CAPTION_OFFSET_X_MIN_PX/);
   assert.match(workflow, /Reset/);

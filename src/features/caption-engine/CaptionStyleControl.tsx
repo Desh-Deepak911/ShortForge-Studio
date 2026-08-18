@@ -514,53 +514,60 @@ export default function CaptionStyleControl({
             checked={backgroundEnabled}
             onChange={(event) => applySceneStyle({ backgroundEnabled: event.target.checked })}
           />
-          Background enabled
+          Background
         </label>
 
-        <div>
-          <label htmlFor={`caption-style-bg-color-${scene.id}`} className={studioFieldLabel}>
-            Background color
-          </label>
-          <input
-            id={`caption-style-bg-color-${scene.id}`}
-            type="color"
-            className="mt-1.5 h-9 w-full cursor-pointer rounded-md border border-border bg-background"
-            value={backgroundColor}
-            onChange={(event) =>
-              applySceneStyle({
-                backgroundColor: normalizeCaptionStyleBackgroundColor(
-                  event.target.value,
-                  backgroundColor,
-                ),
-              })
-            }
-          />
-        </div>
+        {backgroundEnabled ? (
+          <>
+            <div>
+              <label htmlFor={`caption-style-bg-color-${scene.id}`} className={studioFieldLabel}>
+                Color
+              </label>
+              <input
+                id={`caption-style-bg-color-${scene.id}`}
+                type="color"
+                className="mt-1.5 h-9 w-full cursor-pointer rounded-md border border-border bg-background"
+                value={backgroundColor}
+                onChange={(event) =>
+                  applySceneStyle({
+                    backgroundColor: normalizeCaptionStyleBackgroundColor(
+                      event.target.value,
+                      backgroundColor,
+                    ),
+                  })
+                }
+              />
+            </div>
 
-        <div>
-          <label htmlFor={`caption-style-opacity-${scene.id}`} className={studioFieldLabel}>
-            Opacity
-          </label>
-          <input
-            id={`caption-style-opacity-${scene.id}`}
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            className="mt-2 w-full accent-primary"
-            value={backgroundOpacity}
-            disabled={!backgroundEnabled}
-            onChange={(event) =>
-              applySceneStyle({
-                backgroundOpacity: clampCaptionStyleBackgroundOpacity(
-                  Number(event.target.value),
-                  backgroundOpacity,
-                ),
-              })
-            }
-          />
-          <p className={`${studioSubtleText} mt-1 tabular-nums`}>{backgroundOpacity}%</p>
-        </div>
+            <div>
+              <label htmlFor={`caption-style-opacity-${scene.id}`} className={studioFieldLabel}>
+                Opacity
+              </label>
+              <input
+                id={`caption-style-opacity-${scene.id}`}
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                className="mt-2 w-full accent-primary"
+                value={backgroundOpacity}
+                onChange={(event) =>
+                  applySceneStyle({
+                    backgroundOpacity: clampCaptionStyleBackgroundOpacity(
+                      Number(event.target.value),
+                      backgroundOpacity,
+                    ),
+                  })
+                }
+              />
+              <p className={`${studioSubtleText} mt-1 tabular-nums`}>{backgroundOpacity}%</p>
+            </div>
+          </>
+        ) : (
+          <p className={studioSubtleText}>
+            No box will appear behind captions in Preview or export.
+          </p>
+        )}
       </StyleSubsection>
 
       <StyleSubsection title="Spacing">

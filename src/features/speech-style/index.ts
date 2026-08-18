@@ -21,6 +21,3 @@ export {
   TTS_MODEL_EXPRESSIVE,
   TTS_MODEL_NEUTRAL,
 } from "./speech-style.utils";
-
-export { default as SpeechStylePanel } from "./SpeechStylePanel";
-export type { SpeechStylePanelProps } from "./SpeechStylePanel";

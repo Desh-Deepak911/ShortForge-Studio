@@ -109,7 +109,7 @@ test("copy layout copies only layout fields", () => {
   assert.equal(copied.offsetY, -30);
   assert.equal(copied.maxWidthPercent, 70);
   assert.equal(copied.safeAreaEnabled, false);
-  assert.equal(copied.backgroundOpacity, 55);
+  assert.equal("backgroundOpacity" in copied, false);
   assert.equal("captionPreset" in copied, false);
   assert.equal("subtitleText" in copied, false);
   assert.equal("subtitle" in copied, false);

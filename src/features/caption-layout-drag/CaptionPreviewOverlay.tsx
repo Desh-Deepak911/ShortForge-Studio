@@ -20,6 +20,7 @@ import {
   resolvePreviewCaptionPillStyle,
 } from "@/features/caption-engine/caption-layout.utils";
 import {
+  resolveCaptionBackgroundAuthority,
   resolvePreviewCaptionPillCombinedStyle,
   resolvePreviewCaptionTypographyStyleForScene,
 } from "@/features/caption-style";
@@ -179,6 +180,12 @@ export default function CaptionPreviewOverlay({
         resolvePreviewCaptionPillStyle(resolvedLayout),
         outputScale,
       );
+  const backgroundAuthority = resolveCaptionBackgroundAuthority({
+    sceneStyle: layoutScene.captionStyle,
+    projectStyle: script?.defaultCaptionStyle,
+    sceneLayout: layoutScene.captionLayout,
+    projectLayout: script?.defaultCaptionLayout,
+  });
   const typographyStyle = resolvePreviewCaptionTypographyStyleForScene(
     layoutScene,
     script,
@@ -392,7 +399,7 @@ export default function CaptionPreviewOverlay({
           ["--preview-caption-pad-y" as string]: `${LEGACY_EXPORT_CAPTION_BOX_PAD_Y * outputScale}px`,
           ["--preview-caption-radius" as string]: `${LEGACY_EXPORT_CAPTION_BOX_RADIUS * outputScale}px`,
           ["--preview-caption-highlight-bar" as string]: `${3 * outputScale}px`,
-          ["--preview-caption-border-width" as string]: `${Math.max(1, outputScale)}px`,
+          ["--preview-caption-border-width" as string]: "0px",
           ["--preview-caption-reference-width" as string]: `${CAPTION_LAYOUT_REFERENCE_WIDTH}`,
           ["--preview-caption-reference-height" as string]: `${CAPTION_LAYOUT_REFERENCE_HEIGHT}`,
         }
@@ -459,6 +466,11 @@ export default function CaptionPreviewOverlay({
           aria-label={captionInteractive ? "Move caption" : undefined}
           className={`${pillClassName} ${captionInteractive ? "outline-none focus-visible:ring-2 focus-visible:ring-accent/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40" : ""}`.trim()}
           style={pillStyle}
+          data-caption-background-enabled={backgroundAuthority.backgroundEnabled ? "true" : "false"}
+          data-caption-background-opacity={String(backgroundAuthority.effectiveOpacityPercent)}
+          data-caption-container-fill={backgroundAuthority.drawsFill ? "true" : "false"}
+          data-caption-container-border="false"
+          data-caption-container-blur="false"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={finishDrag}

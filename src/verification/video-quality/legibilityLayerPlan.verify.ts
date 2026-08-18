@@ -131,7 +131,8 @@ test("8. Generated caption at top", () => {
   assert.equal(plan.caption.placement, "top");
   assert.ok(plan.caption.region);
   assert.ok(plan.caption.region!.y < 960);
-  assert.equal(plan.caption.needsLocalScrim, true);
+  assert.equal(plan.caption.needsLocalScrim, false);
+  assert.equal(plan.caption.backgroundIntent, "explicit-transparent");
   assert.equal(plan.globalGradientEnabled, false);
 });
 
@@ -147,7 +148,8 @@ test("9. Generated caption at bottom", () => {
   assert.equal(plan.caption.placement, "bottom");
   assert.ok(plan.caption.region);
   assert.ok(plan.caption.region!.y > 960);
-  assert.equal(plan.caption.needsLocalScrim, true);
+  assert.equal(plan.caption.needsLocalScrim, false);
+  assert.equal(plan.caption.backgroundIntent, "explicit-transparent");
 });
 
 test("10. Subtitle mode placement mapping", () => {
@@ -259,7 +261,8 @@ test("18. Intra-scene transition keeps captions (suppress flag false)", () => {
     }),
   );
   assert.equal(plan.caption.active, true);
-  assert.equal(plan.caption.needsLocalScrim, true);
+  assert.equal(plan.caption.needsLocalScrim, false);
+  assert.equal(plan.caption.backgroundIntent, "explicit-transparent");
 });
 
 test("19. Branding enabled and disabled", () => {

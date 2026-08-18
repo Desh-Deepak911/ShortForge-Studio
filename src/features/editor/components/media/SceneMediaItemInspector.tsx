@@ -294,6 +294,7 @@ export default function SceneMediaItemInspector({
         <SceneVideoInspector
           media={media}
           sceneId={scene.id}
+          mediaItemId={mediaItemId}
           sceneDurationMs={sceneDurationMs}
           hideSourceActions
           onReplace={() => {

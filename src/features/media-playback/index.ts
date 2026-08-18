@@ -25,8 +25,10 @@ export {
   hasSceneMediaEnded,
   isPositiveDurationMs,
   isSceneMediaReady,
+  resolveDisplayableVideoSourceTimeMs,
   resolveSceneMediaClipTime,
   validateSceneMediaPlayback,
+  VIDEO_CLIP_END_EPSILON_MS,
 } from "./media-playback.utils";
 export type { SceneMediaTrimWindow } from "./media-playback.utils";
 
@@ -46,6 +48,7 @@ export type {
 export {
   buildResetVideoTrimPatch,
   buildResetVideoTrimScenePatch,
+  buildVideoTrimForMedia,
   buildVideoTrimPatch,
   buildVideoTrimScenePatch,
   clampPosterTimeToTrimWindow,

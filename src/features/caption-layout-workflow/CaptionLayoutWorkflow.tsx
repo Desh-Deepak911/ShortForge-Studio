@@ -48,7 +48,7 @@ export default function CaptionLayoutWorkflow({
       return;
     }
 
-    onSceneLayoutChange(buildCaptionLayoutPastePatch(clipboard));
+    onSceneLayoutChange(buildCaptionLayoutPastePatch(clipboard, scene.captionLayout));
   };
 
   const handleCopyPrevious = () => {

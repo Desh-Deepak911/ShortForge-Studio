@@ -70,6 +70,8 @@ export interface SceneVideoInspectorProps {
   media: SceneMedia;
   /** Active scene id — scopes temporary trim preview overrides. */
   sceneId: string;
+  /** Stable media-item identity for per-item trim preview. */
+  mediaItemId?: string | null;
   /** Active scene duration in ms (MasterTimeline / scene.durationMs). */
   sceneDurationMs: number;
   onReplace: (file: File) => void;
@@ -141,6 +143,7 @@ function Badge({ children }: { children: ReactNode }) {
 export default function SceneVideoInspector({
   media,
   sceneId,
+  mediaItemId,
   sceneDurationMs,
   onReplace,
   onRemove,
@@ -229,6 +232,7 @@ export default function SceneVideoInspector({
     setOverrideFn?.(
       buildVideoTrimPreviewOverride({
         sceneId,
+        mediaItemId,
         trimStartMs: draft.trimStartMs,
         trimEndMs: draft.trimEndMs,
         activeHandle,
@@ -257,7 +261,7 @@ export default function SceneVideoInspector({
     return () => {
       clearOverrideFn?.();
     };
-  }, [sceneId, media.url, clearOverrideFn]);
+  }, [sceneId, mediaItemId, media.url, clearOverrideFn]);
 
   useEffect(() => {
     if (!media.url?.trim()) {

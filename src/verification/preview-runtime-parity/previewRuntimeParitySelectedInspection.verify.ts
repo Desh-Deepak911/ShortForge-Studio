@@ -177,6 +177,31 @@ test("8. Video inspection begins from canonical trim start", () => {
   assert.equal(result.view?.itemElapsedMs, 0);
 });
 
+test("8b. Trim scrub keeps inspection on the selected second item", () => {
+  const scene = buildThreeVideoEqualWindowScene();
+  const windows = windowsOf(scene);
+  const second = windows[1]!;
+  const result = resolvePreviewSelectedMediaInspection({
+    scene,
+    selectedMediaItemId: second.itemId,
+    sceneElapsedMs: 200,
+    trimScrubActive: true,
+    mixedMediaScenesEnabled: true,
+  });
+  assert.equal(result.active, true);
+  assert.equal(result.selectedMediaItemId, second.itemId);
+  assert.equal(result.presentationAuthority, "trim-scrub");
+  const presented = resolveCurrentPreviewPlaybackPresentation({
+    scene,
+    sceneElapsedMs: 200,
+    isPlaying: false,
+    selectedMediaItemId: second.itemId,
+    trimScrubActive: true,
+    mixedMediaScenesEnabled: true,
+  });
+  assert.equal(presented.playbackMedia.mediaItemId, second.itemId);
+});
+
 test("9. Item-local motion begins deterministically", () => {
   const scene = buildThreeVideoEqualWindowScene();
   const windows = windowsOf(scene);

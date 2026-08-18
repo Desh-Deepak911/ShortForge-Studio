@@ -69,6 +69,28 @@ export function clampSceneMediaTrim(
   };
 }
 
+/** Pull back from an exclusive trim end so the last decoded frame stays visible. */
+export const VIDEO_CLIP_END_EPSILON_MS = 33;
+
+/**
+ * Source time to seek on a video element. Logical clipTimeMs is unchanged.
+ * When holding the last trimmed frame, avoid landing exactly on trimEnd.
+ */
+export function resolveDisplayableVideoSourceTimeMs(input: {
+  readonly clipTimeMs: number;
+  readonly trimStartMs: number;
+  readonly trimEndMs: number;
+  readonly holdingLastFrame?: boolean;
+}): number {
+  const trimStartMs = Math.max(0, input.trimStartMs);
+  const trimEndMs = Math.max(trimStartMs, input.trimEndMs);
+  const clipTimeMs = Math.min(trimEndMs, Math.max(trimStartMs, input.clipTimeMs));
+  if (input.holdingLastFrame !== true) {
+    return clipTimeMs;
+  }
+  return Math.max(trimStartMs, Math.min(clipTimeMs, trimEndMs - VIDEO_CLIP_END_EPSILON_MS));
+}
+
 /** Trimmed clip duration in ms (trimEnd − trimStart). */
 export function getSceneMediaTrimDuration(
   media: Pick<MediaPlaybackMediaInput, "durationMs" | "trimStartMs" | "trimEndMs"> | null | undefined,

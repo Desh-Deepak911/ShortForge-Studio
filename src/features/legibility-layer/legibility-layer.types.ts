@@ -29,16 +29,26 @@ export interface LegibilityTitlePlan {
   readonly fadePhase: "hidden" | "solid" | "fading";
 }
 
+export type LegibilityCaptionBackgroundIntent =
+  | "explicit-transparent"
+  | "enabled"
+  | "absent"
+  | "suppressed";
+
 export interface LegibilityCaptionPlan {
   readonly active: boolean;
   readonly placement: LegibilityCaptionPlacement;
   /**
-   * When true, creator caption style already supplies a usable local background —
-   * do not stack an extra scrim.
+   * When true, the creator enabled a visible caption fill.
+   * Transparent / opacity-0 choices are not treated as missing contrast.
    */
   readonly styleProvidesBackground: boolean;
-  /** Extra local scrim only when style does not already provide contrast. */
-  readonly needsLocalScrim: boolean;
+  /**
+   * Automatic caption scrim is retired. Creator transparent/low-opacity
+   * choices are never replaced with a black rectangle.
+   */
+  readonly needsLocalScrim: false;
+  readonly backgroundIntent: LegibilityCaptionBackgroundIntent;
   readonly region: LegibilityRegion | null;
 }
 

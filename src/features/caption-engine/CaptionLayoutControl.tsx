@@ -9,7 +9,6 @@ import {
   CAPTION_OFFSET_X_MIN_PX,
   CAPTION_OFFSET_Y_MAX_PX,
   CAPTION_OFFSET_Y_MIN_PX,
-  clampCaptionBackgroundOpacity,
   clampCaptionMaxWidthPercent,
   clampCaptionOffsetXPx,
   clampCaptionOffsetYPx,
@@ -95,7 +94,6 @@ export default function CaptionLayoutControl({
   const effective = mergeCaptionLayoutSettings(scene.captionLayout, script.defaultCaptionLayout);
   const anchor = effective.anchor ?? "bottom_center";
   const textAlign = effective.textAlign ?? "center";
-  const opacityValue = effective.backgroundOpacity ?? 45;
   const maxWidthValue = effective.maxWidthPercent ?? 90;
   const offsetXValue = effective.offsetX ?? 0;
   const offsetYValue = effective.offsetY ?? 0;
@@ -224,30 +222,6 @@ export default function CaptionLayoutControl({
             }
           />
           <p className={`${studioSubtleText} mt-1 tabular-nums`}>{maxWidthValue}%</p>
-        </div>
-      </LayoutSubsection>
-
-      <LayoutSubsection title="Appearance">
-        <div>
-          <label htmlFor={`caption-layout-opacity-${scene.id}`} className={studioFieldLabel}>
-            Background Opacity
-          </label>
-          <input
-            id={`caption-layout-opacity-${scene.id}`}
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            className="mt-2 w-full accent-primary"
-            value={opacityValue}
-            onChange={(event) =>
-              applySceneLayout({
-                backgroundOpacity:
-                  clampCaptionBackgroundOpacity(Number(event.target.value)) ?? opacityValue,
-              })
-            }
-          />
-          <p className={`${studioSubtleText} mt-1 tabular-nums`}>{opacityValue}%</p>
         </div>
 
         <label className="flex items-center gap-2 text-xs text-foreground/80">

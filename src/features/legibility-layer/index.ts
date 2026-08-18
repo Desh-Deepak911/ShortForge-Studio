@@ -9,6 +9,7 @@ export {
   LEGIBILITY_REFERENCE_HEIGHT,
 } from "./legibility-layer.types";
 export type {
+  LegibilityCaptionBackgroundIntent,
   LegibilityCaptionPlacement,
   LegibilityBrandingTreatmentMode,
   LegibilityRegion,

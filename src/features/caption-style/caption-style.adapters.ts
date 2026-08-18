@@ -30,10 +30,13 @@ import {
   resolveCaptionShadow,
 } from "./caption-style.effects";
 import {
-  LEGACY_EXPORT_CAPTION_BOX_BORDER,
   LEGACY_EXPORT_CAPTION_FONT_SIZE,
   LEGACY_PREVIEW_CAPTION_FONT_SIZE_PX,
 } from "./caption-style.defaults";
+import {
+  resolveCaptionBackgroundAuthority,
+  type CaptionBackgroundAuthority,
+} from "./resolve-caption-background-authority";
 import type { CaptionResolvedStyle } from "./caption-style.types";
 import { applyCaptionTextTransform, isDefaultCaptionStyleStorage } from "./caption-style.utils";
 
@@ -109,14 +112,19 @@ export interface ExportCaptionStyleMetrics {
   textColor: string;
   fontFamily: string;
   backgroundEnabled: boolean;
+  drawsFill: boolean;
+  drawsBorder: false;
+  drawsBlur: false;
 }
 
 export interface CaptionStyleSceneInput extends CaptionPresetScene {
   captionStyle?: FootieScene["captionStyle"];
+  captionLayout?: FootieScene["captionLayout"];
 }
 
 export interface CaptionStyleScriptInput {
   defaultCaptionStyle?: FootieScript["defaultCaptionStyle"];
+  defaultCaptionLayout?: FootieScript["defaultCaptionLayout"];
 }
 
 function withStoredCaptionTypography(
@@ -137,14 +145,33 @@ function withStoredCaptionTypography(
   };
 }
 
+function resolveBackgroundAuthority(
+  scene?: CaptionStyleSceneInput,
+  script?: CaptionStyleScriptInput,
+): CaptionBackgroundAuthority {
+  return resolveCaptionBackgroundAuthority({
+    sceneStyle: scene?.captionStyle,
+    projectStyle: script?.defaultCaptionStyle,
+    sceneLayout: scene?.captionLayout,
+    projectLayout: script?.defaultCaptionLayout,
+  });
+}
+
 function resolveBaseStyle(
   scene: CaptionStyleSceneInput,
   script?: CaptionStyleScriptInput,
 ): CaptionResolvedStyle {
-  return resolveCaptionStyle({
+  const resolvedStyle = resolveCaptionStyle({
     sceneStyle: scene.captionStyle,
     projectStyle: script?.defaultCaptionStyle,
   }).resolvedStyle;
+  const authority = resolveBackgroundAuthority(scene, script);
+  return {
+    ...resolvedStyle,
+    backgroundEnabled: authority.backgroundEnabled,
+    backgroundOpacity: authority.effectiveOpacityPercent,
+    backgroundColor: authority.backgroundColor,
+  };
 }
 
 function resolvePresetTypographyTokens(
@@ -248,19 +275,7 @@ export function resolveExportCaptionStyleForDisplay(
   script?: CaptionStyleScriptInput,
 ): ExportCaptionStyleMetadata {
   if (!display) {
-    const resolvedStyle = resolveCaptionStyle({
-      projectStyle: script?.defaultCaptionStyle,
-    }).resolvedStyle;
-
-    return {
-      presetId: "minimal",
-      usesFadeSafeStyleOverlay: false,
-      fontWeight: LEGACY_EXPORT_CAPTION_STYLE_TOKENS.fontWeight,
-      letterSpacingEm: LEGACY_EXPORT_CAPTION_STYLE_TOKENS.letterSpacingEm,
-      lineHeightRatio: LEGACY_EXPORT_CAPTION_STYLE_TOKENS.lineHeightRatio,
-      textShadow: LEGACY_EXPORT_CAPTION_STYLE_TOKENS.textShadow,
-      resolvedStyle,
-    };
+    return resolveExportCaptionStyle({}, script);
   }
 
   return resolveExportCaptionStyleFromSceneDisplay({}, script, display);
@@ -363,6 +378,34 @@ export function resolveCaptionStyleMaxLines(
   }).resolvedStyle.maxLines;
 }
 
+function resolveSharedCaptionContainerAppearance(
+  authority: CaptionBackgroundAuthority,
+  resolved: CaptionResolvedStyle,
+  scale: number,
+): CSSProperties {
+  const containerStyle: CSSProperties = {
+    padding: `${resolved.paddingY * scale}px ${resolved.paddingX * scale}px`,
+    borderRadius: `${resolved.cornerRadius * scale}px`,
+    border: "none",
+    boxShadow: "none",
+    backdropFilter: "none",
+    WebkitBackdropFilter: "none",
+  };
+
+  if (!authority.drawsFill) {
+    return {
+      ...containerStyle,
+      backgroundColor: "transparent",
+    };
+  }
+
+  const rgb = colorToRgb(authority.backgroundColor);
+  return {
+    ...containerStyle,
+    backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${authority.effectiveAlpha.toFixed(3)})`,
+  };
+}
+
 /** Preview container styling from the caption style engine. */
 export function resolvePreviewCaptionContainerStyle(
   scene: CaptionStyleSceneInput,
@@ -370,32 +413,14 @@ export function resolvePreviewCaptionContainerStyle(
   scale = PREVIEW_CAPTION_STYLE_UI_SCALE,
 ): CSSProperties {
   const previewStyle = resolvePreviewCaptionStyle(scene, script);
-  const resolved = previewStyle.resolvedStyle;
-  const containerStyle: CSSProperties = {
-    padding: `${resolved.paddingY * scale}px ${resolved.paddingX * scale}px`,
-    borderRadius: `${resolved.cornerRadius * scale}px`,
-  };
-
-  if (!resolved.backgroundEnabled) {
-    return {
-      ...containerStyle,
-      backgroundColor: "transparent",
-      border: "none",
-      boxShadow: "none",
-    };
-  }
-
-  const alpha = resolved.backgroundOpacity / 100;
-  const rgb = colorToRgb(resolved.backgroundColor);
-
-  return {
-    ...containerStyle,
-    backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha.toFixed(3)})`,
-    border: `${Math.max(1, scale)}px solid ${LEGACY_EXPORT_CAPTION_BOX_BORDER}`,
-  };
+  return resolveSharedCaptionContainerAppearance(
+    resolveBackgroundAuthority(scene, script),
+    previewStyle.resolvedStyle,
+    scale,
+  );
 }
 
-/** Merges layout pill styling with caption style engine container values. */
+/** Merges layout pill styling with the shared caption-background authority. */
 export function resolvePreviewCaptionPillCombinedStyle(
   scene: CaptionStyleSceneInput,
   script: CaptionStyleScriptInput | undefined,
@@ -403,15 +428,6 @@ export function resolvePreviewCaptionPillCombinedStyle(
   scale = PREVIEW_CAPTION_STYLE_UI_SCALE,
 ): CSSProperties {
   const styleContainer = resolvePreviewCaptionContainerStyle(scene, script, scale);
-  const usesStoredStyle = !isDefaultCaptionStyleStorage(
-    scene.captionStyle,
-    script?.defaultCaptionStyle,
-  );
-
-  if (!usesStoredStyle) {
-    return layoutPillStyle;
-  }
-
   return {
     ...layoutPillStyle,
     ...styleContainer,
@@ -448,18 +464,22 @@ export function resolveExportCaptionStyleMetrics(
   const resolved = style.resolvedStyle;
   const fontSize = resolved.fontSize * scale * fontScale;
 
+  const drawsFill = resolved.backgroundEnabled && resolved.backgroundOpacity > 0;
   return {
     fontSize,
     lineHeight: fontSize * style.lineHeightRatio,
     padX: resolved.paddingX * scale,
     padY: resolved.paddingY * scale,
     cornerRadius: resolved.cornerRadius * scale,
-    boxBorderColor: LEGACY_EXPORT_CAPTION_BOX_BORDER,
-    backgroundAlpha: resolved.backgroundEnabled ? resolved.backgroundOpacity / 100 : 0,
+    boxBorderColor: "transparent",
+    backgroundAlpha: drawsFill ? resolved.backgroundOpacity / 100 : 0,
     backgroundColor: resolved.backgroundColor,
     textColor: resolved.textColor,
     fontFamily: resolved.fontFamily,
     backgroundEnabled: resolved.backgroundEnabled,
+    drawsFill,
+    drawsBorder: false,
+    drawsBlur: false,
   };
 }
 

@@ -13,6 +13,7 @@ import {
   scaleFitBackgroundBlurPx,
 } from "@/features/media-framing";
 import { buildComposedMediaVisualFilter } from "@/features/media-motion";
+import { resolveDisplayableVideoSourceTimeMs } from "@/features/media-playback";
 import {
   resolvePreviewVideoClipTime,
   shouldPlayPreviewVideoClip,
@@ -166,7 +167,7 @@ export default function SceneFrameVideo({
   const { ref: containerRef, width: frameWidth, height: frameHeight } =
     useFrameSize<HTMLDivElement>();
 
-  const trimPreview = useActiveVideoTrimPreviewOverride(sceneId);
+  const trimPreview = useActiveVideoTrimPreviewOverride(sceneId, mediaItemId);
   const trimPreviewActive = Boolean(trimPreview);
   const keyframedVisualEffectsEnabled = useKeyframedVisualEffectsEnabled();
 
@@ -194,7 +195,12 @@ export default function SceneFrameVideo({
 
   const targetTimeMs = trimPreviewActive
     ? trimPreview!.scrubTimeMs
-    : clipTime.clipTimeMs;
+    : resolveDisplayableVideoSourceTimeMs({
+        clipTimeMs: clipTime.clipTimeMs,
+        trimStartMs: clipTime.trimStartMs,
+        trimEndMs: clipTime.trimEndMs,
+        holdingLastFrame: clipTime.holdingLastFrame,
+      });
 
   useEffect(() => {
     return registerMountedPreviewMediaSource(url);
