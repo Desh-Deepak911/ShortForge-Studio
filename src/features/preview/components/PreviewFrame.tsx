@@ -6,6 +6,15 @@ import {
   type ActiveSceneMediaRenderView,
 } from "@/features/scene-media-timeline";
 import { planPreviewMediaLayers } from "@/features/scene-media-transitions/preview";
+import { reconcilePreviewMediaLayerPlan } from "@/features/preview/runtime-parity/reconcile-preview-media-layer-plan";
+import {
+  buildPreviewMediaLayerLifecycleKey,
+  resolvePreviewMediaSourceIdentity,
+} from "@/features/preview/runtime-parity/resolve-preview-media-layer-identity";
+import {
+  resolvePreviewSelectedMediaInspection,
+  type PreviewSelectedMediaInspection,
+} from "@/features/preview/runtime-parity/resolve-preview-selected-media-inspection";
 import { studioPreviewDevice, studioPreviewScreen } from "@/lib/utils/studioUi";
 import type { FootieScene, SceneType } from "@/features/story/types";
 import { resolveLegibilityLayerPlan } from "@/features/legibility-layer";
@@ -138,14 +147,19 @@ export function PreviewDeviceFrame({
       className={studioPreviewDevice}
       style={maxWidth ? { maxWidth } : undefined}
     >
-      <div className={studioPreviewScreen}>{children}</div>
+      <div className={studioPreviewScreen} data-preview-inner-screen="">
+        {children}
+      </div>
     </div>
   );
 }
 
 export function DynamicIsland() {
   return (
-    <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-2.5">
+    <div
+      data-preview-dynamic-island=""
+      className="absolute inset-x-0 top-0 z-20 flex justify-center pt-2.5"
+    >
       <div className="h-[22px] w-[72px] rounded-full bg-black/80 ring-1 ring-white/[0.08]" />
     </div>
   );
@@ -190,6 +204,17 @@ interface PreviewFrameProps {
   contentDurationMs?: number;
   /** Brand watermark visibility — matches export branding authority. */
   watermarkEnabled?: boolean;
+  /** Validated selected media item for idle inspection. Ignored during playback. */
+  selectedMediaItemId?: string | null;
+  /** Pre-resolved inspection presentation from VideoPreview. */
+  inspectionPresentation?: PreviewSelectedMediaInspection | null;
+  /**
+   * Development-harness certification capture only.
+   * Default false. Studio Preview is unchanged. Suppresses device bezel,
+   * padding, Dynamic Island, and in-frame transport footer so the exact
+   * 9:16 content plate can be screenshotted. Does not hide exported overlays.
+   */
+  certificationCaptureMode?: boolean;
 }
 
 export default function PreviewFrame({
@@ -215,9 +240,26 @@ export default function PreviewFrame({
   contentTimeMs = 0,
   contentDurationMs = 0,
   watermarkEnabled = true,
+  selectedMediaItemId = null,
+  inspectionPresentation = null,
+  certificationCaptureMode = false,
 }: PreviewFrameProps) {
   void sceneDurationMs;
   const mixedMediaEnabled = mixedMediaScenesEnabled === true;
+  const inspection =
+    inspectionPresentation ??
+    resolvePreviewSelectedMediaInspection({
+      scene: previewFrame.scene,
+      selectedMediaItemId,
+      sceneElapsedMs,
+      isPlaying,
+      interSceneTransitionActive: Boolean(transitionOverlay),
+      mixedMediaScenesEnabled: mixedMediaEnabled,
+    });
+  const activeTransitionOverlay = inspection.active ? null : transitionOverlay;
+  const presentationSceneElapsedMs = inspection.active
+    ? inspection.inspectionSceneElapsedMs
+    : sceneElapsedMs;
 
   const legibilityPlan = resolveLegibilityLayerPlan({
     absoluteContentTimeMs: contentTimeMs,
@@ -228,7 +270,7 @@ export default function PreviewFrame({
     captionStyleBackgroundEnabled: true,
     captionStyleBackgroundOpacity: 45,
     watermarkEnabled,
-    suppressCaptionOverlays: Boolean(transitionOverlay),
+    suppressCaptionOverlays: Boolean(activeTransitionOverlay),
   });
 
   const brandingTextShadow =
@@ -236,32 +278,44 @@ export default function PreviewFrame({
   const titleTextShadow =
     "0 1px 3px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.8)";
 
-  const transitionStyles = transitionOverlay
+  const transitionStyles = activeTransitionOverlay
     ? transitionStateToPreviewLayerStyles(
-        transitionOverlay.effect,
-        transitionOverlay.transitionState,
+        activeTransitionOverlay.effect,
+        activeTransitionOverlay.transitionState,
       )
     : null;
 
-  // Scene-to-scene wins. Otherwise one stable media stack (primary + optional outgoing).
-  const mediaLayerPlan = !transitionOverlay
-    ? planPreviewMediaLayers({
-        scene: previewFrame.scene,
-        sceneElapsedMs,
-        isPlaying,
-        mixedMediaScenesEnabled: mixedMediaEnabled,
-      })
+  const canonicalLayerPlan = planPreviewMediaLayers({
+    scene: previewFrame.scene,
+    sceneElapsedMs: presentationSceneElapsedMs,
+    isPlaying: inspection.active ? false : isPlaying,
+    mixedMediaScenesEnabled: mixedMediaEnabled,
+  });
+
+  // Scene-to-scene wins. Inspection mounts one primary and no outgoing layer.
+  const mediaLayerPlan = !activeTransitionOverlay
+    ? reconcilePreviewMediaLayerPlan(
+        inspection.active && inspection.layerPlan
+          ? inspection.layerPlan
+          : canonicalLayerPlan,
+        previewFrame.scene,
+        {
+          sceneElapsedMs: presentationSceneElapsedMs,
+          isPlaying: inspection.active ? false : isPlaying,
+          mixedMediaScenesEnabled: mixedMediaEnabled,
+        },
+      )
     : null;
 
-  return (
-    <PreviewDeviceFrame maxWidth={maxWidth}>
-      <DynamicIsland />
+  const framed = (
+    <>
+      {certificationCaptureMode ? null : <DynamicIsland />}
 
-      {transitionOverlay && transitionStyles ? (
+      {activeTransitionOverlay && transitionStyles ? (
         <>
           <SceneBackdrop
-            scene={transitionOverlay.fromScene}
-            sceneIndex={transitionOverlay.fromSceneIndex}
+            scene={activeTransitionOverlay.fromScene}
+            sceneIndex={activeTransitionOverlay.fromSceneIndex}
             style={transitionStyles.from}
             sceneElapsedMs={transitionFromSceneElapsedMs}
             sceneDurationMs={transitionFromSceneDurationMs}
@@ -270,8 +324,8 @@ export default function PreviewFrame({
             mixedMediaScenesEnabled={mixedMediaEnabled}
           />
           <SceneBackdrop
-            scene={transitionOverlay.toScene}
-            sceneIndex={transitionOverlay.toSceneIndex}
+            scene={activeTransitionOverlay.toScene}
+            sceneIndex={activeTransitionOverlay.toSceneIndex}
             style={transitionStyles.to}
             sceneElapsedMs={transitionToSceneElapsedMs}
             sceneDurationMs={transitionToSceneDurationMs}
@@ -284,6 +338,22 @@ export default function PreviewFrame({
         <div
           className="absolute inset-0 overflow-hidden"
           data-preview-stable-media-stack="true"
+          data-preview-inspection-active={inspection.active ? "true" : "false"}
+          data-preview-inspection-item-id={
+            inspection.active ? inspection.selectedMediaItemId ?? "" : ""
+          }
+          data-preview-mounted-primary-id={
+            mediaLayerPlan.primary.view.mediaItemId ?? ""
+          }
+          data-preview-mounted-outgoing-id={
+            mediaLayerPlan.outgoing?.view.mediaItemId ?? ""
+          }
+          data-preview-mounted-layer-count={
+            mediaLayerPlan.outgoing ? 2 : 1
+          }
+          data-preview-canonical-active-id={
+            mediaLayerPlan.primary.view.mediaItemId ?? ""
+          }
           data-intra-scene-transition-active={
             mediaLayerPlan.intraScene ? "true" : "false"
           }
@@ -310,12 +380,19 @@ export default function PreviewFrame({
         >
           {mediaLayerPlan.outgoing ? (
             <SceneBackdrop
-              key={mediaLayerPlan.outgoing.stableKey}
+              key={buildPreviewMediaLayerLifecycleKey({
+                role: "outgoing",
+                sceneId: previewFrame.scene.id,
+                mediaItemId: mediaLayerPlan.outgoing.view.mediaItemId,
+                sourceIdentity: resolvePreviewMediaSourceIdentity(
+                  mediaLayerPlan.outgoing.view.media?.url,
+                ),
+              })}
               scene={previewFrame.scene}
               sceneIndex={previewFrame.sceneIndex}
               style={mediaLayerPlan.outgoing.style}
               activeMediaView={mediaLayerPlan.outgoing.view}
-              sceneElapsedMs={sceneElapsedMs}
+              sceneElapsedMs={presentationSceneElapsedMs}
               sceneDurationMs={sceneDurationMs}
               isPlaying={mediaLayerPlan.outgoing.isPlaying}
               isActive={mediaLayerPlan.outgoing.isActive}
@@ -323,13 +400,20 @@ export default function PreviewFrame({
             />
           ) : null}
           <SceneBackdrop
-            key={mediaLayerPlan.primary.stableKey}
+            key={buildPreviewMediaLayerLifecycleKey({
+              role: "primary",
+              sceneId: previewFrame.scene.id,
+              mediaItemId: mediaLayerPlan.primary.view.mediaItemId,
+              sourceIdentity: resolvePreviewMediaSourceIdentity(
+                mediaLayerPlan.primary.view.media?.url,
+              ),
+            })}
             scene={previewFrame.scene}
             sceneIndex={previewFrame.sceneIndex}
             style={mediaLayerPlan.primary.style}
             activeMediaView={mediaLayerPlan.primary.view}
             hideImage={hideSceneImage}
-            sceneElapsedMs={sceneElapsedMs}
+            sceneElapsedMs={presentationSceneElapsedMs}
             sceneDurationMs={sceneDurationMs}
             isPlaying={mediaLayerPlan.primary.isPlaying}
             isActive={mediaLayerPlan.primary.isActive}
@@ -389,7 +473,7 @@ export default function PreviewFrame({
 
       {overlay}
 
-      {footer ? (
+      {footer && !certificationCaptureMode ? (
         <div
           className={`absolute inset-x-0 bottom-0 z-10 space-y-2 p-4 pb-4 transition-opacity duration-150 ${
             frameEditActive ? "cursor-default opacity-80" : ""
@@ -406,6 +490,21 @@ export default function PreviewFrame({
           {footer}
         </div>
       ) : null}
-    </PreviewDeviceFrame>
+    </>
   );
+
+  if (certificationCaptureMode) {
+    return (
+      <div
+        className="relative aspect-[9/16] w-full overflow-hidden bg-background"
+        data-preview-runtime-parity-cert-capture-surface=""
+        data-preview-inner-screen=""
+        style={maxWidth ? { width: maxWidth, maxWidth } : undefined}
+      >
+        {framed}
+      </div>
+    );
+  }
+
+  return <PreviewDeviceFrame maxWidth={maxWidth}>{framed}</PreviewDeviceFrame>;
 }

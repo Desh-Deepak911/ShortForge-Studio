@@ -4,6 +4,7 @@ import type { TimelineImageMotionInput } from "@/features/timeline-intelligence/
 import { getImageMotionEventForScene } from "@/features/timeline-intelligence/timeline-playback.utils";
 import { getSceneTimingMap } from "@/features/story/utils";
 import { resolvePreviewPlaybackState } from "@/features/preview/utils/preview-master-timeline.utils";
+import { resolveIdlePreviewSceneElapsedMs } from "@/features/preview/runtime-parity/reconcile-preview-playback-clock";
 import type { FootieScene, FootieScript } from "@/features/story/types";
 
 export interface PreviewSceneTimingInput {
@@ -81,7 +82,7 @@ function resolvePreviewTimelineTimeMs(input: PreviewSceneTimingInput): number | 
 export function getPreviewSceneTiming(input: PreviewSceneTimingInput): PreviewSceneTiming {
   const { scenes, sceneIndex, playbackMode, masterTimeline } = input;
 
-  if (playbackMode === "narration" && masterTimeline) {
+  if (input.isPlaying && playbackMode === "narration" && masterTimeline) {
     const timeMs = input.currentTimeMs ?? Math.floor(input.elapsedSec * 1000);
     const state = resolvePreviewPlaybackState(masterTimeline, scenes, timeMs, {
       defaultCaptionAnimation: input.defaultCaptionAnimation,
@@ -99,6 +100,24 @@ export function getPreviewSceneTiming(input: PreviewSceneTimingInput): PreviewSc
         timelineTimeMs: timeMs,
       };
     }
+  }
+
+  if (!input.isPlaying) {
+    const slot = getSceneTimingMap(scenes)[sceneIndex];
+    const scene = scenes[sceneIndex];
+    const timelineMs = input.currentTimeMs ?? Math.floor(input.elapsedSec * 1000);
+    const sceneElapsedMs = resolveIdlePreviewSceneElapsedMs({
+      scene,
+      sceneIndex,
+      timelineMs,
+    });
+    const sceneDurationMs = slot?.durationMs ?? sceneElapsedMs + 1;
+    return {
+      sceneElapsedMs,
+      sceneDurationMs,
+      activeSceneIndex: sceneIndex,
+      timelineTimeMs: (slot?.startMs ?? 0) + sceneElapsedMs,
+    };
   }
 
   const slot = getSceneTimingMap(scenes)[sceneIndex];

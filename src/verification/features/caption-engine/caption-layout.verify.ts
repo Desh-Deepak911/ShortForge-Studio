@@ -263,9 +263,11 @@ test("export and preview wiring expose layout-aware draw APIs", () => {
   const canvasUtils = readSrc("src/features/export/utils/export-caption-canvas.utils.ts");
   const subtitleOverlay = readSrc("src/features/preview/components/SubtitleOverlay.tsx");
   const videoPreview = readSrc("src/features/preview/components/VideoPreview.tsx");
+  const placementSurface = readSrc("src/features/caption-layout-drag/CaptionPreviewOverlay.tsx");
   assert.match(canvasUtils, /resolveExportCaptionPlacement\(scene, script/);
-  assert.match(subtitleOverlay, /resolvePreviewCaptionLayoutForScene/);
-  assert.match(subtitleOverlay, /resolvePreviewCaptionLayoutScene/);
+  assert.match(subtitleOverlay, /CaptionPreviewOverlay/);
+  assert.match(placementSurface, /resolvePreviewCaptionLayoutForScene/);
+  assert.match(placementSurface, /resolvePreviewCaptionLayoutScene/);
   assert.match(videoPreview, /sceneIndex=\{subtitleSceneIndex\}/);
 });
 

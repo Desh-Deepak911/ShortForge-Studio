@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { resolvePreviewMediaMotionStyle } from "@/features/editor/preview/motion";
 import { resolveVideoBackgroundPaintMode } from "@/features/editor/preview/video-background-paint-loop";
+import { registerMountedPreviewMediaSource } from "@/features/preview/runtime-parity/schedule-owned-preview-blob-revocation";
+import { retirePreviewVideoRuntime } from "@/features/preview/runtime-parity/retire-preview-video-runtime";
 import {
   isFitWithBlurredBackgroundActive,
   resolveMediaFramingLayerPlan,
@@ -156,6 +158,8 @@ export default function SceneFrameVideo({
 }: SceneFrameVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const backgroundCanvasRef = useRef<HTMLCanvasElement>(null);
+  const capturePlateRef = useRef<HTMLCanvasElement>(null);
+  const [certCapturePlate, setCertCapturePlate] = useState(false);
   const seekQueueRef = useRef(createTrimPreviewSeekQueue());
   const rafRef = useRef<number | null>(null);
   const bgRafRef = useRef<number | null>(null);
@@ -193,6 +197,77 @@ export default function SceneFrameVideo({
     : clipTime.clipTimeMs;
 
   useEffect(() => {
+    return registerMountedPreviewMediaSource(url);
+  }, [url]);
+
+  useLayoutEffect(() => {
+    setCertCapturePlate(
+      Boolean(
+        containerRef.current?.closest(
+          "[data-preview-runtime-parity-cert-capture-surface]",
+        ),
+      ),
+    );
+  }, [mediaItemId, url]);
+
+  useEffect(() => {
+    if (!certCapturePlate) {
+      return;
+    }
+    const video = videoRef.current;
+    const canvas = capturePlateRef.current;
+    if (!video || !canvas) {
+      return;
+    }
+
+    const paint = () => {
+      if (video.readyState < 2 || video.videoWidth <= 0) {
+        return;
+      }
+      if (canvas.width !== video.videoWidth) {
+        canvas.width = video.videoWidth;
+      }
+      if (canvas.height !== video.videoHeight) {
+        canvas.height = video.videoHeight;
+      }
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return;
+      }
+      ctx.drawImage(video, 0, 0);
+    };
+
+    video.addEventListener("seeked", paint);
+    video.addEventListener("loadeddata", paint);
+    video.addEventListener("loadedmetadata", paint);
+    if (video.readyState >= 2) {
+      paint();
+    }
+    const raf = requestAnimationFrame(paint);
+    return () => {
+      cancelAnimationFrame(raf);
+      video.removeEventListener("seeked", paint);
+      video.removeEventListener("loadeddata", paint);
+      video.removeEventListener("loadedmetadata", paint);
+    };
+  }, [certCapturePlate, targetTimeMs, url]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    return () => {
+      retirePreviewVideoRuntime({
+        video,
+        seekRafId: rafRef.current,
+        paintRafId: bgRafRef.current,
+        cancelAnimationFrame,
+        clearSource: false,
+      });
+      rafRef.current = null;
+      bgRafRef.current = null;
+    };
+  }, [url, mediaItemId]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video || !url) {
       return;
@@ -206,6 +281,10 @@ export default function SceneFrameVideo({
       seekQueueRef.current = createTrimPreviewSeekQueue(
         Math.round(video.currentTime * 1000),
       );
+
+      if (url && video.getAttribute("src") !== url) {
+        video.src = url;
+      }
 
       const targetSec = targetTimeMs / 1000;
       if (
@@ -280,13 +359,15 @@ export default function SceneFrameVideo({
   useEffect(() => {
     const video = videoRef.current;
     return () => {
-      if (rafRef.current != null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      if (video && !video.paused) {
-        video.pause();
-      }
+      retirePreviewVideoRuntime({
+        video,
+        seekRafId: rafRef.current,
+        paintRafId: bgRafRef.current,
+        cancelAnimationFrame,
+        clearSource: true,
+      });
+      rafRef.current = null;
+      bgRafRef.current = null;
     };
   }, []);
 
@@ -404,6 +485,7 @@ export default function SceneFrameVideo({
     layerPlan.backgroundDimAlpha,
     media.visualAdjustments,
     media.visualEffect,
+    url,
   ]);
 
   if (!url) {
@@ -459,6 +541,17 @@ export default function SceneFrameVideo({
             data-scene-frame-layer="background"
           />
         ) : null}
+        {certCapturePlate ? (
+          <canvas
+            ref={capturePlateRef}
+            className={`absolute inset-0 h-full w-full max-w-none ${
+              objectFit === "contain" ? "object-contain" : "object-cover"
+            }`}
+            style={{ filter: visualFilter }}
+            aria-hidden="true"
+            data-preview-runtime-parity-cert-video-plate=""
+          />
+        ) : null}
         <video
           ref={videoRef}
           src={url}
@@ -471,11 +564,15 @@ export default function SceneFrameVideo({
           className={`absolute inset-0 h-full w-full max-w-none ${
             objectFit === "contain" ? "object-contain" : "object-cover"
           } ${videoClassName}`}
-          style={{ filter: visualFilter }}
+          style={{
+            filter: visualFilter,
+            ...(certCapturePlate ? { opacity: 0 } : {}),
+          }}
           data-preview-video-muted="true"
           data-preview-video-active={isActive ? "true" : "false"}
           data-preview-video-playing={shouldPlay ? "true" : "false"}
           data-preview-video-trim-scrub={trimPreviewActive ? "true" : "false"}
+          data-preview-video-src={url}
           data-scene-frame-layer="foreground"
         />
       </div>

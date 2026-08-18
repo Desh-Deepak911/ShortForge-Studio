@@ -30,9 +30,10 @@ import type { StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 
 import { StaleSceneMediaAppendError } from "@/features/timeline-editor/scene-media/useSceneMediaImageAppend";
 
+import { scheduleOwnedPreviewBlobRevocation } from "@/features/preview/runtime-parity/schedule-owned-preview-blob-revocation";
+
 import {
   revokeFailedAppendObjectUrl,
-  revokeRemovedOwnedMediaUrl,
   trackOwnedObjectUrl,
 } from "./mixed-media-blob-ownership";
 import {
@@ -234,14 +235,20 @@ export function useMixedMediaSequenceUpload(input: {
       if (result.selectedMediaItemId) {
         input.onSelectMediaItem?.(scene.id, result.selectedMediaItemId);
       }
-      revokeRemovedOwnedMediaUrl(ownedUrl, ownedBlobUrls.current);
+      scheduleOwnedPreviewBlobRevocation({
+        url: ownedUrl,
+        owned: ownedBlobUrls.current,
+      });
       return result;
     },
     [input],
   );
 
   const revokeOwnedUrlIfPresent = useCallback((url: string | undefined) => {
-    revokeRemovedOwnedMediaUrl(url, ownedBlobUrls.current);
+    scheduleOwnedPreviewBlobRevocation({
+      url,
+      owned: ownedBlobUrls.current,
+    });
   }, []);
 
   return {

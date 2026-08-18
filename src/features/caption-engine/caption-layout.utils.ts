@@ -13,6 +13,7 @@ import {
   type CaptionLayoutResolveInput,
   type CaptionResolvedLayout,
 } from "@/features/caption-layout";
+import { resolvePreviewCaptionPlacementStyle } from "./resolve-preview-caption-placement";
 import type { FootieScene, FootieScript } from "@/features/story/types";
 
 export type {
@@ -179,34 +180,7 @@ export function resolveExportCaptionBackgroundOpacity(layout: ResolvedCaptionLay
 }
 
 export function resolvePreviewCaptionOverlayStyle(resolved: CaptionResolvedLayout): CSSProperties {
-  if (resolved.usesLegacyBottomCenter) {
-    return {};
-  }
-
-  const canvasWidth = CAPTION_LAYOUT_REFERENCE_WIDTH;
-  const canvasHeight = CAPTION_LAYOUT_REFERENCE_HEIGHT;
-  const leftPercent = (resolved.x / canvasWidth) * 100;
-  const topPercent = (resolved.y / canvasHeight) * 100;
-  const maxWidthPercent = (resolved.maxWidth / canvasWidth) * 100;
-
-  return {
-    pointerEvents: "none",
-    position: "absolute",
-    zIndex: 10,
-    display: "flex",
-    boxSizing: "border-box",
-    overflow: "hidden",
-    left: `${leftPercent}%`,
-    top: `${topPercent}%`,
-    maxWidth: `${maxWidthPercent}%`,
-    width: "max-content",
-    justifyContent:
-      resolved.textAlign === "left"
-        ? "flex-start"
-        : resolved.textAlign === "right"
-          ? "flex-end"
-          : "center",
-  };
+  return resolvePreviewCaptionPlacementStyle(resolved);
 }
 
 export function resolvePreviewCaptionPillStyle(resolved: CaptionResolvedLayout): CSSProperties {

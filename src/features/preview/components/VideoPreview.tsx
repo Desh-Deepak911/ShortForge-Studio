@@ -46,6 +46,7 @@ import {
 } from "@/features/preview/utils";
 import { resolvePreviewSceneLocalTimeMs } from "@/features/editor/preview/motion";
 import { useVideoTrimPreviewOptional } from "@/features/preview/video-trim-preview";
+import { resolvePreviewSelectedMediaInspection } from "@/features/preview/runtime-parity/resolve-preview-selected-media-inspection";
 import { composeIntraSceneTransitionPreview } from "@/features/scene-media-transitions/preview";
 import {
   getSceneMediaType,
@@ -227,6 +228,19 @@ export default function VideoPreview({
   const isVideoScene = Boolean(
     displayScene && getSceneMediaType(displayScene) === "video",
   );
+  const selectedMediaItemId = selection.selectedMediaItemId;
+  const inspection = resolvePreviewSelectedMediaInspection({
+    scene: displayScene,
+    selectedSceneId: selection.selectedSceneId,
+    selectedMediaItemId,
+    mediaItemSelectionActive: selection.isSceneMediaItemSelected,
+    sceneElapsedMs: previewSceneTiming?.sceneElapsedMs ?? 0,
+    isPlaying: playbackActive,
+    trimScrubActive: trimPreviewActive,
+    brandStingActive,
+    interSceneTransitionActive: Boolean(transitionOverlay),
+    mixedMediaScenesEnabled,
+  });
   const canvasEditAvailable = Boolean(
     canvasEditActive &&
     displayScene &&
@@ -235,6 +249,7 @@ export default function VideoPreview({
     !canvasEditBlocked &&
     !transitionOverlay &&
     !intraSceneTransitionActive &&
+    !inspection.active &&
     onSceneImageTransformChange,
   );
 
@@ -244,6 +259,10 @@ export default function VideoPreview({
     x: number;
     y: number;
   } | null>(null);
+
+  const exitSelectedMediaInspection = useCallback(() => {
+    selection.clearSceneMediaItemSelection();
+  }, [selection]);
 
   const exitFrameEdit = useCallback(() => {
     selection.exitImageEdit();
@@ -407,6 +426,9 @@ export default function VideoPreview({
 
   const { sceneElapsedMs, sceneDurationMs, timelineTimeMs } =
     previewSceneTiming;
+  const presentationSceneElapsedMs = inspection.active
+    ? inspection.inspectionSceneElapsedMs
+    : sceneElapsedMs;
   const timingMap = getSceneTimingMap(scenes);
   const transitionFromSceneElapsedMs =
     transitionOverlay && timelineTimeMs != null
@@ -497,7 +519,9 @@ export default function VideoPreview({
           maxWidth={previewMaxWidth}
           title={script.title}
           previewFrame={previewFrame}
-          transitionOverlay={transitionOverlay}
+          selectedMediaItemId={selectedMediaItemId}
+          inspectionPresentation={inspection}
+          transitionOverlay={inspection.active ? null : transitionOverlay}
           transitionFromSceneElapsedMs={transitionFromSceneElapsedMs}
           transitionFromSceneDurationMs={transitionFromSceneDurationMs}
           transitionToSceneElapsedMs={transitionToSceneElapsedMs}
@@ -509,7 +533,7 @@ export default function VideoPreview({
           }
           frameEditActive={isFrameEditing}
           onExitFrameEdit={exitFrameEdit}
-          sceneElapsedMs={sceneElapsedMs}
+          sceneElapsedMs={presentationSceneElapsedMs}
           sceneDurationMs={sceneDurationMs}
           isPlaying={playbackActive}
           mixedMediaScenesEnabled={mixedMediaScenesEnabled}
@@ -517,7 +541,7 @@ export default function VideoPreview({
           contentDurationMs={masterTimeline?.contentEndMs ?? 0}
           watermarkEnabled={!brandStingActive}
           overlay={
-            brandStingActive && script ? (
+            brandStingActive && script && !inspection.active ? (
               <BrandStingPreview
                 sting={getShortForgeBrandSting(script.visualRetentionExtensions)}
                 elapsedMs={brandStingElapsedMs}
@@ -530,7 +554,7 @@ export default function VideoPreview({
                   <EngagementOverlayPreview
                     overlay={getSceneEngagementOverlay(script, displayScene.id)}
                     sceneDurationMs={sceneDurationMs}
-                    sceneElapsedMs={sceneElapsedMs}
+                    sceneElapsedMs={presentationSceneElapsedMs}
                     captionCollision={{
                       present: showSubtitles || showGeneratedCaption,
                       sceneLayout: displayScene.captionLayout,
@@ -545,18 +569,32 @@ export default function VideoPreview({
                     scene={subtitleScene}
                     script={script}
                     sceneIndex={subtitleSceneIndex}
-                    sceneElapsedMs={sceneElapsedMs}
+                    sceneElapsedMs={presentationSceneElapsedMs}
                     sceneDurationMs={sceneDurationMs}
-                    activeSubtitleChunk={previewSceneTiming.activeSubtitleChunk}
-                    chunkProgress={previewSceneTiming.chunkProgress}
+                    activeSubtitleChunk={
+                      inspection.active
+                        ? undefined
+                        : previewSceneTiming.activeSubtitleChunk
+                    }
+                    chunkProgress={
+                      inspection.active
+                        ? undefined
+                        : previewSceneTiming.chunkProgress
+                    }
                     captionAnimationState={
-                      previewSceneTiming.captionAnimationState
+                      inspection.active
+                        ? undefined
+                        : previewSceneTiming.captionAnimationState
                     }
                     subtitleAvailableDurationMs={
-                      previewSceneTiming.subtitleAvailableDurationMs
+                      inspection.active
+                        ? undefined
+                        : previewSceneTiming.subtitleAvailableDurationMs
                     }
                     captionTooShortForEffect={
-                      previewSceneTiming.captionTooShortForEffect
+                      inspection.active
+                        ? undefined
+                        : previewSceneTiming.captionTooShortForEffect
                     }
                     draggable={previewInteraction.allowCaptionDrag}
                     allowPointerEvents={previewInteraction.allowCaptionPointerEvents}
@@ -656,12 +694,41 @@ export default function VideoPreview({
           ))}
         </div>
 
+        {inspection.active ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`${studioPreviewControls} pointer-events-none text-center text-[10px] leading-relaxed text-muted`}
+            data-preview-inspection-status=""
+            data-preview-inspection-active="true"
+          >
+            Inspecting media {inspection.itemIndex + 1} of {inspection.itemCount}
+            {inspection.windowStartMs != null && inspection.windowEndMs != null
+              ? ` · ${formatDisplayTimeRangeSec(
+                  inspection.windowStartMs / 1000,
+                  inspection.windowEndMs / 1000,
+                )}`
+              : ""}
+            . Playback returns to the scene timeline.
+          </p>
+        ) : null}
+        {inspection.active && canvasEditActive ? (
+          <p
+            className={`${studioPreviewControls} pointer-events-none text-center text-[10px] leading-relaxed text-muted`}
+            data-preview-inspection-canvas-disabled=""
+          >
+            Canvas framing is disabled while inspecting a selected media item.
+            Use the inspector.
+          </p>
+        ) : null}
+
         <div
           className={`${studioPreviewControls} flex flex-wrap items-center justify-center gap-1`}
         >
           <button
             type="button"
             onClick={() => {
+              exitSelectedMediaInspection();
               onPreviewStart?.();
               void playPreview();
             }}
@@ -675,6 +742,7 @@ export default function VideoPreview({
           <button
             type="button"
             onClick={() => {
+              exitSelectedMediaInspection();
               onPreviewStart?.();
               void playScenePreview();
             }}
@@ -733,7 +801,10 @@ export default function VideoPreview({
           <button
             type="button"
             data-preview-action="voice"
-            onClick={playWithBrowserVoice}
+            onClick={() => {
+              exitSelectedMediaInspection();
+              playWithBrowserVoice();
+            }}
             disabled={isPlaying}
             className={studioPreviewPill}
             aria-label="Preview with browser text-to-speech"

@@ -20,6 +20,10 @@ import {
 } from "@/features/story/utils/scene-media-upload.utils";
 import { applySceneUpdate, type StoryScriptChangeOptions } from "@/lib/utils/voiceover";
 import type { FootieScript } from "@/features/story/types";
+import {
+  isPreviewMediaSourceMounted,
+  scheduleAfterNextPaint,
+} from "@/features/preview/runtime-parity/schedule-owned-preview-blob-revocation";
 
 function isBlobUrl(url: string) {
   return url.startsWith("blob:");
@@ -113,7 +117,12 @@ export async function performSceneMediaReplace(
       );
 
       if (previousUrl && previousUrl !== candidateUrl) {
-        session.revokeOwnedBlobUrl(previousUrl);
+        scheduleAfterNextPaint(() => {
+          if (isPreviewMediaSourceMounted(previousUrl)) {
+            return;
+          }
+          session.revokeOwnedBlobUrl(previousUrl);
+        });
       }
       return { status: "committed" };
     } catch (error) {
@@ -178,7 +187,12 @@ export async function performSceneMediaReplace(
     );
 
     if (previousUrl && previousUrl !== candidateUrl) {
-      session.revokeOwnedBlobUrl(previousUrl);
+      scheduleAfterNextPaint(() => {
+        if (isPreviewMediaSourceMounted(previousUrl)) {
+          return;
+        }
+        session.revokeOwnedBlobUrl(previousUrl);
+      });
     }
     return { status: "committed" };
   } catch (error) {
@@ -214,7 +228,12 @@ export async function performSceneMediaReplace(
             { intent: "media" },
           );
           if (previousUrl && isBlobUrl(previousUrl) && previousUrl !== url) {
-            session.revokeOwnedBlobUrl(previousUrl);
+            scheduleAfterNextPaint(() => {
+              if (isPreviewMediaSourceMounted(previousUrl)) {
+                return;
+              }
+              session.revokeOwnedBlobUrl(previousUrl);
+            });
           }
           resolve({ status: "committed" });
         };

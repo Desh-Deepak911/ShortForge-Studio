@@ -455,8 +455,8 @@ test("8D.1-5. Transition layers use their own active fallback/media state", () =
   assert.equal(fromView.media?.url, "https://example.com/from-later.jpg");
   assert.equal(isDrawableView(toView), false);
   const preview = readSrc("src/features/preview/components/PreviewFrame.tsx");
-  assert.match(preview, /transitionOverlay\.fromScene/);
-  assert.match(preview, /transitionOverlay\.toScene/);
+  assert.match(preview, /(?:transitionOverlay|activeTransitionOverlay)\.fromScene/);
+  assert.match(preview, /(?:transitionOverlay|activeTransitionOverlay)\.toScene/);
   // Production Preview always uses default multi-image resolution on SceneBackdrop.
   assert.match(preview, /SceneBackdrop/);
   assert.doesNotMatch(preview, /isMultiImageScenesEnabled/);

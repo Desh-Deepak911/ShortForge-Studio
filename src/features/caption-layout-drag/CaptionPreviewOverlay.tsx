@@ -19,8 +19,22 @@ import {
   resolvePreviewCaptionOverlayStyle,
   resolvePreviewCaptionPillStyle,
 } from "@/features/caption-engine/caption-layout.utils";
-import { resolvePreviewCaptionPillCombinedStyle } from "@/features/caption-style";
+import {
+  resolvePreviewCaptionPillCombinedStyle,
+  resolvePreviewCaptionTypographyStyleForScene,
+} from "@/features/caption-style";
 import { mergeCaptionLayoutSettings } from "@/features/caption-layout";
+import {
+  CAPTION_LAYOUT_REFERENCE_HEIGHT,
+  CAPTION_LAYOUT_REFERENCE_WIDTH,
+} from "@/features/caption-layout/caption-layout.defaults";
+import { resolvePreviewCaptionOutputScale } from "@/features/caption-engine/resolve-preview-caption-placement";
+import {
+  LEGACY_EXPORT_CAPTION_BOX_PAD_X,
+  LEGACY_EXPORT_CAPTION_BOX_PAD_Y,
+  LEGACY_EXPORT_CAPTION_BOX_RADIUS,
+  LEGACY_EXPORT_CAPTION_FONT_SIZE,
+} from "@/features/caption-style/caption-style.defaults";
 import type { FootieScene, FootieScript } from "@/features/story/types";
 import { useFrameSize } from "@/hooks/useFrameSize";
 
@@ -47,6 +61,8 @@ export interface CaptionPreviewOverlayProps {
   allowPointerEvents?: boolean;
   onOffsetCommit?: (offsetX: number, offsetY: number) => void;
   onResetLayout?: () => void;
+  /** Resets measured box when the active chunk, effect, or scene identity changes. */
+  measurementKey?: string;
 }
 
 interface DragSession {
@@ -68,6 +84,7 @@ export default function CaptionPreviewOverlay({
   allowPointerEvents = true,
   onOffsetCommit,
   onResetLayout,
+  measurementKey,
 }: CaptionPreviewOverlayProps) {
   const layoutScene = resolvePreviewCaptionLayoutScene(script, scene, sceneIndex);
   const { ref: frameRef, width: frameWidth, height: frameHeight } = useFrameSize<HTMLDivElement>();
@@ -95,16 +112,28 @@ export default function CaptionPreviewOverlay({
       return;
     }
 
+    // Drop the previous chunk/scene box before measuring so a stale width
+    // cannot clamp the new caption against the wrong safe-area box.
+    setPillSize({ width: 0, height: 0 });
+
     const updateSize = () => {
-      const rect = pill.getBoundingClientRect();
-      setPillSize({ width: rect.width, height: rect.height });
+      const width = pill.offsetWidth;
+      const height = pill.offsetHeight;
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return;
+      }
+      setPillSize((current) =>
+        current.width === width && current.height === height
+          ? current
+          : { width, height },
+      );
     };
 
     updateSize();
     const observer = new ResizeObserver(updateSize);
     observer.observe(pill);
     return () => observer.disconnect();
-  }, [children, effectiveOffsets.offsetX, effectiveOffsets.offsetY]);
+  }, [children, effectiveOffsets.offsetX, effectiveOffsets.offsetY, measurementKey, layoutScene.id]);
 
   const contentBox = measureContentBoxInReferencePx(
     pillSize.width,
@@ -137,17 +166,24 @@ export default function CaptionPreviewOverlay({
       );
 
   const usesLegacyBottomCenter = resolvedLayout.usesLegacyBottomCenter;
+  const outputScale = resolvePreviewCaptionOutputScale(frameWidth);
 
   const overlayStyle = usesLegacyBottomCenter
     ? undefined
     : resolvePreviewCaptionOverlayStyle(resolvedLayout);
   const pillStyle = usesLegacyBottomCenter
-    ? resolvePreviewCaptionPillCombinedStyle(layoutScene, script, {})
+    ? resolvePreviewCaptionPillCombinedStyle(layoutScene, script, {}, outputScale)
     : resolvePreviewCaptionPillCombinedStyle(
         layoutScene,
         script,
         resolvePreviewCaptionPillStyle(resolvedLayout),
+        outputScale,
       );
+  const typographyStyle = resolvePreviewCaptionTypographyStyleForScene(
+    layoutScene,
+    script,
+    outputScale,
+  );
 
   const boxCenterY = resolvedLayout.boxTopY + (resolvedLayout.boxBottomY - resolvedLayout.boxTopY) / 2;
   const captionInteractive = draggable && allowPointerEvents;
@@ -348,9 +384,30 @@ export default function CaptionPreviewOverlay({
   }, []);
 
   const showChrome = captionInteractive && (isDragging || isFocused);
+  const outputSpaceStyle =
+    frameWidth > 0
+      ? {
+          ["--preview-caption-font-size" as string]: `${LEGACY_EXPORT_CAPTION_FONT_SIZE * outputScale}px`,
+          ["--preview-caption-pad-x" as string]: `${LEGACY_EXPORT_CAPTION_BOX_PAD_X * outputScale}px`,
+          ["--preview-caption-pad-y" as string]: `${LEGACY_EXPORT_CAPTION_BOX_PAD_Y * outputScale}px`,
+          ["--preview-caption-radius" as string]: `${LEGACY_EXPORT_CAPTION_BOX_RADIUS * outputScale}px`,
+          ["--preview-caption-highlight-bar" as string]: `${3 * outputScale}px`,
+          ["--preview-caption-border-width" as string]: `${Math.max(1, outputScale)}px`,
+          ["--preview-caption-reference-width" as string]: `${CAPTION_LAYOUT_REFERENCE_WIDTH}`,
+          ["--preview-caption-reference-height" as string]: `${CAPTION_LAYOUT_REFERENCE_HEIGHT}`,
+        }
+      : {};
 
   return (
-    <div ref={frameRef} className="pointer-events-none absolute inset-0 z-[15]">
+    <div
+      ref={frameRef}
+      className="preview-caption-output-space pointer-events-none absolute inset-0 z-[15]"
+      style={outputSpaceStyle}
+      data-preview-caption-placement-surface=""
+      data-preview-caption-anchor={resolvedLayout.anchor}
+      data-preview-caption-legacy={usesLegacyBottomCenter ? "true" : "false"}
+      data-preview-caption-frame-width={frameWidth > 0 ? String(Math.round(frameWidth)) : ""}
+    >
       <CaptionLayoutGuides
         visible={isDragging}
         safeAreaEnabled={mergedSettings.safeAreaEnabled !== false}
@@ -387,6 +444,8 @@ export default function CaptionPreviewOverlay({
 
       <div
         className={`${usesLegacyBottomCenter ? "preview-narration-subtitle-overlay" : ""} ${overlayClassName}`.trim()}
+        data-preview-caption-placement-box=""
+        data-preview-caption-anchor={resolvedLayout.anchor}
         style={{
           ...overlayStyle,
           pointerEvents: captionInteractive ? "auto" : "none",
@@ -409,7 +468,16 @@ export default function CaptionPreviewOverlay({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         >
-          {children}
+          <div
+            data-preview-caption-animation-layer=""
+            data-preview-caption-visual-box=""
+            style={{
+              transformOrigin: "center center",
+              ...(typographyStyle ?? {}),
+            }}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </div>

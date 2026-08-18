@@ -295,6 +295,7 @@ export default function EngagementOverlayPreview(
                 }}
               >
                 <span
+                  data-engagement-overlay-icon=""
                   style={{
                     display: "inline-flex",
                     flexShrink: 0,
@@ -308,7 +309,7 @@ export default function EngagementOverlayPreview(
                     confirmation={segment.confirmation}
                   />
                 </span>
-                <span>{segment.label}</span>
+                <span data-engagement-overlay-label="">{segment.label}</span>
               </div>
             </foreignObject>
           );
